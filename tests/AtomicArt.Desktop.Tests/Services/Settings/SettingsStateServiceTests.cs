@@ -319,56 +319,6 @@ public sealed class SettingsStateServiceTests
             applicators);
     }
 
-    private sealed class StubAppStateStore : IAppStateStore
-    {
-        private readonly SettingsState _state;
-
-        public StubAppStateStore(SettingsState state)
-        {
-            _state = state ?? throw new ArgumentNullException(nameof(state));
-        }
-
-        public Task<TState> LoadAsync<TState>(IStateSection section, CancellationToken ct)
-        {
-            if (_state is TState typedState)
-            {
-                return Task.FromResult(typedState);
-            }
-
-            throw new InvalidOperationException("Unexpected test state type.");
-        }
-
-        public Task SaveAsync<TState>(IStateSection section, TState state, CancellationToken ct)
-            where TState : notnull
-        {
-            return SaveAsync(section, (object)state, ct);
-        }
-
-        public Task SaveAsync(IStateSection section, object state, CancellationToken ct)
-        {
-            throw new NotSupportedException("Direct saving is not used by this test.");
-        }
-    }
-
-    private sealed class RecordingStateWriteScheduler : IStateWriteScheduler
-    {
-        public object? SavedState { get; private set; }
-
-        public void ScheduleWrite<TState>(
-            IStateSection section,
-            TState state,
-            StateWriteMode mode = StateWriteMode.Deferred)
-            where TState : notnull
-        {
-            SavedState = state;
-        }
-
-        public Task FlushAsync(CancellationToken ct)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
     private sealed class RecordingUiScaleService : IUiScaleService
     {
         private const double InitialScale = 0.75;
