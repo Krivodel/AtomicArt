@@ -58,7 +58,7 @@ public sealed class DependencyInjectionTests
             .GetRequiredService<IOptions<GoogleInteractionsOptions>>()
             .Value;
 
-        options.BaseUrl.Should().Be("https://generativelanguage.googleapis.com");
+        options.BaseUrl.Should().Be(GoogleInteractionsOptions.DefaultBaseUrl);
     }
 
     [Fact]
@@ -120,8 +120,6 @@ public sealed class DependencyInjectionTests
     {
         Dictionary<string, string?> values = new(StringComparer.Ordinal)
         {
-            [CreateGoogleInteractionsKey(nameof(GoogleInteractionsOptions.BaseUrl))] =
-                "https://generativelanguage.googleapis.com",
             [CreateGoogleInteractionsKey(nameof(GoogleInteractionsOptions.TimeoutSeconds))] = "30"
         };
 

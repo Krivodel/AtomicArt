@@ -3,10 +3,12 @@ namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 public sealed class GoogleInteractionsOptions
 {
     public const string SectionName = "GoogleInteractions";
-    public const string AllowedBaseUrlHost = "generativelanguage.googleapis.com";
+    public const string DefaultBaseUrl = "https://generativelanguage.googleapis.com";
 
-    public string BaseUrl { get; init; } = string.Empty;
+    public string BaseUrl { get; init; } = DefaultBaseUrl;
     public int TimeoutSeconds { get; init; }
+
+    private static readonly string AllowedBaseUrlHost = new Uri(DefaultBaseUrl).Host;
 
     public static bool IsValid(GoogleInteractionsOptions options)
     {
