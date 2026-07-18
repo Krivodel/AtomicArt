@@ -14,10 +14,10 @@ public sealed class GenerationModelConstraintsTests
     [InlineData(" ")]
     public void Constructor_WithInvalidModelId_ThrowsDomainException(string? modelId)
     {
-        Action action = () => CreateConstraints(modelId: modelId!);
+        Action action = () => CreateConstraints(modelId: modelId);
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-100");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.InvalidModelId);
     }
 
     [Fact]
@@ -26,7 +26,7 @@ public sealed class GenerationModelConstraintsTests
         Action action = () => CreateConstraints(maxPromptLength: 0);
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-101");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.InvalidConstraintLimit);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public sealed class GenerationModelConstraintsTests
         Action action = () => CreateConstraints(aspectRatios: []);
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-102");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.MissingConstraintValues);
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public sealed class GenerationModelConstraintsTests
         Action action = () => CreateConstraints(aspectRatios: ["Auto", " "]);
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-102");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.MissingConstraintValues);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public sealed class GenerationModelConstraintsTests
         Action action = () => CreateConstraints(generationCounts: [1, 0]);
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-101");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.InvalidConstraintLimit);
     }
 
     [Fact]
@@ -64,11 +64,11 @@ public sealed class GenerationModelConstraintsTests
             maxTotalAttachedImageBytes: 1_024);
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-103");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.InvalidAttachmentTotalLimit);
     }
 
     private static GenerationModelConstraints CreateConstraints(
-        string modelId = "test-model",
+        string? modelId = "test-model",
         int maxPromptLength = 100,
         IReadOnlyList<string>? aspectRatios = null,
         IReadOnlyList<string>? resolutions = null,

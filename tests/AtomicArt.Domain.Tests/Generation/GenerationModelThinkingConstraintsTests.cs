@@ -29,7 +29,7 @@ public sealed class GenerationModelThinkingConstraintsTests
             "medium");
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-111");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.InvalidThinkingMetadata);
     }
 
     [Fact]
@@ -40,6 +40,6 @@ public sealed class GenerationModelThinkingConstraintsTests
             "minimal");
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-111");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.InvalidThinkingMetadata);
     }
 }

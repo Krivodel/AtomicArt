@@ -4,8 +4,6 @@ namespace AtomicArt.Domain.Generation;
 
 public sealed record GenerationModelThinkingConstraints
 {
-    private const string InvalidMetadataErrorCode = "ERR-GEN-111";
-
     public IReadOnlyList<string> Levels { get; }
     public string Default { get; }
 
@@ -49,7 +47,7 @@ public sealed record GenerationModelThinkingConstraints
         if (levels is null || levels.Count == 0)
         {
             throw new DomainException(
-                InvalidMetadataErrorCode,
+                GenerationErrorCodes.InvalidThinkingMetadata,
                 "Generation model thinking levels must contain at least one value.");
         }
 
@@ -61,7 +59,7 @@ public sealed record GenerationModelThinkingConstraints
             if (string.IsNullOrWhiteSpace(level))
             {
                 throw new DomainException(
-                    InvalidMetadataErrorCode,
+                    GenerationErrorCodes.InvalidThinkingMetadata,
                     "Generation model thinking levels contain an empty value.");
             }
 
@@ -70,7 +68,7 @@ public sealed record GenerationModelThinkingConstraints
             if (!uniqueValues.Add(normalizedLevel))
             {
                 throw new DomainException(
-                    InvalidMetadataErrorCode,
+                    GenerationErrorCodes.InvalidThinkingMetadata,
                     $"Generation model thinking level '{normalizedLevel}' is duplicated.");
             }
 
@@ -87,7 +85,7 @@ public sealed record GenerationModelThinkingConstraints
         if (string.IsNullOrWhiteSpace(defaultValue))
         {
             throw new DomainException(
-                InvalidMetadataErrorCode,
+                GenerationErrorCodes.InvalidThinkingMetadata,
                 "Generation model default thinking level is required.");
         }
 
@@ -96,7 +94,7 @@ public sealed record GenerationModelThinkingConstraints
         if (!levels.Contains(normalizedDefault, StringComparer.Ordinal))
         {
             throw new DomainException(
-                InvalidMetadataErrorCode,
+                GenerationErrorCodes.InvalidThinkingMetadata,
                 $"Generation model default thinking level '{normalizedDefault}' is not supported.");
         }
 

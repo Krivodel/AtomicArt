@@ -4,11 +4,6 @@ namespace AtomicArt.Domain.Generation;
 
 public sealed record GenerationModelConstraints
 {
-    private const string InvalidModelIdErrorCode = "ERR-GEN-100";
-    private const string InvalidPositiveLimitErrorCode = "ERR-GEN-101";
-    private const string MissingRequiredValuesErrorCode = "ERR-GEN-102";
-    private const string InvalidAttachmentTotalLimitErrorCode = "ERR-GEN-103";
-
     public string ModelId { get; }
     public int MaxPromptLength { get; }
     public IReadOnlyList<string> AspectRatios { get; }
@@ -22,7 +17,7 @@ public sealed record GenerationModelConstraints
     public IReadOnlyList<string> SupportedContentTypes { get; }
 
     public GenerationModelConstraints(
-        string modelId,
+        string? modelId,
         int maxPromptLength,
         IReadOnlyList<string> aspectRatios,
         IReadOnlyList<string> resolutions,
@@ -37,7 +32,7 @@ public sealed record GenerationModelConstraints
         if (string.IsNullOrWhiteSpace(modelId))
         {
             throw new DomainException(
-                InvalidModelIdErrorCode,
+                GenerationErrorCodes.InvalidModelId,
                 "The generation model identifier must not be empty.");
         }
 
@@ -47,7 +42,7 @@ public sealed record GenerationModelConstraints
         Resolutions = CreateRequiredSnapshot(resolutions, nameof(resolutions));
         GenerationCounts = CreateRequiredPositiveSnapshot(generationCounts, nameof(generationCounts));
         Temperature = temperature ?? throw new DomainException(
-            MissingRequiredValuesErrorCode,
+            GenerationErrorCodes.MissingConstraintValues,
             "Generation model constraint 'temperature' is required.");
         MaxAttachedImages = RequirePositive(maxAttachedImages, nameof(maxAttachedImages));
         MaxAttachedImageBytes = RequirePositive(maxAttachedImageBytes, nameof(maxAttachedImageBytes));
@@ -58,7 +53,7 @@ public sealed record GenerationModelConstraints
         if (MaxTotalAttachedImageBytes < MaxAttachedImageBytes)
         {
             throw new DomainException(
-                InvalidAttachmentTotalLimitErrorCode,
+                GenerationErrorCodes.InvalidAttachmentTotalLimit,
                 "Total attachment byte limit cannot be lower than the single attachment byte limit.");
         }
     }
@@ -121,7 +116,7 @@ public sealed record GenerationModelConstraints
     private static DomainException CreateInvalidPositiveLimitException(string parameterName)
     {
         return new DomainException(
-            InvalidPositiveLimitErrorCode,
+            GenerationErrorCodes.InvalidConstraintLimit,
             $"Generation model constraint '{parameterName}' must be positive.");
     }
 
@@ -132,7 +127,7 @@ public sealed record GenerationModelConstraints
         if (values is null || values.Count == 0)
         {
             throw new DomainException(
-                MissingRequiredValuesErrorCode,
+                GenerationErrorCodes.MissingConstraintValues,
                 $"Generation model constraint '{parameterName}' must contain at least one value.");
         }
 
@@ -145,7 +140,7 @@ public sealed record GenerationModelConstraints
             if (string.IsNullOrWhiteSpace(value))
             {
                 throw new DomainException(
-                    MissingRequiredValuesErrorCode,
+                    GenerationErrorCodes.MissingConstraintValues,
                     $"Generation model constraint '{parameterName}' contains an empty value.");
             }
 
@@ -162,7 +157,7 @@ public sealed record GenerationModelConstraints
         if (values is null || values.Count == 0)
         {
             throw new DomainException(
-                MissingRequiredValuesErrorCode,
+                GenerationErrorCodes.MissingConstraintValues,
                 $"Generation model constraint '{parameterName}' must contain at least one positive value.");
         }
 
@@ -175,7 +170,7 @@ public sealed record GenerationModelConstraints
             if (value <= 0)
             {
                 throw new DomainException(
-                    InvalidPositiveLimitErrorCode,
+                    GenerationErrorCodes.InvalidConstraintLimit,
                     $"Generation model constraint '{parameterName}' contains a non-positive value.");
             }
 

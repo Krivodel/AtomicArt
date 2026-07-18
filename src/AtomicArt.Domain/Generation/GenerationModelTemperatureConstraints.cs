@@ -4,9 +4,6 @@ namespace AtomicArt.Domain.Generation;
 
 public sealed record GenerationModelTemperatureConstraints
 {
-    private const string InvalidTemperatureBoundsErrorCode = "ERR-GEN-104";
-    private const string InvalidTemperatureDefaultErrorCode = "ERR-GEN-105";
-    private const string InvalidTemperatureStepErrorCode = "ERR-GEN-106";
     private const double ComparisonTolerance = 0.000000001d;
 
     public double Minimum { get; }
@@ -26,7 +23,7 @@ public sealed record GenerationModelTemperatureConstraints
             || maximum <= minimum)
         {
             throw new DomainException(
-                InvalidTemperatureBoundsErrorCode,
+                GenerationErrorCodes.InvalidTemperatureBounds,
                 "Model temperature bounds must define a finite non-negative range.");
         }
 
@@ -35,7 +32,7 @@ public sealed record GenerationModelTemperatureConstraints
             || step > maximum - minimum)
         {
             throw new DomainException(
-                InvalidTemperatureStepErrorCode,
+                GenerationErrorCodes.InvalidTemperatureStep,
                 "The model temperature step must be positive and must not exceed the range.");
         }
 
@@ -46,14 +43,14 @@ public sealed record GenerationModelTemperatureConstraints
         if (!IsSupported(maximum))
         {
             throw new DomainException(
-                InvalidTemperatureStepErrorCode,
+                GenerationErrorCodes.InvalidTemperatureStep,
                 "The model temperature maximum must align with the configured step.");
         }
 
         if (!IsSupported(defaultValue))
         {
             throw new DomainException(
-                InvalidTemperatureDefaultErrorCode,
+                GenerationErrorCodes.InvalidTemperatureDefault,
                 "The default model temperature must align with the allowed range and step.");
         }
 

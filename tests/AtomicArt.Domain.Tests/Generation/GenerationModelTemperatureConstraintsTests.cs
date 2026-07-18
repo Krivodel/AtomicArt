@@ -40,7 +40,7 @@ public sealed class GenerationModelTemperatureConstraintsTests
         Action action = () => new GenerationModelTemperatureConstraints(0.1d, 2d, 0.15d, 0.1d);
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-105");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.InvalidTemperatureDefault);
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class GenerationModelTemperatureConstraintsTests
         Action action = () => new GenerationModelTemperatureConstraints(0.1d, 2d, 1d, 0.3d);
 
         action.Should().Throw<DomainException>()
-            .Which.ErrorCode.Should().Be("ERR-GEN-106");
+            .Which.ErrorCode.Should().Be(GenerationErrorCodes.InvalidTemperatureStep);
     }
 
     private static GenerationModelTemperatureConstraints CreateConstraints()
