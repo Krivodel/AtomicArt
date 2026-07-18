@@ -482,7 +482,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
 
         _hasTemperatureValue = true;
-        Temperature = NanoBanana2PanelDefaults.GetDefaultTemperature(SelectedModel);
+        Temperature = GenerationPanelOptionDefaults.GetDefaultTemperature(SelectedModel);
     }
 
     [RelayCommand]
@@ -891,7 +891,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         try
         {
             SelectedModel = supportedModels.Count > 0
-                ? NanoBanana2PanelDefaults.GetDefaultModel(supportedModels)
+                ? GenerationPanelOptionDefaults.GetDefaultModel(supportedModels)
                 : null;
         }
         finally
@@ -962,12 +962,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             SelectedAspectRatio = GenerationPanelOptionCompatibility.ResolveString(
                 state.AspectRatio,
                 selectedModel.AspectRatios,
-                NanoBanana2PanelDefaults.GetDefaultAspectRatio(selectedModel))
+                GenerationPanelOptionDefaults.GetDefaultAspectRatio(selectedModel))
                 .Value;
             SelectedResolution = GenerationPanelOptionCompatibility.ResolveString(
                 state.Resolution,
                 selectedModel.Resolutions,
-                NanoBanana2PanelDefaults.GetDefaultResolution(selectedModel))
+                GenerationPanelOptionDefaults.GetDefaultResolution(selectedModel))
                 .Value;
             Temperature = GenerationPanelOptionCompatibility.ResolveTemperature(
                 state.Temperature,
@@ -1112,12 +1112,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             GenerationPanelOptionCompatibility.ResolveString(
                 previousAspectRatio,
                 selectedModel.AspectRatios,
-                NanoBanana2PanelDefaults.GetDefaultAspectRatio(selectedModel));
+                GenerationPanelOptionDefaults.GetDefaultAspectRatio(selectedModel));
         (string selectedResolution, bool resolutionWasReset) =
             GenerationPanelOptionCompatibility.ResolveString(
                 previousResolution,
                 selectedModel.Resolutions,
-                NanoBanana2PanelDefaults.GetDefaultResolution(selectedModel));
+                GenerationPanelOptionDefaults.GetDefaultResolution(selectedModel));
         double temperature = GenerationPanelOptionCompatibility.ResolveTemperature(
                 previousTemperature,
                 selectedModel.Temperature)

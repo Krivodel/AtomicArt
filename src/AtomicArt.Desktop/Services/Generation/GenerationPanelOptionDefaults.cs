@@ -37,5 +37,4 @@ internal static class GenerationPanelOptionDefaults
 
         return selectedModel.Temperature.Default;
     }
-
 }
