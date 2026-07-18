@@ -68,9 +68,7 @@ internal sealed class GalleryOverlayEffects
         GalleryAnimationTracker overlayControls,
         GalleryAnimationTracker animatedControls)
     {
-        ArgumentNullException.ThrowIfNull(overlayCanvas);
-        ArgumentNullException.ThrowIfNull(overlayControls);
-        ArgumentNullException.ThrowIfNull(animatedControls);
+        ValidateOverlayArguments(overlayCanvas, overlayControls, animatedControls);
 
         (Ellipse Glow, Ellipse Burst) overlays = CreateBurstOverlays(
             overlayCanvas,
@@ -96,9 +94,7 @@ internal sealed class GalleryOverlayEffects
         GalleryAnimationTracker overlayControls,
         GalleryAnimationTracker animatedControls)
     {
-        ArgumentNullException.ThrowIfNull(overlayCanvas);
-        ArgumentNullException.ThrowIfNull(overlayControls);
-        ArgumentNullException.ThrowIfNull(animatedControls);
+        ValidateOverlayArguments(overlayCanvas, overlayControls, animatedControls);
 
         if (index > 7)
         {
@@ -115,6 +111,16 @@ internal sealed class GalleryOverlayEffects
             delay + AnimationTiming.ScaleTime(430 + (index * 28), speed),
             MotionEasing.EaseOut,
             () => RemoveOverlay(overlayCanvas, overlayControls, flash));
+    }
+
+    private static void ValidateOverlayArguments(
+        Canvas overlayCanvas,
+        GalleryAnimationTracker overlayControls,
+        GalleryAnimationTracker animatedControls)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+        ArgumentNullException.ThrowIfNull(overlayControls);
+        ArgumentNullException.ThrowIfNull(animatedControls);
     }
 
     private static Border CreateWake(Rect last)
