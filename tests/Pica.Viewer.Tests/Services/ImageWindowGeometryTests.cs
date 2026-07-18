@@ -12,24 +12,16 @@ public sealed class ImageWindowGeometryTests
     public void FitImage_WithLandscapeImage_PreservesAspectRatio()
     {
         PixelSize imageSize = new(1920, 1080);
-        Size maximumSize = new(1400d, 900d);
 
-        Size result = ImageWindowGeometry.FitImage(imageSize, 1200d, maximumSize);
-
-        result.Width.Should().BeApproximately(1200d, 0.001d);
-        result.Height.Should().BeApproximately(675d, 0.001d);
+        AssertFittedSize(imageSize, new Size(1200d, 675d));
     }
 
     [Fact]
     public void FitImage_WithPortraitImage_UsesSamePreferredExtent()
     {
         PixelSize imageSize = new(1080, 1920);
-        Size maximumSize = new(1400d, 900d);
 
-        Size result = ImageWindowGeometry.FitImage(imageSize, 1200d, maximumSize);
-
-        result.Width.Should().BeApproximately(506.25d, 0.001d);
-        result.Height.Should().BeApproximately(900d, 0.001d);
+        AssertFittedSize(imageSize, new Size(506.25d, 900d));
     }
 
     [Fact]
@@ -52,5 +44,15 @@ public sealed class ImageWindowGeometryTests
         Rect result = ImageWindowGeometry.GetPanBounds(imageSize, viewportSize);
 
         result.Should().Be(new Rect(800d, 450d, 0d, 0d));
+    }
+
+    private static void AssertFittedSize(PixelSize imageSize, Size expectedSize)
+    {
+        Size maximumSize = new(1400d, 900d);
+
+        Size result = ImageWindowGeometry.FitImage(imageSize, 1200d, maximumSize);
+
+        result.Width.Should().BeApproximately(expectedSize.Width, 0.001d);
+        result.Height.Should().BeApproximately(expectedSize.Height, 0.001d);
     }
 }
