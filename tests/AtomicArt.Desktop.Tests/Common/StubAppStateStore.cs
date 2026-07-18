@@ -2,7 +2,7 @@ using AtomicArt.Desktop.Services.State;
 
 namespace AtomicArt.Desktop.Tests;
 
-internal sealed class StubAppStateStore : IAppStateStore
+internal sealed class StubAppStateStore : AppStateStoreTestDouble
 {
     private readonly object _state;
 
@@ -11,7 +11,9 @@ internal sealed class StubAppStateStore : IAppStateStore
         _state = state ?? throw new ArgumentNullException(nameof(state));
     }
 
-    public Task<TState> LoadAsync<TState>(IStateSection section, CancellationToken ct)
+    public override Task<TState> LoadAsync<TState>(
+        IStateSection section,
+        CancellationToken ct)
     {
         if (_state is TState typedState)
         {
@@ -21,16 +23,10 @@ internal sealed class StubAppStateStore : IAppStateStore
         throw new InvalidOperationException("Unexpected test state type.");
     }
 
-    public Task SaveAsync<TState>(
+    public override Task SaveAsync(
         IStateSection section,
-        TState state,
+        object state,
         CancellationToken ct)
-        where TState : notnull
-    {
-        return SaveAsync(section, (object)state, ct);
-    }
-
-    public Task SaveAsync(IStateSection section, object state, CancellationToken ct)
     {
         throw new NotSupportedException("Direct saving is not used by this test.");
     }
