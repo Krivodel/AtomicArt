@@ -20,7 +20,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void DisplayName_WithNanoBanana2_ReturnsDisplayName()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
 
         string displayName = definition.DisplayName;
 
@@ -30,7 +30,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void GetSupportedContentTypes_WithNanoBanana2_ReturnsCatalogContentTypes()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
 
         IReadOnlyList<string> contentTypes = definition.GetSupportedContentTypes();
@@ -41,7 +41,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void MaxTotalAttachedImageBytes_WithNanoBanana2_ReturnsAggregateLimit()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
 
         long maxTotalAttachedImageBytes = definition.MaxTotalAttachedImageBytes;
 
@@ -51,7 +51,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithUnsupportedResolution_ReturnsError()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         ImageGenerationRequestDto request = CreateRequest(resolution: "1x1");
 
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
@@ -63,7 +63,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithAutoAspectRatio_ReturnsSuccess()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         ImageGenerationRequestDto request = CreateRequest(aspectRatio: GenerationAspectRatios.Auto);
 
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
@@ -74,7 +74,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithUnsupportedTemperature_ReturnsError()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         ImageGenerationRequestDto request = CreateRequest(temperature: 0.15d);
 
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
@@ -86,7 +86,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithoutThinkingLevel_AppliesMetadataDefault()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         ImageGenerationRequestDto request = CreateRequest();
 
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
@@ -99,7 +99,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithUnsupportedThinkingLevel_ReturnsError()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         ImageGenerationRequestDto request = CreateRequest(thinkingLevel: "medium");
 
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
@@ -112,7 +112,7 @@ public sealed class MetadataImageModelDefinitionTests
     public void Validate_WithThinkingLevelForNanoBananaPro_ReturnsError()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
-        MetadataImageModelDefinition definition = CreateDefinition(metadata);
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition(metadata);
         ImageGenerationRequestDto request = CreateRequest(metadata, thinkingLevel: "high");
 
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
@@ -124,7 +124,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithTooManyAttachments_ReturnsError()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         IReadOnlyList<AttachedImageDto> attachedImages = Enumerable
             .Range(0, definition.MaxAttachedImages + 1)
             .Select(index => CreateAttachedImage($"image-{index}.png"))
@@ -140,7 +140,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithPromptLongerThanModelLimit_ReturnsError()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         string prompt = new('a', definition.MaxPromptLength.GetValueOrDefault() + 1);
         ImageGenerationRequestDto request = CreateRequest(prompt: prompt);
 
@@ -153,7 +153,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithInvalidImageSignature_ReturnsError()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         AttachedImageDto attachedImage = new("image.png", PngContentType, [0x00, 0x01, 0x02]);
         IReadOnlyList<AttachedImageDto> attachedImages = new List<AttachedImageDto> { attachedImage };
         ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
@@ -167,7 +167,7 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithUnsupportedModelAttachmentContentType_ReturnsError()
     {
-        MetadataImageModelDefinition definition = CreateDefinition();
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         AttachedImageDto attachedImage = new("image.gif", GifContentType, GifBytes);
         IReadOnlyList<AttachedImageDto> attachedImages = new List<AttachedImageDto> { attachedImage };
         ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
@@ -176,26 +176,6 @@ public sealed class MetadataImageModelDefinitionTests
 
         result.IsValidationError.Should().BeTrue();
         result.ErrorCode.Should().Be("ERR-GEN-004");
-    }
-
-    private static MetadataImageModelDefinition CreateDefinition()
-    {
-        return CreateDefinition(ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata());
-    }
-
-    private static MetadataImageModelDefinition CreateDefinition(GenerationModelMetadataDto metadata)
-    {
-        return new MetadataImageModelDefinition(
-            metadata,
-            new GenerationModelRules([new MetadataGenerationModelRules()]),
-            CreateFormats());
-    }
-
-    private static IReadOnlyList<IAttachedImageFormat> CreateFormats()
-    {
-        return GenerationImageFileFormats.All
-            .Select<GenerationImageFileFormatDescriptor, IAttachedImageFormat>(format => new AttachedImageFormat(format))
-            .ToList();
     }
 
     private static ImageGenerationRequestDto CreateRequest(

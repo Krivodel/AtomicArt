@@ -25,7 +25,7 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithValidCommand_ReturnsBatchWithImageContent()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Guid plannedBatchId = Guid.Empty;
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock(captureBatchId: batchId => plannedBatchId = batchId);
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
@@ -84,7 +84,7 @@ public sealed class CreateImageGenerationHandlerTests
             new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"),
             completedAtUtc,
             generationDuration);
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(content: content);
         CreateImageGenerationHandler handler = new(
@@ -112,7 +112,7 @@ public sealed class CreateImageGenerationHandlerTests
             "image/png",
             "iVBORw0KGgo=",
             GenerationDuration: TimeSpan.FromSeconds(-1));
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(content: content);
         CreateImageGenerationHandler handler = new(
@@ -133,7 +133,7 @@ public sealed class CreateImageGenerationHandlerTests
     public async Task Handle_WithProviderCredential_PassesProviderContextToContentProvider()
     {
         ImageGenerationContentProviderContext? capturedContext = null;
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(
             captureContext: context => capturedContext = context);
@@ -159,7 +159,7 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithNormalizableAttachment_PassesValidatedRequestToPlannerAndWriter()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         ImageGenerationRequestDto? plannedRequest = null;
         ImageGenerationRequestDto? contentRequest = null;
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock(
@@ -198,7 +198,7 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithGenerationCountTwo_ReturnsTwoContentItems()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMockForRequestCount();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
@@ -237,7 +237,7 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithMultipleGenerationItems_StartsContentRequestsInParallel()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMockForRequestCount();
         ParallelTrackingContentProvider contentProvider = new(expectedRequestCount: 2);
         CreateImageGenerationHandler handler = new(
@@ -268,7 +268,7 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithUnsupportedGenerationCount_ReturnsValidationError()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
@@ -298,7 +298,7 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithTooManyAttachedImages_ReturnsValidationError()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
@@ -339,7 +339,7 @@ public sealed class CreateImageGenerationHandlerTests
             maxCount: 3,
             maxSingleFileBytes: PngSignatureLength,
             maxTotalBytes: PngSignatureLength * 3L);
-        ImageModelRegistry registry = CreateRegistry(metadata);
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry(metadata);
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
@@ -377,7 +377,7 @@ public sealed class CreateImageGenerationHandlerTests
             maxCount: 3,
             maxSingleFileBytes: PngSignatureLength,
             maxTotalBytes: PngSignatureLength + 1L);
-        ImageModelRegistry registry = CreateRegistry(metadata);
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry(metadata);
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
@@ -412,7 +412,7 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithUnsupportedAttachmentContentType_ReturnsValidationError()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
@@ -446,7 +446,7 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithUnknownModel_ReturnsNotFound()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
@@ -482,7 +482,7 @@ public sealed class CreateImageGenerationHandlerTests
         try
         {
             Directory.SetCurrentDirectory(outputRoot);
-            ImageModelRegistry registry = CreateRegistry();
+            ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
             Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
             Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
             CreateImageGenerationHandler handler = new(
@@ -546,7 +546,7 @@ public sealed class CreateImageGenerationHandlerTests
         ImageGenerationProviderFailureKind failureKind,
         string expectedErrorCode)
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = new();
         ImageGenerationProviderException exception = new(
@@ -688,17 +688,6 @@ public sealed class CreateImageGenerationHandlerTests
         return GenerationImageFileSignatures.Gif89A.ToArray();
     }
 
-    private static ImageModelRegistry CreateRegistry(GenerationModelMetadataDto? metadata = null)
-    {
-        GenerationModelCatalogDto catalog = metadata is null
-            ? ApiModelMetadataTestCatalog.LoadCatalog()
-            : new GenerationModelCatalogDto([metadata]);
-
-        return new ImageModelRegistry(
-            catalog,
-            CreateFactories());
-    }
-
     private static GenerationModelMetadataDto CreateMetadataWithAttachmentLimits(
         int maxCount,
         long maxSingleFileBytes,
@@ -714,23 +703,6 @@ public sealed class CreateImageGenerationHandlerTests
                 maxTotalBytes,
                 metadata.Attachments.SupportedContentTypes)
         };
-    }
-
-    private static IReadOnlyList<IAttachedImageFormat> CreateFormats()
-    {
-        return GenerationImageFileFormats.All
-            .Select<GenerationImageFileFormatDescriptor, IAttachedImageFormat>(format => new AttachedImageFormat(format))
-            .ToList();
-    }
-
-    private static IReadOnlyList<IImageModelDefinitionFactory> CreateFactories()
-    {
-        return
-        [
-            new MetadataImageModelDefinitionFactory(
-                new GenerationModelRules([new MetadataGenerationModelRules()]),
-                CreateFormats())
-        ];
     }
 
     private static string CreateCleanDirectory(string testName)

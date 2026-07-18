@@ -17,7 +17,7 @@ public sealed class ImageModelRegistryTests
     [Fact]
     public void GetModels_WithRegisteredModel_ReturnsModels()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
 
         IReadOnlyList<ImageModelOption> models = registry.GetModels();
 
@@ -39,7 +39,7 @@ public sealed class ImageModelRegistryTests
     [Fact]
     public void GetById_WithUnknownId_ReturnsNull()
     {
-        ImageModelRegistry registry = CreateRegistry();
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
 
         IImageModelDefinition? definition = registry.GetById("unknown");
 
@@ -55,9 +55,7 @@ public sealed class ImageModelRegistryTests
                 CreateMetadata("duplicate")
         ]);
 
-        Action action = () => new ImageModelRegistry(
-            catalog,
-            CreateFactories());
+        Action action = () => MetadataImageModelTestFactory.CreateRegistry(catalog);
 
         action.Should().Throw<InvalidOperationException>();
     }
@@ -67,7 +65,7 @@ public sealed class ImageModelRegistryTests
     {
         GenerationModelCatalogDto catalog = new([]);
 
-        Action action = () => new ImageModelRegistry(catalog, CreateFactories());
+        Action action = () => MetadataImageModelTestFactory.CreateRegistry(catalog);
 
         action.Should().Throw<InvalidOperationException>();
     }
@@ -89,13 +87,6 @@ public sealed class ImageModelRegistryTests
 
         registry.GetModels().Should().ContainSingle()
             .Which.DisplayName.Should().Be("Test Factory 10");
-    }
-
-    private static ImageModelRegistry CreateRegistry()
-    {
-        return new ImageModelRegistry(
-            ApiModelMetadataTestCatalog.LoadCatalog(),
-            CreateFactories());
     }
 
     private static GenerationModelMetadataDto CreateMetadata(string modelId = "test-model")
@@ -128,23 +119,6 @@ public sealed class ImageModelRegistryTests
                 {
                     ["4k"] = 2520
                 }));
-    }
-
-    private static IReadOnlyList<IAttachedImageFormat> CreateFormats()
-    {
-        return GenerationImageFileFormats.All
-            .Select<GenerationImageFileFormatDescriptor, IAttachedImageFormat>(format => new AttachedImageFormat(format))
-            .ToList();
-    }
-
-    private static IReadOnlyList<IImageModelDefinitionFactory> CreateFactories()
-    {
-        return
-        [
-            new MetadataImageModelDefinitionFactory(
-                new GenerationModelRules([new MetadataGenerationModelRules()]),
-                CreateFormats())
-        ];
     }
 
     private sealed class TestImageModelDefinitionFactory : IImageModelDefinitionFactory
