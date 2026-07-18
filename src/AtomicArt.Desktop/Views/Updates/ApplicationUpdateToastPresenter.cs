@@ -104,11 +104,7 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
 
         DismissCurrentToast();
         StackPanel content = CreateContent();
-        _toast = _manager
-            .CreateToast()
-            .WithTitle(UiStrings.UpdateTitle)
-            .WithContent(content)
-            .OfType(NotificationType.Information)
+        ISukiToast toast = CreateToastBuilder(content)
             .WithActionButton(
                 UiStrings.UpdateLater,
                 OnUpdateLaterRequested,
@@ -119,11 +115,10 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
                 OnUpdateRequested,
                 true)
             .Queue();
-        _updateButton = _toast.ActionButtons
+        _updateButton = toast.ActionButtons
             .OfType<Button>()
             .LastOrDefault();
-        _presentedState = ApplicationUpdateState.Available;
-        RefreshContent(viewModel);
+        PresentToast(toast, ApplicationUpdateState.Available, viewModel);
     }
 
     private void ShowProgressToast()
@@ -137,14 +132,29 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
 
         DismissCurrentToast();
         StackPanel content = CreateContent();
-        _toast = _manager
+        ISukiToast toast = CreateToastBuilder(content)
+            .WithLoadingState(true)
+            .Queue();
+
+        PresentToast(toast, viewModel.State, viewModel);
+    }
+
+    private SukiToastBuilder CreateToastBuilder(StackPanel content)
+    {
+        return _manager
             .CreateToast()
             .WithTitle(UiStrings.UpdateTitle)
             .WithContent(content)
-            .WithLoadingState(true)
-            .OfType(NotificationType.Information)
-            .Queue();
-        _presentedState = viewModel.State;
+            .OfType(NotificationType.Information);
+    }
+
+    private void PresentToast(
+        ISukiToast toast,
+        ApplicationUpdateState state,
+        ApplicationUpdateViewModel viewModel)
+    {
+        _toast = toast;
+        _presentedState = state;
         RefreshContent(viewModel);
     }
 
