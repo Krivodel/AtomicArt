@@ -7,6 +7,8 @@ using Avalonia.VisualTree;
 using FluentAssertions;
 using Xunit;
 
+using AtomicArt.Desktop.Tests.Common;
+
 namespace AtomicArt.Desktop.Tests.Behaviors;
 
 public sealed class ComboBoxAnimationStylesTests
@@ -99,16 +101,8 @@ public sealed class ComboBoxAnimationStylesTests
 
                 Popup popup = GetPopup(comboBox);
                 LayoutTransformControl panel = GetDropDownPanel(comboBox);
-                PopupRoot popupRoot = TopLevel.GetTopLevel(panel).Should()
-                    .BeOfType<PopupRoot>()
-                    .Subject;
-                ScaleTransform inheritedScale = popupRoot.Transform.Should()
-                    .BeOfType<ScaleTransform>()
-                    .Subject;
 
-                popup.InheritsTransform.Should().BeTrue();
-                inheritedScale.ScaleX.Should().BeApproximately(uiScale, 0.001d);
-                inheritedScale.ScaleY.Should().BeApproximately(uiScale, 0.001d);
+                PopupAssertions.AssertInheritsScale(popup, panel, uiScale);
             }
             finally
             {

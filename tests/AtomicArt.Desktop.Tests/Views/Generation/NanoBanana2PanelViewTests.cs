@@ -18,6 +18,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
@@ -461,16 +462,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 Grid thinkingControls = thinkingComboBox.Parent.Should()
                     .BeOfType<Grid>()
                     .Subject;
-                PopupRoot popupRoot = TopLevel.GetTopLevel(panel).Should()
-                    .BeOfType<PopupRoot>()
-                    .Subject;
-                ScaleTransform inheritedScale = popupRoot.Transform.Should()
-                    .BeOfType<ScaleTransform>()
-                    .Subject;
 
-                popup.InheritsTransform.Should().BeTrue();
-                inheritedScale.ScaleX.Should().BeApproximately(uiScale, 0.001d);
-                inheritedScale.ScaleY.Should().BeApproximately(uiScale, 0.001d);
+                PopupAssertions.AssertInheritsScale(popup, panel, uiScale);
                 temperatureResetButton.IsEffectivelyVisible.Should().BeTrue();
                 thinkingControls.IsEffectivelyVisible.Should().BeTrue();
                 AssertContainedByPanel(temperatureResetButton, panel);
