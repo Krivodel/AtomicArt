@@ -4,12 +4,12 @@ using Avalonia.Platform.Storage;
 
 namespace Pica.Viewer.Services;
 
-public sealed class ClipboardImageWriter : IViewerClipboardWriter, IDisposable
+internal sealed class ClipboardImageWriter : IViewerClipboardWriter, IDisposable
 {
     private readonly AvaloniaClipboardDataWriter _clipboardDataWriter;
     private readonly IPlatformClipboardImageWriter _platformImageWriter;
 
-    internal ClipboardImageWriter(
+    public ClipboardImageWriter(
         AvaloniaClipboardDataWriter clipboardDataWriter,
         IPlatformClipboardImageWriter platformImageWriter)
     {

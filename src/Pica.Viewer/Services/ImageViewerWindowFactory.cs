@@ -5,7 +5,7 @@ using Pica.Viewer.Views;
 
 namespace Pica.Viewer.Services;
 
-public sealed class ImageViewerWindowFactory : IImageViewerWindowFactory
+internal sealed class ImageViewerWindowFactory : IImageViewerWindowFactory
 {
     private readonly IViewerClipboardWriter _clipboardImageWriter;
     private readonly IImageFormatRegistry _formatRegistry;
@@ -18,7 +18,7 @@ public sealed class ImageViewerWindowFactory : IImageViewerWindowFactory
     private readonly ILogger<ImageViewerWindow> _logger;
     private readonly ILogger<TemporarySelectionFileStore> _temporarySelectionFileLogger;
 
-    internal ImageViewerWindowFactory(
+    public ImageViewerWindowFactory(
         IViewerClipboardWriter clipboardImageWriter,
         IImageFormatRegistry formatRegistry,
         IImageViewerStateService stateService,

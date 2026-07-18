@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Pica.Viewer.Services;
-using Pica.Viewer.Views;
 
 namespace Pica.Viewer;
 
@@ -26,26 +25,12 @@ public static class DependencyInjection
             PlatformClipboardImageWriterFactory.Create(
                 provider.GetRequiredService<AvaloniaClipboardDataWriter>(),
                 provider.GetRequiredService<ClipboardImagePreparer>()));
-        services.AddSingleton<ClipboardImageWriter>(provider =>
-            new ClipboardImageWriter(
-                provider.GetRequiredService<AvaloniaClipboardDataWriter>(),
-                provider.GetRequiredService<IPlatformClipboardImageWriter>()));
+        services.AddSingleton<ClipboardImageWriter>();
         services.AddSingleton<IClipboardImageWriter>(provider =>
             provider.GetRequiredService<ClipboardImageWriter>());
         services.AddSingleton<IViewerClipboardWriter>(provider =>
             provider.GetRequiredService<ClipboardImageWriter>());
-        services.AddSingleton<IImageViewerWindowFactory>(provider =>
-            new ImageViewerWindowFactory(
-                provider.GetRequiredService<IViewerClipboardWriter>(),
-                provider.GetRequiredService<IImageFormatRegistry>(),
-                provider.GetRequiredService<IImageViewerStateService>(),
-                provider.GetRequiredService<ImagePreviewLoader>(),
-                provider.GetRequiredService<FullResolutionImageLoader>(),
-                provider.GetRequiredService<PngImageEncoder>(),
-                provider.GetRequiredService<ClipboardImagePreparer>(),
-                provider.GetRequiredService<IPlatformFileActions>(),
-                provider.GetRequiredService<ILogger<ImageViewerWindow>>(),
-                provider.GetRequiredService<ILogger<TemporarySelectionFileStore>>()));
+        services.AddSingleton<IImageViewerWindowFactory, ImageViewerWindowFactory>();
 
         return services;
     }

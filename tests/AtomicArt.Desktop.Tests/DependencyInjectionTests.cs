@@ -16,6 +16,7 @@ using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Settings;
 using AtomicArt.Desktop.Views;
 using AtomicArt.Tests.Common;
+using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.Tests;
 
@@ -196,6 +197,24 @@ public sealed class DependencyInjectionTests
 
         firstService.Should().BeSameAs(secondService);
         firstService.BaseAddress.ToString().Should().Be(TestApiConfiguration.BaseAddress);
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithPicaViewer_ResolvesConstructorRegisteredServices()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+
+        IClipboardImageWriter firstClipboardWriter =
+            serviceProvider.GetRequiredService<IClipboardImageWriter>();
+        IClipboardImageWriter secondClipboardWriter =
+            serviceProvider.GetRequiredService<IClipboardImageWriter>();
+        IImageViewerWindowFactory firstWindowFactory =
+            serviceProvider.GetRequiredService<IImageViewerWindowFactory>();
+        IImageViewerWindowFactory secondWindowFactory =
+            serviceProvider.GetRequiredService<IImageViewerWindowFactory>();
+
+        firstClipboardWriter.Should().BeSameAs(secondClipboardWriter);
+        firstWindowFactory.Should().BeSameAs(secondWindowFactory);
     }
 
     [Fact]
