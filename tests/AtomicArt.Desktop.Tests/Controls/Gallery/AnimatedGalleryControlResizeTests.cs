@@ -14,22 +14,15 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
     [Fact]
     public void BoundsChanged_WhenAttached_AnimatesExistingCardsToNewPositions()
     {
-        Dispatch(() =>
-        {
-            RunResizeScenario((_, scenario) =>
+        AssertResizeToWideLayout(
+            (scenario, thirdCard) =>
             {
-                GenerationCardControl thirdCard = GetThirdCard(scenario.Control, scenario.Items);
-
                 AssertThirdCardAtNarrowLayout(thirdCard);
 
                 scenario.Window.Width = 980d;
                 scenario.Window.CaptureRenderedFrame();
-
-                thirdCard = GetThirdCard(scenario.Control, scenario.Items);
-                AssertThirdCardMovedToWideLayout(thirdCard);
-                AssertAllCardsRendered(scenario);
-            });
-        });
+            },
+            AssertAllCardsRendered);
     }
 
     [Fact]
@@ -45,7 +38,7 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
     [Fact]
     public void ScrollViewerBoundsChanged_WhenAttached_AnimatesExistingCardsToNewPositions()
     {
-        AssertScrollViewerResize((scrollViewer, _) =>
+        AssertScrollViewerResize((scrollViewer, scenario) =>
         {
             scrollViewer.Arrange(new Rect(0d, 0d, 980d, 640d));
         });
@@ -118,16 +111,28 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
     private static void AssertScrollViewerResize(
         Action<ScrollViewer, ResizeScenario> resize)
     {
+        AssertResizeToWideLayout((scenario, _) =>
+        {
+            ScrollViewer scrollViewer = GetGalleryScrollViewer(scenario.Control);
+
+            resize(scrollViewer, scenario);
+        });
+    }
+
+    private static void AssertResizeToWideLayout(
+        Action<ResizeScenario, GenerationCardControl> resize,
+        Action<ResizeScenario>? assertAfterResize = null)
+    {
         Dispatch(() =>
         {
             RunResizeScenario((_, scenario) =>
             {
                 GenerationCardControl thirdCard = GetThirdCard(scenario.Control, scenario.Items);
-                ScrollViewer scrollViewer = GetGalleryScrollViewer(scenario.Control);
 
-                resize(scrollViewer, scenario);
+                resize(scenario, thirdCard);
 
                 AssertThirdCardMovedToWideLayout(thirdCard);
+                assertAfterResize?.Invoke(scenario);
             });
         });
     }
