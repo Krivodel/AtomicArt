@@ -72,7 +72,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
     private readonly DispatcherTimer _windowModeLayoutTimer;
     private readonly DispatcherTimer _openWithMenuHideTimer;
     private readonly ImagePreviewCache _previewCache;
-    private readonly ViewerSettingsState _settings;
+    private readonly ImageViewerState _settings;
     private Bitmap? _bitmap;
     private PicaImageItem? _currentItem;
     private PixelSize _sourcePixelSize;
@@ -165,14 +165,14 @@ public sealed partial class ImageViewerWindow : SukiWindow
             pngImageEncoder,
             actionDispatcher);
         ArgumentNullException.ThrowIfNull(initialState);
-        _settings = ViewerSettingsState.Create(initialState);
+        _settings = initialState.CreateCopy();
         _selectedIndex = GetItemIndexOrDefault(request.Items, request.SelectedItemId);
-        _isWindowedMode = _settings.RememberWindowPlacement && (initialState.IsWindowed == true);
+        _isWindowedMode = _settings.RememberWindowPlacement && (_settings.IsWindowed == true);
         _windowedPosition = _settings.RememberWindowPlacement
-            ? CreateWindowedPosition(initialState)
+            ? CreateWindowedPosition(_settings)
             : null;
         _windowedClientSize = _settings.RememberWindowPlacement
-            ? CreateWindowedClientSize(initialState)
+            ? CreateWindowedClientSize(_settings)
             : null;
         Size initialWindowedClientSize = _windowedClientSize
             ?? new Size(DefaultWindowWidth, DefaultWindowHeight);
@@ -207,7 +207,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             WindowResizePointerReleased = OnWindowResizePointerReleased
         };
         _view = new ImageViewerView(
-            initialState,
+            _settings,
             request.Actions,
             GetViewerWindowMode(),
             viewEvents);

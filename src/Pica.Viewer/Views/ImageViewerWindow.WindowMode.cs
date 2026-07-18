@@ -317,10 +317,12 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private ImageViewerState CreateState()
     {
-        return _settings.CreateImageViewerState(
+        return _settings.CreateSnapshot(
             _isWindowedMode,
-            _windowedPosition,
-            _windowedClientSize);
+            _windowedPosition?.X,
+            _windowedPosition?.Y,
+            _windowedClientSize?.Width,
+            _windowedClientSize?.Height);
     }
 
     private static PixelPoint? CreateWindowedPosition(ImageViewerState state)
