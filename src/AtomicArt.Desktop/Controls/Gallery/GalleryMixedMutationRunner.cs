@@ -5,10 +5,10 @@ using AtomicArt.Desktop.Services.Gallery;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryMixedMutationRunner : IGalleryOperationRunner
+internal sealed class GalleryMixedMutationRunner : GalleryOperationRunner
 {
-    public Type OperationType => typeof(MixedMutationGalleryOperation);
-    public bool SupportsBatching => false;
+    public override Type OperationType => typeof(MixedMutationGalleryOperation);
+    public override bool SupportsBatching => false;
 
     private readonly GalleryMotionAnimator _motionAnimator;
     private readonly GalleryLayoutService _galleryLayout;
@@ -24,21 +24,7 @@ internal sealed class GalleryMixedMutationRunner : IGalleryOperationRunner
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public bool CanRun(IReadOnlyList<GalleryOperation> operations)
-    {
-        ArgumentNullException.ThrowIfNull(operations);
-
-        return GalleryOperationTypeSelector.Contains(operations, OperationType);
-    }
-
-    public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)
-    {
-        ArgumentNullException.ThrowIfNull(operations);
-
-        return operations;
-    }
-
-    public async Task RunAsync(
+    public override async Task RunAsync(
         IReadOnlyList<GalleryOperation> operations,
         GalleryOperationCoordinator context,
         CancellationToken ct)
@@ -64,6 +50,12 @@ internal sealed class GalleryMixedMutationRunner : IGalleryOperationRunner
             GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, deleteOverlays);
             context.NotifyStateChanged();
         }
+    }
+
+    protected override IReadOnlyList<GalleryOperation> SelectOperationsCore(
+        IReadOnlyList<GalleryOperation> operations)
+    {
+        return operations;
     }
 
     private async Task ExecuteMutationAsync(

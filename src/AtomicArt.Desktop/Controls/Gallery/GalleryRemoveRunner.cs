@@ -8,10 +8,10 @@ using AtomicArt.Desktop.Services.GalleryAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryRemoveRunner : IGalleryOperationRunner
+internal sealed class GalleryRemoveRunner : GalleryOperationRunner
 {
-    public Type OperationType => typeof(RemoveGalleryOperation);
-    public bool SupportsBatching => false;
+    public override Type OperationType => typeof(RemoveGalleryOperation);
+    public override bool SupportsBatching => false;
 
     private readonly GalleryAnimationScheduler _animationScheduler;
     private readonly GalleryMotionAnimator _motionAnimator;
@@ -30,21 +30,7 @@ internal sealed class GalleryRemoveRunner : IGalleryOperationRunner
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public bool CanRun(IReadOnlyList<GalleryOperation> operations)
-    {
-        ArgumentNullException.ThrowIfNull(operations);
-
-        return GalleryOperationTypeSelector.ContainsOnly(operations, OperationType);
-    }
-
-    public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)
-    {
-        ArgumentNullException.ThrowIfNull(operations);
-
-        return operations;
-    }
-
-    public async Task RunAsync(
+    public override async Task RunAsync(
         IReadOnlyList<GalleryOperation> operations,
         GalleryOperationCoordinator context,
         CancellationToken ct)
@@ -72,6 +58,17 @@ internal sealed class GalleryRemoveRunner : IGalleryOperationRunner
         {
             context.NotifyStateChanged();
         }
+    }
+
+    protected override bool CanRunCore(IReadOnlyList<GalleryOperation> operations)
+    {
+        return GalleryOperationTypeSelector.ContainsOnly(operations, OperationType);
+    }
+
+    protected override IReadOnlyList<GalleryOperation> SelectOperationsCore(
+        IReadOnlyList<GalleryOperation> operations)
+    {
+        return operations;
     }
 
     private static List<(object Item, Rect Rect)> MaterializeOperations(

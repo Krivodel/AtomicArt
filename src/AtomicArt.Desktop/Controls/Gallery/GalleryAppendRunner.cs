@@ -6,10 +6,10 @@ using AtomicArt.Desktop.Services.Gallery;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryAppendRunner : IGalleryOperationRunner
+internal sealed class GalleryAppendRunner : GalleryOperationRunner
 {
-    public Type OperationType => typeof(AppendBatchGalleryOperation);
-    public bool SupportsBatching => true;
+    public override Type OperationType => typeof(AppendBatchGalleryOperation);
+    public override bool SupportsBatching => true;
 
     private readonly GalleryMotionAnimator _motionAnimator;
     private readonly GalleryLayoutService _galleryLayout;
@@ -25,21 +25,7 @@ internal sealed class GalleryAppendRunner : IGalleryOperationRunner
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public bool CanRun(IReadOnlyList<GalleryOperation> operations)
-    {
-        ArgumentNullException.ThrowIfNull(operations);
-
-        return GalleryOperationTypeSelector.Contains(operations, OperationType);
-    }
-
-    public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)
-    {
-        ArgumentNullException.ThrowIfNull(operations);
-
-        return GalleryOperationTypeSelector.Select(operations, OperationType);
-    }
-
-    public async Task RunAsync(
+    public override async Task RunAsync(
         IReadOnlyList<GalleryOperation> operations,
         GalleryOperationCoordinator context,
         CancellationToken ct)

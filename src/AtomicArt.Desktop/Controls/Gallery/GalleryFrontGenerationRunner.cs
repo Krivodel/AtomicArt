@@ -8,10 +8,12 @@ using AtomicArt.Desktop.Services.GalleryAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryFrontGenerationRunner : IGalleryRetargetableOperationRunner
+internal sealed class GalleryFrontGenerationRunner :
+    GalleryOperationRunner,
+    IGalleryRetargetableOperationRunner
 {
-    public Type OperationType => typeof(GenerateFrontGalleryOperation);
-    public bool SupportsBatching => true;
+    public override Type OperationType => typeof(GenerateFrontGalleryOperation);
+    public override bool SupportsBatching => true;
     public bool IsRunning => _isRunning;
 
     private readonly GalleryAnimationScheduler _animationScheduler;
@@ -35,21 +37,7 @@ internal sealed class GalleryFrontGenerationRunner : IGalleryRetargetableOperati
         _retargetWaiter = retargetWaiter ?? throw new ArgumentNullException(nameof(retargetWaiter));
     }
 
-    public bool CanRun(IReadOnlyList<GalleryOperation> operations)
-    {
-        ArgumentNullException.ThrowIfNull(operations);
-
-        return GalleryOperationTypeSelector.Contains(operations, OperationType);
-    }
-
-    public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)
-    {
-        ArgumentNullException.ThrowIfNull(operations);
-
-        return GalleryOperationTypeSelector.Select(operations, OperationType);
-    }
-
-    public async Task RunAsync(
+    public override async Task RunAsync(
         IReadOnlyList<GalleryOperation> operations,
         GalleryOperationCoordinator context,
         CancellationToken ct)
