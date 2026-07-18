@@ -1,17 +1,14 @@
-using System.Text.Json;
-
 using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Desktop.Tests.Services;
 
 public sealed class ImageModelOptionCatalogTests
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -65,50 +62,11 @@ public sealed class ImageModelOptionCatalogTests
         string? modelId = "test-model",
         string? displayName = "Test Model")
     {
-        string modelIdJson = modelId is null ? "null" : JsonSerializer.Serialize(modelId, JsonOptions);
-        string displayNameJson = displayName is null ? "null" : JsonSerializer.Serialize(displayName, JsonOptions);
-        string json =
-            $$"""
-            {
-              "models": [
-                {
-                  "id": {{modelIdJson}},
-                  "displayName": {{displayNameJson}},
-                  "provider": "google",
-                  "providerModelId": "provider-test-model",
-                  "panelId": "nano-banana",
-                  "contextWindowTokens": 1000,
-                  "maxOutputTokens": 500,
-                  "maxPromptLength": 100,
-                  "aspectRatios": [ "авто" ],
-                  "resolutions": [ "1k" ],
-                  "generationCounts": [ 1 ],
-                  "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
-                  "attachments": {
-                    "maxCount": 1,
-                    "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 2048,
-                    "supportedContentTypes": [ "image/png" ]
-                  },
-                  "pricing": {
-                    "currencyCode": "USD",
-                    "inputTokenUsdPerMillion": 0.25,
-                    "textOutputTokenUsdPerMillion": 1.50,
-                    "imageOutputTokenUsdPerMillion": 30.00,
-                    "inputImageTokens": 1120,
-                    "outputImageTokensByResolution": {
-                      "1k": 1120
-                    }
-                  }
-                }
-              ]
-            }
-            """;
+        string[] aspectRatios = ["авто"];
 
-        GenerationModelCatalogDto? catalog = JsonSerializer.Deserialize<GenerationModelCatalogDto>(
-            json,
-            JsonOptions);
-
-        return catalog ?? throw new InvalidOperationException("Catalog must be deserialized.");
+        return GenerationModelCatalogJsonTestFactory.CreateCatalog(
+            modelId,
+            displayName,
+            aspectRatios);
     }
 }

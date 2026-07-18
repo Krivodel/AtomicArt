@@ -7,6 +7,7 @@ using Xunit;
 using AtomicArt.Api.ModelMetadata;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Api.Tests.ModelMetadata;
 
@@ -59,7 +60,7 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithValidJson_ReturnsCatalogSnapshot()
     {
-        string path = CreateTempFile(CreateValidJson());
+        string path = CreateTempFile(GenerationModelCatalogJsonTestFactory.CreateJson());
 
         try
         {
@@ -322,47 +323,6 @@ public sealed class JsonModelMetadataStartupLoaderTests
         }
     }
 
-    private static string CreateValidJson()
-    {
-        return
-            """
-            {
-              "models": [
-                {
-                  "id": "test-model",
-                  "displayName": "Test Model",
-                  "provider": "google",
-                  "providerModelId": "provider-test-model",
-                  "panelId": "nano-banana",
-                  "contextWindowTokens": 1000,
-                  "maxOutputTokens": 500,
-                  "maxPromptLength": 100,
-                  "aspectRatios": [ "Авто", "1:1" ],
-                  "resolutions": [ "1k" ],
-                  "generationCounts": [ 1 ],
-                  "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
-                  "attachments": {
-                    "maxCount": 1,
-                    "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 2048,
-                    "supportedContentTypes": [ "image/png" ]
-                  },
-                  "pricing": {
-                    "currencyCode": "USD",
-                    "inputTokenUsdPerMillion": 0.25,
-                    "textOutputTokenUsdPerMillion": 1.50,
-                    "imageOutputTokenUsdPerMillion": 30.00,
-                    "inputImageTokens": 1120,
-                    "outputImageTokensByResolution": {
-                      "1k": 1120
-                    }
-                  }
-                }
-              ]
-            }
-            """;
-    }
-
     private static string CreateJsonWithoutModelProperty(string propertyName)
     {
         (JsonObject catalog, JsonObject model) = CreateValidModelJson();
@@ -401,7 +361,8 @@ public sealed class JsonModelMetadataStartupLoaderTests
 
     private static (JsonObject Catalog, JsonObject Model) CreateValidModelJson()
     {
-        if (JsonNode.Parse(CreateValidJson()) is not JsonObject parsedCatalog)
+        if (JsonNode.Parse(GenerationModelCatalogJsonTestFactory.CreateJson())
+            is not JsonObject parsedCatalog)
         {
             throw new InvalidOperationException("Valid model catalog test JSON is not an object.");
         }
