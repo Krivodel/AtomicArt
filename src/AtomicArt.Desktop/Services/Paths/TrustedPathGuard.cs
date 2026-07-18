@@ -388,7 +388,7 @@ internal static class TrustedPathGuard
         EnsureNoReparsePointInExistingPath(targetDirectoryPath, failureMessage);
 
         string[] trustedDirectories = [trustedRootDirectory];
-        using SafeFileHandle tempHandle = OpenWindowsFileHandleForRename(tempFullPath);
+        using SafeFileHandle tempHandle = OpenWindowsFileHandleForMutation(tempFullPath);
         ThrowIfWindowsHandleInvalid(tempHandle, "Failed to open trusted temporary file for replacement.");
 
         ResolveTrustedOpenedFilePath(
@@ -436,7 +436,7 @@ internal static class TrustedPathGuard
         string trustedRootDirectory,
         Action<string> validateResolvedPath)
     {
-        using SafeFileHandle handle = OpenWindowsFileHandleForDeletion(trustedPath);
+        using SafeFileHandle handle = OpenWindowsFileHandleForMutation(trustedPath);
 
         if (handle.IsInvalid)
         {
@@ -460,19 +460,7 @@ internal static class TrustedPathGuard
         MarkWindowsHandleForDeletion(handle);
     }
 
-    private static SafeFileHandle OpenWindowsFileHandleForDeletion(string trustedPath)
-    {
-        return CreateFile(
-            trustedPath,
-            WindowsDeleteAccess | WindowsGenericReadAccess,
-            WindowsFileShareRead | WindowsFileShareWrite,
-            IntPtr.Zero,
-            WindowsOpenExisting,
-            0,
-            IntPtr.Zero);
-    }
-
-    private static SafeFileHandle OpenWindowsFileHandleForRename(string trustedPath)
+    private static SafeFileHandle OpenWindowsFileHandleForMutation(string trustedPath)
     {
         return CreateFile(
             trustedPath,
