@@ -212,9 +212,7 @@ public static class DependencyInjection
 
         foreach (Type implementationType in implementationTypes)
         {
-            services.AddSingleton(implementationType);
-            services.AddSingleton(markerType, provider =>
-                (IStateSection)provider.GetRequiredService(implementationType));
+            services.AddSharedSingletonImplementation(markerType, implementationType);
         }
 
         return services;
@@ -228,9 +226,7 @@ public static class DependencyInjection
 
         foreach (Type implementationType in implementationTypes)
         {
-            services.AddSingleton(implementationType);
-            services.AddSingleton(markerType, provider =>
-                (IGenerationImageFormat)provider.GetRequiredService(implementationType));
+            services.AddSharedSingletonImplementation(markerType, implementationType);
         }
 
         return services;
@@ -245,9 +241,7 @@ public static class DependencyInjection
 
         foreach (Type implementationType in implementationTypes)
         {
-            services.AddSingleton(implementationType);
-            services.AddSingleton(descriptorType, provider =>
-                (IGenerationItemStatusDescriptor)provider.GetRequiredService(implementationType));
+            services.AddSharedSingletonImplementation(descriptorType, implementationType);
         }
 
         return services;

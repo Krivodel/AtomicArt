@@ -33,10 +33,7 @@ public static class SettingsServiceCollectionExtensions
         IReadOnlyList<Type> factoryTypes =
             DesktopTypeDiscovery.FindPublicImplementations(factoryType);
 
-        foreach (Type currentFactoryType in factoryTypes)
-        {
-            services.AddSingleton(factoryType, currentFactoryType);
-        }
+        services.AddSingletonImplementations(factoryType, factoryTypes);
 
         return services;
     }
@@ -49,10 +46,7 @@ public static class SettingsServiceCollectionExtensions
         IReadOnlyList<Type> applicatorTypes =
             DesktopTypeDiscovery.FindPublicImplementations(applicatorType);
 
-        foreach (Type currentApplicatorType in applicatorTypes)
-        {
-            services.AddSingleton(applicatorType, currentApplicatorType);
-        }
+        services.AddSingletonImplementations(applicatorType, applicatorTypes);
 
         return services;
     }
