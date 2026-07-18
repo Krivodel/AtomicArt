@@ -42,7 +42,7 @@ public static class UiStrings
     public static string SettingsApiBaseAddressPlaceholder => "http://localhost:5000/";
     public static string SettingsApiBaseAddressInvalid => "Укажи абсолютный адрес HTTP или HTTPS.";
     public static string SettingsGoogleApiKeyLabel => "Google API-ключ";
-    public static string SettingsGoogleApiKeyPlaceholder => "Google API-ключ";
+    public static string SettingsGoogleApiKeyPlaceholder => SettingsGoogleApiKeyLabel;
     public static string SettingsScaleLabel => "Масштаб";
     public static string SettingsGpuResourceCacheLabel => "GPU-кэш";
     public static string SettingsSave => "Сохранить";
