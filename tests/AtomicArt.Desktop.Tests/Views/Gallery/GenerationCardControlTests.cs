@@ -22,23 +22,6 @@ public sealed class GenerationCardControlTests
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 8, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory]
-    [InlineData(0d, 0d, false)]
-    [InlineData(3d, 0d, false)]
-    [InlineData(4d, 0d, true)]
-    [InlineData(3d, 3d, true)]
-    public void HasReachedDragStartThreshold_WithPointerMovement_DetectsActualDrag(
-        double x,
-        double y,
-        bool expectedResult)
-    {
-        bool result = GenerationCardControl.HasReachedDragStartThreshold(
-            new Point(0d, 0d),
-            new Point(x, y));
-
-        result.Should().Be(expectedResult);
-    }
-
-    [Theory]
     [InlineData(KeyModifiers.None, false)]
     [InlineData(KeyModifiers.Shift, true)]
     [InlineData(KeyModifiers.Control, true)]

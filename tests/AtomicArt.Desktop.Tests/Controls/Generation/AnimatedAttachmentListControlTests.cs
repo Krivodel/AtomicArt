@@ -24,22 +24,6 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     private const double AttachmentSlotWidth = 64d;
 
     [Theory]
-    [InlineData(2d, 2d, false)]
-    [InlineData(4d, 0d, true)]
-    [InlineData(8d, 0d, true)]
-    public void HasReachedDragStartThreshold_WithPointerMovement_DetectsActualDrag(
-        double x,
-        double y,
-        bool expectedResult)
-    {
-        bool result = AnimatedAttachmentListControl.HasReachedDragStartThreshold(
-            new Point(0d, 0d),
-            new Point(x, y));
-
-        result.Should().Be(expectedResult);
-    }
-
-    [Theory]
     [InlineData(0d, 0)]
     [InlineData(63d, 0)]
     [InlineData(64d, 1)]

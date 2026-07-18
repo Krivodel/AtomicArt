@@ -5,6 +5,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Input;
 
+using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -12,7 +13,6 @@ namespace AtomicArt.Desktop.Views.Gallery;
 
 public partial class GenerationCardControl : UserControl
 {
-    private const double DragStartThreshold = 4d;
     private const int DragPreviewWidth = 256;
 
     public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
@@ -80,14 +80,6 @@ public partial class GenerationCardControl : UserControl
         return imagePath;
     }
 
-    internal static bool HasReachedDragStartThreshold(Point origin, Point current)
-    {
-        double dx = current.X - origin.X;
-        double dy = current.Y - origin.Y;
-
-        return Math.Sqrt((dx * dx) + (dy * dy)) >= DragStartThreshold;
-    }
-
     internal static string? GetImageDragPreviewPathOrDefault(GenerationItemViewModel item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -152,7 +144,7 @@ public partial class GenerationCardControl : UserControl
             return;
         }
 
-        if (!HasReachedDragStartThreshold(dragCandidate.Origin, pointerPoint.Position))
+        if (!PointerDragThreshold.IsReached(dragCandidate.Origin, pointerPoint.Position))
         {
             return;
         }

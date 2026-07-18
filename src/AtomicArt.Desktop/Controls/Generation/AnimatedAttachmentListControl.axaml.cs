@@ -35,7 +35,6 @@ public partial class AnimatedAttachmentListControl : UserControl
     private const double DefaultPreviewSize = 56d;
     private const double DefaultPreviewGap = 8d;
     private const double MovementTolerance = 0.5d;
-    private const double DragStartThreshold = 4d;
     private const int SpawnDurationMilliseconds = 280;
     private const int MoveDurationMilliseconds = 260;
     private const int RemoveDurationMilliseconds = 300;
@@ -137,14 +136,6 @@ public partial class AnimatedAttachmentListControl : UserControl
         int targetIndex = (int)Math.Floor(draggedCenterX / Math.Max(1d, slotWidth));
 
         return Math.Clamp(targetIndex, 0, itemCount - 1);
-    }
-
-    internal static bool HasReachedDragStartThreshold(Point origin, Point current)
-    {
-        double dx = current.X - origin.X;
-        double dy = current.Y - origin.Y;
-
-        return Math.Sqrt((dx * dx) + (dy * dy)) >= DragStartThreshold;
     }
 
     private static Bitmap CreateBitmap(AttachedImageViewModel item)
@@ -546,7 +537,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             return;
         }
 
-        if (!HasReachedDragStartThreshold(dragCandidate.Origin, pointerPoint.Position))
+        if (!PointerDragThreshold.IsReached(dragCandidate.Origin, pointerPoint.Position))
         {
             e.Handled = true;
             return;
