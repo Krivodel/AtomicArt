@@ -525,33 +525,10 @@ public sealed class GenerationsControllerTests
         File.Copy(sourceMetadataPath, metadataPath);
         File.WriteAllText(
             Path.Combine(contentRoot, "appsettings.json"),
-            CreateAppSettingsJson(imagesDirectory),
+            ApiTestAppSettingsJson.Create(true, imagesDirectory),
             Encoding.UTF8);
 
         return contentRoot;
-    }
-
-    private static string CreateAppSettingsJson(string imagesDirectory)
-    {
-        return $$"""
-        {
-          "Logging": {
-            "LogLevel": {
-              "Default": "Information",
-              "Microsoft.AspNetCore": "Warning"
-            }
-          },
-          "GoogleInteractions": {
-            "BaseUrl": "https://generativelanguage.googleapis.com",
-            "TimeoutSeconds": 100
-          },
-          "TestGeneration": {
-            "Enabled": true,
-            "ImagesDirectory": {{JsonSerializer.Serialize(imagesDirectory)}}
-          },
-          "AllowedHosts": "*"
-        }
-        """;
     }
 
     private static byte[] CreatePngBytes()

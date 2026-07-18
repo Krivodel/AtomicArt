@@ -150,33 +150,10 @@ public sealed class GenerationModelsControllerTests
         File.Copy(sourceMetadataPath, metadataPath);
         File.WriteAllText(
             Path.Combine(contentRoot, "appsettings.json"),
-            CreateAppSettingsJson(testGenerationEnabled),
+            ApiTestAppSettingsJson.Create(testGenerationEnabled, "TestGenerationImages"),
             Encoding.UTF8);
 
         return contentRoot;
-    }
-
-    private static string CreateAppSettingsJson(bool testGenerationEnabled)
-    {
-        return $$"""
-        {
-          "Logging": {
-            "LogLevel": {
-              "Default": "Information",
-              "Microsoft.AspNetCore": "Warning"
-            }
-          },
-          "GoogleInteractions": {
-            "BaseUrl": "https://generativelanguage.googleapis.com",
-            "TimeoutSeconds": 100
-          },
-          "TestGeneration": {
-            "Enabled": {{testGenerationEnabled.ToString().ToLowerInvariant()}},
-            "ImagesDirectory": "TestGenerationImages"
-          },
-          "AllowedHosts": "*"
-        }
-        """;
     }
 
     private static void DeleteDirectoryIfExists(string directoryPath)
