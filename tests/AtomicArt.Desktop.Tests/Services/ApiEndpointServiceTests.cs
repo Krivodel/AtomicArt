@@ -21,31 +21,44 @@ public sealed class ApiEndpointServiceTests
     [Fact]
     public void SetBaseAddress_WithChangedAddress_IncrementsRevisionAndRaisesEvent()
     {
-        IApiEndpointService service = TestApiEndpointServiceFactory.Create();
-        int eventCount = 0;
-        service.BaseAddressChanged += (_, _) => eventCount++;
+        ApiEndpointChangeTestContext context = new();
         ApiBaseAddress.TryCreate(
             "https://second.atomicart.test/",
             out ApiBaseAddress? secondAddress).Should().BeTrue();
 
-        service.SetBaseAddress(secondAddress
+        context.Service.SetBaseAddress(secondAddress
             ?? throw new InvalidOperationException("Second address is required."));
 
-        service.Revision.Should().Be(1);
-        service.BaseAddress.Should().Be(secondAddress);
-        eventCount.Should().Be(1);
+        context.Service.Revision.Should().Be(1);
+        context.Service.BaseAddress.Should().Be(secondAddress);
+        context.EventCount.Should().Be(1);
     }
 
     [Fact]
     public void SetBaseAddress_WithSameAddress_DoesNotChangeRevisionOrRaiseEvent()
     {
-        IApiEndpointService service = TestApiEndpointServiceFactory.Create();
-        int eventCount = 0;
-        service.BaseAddressChanged += (_, _) => eventCount++;
+        ApiEndpointChangeTestContext context = new();
 
-        service.SetBaseAddress(service.BaseAddress);
+        context.Service.SetBaseAddress(context.Service.BaseAddress);
 
-        service.Revision.Should().Be(0);
-        eventCount.Should().Be(0);
+        context.Service.Revision.Should().Be(0);
+        context.EventCount.Should().Be(0);
+    }
+
+    private sealed class ApiEndpointChangeTestContext
+    {
+        public IApiEndpointService Service { get; }
+        public int EventCount { get; private set; }
+
+        public ApiEndpointChangeTestContext()
+        {
+            Service = TestApiEndpointServiceFactory.Create();
+            Service.BaseAddressChanged += OnBaseAddressChanged;
+        }
+
+        private void OnBaseAddressChanged(object? sender, EventArgs e)
+        {
+            EventCount++;
+        }
     }
 }
