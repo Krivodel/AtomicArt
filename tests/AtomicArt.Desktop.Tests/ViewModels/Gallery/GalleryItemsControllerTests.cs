@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Xunit;
 
-using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Tests.Services.Generation;
@@ -86,20 +85,12 @@ public sealed class GalleryItemsControllerTests
 
     private static GalleryItemState CreateState(string? imagePath, string? thumbnailPath)
     {
-        return new GalleryItemState
-        {
-            Id = ItemId,
-            ModelId = ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            Prompt = "Prompt",
-            AspectRatio = GenerationAspectRatios.Auto,
-            Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc = CreatedAtUtc,
-            Status = GenerationItemStatus.Generated,
-            ImagePath = imagePath,
-            ThumbnailPath = thumbnailPath,
-            AttachedImagesCount = 0
-        };
+        return GalleryItemStateTestFactory.CreateGenerated(
+            prompt: "Prompt",
+            id: ItemId,
+            createdAtUtc: CreatedAtUtc,
+            imagePath: imagePath,
+            thumbnailPath: thumbnailPath);
     }
 
     private sealed class RejectingThumbnailTrustedImageFileService : TrustedImageFileServiceTestDouble

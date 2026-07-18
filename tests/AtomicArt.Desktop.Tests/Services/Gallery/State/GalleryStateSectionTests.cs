@@ -3,8 +3,8 @@ using System.Text.Json;
 using FluentAssertions;
 using Xunit;
 
-using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Tests.TestDoubles;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery.State;
 
@@ -78,19 +78,11 @@ public sealed class GalleryStateSectionTests
 
     private static GalleryItemState CreateState(string? imagePath, string? thumbnailPath)
     {
-        return new GalleryItemState
-        {
-            Id = ItemId,
-            ModelId = "nano-banana-2",
-            ModelDisplayName = "Nano Banana 2",
-            Prompt = "Prompt",
-            AspectRatio = GenerationAspectRatios.Auto,
-            Resolution = "1024x1024",
-            CreatedAtUtc = CreatedAtUtc,
-            Status = GenerationItemStatus.Generated,
-            ImagePath = imagePath,
-            ThumbnailPath = thumbnailPath,
-            AttachedImagesCount = 0
-        };
+        return GalleryItemStateTestFactory.CreateGenerated(
+            prompt: "Prompt",
+            id: ItemId,
+            createdAtUtc: CreatedAtUtc,
+            imagePath: imagePath,
+            thumbnailPath: thumbnailPath);
     }
 }

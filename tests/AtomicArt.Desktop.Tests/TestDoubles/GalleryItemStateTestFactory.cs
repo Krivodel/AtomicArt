@@ -12,21 +12,36 @@ internal static class GalleryItemStateTestFactory
 
     public static GalleryItemState CreateGenerated(
         string prompt = DefaultPrompt,
-        int secondsBefore = 0)
+        int secondsBefore = 0,
+        Guid? id = null,
+        DateTime? createdAtUtc = null,
+        string? imagePath = DefaultImagePath,
+        string? thumbnailPath = null,
+        DateTime? completedAtUtc = null,
+        TimeSpan? generationDuration = null,
+        GenerationPriceDto? price = null,
+        GenerationUsageDto? usage = null,
+        int attachedImagesCount = 0)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
 
         return new GalleryItemState
         {
-            Id = Guid.NewGuid(),
+            Id = id ?? Guid.NewGuid(),
             ModelId = ApiModelMetadataTestCatalog.NanoBanana2ModelId,
             ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             Prompt = prompt,
             AspectRatio = GenerationAspectRatios.Auto,
             Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc = CreatedAtUtc.AddSeconds(-secondsBefore),
+            CreatedAtUtc = createdAtUtc ?? CreatedAtUtc.AddSeconds(-secondsBefore),
             Status = GenerationItemStatus.Generated,
-            ImagePath = DefaultImagePath
+            ImagePath = imagePath,
+            ThumbnailPath = thumbnailPath,
+            CompletedAtUtc = completedAtUtc,
+            GenerationDuration = generationDuration,
+            Price = price,
+            Usage = usage,
+            AttachedImagesCount = attachedImagesCount
         };
     }
 }

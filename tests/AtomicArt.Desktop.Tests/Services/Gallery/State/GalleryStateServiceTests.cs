@@ -166,23 +166,16 @@ public sealed class GalleryStateServiceTests
 
     private static GalleryItemState CreateGeneratedItem(string? imagePath)
     {
-        return new GalleryItemState
-        {
-            Id = GeneratedItemId,
-            ModelId = ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            Prompt = "Prompt",
-            AspectRatio = GenerationAspectRatios.Auto,
-            Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc = CreatedAtUtc,
-            Status = GenerationItemStatus.Generated,
-            ImagePath = imagePath,
-            CompletedAtUtc = CompletedAtUtc,
-            GenerationDuration = TimeSpan.FromSeconds(5),
-            Price = new GenerationPriceDto(0.05m, "USD", "actual"),
-            Usage = new GenerationUsageDto(120, 340),
-            AttachedImagesCount = 1
-        };
+        return GalleryItemStateTestFactory.CreateGenerated(
+            prompt: "Prompt",
+            id: GeneratedItemId,
+            createdAtUtc: CreatedAtUtc,
+            imagePath: imagePath,
+            completedAtUtc: CompletedAtUtc,
+            generationDuration: TimeSpan.FromSeconds(5),
+            price: new GenerationPriceDto(0.05m, "USD", "actual"),
+            usage: new GenerationUsageDto(120, 340),
+            attachedImagesCount: 1);
     }
 
     private static GalleryItemState CreateRunningItem()
