@@ -1,6 +1,6 @@
 using AtomicArt.Desktop.Services.Gallery;
 
-namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
+namespace AtomicArt.Desktop.Tests.TestDoubles;
 
 internal sealed class RecordingAnimatedGalleryOperations : IAnimatedGalleryOperations
 {
