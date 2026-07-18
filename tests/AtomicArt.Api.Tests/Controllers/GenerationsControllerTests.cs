@@ -125,7 +125,7 @@ public sealed class GenerationsControllerTests
             Path.Combine(AppContext.BaseDirectory, relativeImagesDirectory));
         await File.WriteAllBytesAsync(
             Path.Combine(imagesDirectory.DirectoryPath, "any-file-name"),
-            CreatePngBytes(),
+            GenerationImageTestData.MinimalPngBytes,
             CancellationToken.None);
         await using WebApplicationFactory<Program> factory = CreateFactoryWithTestGeneration(
             contentRoot.DirectoryPath);
@@ -480,13 +480,6 @@ public sealed class GenerationsControllerTests
     {
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder => builder.UseContentRoot(contentRoot));
-    }
-
-    private static byte[] CreatePngBytes()
-    {
-        byte[] content = [.. GenerationImageFileSignatures.Png, 0x00];
-
-        return content;
     }
 
     private static ImageGenerationRequestDto CreateRequestWithNullAttachedImage()

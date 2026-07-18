@@ -349,7 +349,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                 image.IsVisible.Should().BeFalse();
                 loadingIndicator.IsVisible.Should().BeTrue();
 
-                AttachedImageDto dto = CreateDto("pending.png");
+                AttachedImageDto dto = GenerationImageTestData.CreateAttachedImage("pending.png");
                 pendingItem.Complete(dto, CreateState(dto));
 
                 for (int attempt = 0; attempt < 100 && image.Source is null; attempt++)
@@ -430,18 +430,10 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
 
     private static AttachedImageViewModel CreateItem(string fileName)
     {
-        AttachedImageDto dto = CreateDto(fileName);
+        AttachedImageDto dto = GenerationImageTestData.CreateAttachedImage(fileName);
         PanelAttachmentState state = CreateState(dto);
 
         return new AttachedImageViewModel(dto, state);
-    }
-
-    private static AttachedImageDto CreateDto(string fileName)
-    {
-        return new AttachedImageDto(
-            fileName,
-            GenerationImageContentTypes.Png,
-            GenerationImageTestData.ValidPngBytes);
     }
 
     private static PanelAttachmentState CreateState(AttachedImageDto dto)

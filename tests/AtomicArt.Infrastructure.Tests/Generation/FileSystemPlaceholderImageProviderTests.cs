@@ -7,6 +7,7 @@ using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Tests.Common;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Infrastructure.Tests.Generation;
 
@@ -19,13 +20,16 @@ public sealed class FileSystemPlaceholderImageProviderTests
             typeof(FileSystemPlaceholderImageProviderTests),
             nameof(GetNextAsync_WithSupportedImageWithoutExtension_ReturnsImage));
         string path = Path.Combine(directory.DirectoryPath, "any name");
-        await File.WriteAllBytesAsync(path, CreatePngBytes(), CancellationToken.None);
+        await File.WriteAllBytesAsync(
+            path,
+            GenerationImageTestData.MinimalPngBytes,
+            CancellationToken.None);
         FileSystemPlaceholderImageProvider provider = CreateProvider(directory.DirectoryPath);
 
         PlaceholderImage image = await provider.GetNextAsync("test", 0, CancellationToken.None);
 
         image.ContentType.Should().Be(GenerationImageContentTypes.Png);
-        image.Content.Should().Equal(CreatePngBytes());
+        image.Content.Should().Equal(GenerationImageTestData.MinimalPngBytes);
     }
 
     [Fact]
@@ -40,7 +44,7 @@ public sealed class FileSystemPlaceholderImageProviderTests
             CancellationToken.None);
         await File.WriteAllBytesAsync(
             Path.Combine(directory.DirectoryPath, "image.bin"),
-            CreatePngBytes(),
+            GenerationImageTestData.MinimalPngBytes,
             CancellationToken.None);
         FileSystemPlaceholderImageProvider provider = CreateProvider(directory.DirectoryPath);
 
@@ -70,7 +74,10 @@ public sealed class FileSystemPlaceholderImageProviderTests
             typeof(FileSystemPlaceholderImageProviderTests),
             nameof(GetNextAsync_WithImageOverLimit_SkipsFile));
         string path = Path.Combine(directory.DirectoryPath, "large");
-        await File.WriteAllBytesAsync(path, CreatePngBytes(), CancellationToken.None);
+        await File.WriteAllBytesAsync(
+            path,
+            GenerationImageTestData.MinimalPngBytes,
+            CancellationToken.None);
         FileSystemPlaceholderImageProvider provider = CreateProvider(
             directory.DirectoryPath,
             maxImageBytes: 4);
@@ -92,13 +99,6 @@ public sealed class FileSystemPlaceholderImageProviderTests
                 ImagesDirectory = imagesDirectory,
                 MaxImageBytes = maxImageBytes
             }));
-    }
-
-    private static byte[] CreatePngBytes()
-    {
-        byte[] content = [.. GenerationImageFileSignatures.Png, 0x00];
-
-        return content;
     }
 
 }

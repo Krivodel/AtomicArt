@@ -23,7 +23,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
 
     private static string ModelId => ApiModelMetadataTestCatalog.NanoBanana2ModelId;
 
-    private static readonly byte[] PngBytes = GenerationImageFileSignatures.Png.ToArray();
+    private static readonly byte[] PngBytes = GenerationImageTestData.PngSignatureBytes;
     private static readonly byte[] GifBytes = GenerationImageFileSignatures.Gif89A.ToArray();
     private static readonly byte[] WebpBytes =
     [
@@ -187,7 +187,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
     [Fact]
     public void Validate_WithLargeAttachedImageContent_IsValid()
     {
-        byte[] content = CreateLargePngContent(PngBytes.Length + 1_024);
+        byte[] content = GenerationImageTestData.CreatePngContent(PngBytes.Length + 1_024);
         CreateImageGenerationCommand command = CreateCommand(
             attachedImages:
             [
@@ -371,14 +371,6 @@ public sealed class CreateImageGenerationCommandValidatorTests
             .Returns(metadata);
 
         return modelDefinition.Object;
-    }
-
-    private static byte[] CreateLargePngContent(int length)
-    {
-        byte[] content = new byte[length];
-        PngBytes.CopyTo(content, 0);
-
-        return content;
     }
 
     private static CreateImageGenerationCommand CreateCommandFromJson(string json)

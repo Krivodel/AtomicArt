@@ -19,8 +19,6 @@ namespace AtomicArt.Application.Tests.Features.Generation.Commands.CreateImageGe
 
 public sealed class CreateImageGenerationHandlerTests
 {
-    private const int PngSignatureLength = 8;
-
     private static readonly Guid ItemId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
     private static readonly TimeSpan AsyncAssertionTimeout = TimeSpan.FromSeconds(1);
@@ -159,7 +157,7 @@ public sealed class CreateImageGenerationHandlerTests
                 new(
                     " source.png ",
                     " IMAGE/PNG ",
-                    CreatePngContent())
+                    GenerationImageTestData.PngSignatureBytes)
             ]);
 
         await HandleSuccessfullyAsync(handler, command);
@@ -258,7 +256,7 @@ public sealed class CreateImageGenerationHandlerTests
             .Select(index => new AttachedImageDto(
                 $"reference-{index}.png",
                 "image/png",
-                CreatePngContent()))
+                GenerationImageTestData.PngSignatureBytes))
             .ToList();
         CreateImageGenerationCommand command = CreateCommand(attachedImages: attachedImages);
 
@@ -272,13 +270,17 @@ public sealed class CreateImageGenerationHandlerTests
     {
         GenerationModelMetadataDto metadata = CreateMetadataWithAttachmentLimits(
             maxCount: 3,
-            maxSingleFileBytes: PngSignatureLength,
-            maxTotalBytes: PngSignatureLength * 3L);
+            maxSingleFileBytes: GenerationImageTestData.PngSignatureLength,
+            maxTotalBytes: GenerationImageTestData.PngSignatureLength * 3L);
         HandlerTestContext context = new(metadata);
         CreateImageGenerationCommand command = CreateCommand(
             attachedImages:
             [
-                new AttachedImageDto("reference.png", "image/png", CreateLargePngContent(PngSignatureLength + 1))
+                new AttachedImageDto(
+                    "reference.png",
+                    "image/png",
+                    GenerationImageTestData.CreatePngContent(
+                        GenerationImageTestData.PngSignatureLength + 1))
             ]);
 
         Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
@@ -291,14 +293,20 @@ public sealed class CreateImageGenerationHandlerTests
     {
         GenerationModelMetadataDto metadata = CreateMetadataWithAttachmentLimits(
             maxCount: 3,
-            maxSingleFileBytes: PngSignatureLength,
-            maxTotalBytes: PngSignatureLength + 1L);
+            maxSingleFileBytes: GenerationImageTestData.PngSignatureLength,
+            maxTotalBytes: GenerationImageTestData.PngSignatureLength + 1L);
         HandlerTestContext context = new(metadata);
         CreateImageGenerationCommand command = CreateCommand(
             attachedImages:
             [
-                new AttachedImageDto("reference-1.png", "image/png", CreatePngContent()),
-                new AttachedImageDto("reference-2.png", "image/png", CreatePngContent())
+                new AttachedImageDto(
+                    "reference-1.png",
+                    "image/png",
+                    GenerationImageTestData.PngSignatureBytes),
+                new AttachedImageDto(
+                    "reference-2.png",
+                    "image/png",
+                    GenerationImageTestData.PngSignatureBytes)
             ]);
 
         Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
@@ -535,19 +543,6 @@ public sealed class CreateImageGenerationHandlerTests
             attachedImages: attachedImages);
 
         return new CreateImageGenerationCommand(request, providerCredential);
-    }
-
-    private static byte[] CreatePngContent()
-    {
-        return GenerationImageFileSignatures.Png.ToArray();
-    }
-
-    private static byte[] CreateLargePngContent(int length)
-    {
-        byte[] content = new byte[length];
-        CreatePngContent().CopyTo(content, 0);
-
-        return content;
     }
 
     private static byte[] CreateGifContent()

@@ -24,12 +24,12 @@ public sealed class NanoBanana2AttachmentsViewModelTests
         ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] firstImages =
         [
-            CreateImage("first.png")
+            GenerationImageTestData.CreateAttachedImage("first.png")
         ];
         AttachedImageDto[] secondImages =
         [
-            CreateImage("second.png"),
-            CreateImage("third.png")
+            GenerationImageTestData.CreateAttachedImage("second.png"),
+            GenerationImageTestData.CreateAttachedImage("third.png")
         ];
 
         await AttachImagesAsync(viewModel, selectedModel, firstImages);
@@ -54,9 +54,9 @@ public sealed class NanoBanana2AttachmentsViewModelTests
         ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] images =
         [
-            CreateImage("first.png"),
-            CreateImage("second.png"),
-            CreateImage("third.png")
+            GenerationImageTestData.CreateAttachedImage("first.png"),
+            GenerationImageTestData.CreateAttachedImage("second.png"),
+            GenerationImageTestData.CreateAttachedImage("third.png")
         ];
 
         await AttachImagesAsync(viewModel, selectedModel, images);
@@ -84,8 +84,8 @@ public sealed class NanoBanana2AttachmentsViewModelTests
         ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] images =
         [
-            CreateImage("first.png"),
-            CreateImage("second.png")
+            GenerationImageTestData.CreateAttachedImage("first.png"),
+            GenerationImageTestData.CreateAttachedImage("second.png")
         ];
         Task attaching = AttachImagesAsync(viewModel, selectedModel, images);
         await preparationService.WaitUntilStartedAsync();
@@ -119,7 +119,7 @@ public sealed class NanoBanana2AttachmentsViewModelTests
         ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] images =
         [
-            CreateImage("pending.png")
+            GenerationImageTestData.CreateAttachedImage("pending.png")
         ];
         Task attaching = AttachImagesAsync(viewModel, selectedModel, images);
         await preparationService.WaitUntilStartedAsync();
@@ -152,7 +152,7 @@ public sealed class NanoBanana2AttachmentsViewModelTests
                 sourceReadStarted.TrySetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, ct);
 
-                return CreateImage("reading.png");
+                return GenerationImageTestData.CreateAttachedImage("reading.png");
             });
         ImageAttachmentInput[] inputs = [input];
 
@@ -192,7 +192,7 @@ public sealed class NanoBanana2AttachmentsViewModelTests
         ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] images =
         [
-            CreateImage("failed.png")
+            GenerationImageTestData.CreateAttachedImage("failed.png")
         ];
 
         await AttachImagesAsync(viewModel, selectedModel, images);
@@ -216,8 +216,8 @@ public sealed class NanoBanana2AttachmentsViewModelTests
         ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] images =
         [
-            CreateImage(rejectedFileName),
-            CreateImage("accepted.png")
+            GenerationImageTestData.CreateAttachedImage(rejectedFileName),
+            GenerationImageTestData.CreateAttachedImage("accepted.png")
         ];
 
         await AttachImagesAsync(viewModel, selectedModel, images);
@@ -231,8 +231,8 @@ public sealed class NanoBanana2AttachmentsViewModelTests
     [Fact]
     public async Task AttachInputsAsync_FromSeparateCalls_CompletesEachAttachmentIndependently()
     {
-        AttachedImageDto firstImage = CreateImage("first.png");
-        AttachedImageDto secondImage = CreateImage("second.png");
+        AttachedImageDto firstImage = GenerationImageTestData.CreateAttachedImage("first.png");
+        AttachedImageDto secondImage = GenerationImageTestData.CreateAttachedImage("second.png");
         ControlledAttachedImagePreparationService preparationService = new(
             [firstImage.FileName, secondImage.FileName]);
         NanoBanana2AttachmentsViewModel viewModel = new(
@@ -263,14 +263,6 @@ public sealed class NanoBanana2AttachmentsViewModelTests
 
         viewModel.AttachedImages.Should().OnlyContain(image => image.IsReady);
         viewModel.HasPendingAttachments.Should().BeFalse();
-    }
-
-    private static AttachedImageDto CreateImage(string fileName)
-    {
-        return new AttachedImageDto(
-            fileName,
-            GenerationImageContentTypes.Png,
-            GenerationImageTestData.ValidPngBytes);
     }
 
     private static ImageModelOption CreateModel()
