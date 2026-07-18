@@ -13,12 +13,8 @@ public sealed class GalleryMotionExistingAnimatorTests : GalleryMotionAnimatorTe
     [Fact]
     public async Task AnimateExistingAsync_WithMovedCard_UsesReferenceDelayDurationAndEase()
     {
-        TestUiFrameScheduler frameScheduler = new();
-        List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
-        GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
-        GalleryOperationCoordinator context = CreateContext(frameScheduler);
+        GalleryMotionTestScene scene = GalleryMotionTestScene.Create();
+        GalleryOperationCoordinator context = scene.Context;
         Guid itemId = Guid.NewGuid();
         double pitch = GalleryLayoutService.CardWidth + GalleryLayoutService.CardGap;
         int delayMilliseconds = 80;
@@ -29,22 +25,23 @@ public sealed class GalleryMotionExistingAnimatorTests : GalleryMotionAnimatorTe
         firstSnapshot[itemId] = new Rect(0d, 0d, GalleryLayoutService.CardWidth, GalleryLayoutService.CardHeight);
         GalleryAnimationTracker tracker = [];
 
-        Task animationTask = animator.AnimateFrontMaterializationAsync(
+        Task animationTask = scene.Animator.AnimateFrontMaterializationAsync(
             context,
             firstSnapshot,
             new HashSet<Guid>(),
             tracker);
 
-        appliedFrames.Should().ContainSingle();
-        appliedFrames[0].Frame.Should().Be(new MotionFrame(-pitch, 0d, 1d, 0d, 1d));
+        scene.AppliedFrames.Should().ContainSingle();
+        scene.AppliedFrames[0].Frame.Should().Be(new MotionFrame(-pitch, 0d, 1d, 0d, 1d));
         tracker.Should().ContainSingle().Which.Should().BeSameAs(control);
 
-        frameScheduler.RunNextFrame(TimeSpan.Zero);
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(delayMilliseconds - 1d));
+        scene.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+        scene.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(delayMilliseconds - 1d));
 
-        appliedFrames.Last().Frame.Should().Be(new MotionFrame(-pitch, 0d, 1d, 0d, 1d));
+        scene.AppliedFrames.Last().Frame.Should().Be(new MotionFrame(-pitch, 0d, 1d, 0d, 1d));
 
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(delayMilliseconds + (durationMilliseconds / 2d)));
+        scene.FrameScheduler.RunNextFrame(
+            TimeSpan.FromMilliseconds(delayMilliseconds + (durationMilliseconds / 2d)));
 
         List<MotionFrame> referenceFrames = GalleryMotionPlanner.BuildExistingFrames(
             firstSnapshot[itemId],
@@ -53,11 +50,12 @@ public sealed class GalleryMotionExistingAnimatorTests : GalleryMotionAnimatorTe
             0,
             context.OverlayCanvas.Bounds);
         MotionFrame expectedMiddleFrame = Interpolate(referenceFrames, MotionEasing.EaseRail(0.5d));
-        appliedFrames.Last().Frame.Should().Be(expectedMiddleFrame);
+        scene.AppliedFrames.Last().Frame.Should().Be(expectedMiddleFrame);
 
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(delayMilliseconds + durationMilliseconds));
+        scene.FrameScheduler.RunNextFrame(
+            TimeSpan.FromMilliseconds(delayMilliseconds + durationMilliseconds));
         await animationTask;
 
-        appliedFrames.Last().Frame.Should().Be(new MotionFrame(0d, 0d, 1d, 0d, 1d));
+        scene.AppliedFrames.Last().Frame.Should().Be(new MotionFrame(0d, 0d, 1d, 0d, 1d));
     }
 }

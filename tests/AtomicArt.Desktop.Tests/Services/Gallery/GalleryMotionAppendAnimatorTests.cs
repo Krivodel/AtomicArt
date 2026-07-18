@@ -12,12 +12,8 @@ public sealed class GalleryMotionAppendAnimatorTests : GalleryMotionAnimatorTest
     [Fact]
     public async Task AnimateAppendBatchAsync_WhenBatchAppended_UsesReferenceFramesDurationDelayAndEase()
     {
-        TestUiFrameScheduler frameScheduler = new();
-        List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
-        GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
-        GalleryOperationCoordinator context = CreateContext(frameScheduler);
+        GalleryMotionTestScene scene = GalleryMotionTestScene.Create();
+        GalleryOperationCoordinator context = scene.Context;
         Guid firstId = Guid.NewGuid();
         Guid secondId = Guid.NewGuid();
         Border firstControl = new();
@@ -25,28 +21,30 @@ public sealed class GalleryMotionAppendAnimatorTests : GalleryMotionAnimatorTest
         context.CardControls[firstId] = firstControl;
         context.CardControls[secondId] = secondControl;
 
-        Task animationTask = animator.AnimateAppendBatchAsync(context, new List<object> { firstId, secondId });
+        Task animationTask = scene.Animator.AnimateAppendBatchAsync(
+            context,
+            new List<object> { firstId, secondId });
 
-        appliedFrames.Should().HaveCount(2);
-        appliedFrames[0].Control.Should().BeSameAs(firstControl);
-        appliedFrames[0].Frame.Should().Be(new MotionFrame(0d, 14d, 0.96d, 0d, 0d));
-        appliedFrames[1].Control.Should().BeSameAs(secondControl);
-        appliedFrames[1].Frame.Should().Be(new MotionFrame(0d, 14d, 0.96d, 0d, 0d));
+        scene.AppliedFrames.Should().HaveCount(2);
+        scene.AppliedFrames[0].Control.Should().BeSameAs(firstControl);
+        scene.AppliedFrames[0].Frame.Should().Be(new MotionFrame(0d, 14d, 0.96d, 0d, 0d));
+        scene.AppliedFrames[1].Control.Should().BeSameAs(secondControl);
+        scene.AppliedFrames[1].Frame.Should().Be(new MotionFrame(0d, 14d, 0.96d, 0d, 0d));
 
-        frameScheduler.RunNextFrame(TimeSpan.Zero);
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(180d));
+        scene.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+        scene.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(180d));
 
-        MotionFrame middleFrame = appliedFrames.Last(frame => frame.Control == firstControl).Frame;
+        MotionFrame middleFrame = scene.AppliedFrames.Last(frame => frame.Control == firstControl).Frame;
         middleFrame.Y.Should().BeApproximately(1.75d, 0.000000000001d);
         middleFrame.Scale.Should().BeApproximately(0.995d, 0.000000000001d);
         middleFrame.Opacity.Should().BeApproximately(0.875d, 0.000000000001d);
 
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(360d));
+        scene.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(360d));
         animationTask.IsCompleted.Should().BeFalse();
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(388d));
+        scene.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(388d));
         await animationTask;
 
-        appliedFrames.Last(frame => frame.Control == secondControl)
+        scene.AppliedFrames.Last(frame => frame.Control == secondControl)
             .Frame
             .Should()
             .Be(new MotionFrame(0d, 0d, 1d, 0d, 1d));

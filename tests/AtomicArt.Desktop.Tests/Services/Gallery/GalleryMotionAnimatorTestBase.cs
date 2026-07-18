@@ -8,30 +8,12 @@ namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
 public abstract class GalleryMotionAnimatorTestBase
 {
-    private protected static GalleryMotionAnimator CreateAnimator(GalleryAnimationScheduler animationScheduler)
-    {
-        GalleryOverlayEffects overlayEffects = new(animationScheduler);
-        GalleryLayoutService galleryLayout = new();
-
-        return GalleryMotionAnimatorTestFactory.Create(
-            animationScheduler,
-            overlayEffects,
-            galleryLayout);
-    }
-
     private protected static GalleryFrontGenerationRunState CreateFrontState(IReadOnlyList<object> activeItems)
     {
         GalleryFrontGenerationRunState state = new(new List<GalleryOperation>());
         state.ActiveFrontItems.AddRange(activeItems);
 
         return state;
-    }
-
-    private protected static GalleryOperationCoordinator CreateContext(TestUiFrameScheduler frameScheduler)
-    {
-        return GalleryOperationCoordinatorTestFactory.CreateAttached(
-            frameScheduler,
-            new List<object>());
     }
 
     private protected static List<object> CreatePositionedItems(
@@ -83,5 +65,4 @@ public abstract class GalleryMotionAnimatorTestBase
     {
         return from + ((to - from) * amount);
     }
-
 }

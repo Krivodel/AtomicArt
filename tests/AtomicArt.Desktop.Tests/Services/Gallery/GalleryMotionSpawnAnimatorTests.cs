@@ -13,12 +13,8 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
     [Fact]
     public void AnimateSpawnRetargetAsync_WhenTargetsProvided_CreatesTemporaryCopiesAndReferenceFirstFrames()
     {
-        TestUiFrameScheduler frameScheduler = new();
-        List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
-        GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
-        GalleryOperationCoordinator context = CreateContext(frameScheduler);
+        GalleryMotionTestScene scene = GalleryMotionTestScene.Create();
+        GalleryOperationCoordinator context = scene.Context;
         Guid firstId = Guid.NewGuid();
         Guid secondId = Guid.NewGuid();
         double pitch = GalleryLayoutService.CardWidth + GalleryLayoutService.CardGap;
@@ -31,7 +27,7 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
         double expectedStartY = (GalleryLayoutService.CardHeight * 0.42d)
             - (GalleryLayoutService.CardHeight / 2d);
 
-        Task animationTask = animator.AnimateSpawnRetargetAsync(
+        Task animationTask = scene.Animator.AnimateSpawnRetargetAsync(
             context,
             new Dictionary<Guid, Rect>(),
             state);
@@ -41,32 +37,28 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
         state.RunningControls.Should().HaveCount(6);
         state.OverlayControls.Should().HaveCount(6);
         context.OverlayCanvas.Children.Should().HaveCount(6);
-        appliedFrames.Should().HaveCount(6);
-        appliedFrames[3].Control.Should().BeSameAs(state.SpawnClones[firstId]);
-        appliedFrames[3].Frame.X.Should().BeApproximately(expectedStartX, 0.000000000001d);
-        appliedFrames[3].Frame.Y.Should().BeApproximately(expectedStartY, 0.000000000001d);
-        appliedFrames[3].Frame.Scale.Should().Be(0.30d);
-        appliedFrames[3].Frame.Opacity.Should().Be(0d);
-        appliedFrames[5].Control.Should().BeSameAs(state.SpawnClones[secondId]);
-        appliedFrames[5].Frame.X.Should().BeApproximately(-expectedStartX, 0.000000000001d);
-        appliedFrames[5].Frame.Y.Should().BeApproximately(expectedStartY, 0.000000000001d);
-        appliedFrames[5].Frame.Scale.Should().Be(0.30d);
-        appliedFrames[5].Frame.Opacity.Should().Be(0d);
+        scene.AppliedFrames.Should().HaveCount(6);
+        scene.AppliedFrames[3].Control.Should().BeSameAs(state.SpawnClones[firstId]);
+        scene.AppliedFrames[3].Frame.X.Should().BeApproximately(expectedStartX, 0.000000000001d);
+        scene.AppliedFrames[3].Frame.Y.Should().BeApproximately(expectedStartY, 0.000000000001d);
+        scene.AppliedFrames[3].Frame.Scale.Should().Be(0.30d);
+        scene.AppliedFrames[3].Frame.Opacity.Should().Be(0d);
+        scene.AppliedFrames[5].Control.Should().BeSameAs(state.SpawnClones[secondId]);
+        scene.AppliedFrames[5].Frame.X.Should().BeApproximately(-expectedStartX, 0.000000000001d);
+        scene.AppliedFrames[5].Frame.Y.Should().BeApproximately(expectedStartY, 0.000000000001d);
+        scene.AppliedFrames[5].Frame.Scale.Should().Be(0.30d);
+        scene.AppliedFrames[5].Frame.Opacity.Should().Be(0d);
     }
 
     [Fact]
     public async Task AnimateSpawnRetargetAsync_WithEightItems_WaitsForLastTargetFlash()
     {
-        TestUiFrameScheduler frameScheduler = new();
-        List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
-        GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
-        GalleryOperationCoordinator context = CreateContext(frameScheduler);
+        GalleryMotionTestScene scene = GalleryMotionTestScene.Create();
+        GalleryOperationCoordinator context = scene.Context;
         List<object> items = CreatePositionedItems(context, 8);
         GalleryFrontGenerationRunState state = CreateFrontState(items);
 
-        Task animationTask = animator.AnimateSpawnRetargetAsync(
+        Task animationTask = scene.Animator.AnimateSpawnRetargetAsync(
             context,
             new Dictionary<Guid, Rect>(),
             state);
@@ -74,12 +66,12 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
         context.OverlayCanvas.Children.Should().HaveCount(18);
         state.OverlayControls.Should().HaveCount(18);
 
-        frameScheduler.RunNextFrame(TimeSpan.Zero);
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(1100d));
+        scene.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+        scene.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(1100d));
 
         animationTask.IsCompleted.Should().BeFalse();
 
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(1146d));
+        scene.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(1146d));
         await animationTask;
 
         animationTask.IsCompletedSuccessfully.Should().BeTrue();
@@ -88,16 +80,12 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
     [Fact]
     public void AnimateSpawnRetargetAsync_WithNineItems_CreatesTargetFlashOnlyThroughIndexSeven()
     {
-        TestUiFrameScheduler frameScheduler = new();
-        List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
-        GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
-        GalleryOperationCoordinator context = CreateContext(frameScheduler);
+        GalleryMotionTestScene scene = GalleryMotionTestScene.Create();
+        GalleryOperationCoordinator context = scene.Context;
         List<object> items = CreatePositionedItems(context, 9);
         GalleryFrontGenerationRunState state = CreateFrontState(items);
 
-        Task animationTask = animator.AnimateSpawnRetargetAsync(
+        Task animationTask = scene.Animator.AnimateSpawnRetargetAsync(
             context,
             new Dictionary<Guid, Rect>(),
             state);
@@ -111,12 +99,8 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
     [Fact]
     public async Task AnimateSpawnRetargetAsync_WithCurrentSpawnRect_UsesRetargetTimingAndStartState()
     {
-        TestUiFrameScheduler frameScheduler = new();
-        List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
-        GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
-        GalleryOperationCoordinator context = CreateContext(frameScheduler);
+        GalleryMotionTestScene scene = GalleryMotionTestScene.Create();
+        GalleryOperationCoordinator context = scene.Context;
         Guid itemId = Guid.NewGuid();
         double pitch = GalleryLayoutService.CardWidth + GalleryLayoutService.CardGap;
         Border control = CreatePositionedControl(pitch, 0d);
@@ -125,23 +109,24 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
         currentSpawnRects[itemId] = new Rect(20d, 40d, 75d, 119d);
         GalleryFrontGenerationRunState state = CreateFrontState(new List<object> { itemId });
 
-        Task animationTask = animator.AnimateSpawnRetargetAsync(
+        Task animationTask = scene.Animator.AnimateSpawnRetargetAsync(
             context,
             currentSpawnRects,
             state);
 
-        appliedFrames.Should().ContainSingle();
-        appliedFrames[0].Frame.X.Should().BeApproximately(-296.5d, 0.000000000001d);
-        appliedFrames[0].Frame.Y.Should().BeApproximately(-69.5d, 0.000000000001d);
-        appliedFrames[0].Frame.Scale.Should().BeApproximately(75d / GalleryLayoutService.CardWidth, 0.000000000001d);
-        appliedFrames[0].Frame.Opacity.Should().Be(1d);
+        scene.AppliedFrames.Should().ContainSingle();
+        scene.AppliedFrames[0].Frame.X.Should().BeApproximately(-296.5d, 0.000000000001d);
+        scene.AppliedFrames[0].Frame.Y.Should().BeApproximately(-69.5d, 0.000000000001d);
+        scene.AppliedFrames[0].Frame.Scale.Should()
+            .BeApproximately(75d / GalleryLayoutService.CardWidth, 0.000000000001d);
+        scene.AppliedFrames[0].Frame.Opacity.Should().Be(1d);
 
-        frameScheduler.RunNextFrame(TimeSpan.Zero);
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(759d));
+        scene.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+        scene.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(759d));
 
         animationTask.IsCompleted.Should().BeFalse();
 
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(760d));
+        scene.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(760d));
         await animationTask;
 
         animationTask.IsCompletedSuccessfully.Should().BeTrue();
