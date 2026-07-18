@@ -40,6 +40,11 @@ internal sealed class GoogleInteractionsResponseParser
         "canceled",
         "incomplete"
     ];
+    private static readonly string[] StatusPropertyNames =
+    [
+        StatusPropertyName,
+        StatePropertyName
+    ];
 
     public GoogleInteractionsResult Parse(string responseJson)
     {
@@ -67,14 +72,7 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static void ValidateStatus(JsonElement root)
     {
-        if (!GoogleInteractionsJsonElementReader.TryGetProperty(
-            root,
-            StatusPropertyName,
-            out JsonElement statusElement)
-            && !GoogleInteractionsJsonElementReader.TryGetProperty(
-                root,
-                StatePropertyName,
-                out statusElement))
+        if (!TryGetStatusElement(root, out JsonElement statusElement))
         {
             return;
         }
@@ -409,17 +407,33 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static string? ExtractStatus(JsonElement root)
     {
-        if (TryGetStringProperty(root, StatusPropertyName, out string? status))
+        foreach (string propertyName in StatusPropertyNames)
         {
-            return status;
-        }
-
-        if (TryGetStringProperty(root, StatePropertyName, out status))
-        {
-            return status;
+            if (TryGetStringProperty(root, propertyName, out string? status))
+            {
+                return status;
+            }
         }
 
         return null;
+    }
+
+    private static bool TryGetStatusElement(JsonElement root, out JsonElement statusElement)
+    {
+        foreach (string propertyName in StatusPropertyNames)
+        {
+            if (GoogleInteractionsJsonElementReader.TryGetProperty(
+                root,
+                propertyName,
+                out statusElement))
+            {
+                return true;
+            }
+        }
+
+        statusElement = default;
+
+        return false;
     }
 
     private static GenerationUsageDto ExtractUsage(JsonElement root)
