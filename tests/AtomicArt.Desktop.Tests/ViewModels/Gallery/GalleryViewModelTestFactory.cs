@@ -140,15 +140,6 @@ internal static class GalleryViewModelTestFactory
             return Task.CompletedTask;
         }
     }
-
-    private sealed class NullImageViewerService : IImageViewerService
-    {
-        public Task OpenAsync(GalleryImageViewerRequest request, CancellationToken ct)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
     public static GenerationLifecycleEvent CreateCompletedEvent(
         Guid correlationId,
         GenerationBatchDto batch)

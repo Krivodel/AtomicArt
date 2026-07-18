@@ -1635,7 +1635,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             new GenerationConcurrencyLimiter(),
             generationApiClient,
             new NanoBanana2GenerationLifecyclePublisher(generationLifecycleEventHub),
-            new TestGenerationResultStorage(),
+            new NullGenerationResultStorage(),
             TestGenerationActivityTrackerFactory.Create(),
             NullLogger<GenerationRunDispatcher>.Instance);
 
@@ -2076,18 +2076,6 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         }
     }
 
-    private sealed class RecordingImageViewerService : IImageViewerService
-    {
-        public GalleryImageViewerRequest? LastRequest { get; private set; }
-
-        public Task OpenAsync(GalleryImageViewerRequest request, CancellationToken ct)
-        {
-            LastRequest = request;
-
-            return Task.CompletedTask;
-        }
-    }
-
     private sealed class RecordingSecretStore : ISecretStore
     {
         private readonly string? _value;
@@ -2109,23 +2097,6 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         public Task SetSecretAsync(string key, string value, CancellationToken ct)
         {
             throw new NotSupportedException("Panel tests do not write secrets.");
-        }
-    }
-
-    private sealed class TestGenerationResultStorage : IGenerationResultStorage
-    {
-        public string? GetExpectedResultPathOrDefault(Guid batchId, Guid itemId, string contentType)
-        {
-            return null;
-        }
-
-        public Task SaveAsync(
-            Guid batchId,
-            Guid itemId,
-            GenerationImageContentValidationResult content,
-            CancellationToken ct)
-        {
-            return Task.CompletedTask;
         }
     }
 

@@ -784,7 +784,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             new GenerationConcurrencyLimiter(),
             generationApiClient,
             new NanoBanana2GenerationLifecyclePublisher(generationLifecycleEventHub),
-            new NoOpGenerationResultStorage(),
+            new NullGenerationResultStorage(),
             TestGenerationActivityTrackerFactory.Create(),
             NullLogger<GenerationRunDispatcher>.Instance);
         IImageModelOptionCatalog modelOptionCatalog =
@@ -808,7 +808,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 new NanoBanana2GenerationRequestBuilder(),
                 generationRunDispatcher),
             new NoOpGenerationPanelStateService(),
-            new NoOpImageViewerService(),
+            new NullImageViewerService(),
             new NanoBanana2QuoteViewModel(new GenerationPricePreviewEstimator()),
             new TestViewModelErrorHandler());
     }
@@ -909,31 +909,6 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         public Task DeleteAsync(
             string panelId,
             PanelAttachmentState attachment,
-            CancellationToken ct)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class NoOpImageViewerService : IImageViewerService
-    {
-        public Task OpenAsync(GalleryImageViewerRequest request, CancellationToken ct)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class NoOpGenerationResultStorage : IGenerationResultStorage
-    {
-        public string? GetExpectedResultPathOrDefault(Guid batchId, Guid itemId, string contentType)
-        {
-            return null;
-        }
-
-        public Task SaveAsync(
-            Guid batchId,
-            Guid itemId,
-            GenerationImageContentValidationResult content,
             CancellationToken ct)
         {
             return Task.CompletedTask;

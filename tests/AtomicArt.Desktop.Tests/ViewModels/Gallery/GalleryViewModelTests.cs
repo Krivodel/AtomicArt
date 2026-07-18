@@ -575,7 +575,7 @@ public sealed class GalleryViewModelTests
             new GenerationConcurrencyLimiter(),
             new ThrowingImageGenerationApiClient(),
             new NanoBanana2GenerationLifecyclePublisher(lifecycleEventHub),
-            new TestGenerationResultStorage(),
+            new NullGenerationResultStorage(),
             TestGenerationActivityTrackerFactory.Create(),
             NullLogger<GenerationRunDispatcher>.Instance);
 
@@ -664,23 +664,6 @@ public sealed class GalleryViewModelTests
         }
     }
 
-    private sealed class TestGenerationResultStorage : IGenerationResultStorage
-    {
-        public string? GetExpectedResultPathOrDefault(Guid batchId, Guid itemId, string contentType)
-        {
-            return null;
-        }
-
-        public Task SaveAsync(
-            Guid batchId,
-            Guid itemId,
-            GenerationImageContentValidationResult content,
-            CancellationToken ct)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
     private sealed class RecordingGalleryItemDeletionService : IGalleryItemDeletionService
     {
         private readonly List<GalleryItemDeletionRequest> _requests = [];
@@ -694,19 +677,4 @@ public sealed class GalleryViewModelTests
             return Task.CompletedTask;
         }
     }
-
-    private sealed class RecordingImageViewerService : IImageViewerService
-    {
-        public GalleryImageViewerRequest? LastRequest { get; private set; }
-        public int OpenCallCount { get; private set; }
-
-        public Task OpenAsync(GalleryImageViewerRequest request, CancellationToken ct)
-        {
-            LastRequest = request;
-            OpenCallCount++;
-
-            return Task.CompletedTask;
-        }
-    }
-
 }

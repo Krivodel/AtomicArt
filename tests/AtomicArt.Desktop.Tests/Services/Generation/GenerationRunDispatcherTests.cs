@@ -387,7 +387,7 @@ public sealed class GenerationRunDispatcherTests
             limiter ?? new GenerationConcurrencyLimiter(),
             apiClient,
             new NanoBanana2GenerationLifecyclePublisher(lifecycleEventHub),
-            new TestGenerationResultStorage(),
+            new NullGenerationResultStorage(),
             TestGenerationActivityTrackerFactory.Create(),
             NullLogger<GenerationRunDispatcher>.Instance);
     }
@@ -578,23 +578,6 @@ public sealed class GenerationRunDispatcherTests
             CancellationToken ct = default)
         {
             return Task.FromResult(CreateBatch(request));
-        }
-    }
-
-    private sealed class TestGenerationResultStorage : IGenerationResultStorage
-    {
-        public string? GetExpectedResultPathOrDefault(Guid batchId, Guid itemId, string contentType)
-        {
-            return null;
-        }
-
-        public Task SaveAsync(
-            Guid batchId,
-            Guid itemId,
-            GenerationImageContentValidationResult content,
-            CancellationToken ct)
-        {
-            return Task.CompletedTask;
         }
     }
 
