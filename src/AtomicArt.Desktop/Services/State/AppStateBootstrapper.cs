@@ -58,6 +58,25 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
         _logger.LogInformation("Atomic Art state flush completed.");
     }
 
+    private static async Task RunFlushOperationAsync(
+        Func<Task> operation,
+        Action<Exception> logFailure,
+        CancellationToken ct)
+    {
+        try
+        {
+            await operation().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logFailure(ex);
+        }
+    }
+
     private async Task RestoreGalleryAsync(IAppStateRestoreTarget target, CancellationToken ct)
     {
         GalleryState state = await _galleryStateService.LoadAsync(ct).ConfigureAwait(false);
@@ -89,35 +108,23 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
         }
     }
 
-    private async Task CommitPendingStateAsync(IAppStateFlushTarget target, CancellationToken ct)
+    private Task CommitPendingStateAsync(IAppStateFlushTarget target, CancellationToken ct)
     {
-        try
-        {
-            await target.CommitPendingStateAsync(ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to commit pending app state before flush.");
-        }
+        return RunFlushOperationAsync(
+            () => target.CommitPendingStateAsync(ct),
+            exception => _logger.LogError(
+                exception,
+                "Failed to commit pending app state before flush."),
+            ct);
     }
 
-    private async Task FlushCoreAsync(CancellationToken ct)
+    private Task FlushCoreAsync(CancellationToken ct)
     {
-        try
-        {
-            await _writeScheduler.FlushAsync(ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to flush app state writes.");
-        }
+        return RunFlushOperationAsync(
+            () => _writeScheduler.FlushAsync(ct),
+            exception => _logger.LogError(
+                exception,
+                "Failed to flush app state writes."),
+            ct);
     }
 }
