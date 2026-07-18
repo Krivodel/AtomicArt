@@ -306,10 +306,7 @@ public sealed class AppStateStore : IAppStateStore
     {
         try
         {
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
+            FileDeletion.DeleteIfExists(tempPath);
         }
         catch (IOException ex)
         {

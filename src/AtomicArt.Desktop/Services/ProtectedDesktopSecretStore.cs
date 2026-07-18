@@ -198,9 +198,6 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
 
     private static void DeleteTempFile(string tempPath)
     {
-        if (File.Exists(tempPath))
-        {
-            File.Delete(tempPath);
-        }
+        FileDeletion.DeleteIfExists(tempPath);
     }
 }

@@ -291,10 +291,7 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
                 path,
                 TrustedPathFailureMessage);
 
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+            FileDeletion.DeleteIfExists(path);
         }
         catch (IOException ex)
         {

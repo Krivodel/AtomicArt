@@ -256,10 +256,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
     {
         try
         {
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
+            FileDeletion.DeleteIfExists(tempPath);
         }
         catch (IOException ex)
         {
