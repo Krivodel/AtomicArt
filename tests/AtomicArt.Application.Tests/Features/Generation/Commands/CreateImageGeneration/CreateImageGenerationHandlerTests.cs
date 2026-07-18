@@ -106,6 +106,30 @@ public sealed class CreateImageGenerationHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WithNegativeProviderDuration_ClampsDurationToZero()
+    {
+        ImageGenerationContentResult content = new(
+            "image/png",
+            "iVBORw0KGgo=",
+            GenerationDuration: TimeSpan.FromSeconds(-1));
+        ImageModelRegistry registry = CreateRegistry();
+        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
+        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(content: content);
+        CreateImageGenerationHandler handler = new(
+            registry,
+            outputPlanner.Object,
+            contentProvider.Object,
+            new TestDateTimeProvider());
+        CreateImageGenerationCommand command = CreateCommand();
+
+        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        GenerationBatchDto batch = result.Value ?? throw new InvalidOperationException("Generation batch result is missing.");
+        batch.Items.Single().GenerationDuration.Should().Be(TimeSpan.Zero);
+    }
+
+    [Fact]
     public async Task Handle_WithProviderCredential_PassesProviderContextToContentProvider()
     {
         ImageGenerationContentProviderContext? capturedContext = null;

@@ -207,21 +207,27 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
             "Провайдер генерации временно недоступен.");
     }
 
-    private GenerationItemDto CreateItem(
-        ImageGenerationRequestDto request,
-        IImageModelDefinition modelDefinition,
-        ImageGenerationOutputItemPlan itemPlan,
+    private static TimeSpan ResolveGenerationDuration(
         ImageGenerationContentResult content,
         DateTime startedAtUtc,
         DateTime completedAtUtc)
     {
-        GenerationImageContentDto imageContent = new(content.ContentType, content.Base64Data);
         TimeSpan generationDuration = content.GenerationDuration ?? completedAtUtc - startedAtUtc;
 
-        if (generationDuration < TimeSpan.Zero)
-        {
-            generationDuration = TimeSpan.Zero;
-        }
+        return generationDuration < TimeSpan.Zero
+            ? TimeSpan.Zero
+            : generationDuration;
+    }
+
+    private static GenerationItemDto CreateItem(
+        ImageGenerationRequestDto request,
+        IImageModelDefinition modelDefinition,
+        ImageGenerationOutputItemPlan itemPlan,
+        ImageGenerationContentResult content,
+        DateTime completedAtUtc,
+        TimeSpan generationDuration)
+    {
+        GenerationImageContentDto imageContent = new(content.ContentType, content.Base64Data);
 
         return new GenerationItemDto(
             itemPlan.Id,
@@ -267,7 +273,7 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
             .GetContentAsync(context, ct)
             .ConfigureAwait(false);
         DateTime completedAtUtc = content.CompletedAtUtc ?? _dateTimeProvider.UtcNow;
-        TimeSpan generationDuration = content.GenerationDuration ?? completedAtUtc - startedAtUtc;
+        TimeSpan generationDuration = ResolveGenerationDuration(content, startedAtUtc, completedAtUtc);
 
         _logger.LogInformation(
             "Generation item {ItemId} at index {ItemIndex} was created by provider {Provider} in {ElapsedMilliseconds} ms. Content type: {ContentType}; Base64 length: {Base64Length} characters.",
@@ -278,6 +284,12 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
             content.ContentType,
             content.Base64Data.Length);
 
-        return CreateItem(request, modelDefinition, itemPlan, content, startedAtUtc, completedAtUtc);
+        return CreateItem(
+            request,
+            modelDefinition,
+            itemPlan,
+            content,
+            completedAtUtc,
+            generationDuration);
     }
 }
