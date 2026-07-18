@@ -39,7 +39,7 @@ public sealed class GenerationModelRulesTests
         GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be("ERR-GEN-002");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.UnsupportedResolution);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public sealed class GenerationModelRulesTests
         GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be("ERR-GEN-003");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.UnsupportedAspectRatio);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public sealed class GenerationModelRulesTests
         GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public sealed class GenerationModelRulesTests
         GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class GenerationModelRulesTests
         GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed class GenerationModelRulesTests
         GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public sealed class GenerationModelRulesTests
         GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]

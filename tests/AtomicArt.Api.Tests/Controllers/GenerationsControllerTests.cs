@@ -29,6 +29,7 @@ using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain;
+using AtomicArt.Domain.Generation;
 using AtomicArt.Infrastructure;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Infrastructure.Generation.GoogleInteractions;
@@ -223,7 +224,9 @@ public sealed class GenerationsControllerTests
     [Fact]
     public async Task CreateAsync_WithValidationResult_ReturnsBadRequestProblemDetails()
     {
-        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.ValidationError("ERR-GEN-004", "Invalid request");
+        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.ValidationError(
+            GenerationErrorCodes.ModelRequestValidation,
+            "Invalid request");
         Mock<IMediator> mediator = CreateMediator(result);
         GenerationsController controller = CreateController(mediator.Object);
         ImageGenerationRequestDto request = CreateRequest();
@@ -239,7 +242,9 @@ public sealed class GenerationsControllerTests
     [Fact]
     public async Task CreateAsync_WithNullAttachedImage_ReturnsBadRequestProblemDetails()
     {
-        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.ValidationError("ERR-GEN-004", "Invalid attachment");
+        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.ValidationError(
+            GenerationErrorCodes.ModelRequestValidation,
+            "Invalid attachment");
         Mock<IMediator> mediator = CreateMediator(result);
         GenerationsController controller = CreateController(mediator.Object);
         ImageGenerationRequestDto request = CreateRequestWithNullAttachedImage();
@@ -300,7 +305,9 @@ public sealed class GenerationsControllerTests
     [Fact]
     public async Task CreateAsync_WithNotFoundResult_ReturnsBadRequestProblemDetails()
     {
-        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.NotFound("ERR-GEN-001", "Model not found");
+        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.NotFound(
+            GenerationErrorCodes.ModelNotFound,
+            "Model not found");
         Mock<IMediator> mediator = CreateMediator(result);
         GenerationsController controller = CreateController(mediator.Object);
         ImageGenerationRequestDto request = CreateRequest();

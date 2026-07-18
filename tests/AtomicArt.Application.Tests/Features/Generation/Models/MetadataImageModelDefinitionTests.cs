@@ -58,7 +58,7 @@ public sealed class MetadataImageModelDefinitionTests
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
 
         result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-002");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.UnsupportedResolution);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class MetadataImageModelDefinitionTests
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
 
         result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public sealed class MetadataImageModelDefinitionTests
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
 
         result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public sealed class MetadataImageModelDefinitionTests
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
 
         result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public sealed class MetadataImageModelDefinitionTests
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
 
         result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class MetadataImageModelDefinitionTests
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
 
         result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public sealed class MetadataImageModelDefinitionTests
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
 
         result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public sealed class MetadataImageModelDefinitionTests
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
 
         result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 
     private static ImageGenerationRequestDto CreateRequest(
