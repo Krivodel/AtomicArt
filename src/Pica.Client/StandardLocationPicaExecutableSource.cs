@@ -4,6 +4,11 @@ namespace Pica.Client;
 
 public sealed class StandardLocationPicaExecutableSource : IPicaExecutableSource
 {
+    private const string ApplicationsDirectoryName = "Applications";
+    private const string BinDirectoryName = "bin";
+    private const string LocalDirectoryName = ".local";
+    private const string UsrDirectoryName = "usr";
+
     public IEnumerable<string> GetCandidatePaths()
     {
         if (OperatingSystem.IsMacOS())
@@ -58,10 +63,13 @@ public sealed class StandardLocationPicaExecutableSource : IPicaExecutableSource
 
         if (!string.IsNullOrWhiteSpace(userProfile))
         {
-            yield return Path.Combine(userProfile, "Applications", bundleExecutablePath);
+            yield return Path.Combine(userProfile, ApplicationsDirectoryName, bundleExecutablePath);
         }
 
-        yield return Path.Combine(Path.DirectorySeparatorChar.ToString(), "Applications", bundleExecutablePath);
+        yield return Path.Combine(
+            Path.DirectorySeparatorChar.ToString(),
+            ApplicationsDirectoryName,
+            bundleExecutablePath);
     }
 
     private static IEnumerable<string> GetLinuxCandidatePaths()
@@ -72,12 +80,12 @@ public sealed class StandardLocationPicaExecutableSource : IPicaExecutableSource
         {
             yield return Path.Combine(
                 userProfile,
-                ".local",
-                "bin",
+                LocalDirectoryName,
+                BinDirectoryName,
                 PicaProtocolConstants.ExecutableName);
             yield return Path.Combine(
                 userProfile,
-                ".local",
+                LocalDirectoryName,
                 "share",
                 PicaProtocolConstants.ApplicationName,
                 PicaProtocolConstants.ExecutableName);
@@ -85,14 +93,14 @@ public sealed class StandardLocationPicaExecutableSource : IPicaExecutableSource
 
         yield return Path.Combine(
             Path.DirectorySeparatorChar.ToString(),
-            "usr",
+            UsrDirectoryName,
             "local",
-            "bin",
+            BinDirectoryName,
             PicaProtocolConstants.ExecutableName);
         yield return Path.Combine(
             Path.DirectorySeparatorChar.ToString(),
-            "usr",
-            "bin",
+            UsrDirectoryName,
+            BinDirectoryName,
             PicaProtocolConstants.ExecutableName);
         yield return Path.Combine(
             Path.DirectorySeparatorChar.ToString(),
