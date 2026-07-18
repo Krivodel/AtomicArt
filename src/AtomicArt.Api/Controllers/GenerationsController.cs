@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using MediatR;
 
+using AtomicArt.Api.ErrorHandling;
 using AtomicArt.Application.Common.Models;
 using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Models;
@@ -86,7 +87,7 @@ public sealed class GenerationsController : ControllerBase
         ProblemDetails problemDetails = CreateProblemDetails(
             statusCode,
             problemTitle,
-            "Запрос не прошёл проверку.",
+            ValidationProblemDetailsFactory.RequestValidationDetail,
             result.ErrorCode);
 
         return StatusCode(statusCode, problemDetails);

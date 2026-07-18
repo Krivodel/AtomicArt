@@ -6,6 +6,8 @@ namespace AtomicArt.Api.ErrorHandling;
 
 public static class ValidationProblemDetailsFactory
 {
+    public const string RequestValidationDetail = "Запрос не прошёл проверку.";
+
     private const string FieldsExtensionName = "fields";
 
     public static ApiProblemDetails Create(ValidationException validationException)
@@ -16,7 +18,7 @@ public static class ValidationProblemDetailsFactory
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "Ошибка валидации запроса.",
-            Detail = "Запрос не прошёл проверку."
+            Detail = ValidationProblemDetailsFactory.RequestValidationDetail
         };
         string[] fields = validationException.Errors
             .Select(error => error.PropertyName)
