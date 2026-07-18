@@ -95,33 +95,38 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
 
     private void ShowAvailableToast()
     {
-        ApplicationUpdateViewModel? viewModel = _viewModel;
-
-        if (viewModel is null)
-        {
-            return;
-        }
-
-        DismissCurrentToast();
-        StackPanel content = CreateContent();
-        ISukiToast toast = CreateToastBuilder(content)
-            .WithActionButton(
-                UiStrings.UpdateLater,
-                OnUpdateLaterRequested,
-                true,
-                SukiButtonStyles.Basic)
-            .WithActionButton(
-                viewModel.UpdateActionText,
-                OnUpdateRequested,
-                true)
-            .Queue();
-        _updateButton = toast.ActionButtons
-            .OfType<Button>()
-            .LastOrDefault();
-        PresentToast(toast, ApplicationUpdateState.Available, viewModel);
+        ShowToast(
+            (viewModel, builder) => builder
+                .WithActionButton(
+                    UiStrings.UpdateLater,
+                    OnUpdateLaterRequested,
+                    true,
+                    SukiButtonStyles.Basic)
+                .WithActionButton(
+                    viewModel.UpdateActionText,
+                    OnUpdateRequested,
+                    true),
+            static _ => ApplicationUpdateState.Available,
+            toast =>
+            {
+                _updateButton = toast.ActionButtons
+                    .OfType<Button>()
+                    .LastOrDefault();
+            });
     }
 
     private void ShowProgressToast()
+    {
+        ShowToast(
+            static (_, builder) => builder.WithLoadingState(true),
+            static viewModel => viewModel.State,
+            toastQueued: null);
+    }
+
+    private void ShowToast(
+        Func<ApplicationUpdateViewModel, SukiToastBuilder, SukiToastBuilder> configureBuilder,
+        Func<ApplicationUpdateViewModel, ApplicationUpdateState> selectState,
+        Action<ISukiToast>? toastQueued)
     {
         ApplicationUpdateViewModel? viewModel = _viewModel;
 
@@ -132,11 +137,10 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
 
         DismissCurrentToast();
         StackPanel content = CreateContent();
-        ISukiToast toast = CreateToastBuilder(content)
-            .WithLoadingState(true)
-            .Queue();
-
-        PresentToast(toast, viewModel.State, viewModel);
+        SukiToastBuilder builder = configureBuilder(viewModel, CreateToastBuilder(content));
+        ISukiToast toast = builder.Queue();
+        toastQueued?.Invoke(toast);
+        PresentToast(toast, selectState(viewModel), viewModel);
     }
 
     private SukiToastBuilder CreateToastBuilder(StackPanel content)
