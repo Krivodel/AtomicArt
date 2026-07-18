@@ -22,6 +22,7 @@ namespace AtomicArt.Desktop.Tests.Controls.Generation;
 public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlTestBase
 {
     private const double AttachmentSlotWidth = 64d;
+    private const double AttachmentViewportHeight = 96d;
 
     [Theory]
     [InlineData(0d, 0)]
@@ -73,13 +74,8 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
         Dispatch(() =>
         {
             ObservableCollection<AttachedImageViewModel> items = [CreateItem("first.png")];
-            AnimatedAttachmentListControl control = new()
-            {
-                Items = items
-            };
-            Window window = Show(control, 420d, 96d);
 
-            try
+            ShowAttachments(items, 420d, (control, _) =>
             {
                 Canvas panel = GetAttachmentPanel(control);
 
@@ -87,11 +83,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                     ?? throw new InvalidOperationException("Attachment panel position was not available.");
 
                 panelPosition.X.Should().Be(0d);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -105,13 +97,8 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                 AttachedImageViewModel.CreateLoading("loading.png"),
                 CreateItem("ready.png")
             ];
-            AnimatedAttachmentListControl control = new()
-            {
-                Items = items
-            };
-            Window window = Show(control, 160d, 96d);
 
-            try
+            ShowAttachments(items, 160d, (control, _) =>
             {
                 List<Border> previews = control
                     .GetVisualDescendants()
@@ -122,11 +109,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                 previews.Should().HaveCount(2);
                 previews.Should().OnlyContain(
                     preview => preview.BorderThickness == new Thickness(0d));
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -136,13 +119,8 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
         Dispatch(() =>
         {
             ObservableCollection<AttachedImageViewModel> items = [CreateItem("ready.png")];
-            AnimatedAttachmentListControl control = new()
-            {
-                Items = items
-            };
-            Window window = Show(control, 160d, 96d);
 
-            try
+            ShowAttachments(items, 160d, (control, _) =>
             {
                 Image image = control
                     .GetVisualDescendants()
@@ -152,11 +130,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                 RenderOptions.GetBitmapInterpolationMode(image)
                     .Should()
                     .Be(BitmapInterpolationMode.MediumQuality);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -167,13 +141,8 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
         {
             AttachedImageViewModel firstItem = CreateItem("first.png");
             ObservableCollection<AttachedImageViewModel> items = [firstItem];
-            AnimatedAttachmentListControl control = new()
-            {
-                Items = items
-            };
-            Window window = Show(control, 240d, 96d);
 
-            try
+            ShowAttachments(items, 240d, (control, window) =>
             {
                 Canvas panel = GetAttachmentPanel(control);
                 Control firstControl = panel.Children.OfType<Control>().Single();
@@ -201,11 +170,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                 (Math.Abs(translate.X) + Math.Abs(translate.Y)).Should().BeGreaterThan(0d);
                 scale.ScaleX.Should().Be(0.94d);
                 scale.ScaleY.Should().Be(0.94d);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -214,19 +179,12 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     {
         Dispatch(() =>
         {
-            ObservableCollection<AttachedImageViewModel> items =
-            [
-                CreateItem("first.png"),
-                CreateItem("second.png"),
-                CreateItem("third.png")
-            ];
-            AnimatedAttachmentListControl control = new()
-            {
-                Items = items
-            };
-            Window window = Show(control, 160d, 96d);
+            ObservableCollection<AttachedImageViewModel> items = CreateReadyItems(
+                "first.png",
+                "second.png",
+                "third.png");
 
-            try
+            ShowAttachments(items, 160d, (control, window) =>
             {
                 ScrollViewer scrollViewer = GetAttachmentScrollViewer(control);
                 Canvas panel = GetAttachmentPanel(control);
@@ -240,11 +198,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
 
                 double expectedOffsetX = Math.Max(0d, panel.Width - scrollViewer.Viewport.Width);
                 scrollViewer.Offset.X.Should().BeApproximately(expectedOffsetX, 1d);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -253,19 +207,12 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     {
         Dispatch(() =>
         {
-            ObservableCollection<AttachedImageViewModel> items =
-            [
-                CreateItem("first.png"),
-                CreateItem("second.png"),
-                CreateItem("third.png")
-            ];
-            AnimatedAttachmentListControl control = new()
-            {
-                Items = items
-            };
-            Window window = Show(control, 260d, 96d);
+            ObservableCollection<AttachedImageViewModel> items = CreateReadyItems(
+                "first.png",
+                "second.png",
+                "third.png");
 
-            try
+            ShowAttachments(items, 260d, (control, window) =>
             {
                 Canvas panel = GetAttachmentPanel(control);
                 Canvas overlay = GetOverlayCanvas(control);
@@ -281,11 +228,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
 
                 panel.Children.OfType<Control>().Should().ContainSingle();
                 overlay.Children.OfType<Control>().Should().HaveCount(2);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -298,13 +241,8 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
             [
                 AttachedImageViewModel.CreateLoading("loading.png")
             ];
-            AnimatedAttachmentListControl control = new()
-            {
-                Items = items
-            };
-            Window window = Show(control, 160d, 96d);
 
-            try
+            ShowAttachments(items, 160d, (control, window) =>
             {
                 Canvas panel = GetAttachmentPanel(control);
                 Canvas overlay = GetOverlayCanvas(control);
@@ -314,11 +252,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
 
                 panel.Children.OfType<Control>().Should().BeEmpty();
                 overlay.Children.OfType<Control>().Should().ContainSingle();
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -329,13 +263,8 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
         {
             AttachedImageViewModel pendingItem = AttachedImageViewModel.CreateLoading("pending.png");
             ObservableCollection<AttachedImageViewModel> items = [pendingItem];
-            AnimatedAttachmentListControl control = new()
-            {
-                Items = items
-            };
-            Window window = Show(control, 160d, 96d);
 
-            try
+            await ShowAttachmentsAsync(items, 160d, async (control, window) =>
             {
                 Image image = control
                     .GetVisualDescendants()
@@ -372,12 +301,42 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
 
                 image.IsVisible.Should().BeTrue();
                 image.Opacity.Should().Be(1d);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
+    }
+
+    private static void ShowAttachments(
+        ObservableCollection<AttachedImageViewModel> items,
+        double width,
+        Action<AnimatedAttachmentListControl, Window> action)
+    {
+        AnimatedAttachmentListControl control = new()
+        {
+            Items = items
+        };
+
+        Show(control, width, AttachmentViewportHeight, window => action(control, window));
+    }
+
+    private static async Task ShowAttachmentsAsync(
+        ObservableCollection<AttachedImageViewModel> items,
+        double width,
+        Func<AnimatedAttachmentListControl, Window, Task> action)
+    {
+        AnimatedAttachmentListControl control = new()
+        {
+            Items = items
+        };
+        Window window = Show(control, width, AttachmentViewportHeight);
+
+        try
+        {
+            await action(control, window);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     private static Canvas GetAttachmentPanel(AnimatedAttachmentListControl control)
@@ -434,6 +393,13 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
         PanelAttachmentState state = CreateState(dto);
 
         return new AttachedImageViewModel(dto, state);
+    }
+
+    private static ObservableCollection<AttachedImageViewModel> CreateReadyItems(
+        params string[] fileNames)
+    {
+        return new ObservableCollection<AttachedImageViewModel>(
+            fileNames.Select(CreateItem));
     }
 
     private static PanelAttachmentState CreateState(AttachedImageDto dto)
