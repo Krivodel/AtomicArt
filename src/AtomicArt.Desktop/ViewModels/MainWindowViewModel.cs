@@ -54,17 +54,16 @@ public sealed partial class MainWindowViewModel :
         ApplicationUpdateViewModel applicationUpdate,
         IViewModelErrorHandler errorHandler)
     {
-        ValidateConstructorArguments(
-            gallery,
-            settings,
-            modelPanels,
-            desktopModelPanelRegistry,
-            uiScaleService,
-            trayService,
-            windowStateService,
-            appStateBootstrapper,
-            applicationUpdate,
-            errorHandler);
+        ArgumentNullException.ThrowIfNull(gallery);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(modelPanels);
+        ArgumentNullException.ThrowIfNull(desktopModelPanelRegistry);
+        ArgumentNullException.ThrowIfNull(uiScaleService);
+        ArgumentNullException.ThrowIfNull(trayService);
+        ArgumentNullException.ThrowIfNull(windowStateService);
+        ArgumentNullException.ThrowIfNull(appStateBootstrapper);
+        ArgumentNullException.ThrowIfNull(applicationUpdate);
+        ArgumentNullException.ThrowIfNull(errorHandler);
 
         IReadOnlyList<IModelPanelViewModel> panels = modelPanels.ToList();
         Gallery = gallery;
@@ -174,30 +173,6 @@ public sealed partial class MainWindowViewModel :
         {
             IsLoading = false;
         }
-    }
-
-    private static void ValidateConstructorArguments(
-        GalleryViewModel gallery,
-        SettingsViewModel settings,
-        IEnumerable<IModelPanelViewModel> modelPanels,
-        DesktopModelPanelRegistry desktopModelPanelRegistry,
-        IUiScaleService uiScaleService,
-        ITrayService trayService,
-        IWindowStateService windowStateService,
-        IAppStateBootstrapper appStateBootstrapper,
-        ApplicationUpdateViewModel applicationUpdate,
-        IViewModelErrorHandler errorHandler)
-    {
-        ArgumentNullException.ThrowIfNull(gallery);
-        ArgumentNullException.ThrowIfNull(settings);
-        ArgumentNullException.ThrowIfNull(modelPanels);
-        ArgumentNullException.ThrowIfNull(desktopModelPanelRegistry);
-        ArgumentNullException.ThrowIfNull(uiScaleService);
-        ArgumentNullException.ThrowIfNull(trayService);
-        ArgumentNullException.ThrowIfNull(windowStateService);
-        ArgumentNullException.ThrowIfNull(appStateBootstrapper);
-        ArgumentNullException.ThrowIfNull(applicationUpdate);
-        ArgumentNullException.ThrowIfNull(errorHandler);
     }
 
     private void SubscribeToEvents()
