@@ -65,18 +65,18 @@ public sealed class ImageGenerationApiClient : IImageGenerationApiClient
 
         if (!response.IsSuccessStatusCode)
         {
-            SafeApiProblemDetailsReadResult problemDetails = await SafeApiProblemDetailsReader
-                .TryReadErrorCodeAsync(response.Content, ct)
+            await SafeApiProblemDetailsReader
+                .LogResponseFailureAsync(
+                    _logger,
+                    response,
+                    SafeApiProblemDetailsApi.ImageGeneration,
+                    errorCode => _logger.LogWarning(
+                        "Image generation API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
+                        (int)response.StatusCode,
+                        errorCode,
+                        stopwatch.ElapsedMilliseconds),
+                    ct)
                 .ConfigureAwait(false);
-            SafeApiProblemDetailsReader.LogReadFailure(
-                _logger,
-                problemDetails,
-                SafeApiProblemDetailsApi.ImageGeneration);
-            _logger.LogWarning(
-                "Image generation API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
-                (int)response.StatusCode,
-                problemDetails.LogErrorCode,
-                stopwatch.ElapsedMilliseconds);
         }
 
         response.EnsureSuccessStatusCode();

@@ -39,18 +39,18 @@ public sealed class GenerationModelCatalogApiClient : IGenerationModelCatalogApi
 
         if (!response.IsSuccessStatusCode)
         {
-            SafeApiProblemDetailsReadResult problemDetails = await SafeApiProblemDetailsReader
-                .TryReadErrorCodeAsync(response.Content, ct)
+            await SafeApiProblemDetailsReader
+                .LogResponseFailureAsync(
+                    _logger,
+                    response,
+                    SafeApiProblemDetailsApi.GenerationModelCatalog,
+                    errorCode => _logger.LogWarning(
+                        "Generation model catalog API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
+                        (int)response.StatusCode,
+                        errorCode,
+                        stopwatch.ElapsedMilliseconds),
+                    ct)
                 .ConfigureAwait(false);
-            SafeApiProblemDetailsReader.LogReadFailure(
-                _logger,
-                problemDetails,
-                SafeApiProblemDetailsApi.GenerationModelCatalog);
-            _logger.LogWarning(
-                "Generation model catalog API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
-                (int)response.StatusCode,
-                problemDetails.LogErrorCode,
-                stopwatch.ElapsedMilliseconds);
         }
 
         response.EnsureSuccessStatusCode();

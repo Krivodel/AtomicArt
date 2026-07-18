@@ -90,6 +90,25 @@ internal static class SafeApiProblemDetailsReader
         }
     }
 
+    internal static async Task LogResponseFailureAsync(
+        ILogger logger,
+        HttpResponseMessage response,
+        SafeApiProblemDetailsApi api,
+        Action<string> logResponseFailure,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(response);
+        ArgumentNullException.ThrowIfNull(logResponseFailure);
+
+        SafeApiProblemDetailsReadResult problemDetails = await TryReadErrorCodeAsync(
+                response.Content,
+                ct)
+            .ConfigureAwait(false);
+        LogReadFailure(logger, problemDetails, api);
+        logResponseFailure(problemDetails.LogErrorCode);
+    }
+
     private static async Task<string?> ReadErrorCodeAsync(
         HttpContent content,
         CancellationToken ct)
