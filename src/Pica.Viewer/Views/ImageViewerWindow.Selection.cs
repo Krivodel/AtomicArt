@@ -92,17 +92,17 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         _selectionOverlayAnimationId++;
         _view.SelectionOverlay.IsVisible = true;
-        _view.SelectionShade.Opacity = VisibleControlsOpacity;
-        _view.SelectionFrame.Opacity = VisibleControlsOpacity;
+        _view.SelectionShade.Opacity = ImageViewerVisualMetrics.VisibleControlsOpacity;
+        _view.SelectionFrame.Opacity = ImageViewerVisualMetrics.VisibleControlsOpacity;
     }
 
     private async void HideSelectionOverlay()
     {
         long animationId = ++_selectionOverlayAnimationId;
-        _view.SelectionShade.Opacity = HiddenControlsOpacity;
-        _view.SelectionFrame.Opacity = HiddenControlsOpacity;
+        _view.SelectionShade.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
+        _view.SelectionFrame.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
 
-        await Task.Delay(SelectionOverlayFadeDuration);
+        await Task.Delay(ImageViewerVisualMetrics.SelectionOverlayFadeDuration);
 
         if ((animationId == _selectionOverlayAnimationId)
             && !_isSelectionActive
@@ -178,13 +178,18 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         double toolbarWidth = _view.SelectionToolbar.Width;
         double maximumToolbarX = Math.Max(0d, viewport.Width - toolbarWidth);
-        double maximumToolbarY = Math.Max(0d, viewport.Height - SelectionToolbarHeight);
+        double maximumToolbarY = Math.Max(
+            0d,
+            viewport.Height - ImageViewerVisualMetrics.SelectionToolbarHeight);
         double centeredX = Math.Clamp(
             rect.Left + ((rect.Width - toolbarWidth) / 2d),
             0d,
             maximumToolbarX);
 
-        if (rect.Bottom + SelectionToolbarGap + SelectionToolbarHeight <= viewport.Height)
+        if (rect.Bottom
+            + SelectionToolbarGap
+            + ImageViewerVisualMetrics.SelectionToolbarHeight
+            <= viewport.Height)
         {
             double toolbarY = Math.Clamp(rect.Bottom + SelectionToolbarGap, 0d, maximumToolbarY);
 
@@ -192,7 +197,8 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         double centeredY = Math.Clamp(
-            rect.Top + ((rect.Height - SelectionToolbarHeight) / 2d),
+            rect.Top
+                + ((rect.Height - ImageViewerVisualMetrics.SelectionToolbarHeight) / 2d),
             0d,
             maximumToolbarY);
 
@@ -206,13 +212,24 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return new Point(rect.Left - SelectionToolbarGap - toolbarWidth, centeredY);
         }
 
-        if (rect.Top - SelectionToolbarGap - SelectionToolbarHeight >= 0d)
+        if (rect.Top
+            - SelectionToolbarGap
+            - ImageViewerVisualMetrics.SelectionToolbarHeight
+            >= 0d)
         {
-            return new Point(centeredX, rect.Top - SelectionToolbarGap - SelectionToolbarHeight);
+            return new Point(
+                centeredX,
+                rect.Top
+                    - SelectionToolbarGap
+                    - ImageViewerVisualMetrics.SelectionToolbarHeight);
         }
 
         double fallbackY = Math.Clamp(
-            Math.Max(rect.Top, rect.Bottom - SelectionToolbarHeight - SelectionToolbarGap),
+            Math.Max(
+                rect.Top,
+                rect.Bottom
+                    - ImageViewerVisualMetrics.SelectionToolbarHeight
+                    - SelectionToolbarGap),
             0d,
             maximumToolbarY);
 

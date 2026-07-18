@@ -24,14 +24,17 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
-        double edgeWidth = Math.Max(ArrowAreaMinWidth, viewport.Width * EdgeRevealRatio);
+        double edgeWidth = Math.Max(
+            ImageViewerVisualMetrics.ArrowAreaMinWidth,
+            viewport.Width * EdgeRevealRatio);
         _view.LeftNavigationArea.Width = edgeWidth;
         _view.RightNavigationArea.Width = edgeWidth;
         SetControlVisibility(_view.LeftNavigationArea, pointerPosition.X <= edgeWidth);
         SetControlVisibility(_view.RightNavigationArea, pointerPosition.X >= viewport.Width - edgeWidth);
         SetControlVisibility(_view.BottomControls, pointerPosition.Y >= viewport.Height - BottomRevealSize);
-        bool showsWindowButtons = (pointerPosition.X >= viewport.Width - (CloseRevealSize * 3d))
-            && (pointerPosition.Y <= CloseRevealSize);
+        bool showsWindowButtons = (pointerPosition.X
+                >= viewport.Width - (ImageViewerVisualMetrics.CloseRevealSize * 3d))
+            && (pointerPosition.Y <= ImageViewerVisualMetrics.CloseRevealSize);
         SetControlVisibility(_view.FullscreenSettingsButton, showsWindowButtons);
         SetControlVisibility(_view.WindowModeButton, showsWindowButtons);
         SetControlVisibility(_view.CloseButton, showsWindowButtons);
@@ -55,7 +58,9 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private static void SetControlVisibility(InputElement control, bool isVisible)
     {
-        control.Opacity = isVisible ? VisibleControlsOpacity : HiddenControlsOpacity;
+        control.Opacity = isVisible
+            ? ImageViewerVisualMetrics.VisibleControlsOpacity
+            : ImageViewerVisualMetrics.HiddenControlsOpacity;
         control.IsHitTestVisible = isVisible;
     }
 
@@ -81,12 +86,12 @@ public sealed partial class ImageViewerWindow : SukiWindow
         Point menuPosition = CalculateFloatingMenuPosition(position, menuSize, viewport);
         Canvas.SetLeft(_view.ContextMenu, menuPosition.X);
         Canvas.SetTop(_view.ContextMenu, menuPosition.Y);
-        _view.ContextMenu.Opacity = VisibleControlsOpacity;
+        _view.ContextMenu.Opacity = ImageViewerVisualMetrics.VisibleControlsOpacity;
     }
 
     private void HideContextMenu()
     {
-        _view.ContextMenu.Opacity = HiddenControlsOpacity;
+        _view.ContextMenu.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
         _view.ContextMenu.IsVisible = false;
         HideOpenWithSubmenu();
     }
@@ -124,13 +129,13 @@ public sealed partial class ImageViewerWindow : SukiWindow
         double maxY = Math.Max(0d, viewport.Height - submenuSize.Height);
         Canvas.SetLeft(_view.OpenWithMenu, Math.Clamp(x, 0d, maxX));
         Canvas.SetTop(_view.OpenWithMenu, Math.Clamp(anchorPosition.Y, 0d, maxY));
-        _view.OpenWithMenu.Opacity = VisibleControlsOpacity;
+        _view.OpenWithMenu.Opacity = ImageViewerVisualMetrics.VisibleControlsOpacity;
     }
 
     private void HideOpenWithSubmenu()
     {
         _openWithMenuHideTimer.Stop();
-        _view.OpenWithMenu.Opacity = HiddenControlsOpacity;
+        _view.OpenWithMenu.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
         _view.OpenWithMenu.IsVisible = false;
         _openWithAnchor = null;
     }

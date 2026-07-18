@@ -196,15 +196,18 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         _view.SettingsPanel.IsVisible = true;
         _view.SettingsPanel.IsHitTestVisible = true;
-        StartSettingsPanelAnimation(VisibleControlsOpacity, 0d, null);
+        StartSettingsPanelAnimation(
+            ImageViewerVisualMetrics.VisibleControlsOpacity,
+            0d,
+            null);
     }
 
     private void HideSettingsPanel()
     {
         _view.SettingsPanel.IsHitTestVisible = false;
         StartSettingsPanelAnimation(
-            HiddenControlsOpacity,
-            SettingsPanelHiddenOffset,
+            ImageViewerVisualMetrics.HiddenControlsOpacity,
+            ImageViewerVisualMetrics.SettingsPanelHiddenOffset,
             CompleteSettingsPanelHide);
     }
 
@@ -213,11 +216,11 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _settingsPanelAnimationId++;
         _view.SettingsPanel.IsHitTestVisible = false;
         _view.SettingsPanel.IsVisible = false;
-        _view.SettingsPanel.Opacity = HiddenControlsOpacity;
+        _view.SettingsPanel.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
 
         if (_view.SettingsPanel.RenderTransform is TranslateTransform transform)
         {
-            transform.Y = SettingsPanelHiddenOffset;
+            transform.Y = ImageViewerVisualMetrics.SettingsPanelHiddenOffset;
         }
     }
 

@@ -15,30 +15,23 @@ namespace Pica.Viewer.Views;
 
 public sealed partial class ImageViewerWindow : SukiWindow
 {
-    private const double HiddenControlsOpacity = 0d;
-    private const double VisibleControlsOpacity = 1d;
     private const double EdgeRevealRatio = 0.04d;
-    private const double CloseRevealSize = 64d;
     private const double BottomRevealSize = 128d;
     private const double ContextMenuGap = 8d;
     private const double ContextMenuFallbackWidth = 172d;
     private const double ContextMenuFallbackHeight = 260d;
     private const double OpenWithMenuFallbackWidth = 220d;
     private const double OpenWithMenuFallbackHeight = 52d;
-    private const double ArrowAreaMinWidth = 24d;
-    private const double SelectionToolbarHeight = 44d;
     private const double SelectionToolbarGap = 10d;
     private const double SelectionHandleSize = 8d;
     private const double MinimumSelectionSize = 12d;
     private const double DefaultZoomButtonFactor = 1.2d;
     private const double WheelZoomBase = 1.0015d;
     private const double SettingsPanelAnimationDurationSeconds = 0.16d;
-    private const double SettingsPanelHiddenOffset = -10d;
     private const double ScaleAnimationDurationSeconds = 0.14d;
     private const double CopyFeedbackOpacity = 0.44d;
     private const double CopyFeedbackFadeInDurationSeconds = 0.1d;
     private const double CopyFeedbackFadeOutDurationSeconds = 0.08d;
-    private const double SelectionOverlayFadeDurationSeconds = 0.16d;
     private const double MinimumScale = 0.05d;
     private const double MaximumScale = 32d;
     private const int CursorHideDelayMilliseconds = 1000;
@@ -55,8 +48,6 @@ public sealed partial class ImageViewerWindow : SukiWindow
         TimeSpan.FromSeconds(CopyFeedbackFadeInDurationSeconds);
     private static readonly TimeSpan CopyFeedbackFadeOutDuration =
         TimeSpan.FromSeconds(CopyFeedbackFadeOutDurationSeconds);
-    private static readonly TimeSpan SelectionOverlayFadeDuration =
-        TimeSpan.FromSeconds(SelectionOverlayFadeDurationSeconds);
     private static readonly TimeSpan SettingsPanelAnimationDuration =
         TimeSpan.FromSeconds(SettingsPanelAnimationDurationSeconds);
     private static readonly double ZoomButtonStepBase =
@@ -275,7 +266,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         LoadSelectedImage();
         ApplyInitialWindowMode();
-        _view.FadeOverlay.Opacity = HiddenControlsOpacity;
+        _view.FadeOverlay.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
         _cursorTimer.Start();
     }
 

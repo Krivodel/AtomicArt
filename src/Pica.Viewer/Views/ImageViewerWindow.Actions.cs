@@ -40,13 +40,13 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         await AnimateCopyFeedbackOpacityAsync(
             animationId,
-            HiddenControlsOpacity,
+            ImageViewerVisualMetrics.HiddenControlsOpacity,
             CopyFeedbackOpacity,
             CopyFeedbackFadeInDuration);
         await AnimateCopyFeedbackOpacityAsync(
             animationId,
             CopyFeedbackOpacity,
-            HiddenControlsOpacity,
+            ImageViewerVisualMetrics.HiddenControlsOpacity,
             CopyFeedbackFadeOutDuration);
     }
 

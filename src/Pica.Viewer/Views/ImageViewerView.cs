@@ -50,12 +50,8 @@ internal sealed class ImageViewerView : IDisposable
     private const string OpenWithIconGeometry = "M13,3 L20,3 L20,10 L18,10 L18,6.4 L9.4,15 L8,13.6 L16.6,5 L13,5 Z M4,5 L10,5 L10,7 L6,7 L6,17 L16,17 L16,13 L18,13 L18,19 L4,19 Z";
     private const string SubmenuIconGeometry = "M9,6 L15,12 L9,18 Z";
     private const string WindowModeIconGeometry = "M6,6 L18,6 L18,18 L6,18 Z M8,8 L8,16 L16,16 L16,8 Z";
-    private const double HiddenControlsOpacity = 0d;
-    private const double VisibleControlsOpacity = 1d;
-    private const double CloseRevealSize = 64d;
     private const double SettingsPanelTopGap = 8d;
     private const double SettingsPanelRightMargin = 12d;
-    private const double ArrowAreaMinWidth = 24d;
     private const double NavigationIconSize = 44d;
     private const double NavigationShadowPadding = 8d;
     private const double ToolShadowPadding = 7d;
@@ -63,17 +59,12 @@ internal sealed class ImageViewerView : IDisposable
     private const double ToolIconSize = 22d;
     private const double WindowResizeBorderSize = 6d;
     private const double WindowResizeCornerSize = 12d;
-    private const double SettingsPanelHiddenOffset = -10d;
     private const double SelectionButtonSize = 42d;
     private const double SelectionButtonSpacing = 6d;
     private const double SelectionToolbarPadding = 8d;
-    private const double SelectionToolbarHeight = 44d;
     private const double ControlsFadeDurationSeconds = 0.16d;
-    private const double SelectionOverlayFadeDurationSeconds = 0.16d;
     private static readonly TimeSpan ControlsFadeDuration =
         TimeSpan.FromSeconds(ControlsFadeDurationSeconds);
-    private static readonly TimeSpan SelectionOverlayFadeDuration =
-        TimeSpan.FromSeconds(SelectionOverlayFadeDurationSeconds);
     private static readonly IBrush DestructiveIconBrush =
         new SolidColorBrush(Color.FromRgb(179, 38, 30));
     private static readonly Cursor HandCursor = new(StandardCursorType.Hand);
@@ -194,7 +185,7 @@ internal sealed class ImageViewerView : IDisposable
         {
             Background = Brushes.Black,
             ClipToBounds = true,
-            Opacity = VisibleControlsOpacity
+            Opacity = ImageViewerVisualMetrics.VisibleControlsOpacity
         };
     }
 
@@ -285,8 +276,10 @@ internal sealed class ImageViewerView : IDisposable
             HorizontalAlignment = HorizontalAlignment.Right,
             IsHitTestVisible = false,
             IsVisible = false,
-            Opacity = HiddenControlsOpacity,
-            RenderTransform = new TranslateTransform(0d, SettingsPanelHiddenOffset),
+            Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
+            RenderTransform = new TranslateTransform(
+                0d,
+                ImageViewerVisualMetrics.SettingsPanelHiddenOffset),
             VerticalAlignment = VerticalAlignment.Top
         };
     }
@@ -295,7 +288,7 @@ internal sealed class ImageViewerView : IDisposable
     {
         double topMargin = windowMode == ViewerWindowMode.Windowed
             ? SettingsPanelTopGap
-            : CloseRevealSize + SettingsPanelTopGap;
+            : ImageViewerVisualMetrics.CloseRevealSize + SettingsPanelTopGap;
 
         return new Thickness(0d, topMargin, SettingsPanelRightMargin, 0d);
     }
@@ -372,7 +365,7 @@ internal sealed class ImageViewerView : IDisposable
         {
             Background = Brushes.Black,
             IsHitTestVisible = false,
-            Opacity = VisibleControlsOpacity
+            Opacity = ImageViewerVisualMetrics.VisibleControlsOpacity
         };
     }
 
@@ -412,13 +405,13 @@ internal sealed class ImageViewerView : IDisposable
 
         return new Border
         {
-            Width = ArrowAreaMinWidth,
+            Width = ImageViewerVisualMetrics.ArrowAreaMinWidth,
             HorizontalAlignment = alignment,
             VerticalAlignment = VerticalAlignment.Stretch,
             Background = Brushes.Transparent,
             Child = iconHost,
             Cursor = HandCursor,
-            Opacity = HiddenControlsOpacity,
+            Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
             Transitions = CreateOpacityTransition(ControlsFadeDuration)
         };
     }
@@ -434,7 +427,7 @@ internal sealed class ImageViewerView : IDisposable
             Margin = new Thickness(0d, 0d, 0d, 26d),
             Orientation = Orientation.Horizontal,
             Spacing = 8d,
-            Opacity = HiddenControlsOpacity,
+            Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
             Transitions = CreateOpacityTransition(ControlsFadeDuration)
         };
         controls.Children.Add(CreateIconButton(
@@ -467,8 +460,8 @@ internal sealed class ImageViewerView : IDisposable
         button.HorizontalAlignment = HorizontalAlignment.Right;
         button.VerticalAlignment = VerticalAlignment.Top;
         button.Margin = new Thickness(0d);
-        button.Width = CloseRevealSize;
-        button.Height = CloseRevealSize;
+        button.Width = ImageViewerVisualMetrics.CloseRevealSize;
+        button.Height = ImageViewerVisualMetrics.CloseRevealSize;
         button.Background = Brushes.Transparent;
         button.BorderBrush = Brushes.Transparent;
         button.BorderThickness = new Thickness(0d);
@@ -476,7 +469,7 @@ internal sealed class ImageViewerView : IDisposable
         button.HorizontalContentAlignment = HorizontalAlignment.Center;
         button.Padding = new Thickness(0d);
         button.VerticalContentAlignment = VerticalAlignment.Center;
-        button.Opacity = HiddenControlsOpacity;
+        button.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
         button.Transitions = CreateOpacityTransition(ControlsFadeDuration);
         WrapButtonContentWithFloatingShadow(button);
 
@@ -492,14 +485,18 @@ internal sealed class ImageViewerView : IDisposable
             Brushes.White);
         button.HorizontalAlignment = HorizontalAlignment.Right;
         button.VerticalAlignment = VerticalAlignment.Top;
-        button.Margin = new Thickness(0d, 0d, CloseRevealSize, 0d);
-        button.Width = CloseRevealSize;
-        button.Height = CloseRevealSize;
+        button.Margin = new Thickness(
+            0d,
+            0d,
+            ImageViewerVisualMetrics.CloseRevealSize,
+            0d);
+        button.Width = ImageViewerVisualMetrics.CloseRevealSize;
+        button.Height = ImageViewerVisualMetrics.CloseRevealSize;
         button.Background = Brushes.Transparent;
         button.BorderBrush = Brushes.Transparent;
         button.BorderThickness = new Thickness(0d);
         button.CornerRadius = new CornerRadius(0d);
-        button.Opacity = HiddenControlsOpacity;
+        button.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
         button.Transitions = CreateOpacityTransition(ControlsFadeDuration);
         WrapButtonContentWithFloatingShadow(button);
 
@@ -517,9 +514,13 @@ internal sealed class ImageViewerView : IDisposable
         icon.Classes.Add("settings-icon");
         Button button = new()
         {
-            Width = CloseRevealSize,
-            Height = CloseRevealSize,
-            Margin = new Thickness(0d, 0d, CloseRevealSize * 2d, 0d),
+            Width = ImageViewerVisualMetrics.CloseRevealSize,
+            Height = ImageViewerVisualMetrics.CloseRevealSize,
+            Margin = new Thickness(
+                0d,
+                0d,
+                ImageViewerVisualMetrics.CloseRevealSize * 2d,
+                0d),
             Padding = new Thickness(0d),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
@@ -530,7 +531,7 @@ internal sealed class ImageViewerView : IDisposable
             CornerRadius = new CornerRadius(0d),
             Cursor = HandCursor,
             Focusable = false,
-            Opacity = HiddenControlsOpacity,
+            Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
             Transitions = CreateOpacityTransition(ControlsFadeDuration)
         };
         button.Click += clickHandler;
@@ -618,7 +619,7 @@ internal sealed class ImageViewerView : IDisposable
             Child = content,
             HorizontalAlignment = HorizontalAlignment.Left,
             IsVisible = false,
-            Opacity = HiddenControlsOpacity,
+            Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
             Transitions = CreateOpacityTransition(ControlsFadeDuration),
             VerticalAlignment = VerticalAlignment.Top
         };
@@ -649,22 +650,24 @@ internal sealed class ImageViewerView : IDisposable
         {
             Fill = new SolidColorBrush(Color.FromArgb(160, 0, 0, 0)),
             IsHitTestVisible = false,
-            Opacity = HiddenControlsOpacity,
-            Transitions = CreateOpacityTransition(SelectionOverlayFadeDuration)
+            Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
+            Transitions = CreateOpacityTransition(
+                ImageViewerVisualMetrics.SelectionOverlayFadeDuration)
         };
         frame = new ShapePath
         {
             Fill = Brushes.Transparent,
             IsHitTestVisible = false,
-            Opacity = HiddenControlsOpacity,
+            Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
             Stroke = new SolidColorBrush(Color.FromArgb(230, 255, 255, 255)),
             StrokeDashArray = [4d, 4d],
             StrokeThickness = 1d,
-            Transitions = CreateOpacityTransition(SelectionOverlayFadeDuration)
+            Transitions = CreateOpacityTransition(
+                ImageViewerVisualMetrics.SelectionOverlayFadeDuration)
         };
         toolbar = new StackPanel
         {
-            Height = SelectionToolbarHeight,
+            Height = ImageViewerVisualMetrics.SelectionToolbarHeight,
             Orientation = Orientation.Horizontal,
             Spacing = SelectionButtonSpacing,
             IsVisible = false
