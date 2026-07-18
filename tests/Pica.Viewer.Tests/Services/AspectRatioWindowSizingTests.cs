@@ -18,7 +18,7 @@ public sealed class AspectRatioWindowSizingTests
 
         WindowRectangle result = AspectRatioWindowSizing.Constrain(
             requested,
-            WindowSizingEdge.Right,
+            WindowSizingEdges.Right,
             WindowSizingBasis.Width,
             FrameWidth,
             FrameHeight,
@@ -35,7 +35,7 @@ public sealed class AspectRatioWindowSizingTests
 
         WindowRectangle result = AspectRatioWindowSizing.Constrain(
             requested,
-            WindowSizingEdge.Left,
+            WindowSizingEdges.Left,
             WindowSizingBasis.Width,
             FrameWidth,
             FrameHeight,
@@ -52,7 +52,7 @@ public sealed class AspectRatioWindowSizingTests
 
         WindowRectangle result = AspectRatioWindowSizing.Constrain(
             requested,
-            WindowSizingEdge.Top,
+            WindowSizingEdges.Top,
             WindowSizingBasis.Height,
             FrameWidth,
             FrameHeight,

@@ -8,16 +8,16 @@ internal sealed class FreeWindowResizeSession : IWindowResizeSession
 
     private readonly WindowRectangle _initialRectangle;
     private readonly PixelPoint _initialPointerPosition;
-    private readonly WindowSizingEdge _sizingEdge;
+    private readonly WindowSizingEdges _sizingEdges;
 
     public FreeWindowResizeSession(
         WindowRectangle initialRectangle,
         PixelPoint initialPointerPosition,
-        WindowSizingEdge sizingEdge)
+        WindowSizingEdges sizingEdges)
     {
         _initialRectangle = initialRectangle;
         _initialPointerPosition = initialPointerPosition;
-        _sizingEdge = sizingEdge;
+        _sizingEdges = sizingEdges;
     }
 
     public WindowRectangle Calculate(PixelPoint pointerPosition)
@@ -33,17 +33,13 @@ internal sealed class FreeWindowResizeSession : IWindowResizeSession
 
     private void ApplyHorizontalDelta(ref WindowRectangle rectangle, int delta)
     {
-        if ((_sizingEdge == WindowSizingEdge.Left)
-            || (_sizingEdge == WindowSizingEdge.TopLeft)
-            || (_sizingEdge == WindowSizingEdge.BottomLeft))
+        if (_sizingEdges.HasFlag(WindowSizingEdges.Left))
         {
             rectangle.Left = Math.Min(
                 rectangle.Left + delta,
                 rectangle.Right - MinimumWindowExtent);
         }
-        else if ((_sizingEdge == WindowSizingEdge.Right)
-            || (_sizingEdge == WindowSizingEdge.TopRight)
-            || (_sizingEdge == WindowSizingEdge.BottomRight))
+        else if (_sizingEdges.HasFlag(WindowSizingEdges.Right))
         {
             rectangle.Right = Math.Max(
                 rectangle.Right + delta,
@@ -53,17 +49,13 @@ internal sealed class FreeWindowResizeSession : IWindowResizeSession
 
     private void ApplyVerticalDelta(ref WindowRectangle rectangle, int delta)
     {
-        if ((_sizingEdge == WindowSizingEdge.Top)
-            || (_sizingEdge == WindowSizingEdge.TopLeft)
-            || (_sizingEdge == WindowSizingEdge.TopRight))
+        if (_sizingEdges.HasFlag(WindowSizingEdges.Top))
         {
             rectangle.Top = Math.Min(
                 rectangle.Top + delta,
                 rectangle.Bottom - MinimumWindowExtent);
         }
-        else if ((_sizingEdge == WindowSizingEdge.Bottom)
-            || (_sizingEdge == WindowSizingEdge.BottomLeft)
-            || (_sizingEdge == WindowSizingEdge.BottomRight))
+        else if (_sizingEdges.HasFlag(WindowSizingEdges.Bottom))
         {
             rectangle.Bottom = Math.Max(
                 rectangle.Bottom + delta,

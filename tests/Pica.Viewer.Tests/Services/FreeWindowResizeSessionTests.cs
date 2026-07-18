@@ -21,7 +21,7 @@ public sealed class FreeWindowResizeSessionTests
         FreeWindowResizeSession session = new(
             initialRectangle,
             new PixelPoint(900, 600),
-            WindowSizingEdge.BottomRight);
+            WindowSizingEdges.BottomRight);
 
         WindowRectangle result = session.Calculate(new PixelPoint(1000, 650));
 
@@ -44,7 +44,7 @@ public sealed class FreeWindowResizeSessionTests
         FreeWindowResizeSession session = new(
             initialRectangle,
             new PixelPoint(100, 350),
-            WindowSizingEdge.Left);
+            WindowSizingEdges.Left);
 
         WindowRectangle result = session.Calculate(new PixelPoint(1000, 350));
 

@@ -22,7 +22,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         if (!_isWindowedMode
             || (_bitmap is null)
-            || (sender is not Border { Tag: WindowSizingEdge sizingEdge }))
+            || (sender is not Border { Tag: WindowSizingEdges sizingEdges }))
         {
             return;
         }
@@ -51,14 +51,14 @@ public sealed partial class ImageViewerWindow : SukiWindow
             ? new AspectRatioWindowResizeSession(
                 initialRectangle,
                 pointerPosition,
-                sizingEdge,
+                sizingEdges,
                 0,
                 titleBarHeight,
                 aspectRatio)
             : new FreeWindowResizeSession(
                 initialRectangle,
                 pointerPosition,
-                sizingEdge);
+                sizingEdges);
         e.Pointer.Capture((InputElement)sender);
         e.Handled = true;
     }

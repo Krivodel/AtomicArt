@@ -8,7 +8,7 @@ internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
 
     private readonly WindowRectangle _initialRectangle;
     private readonly PixelPoint _initialPointerPosition;
-    private readonly WindowSizingEdge _sizingEdge;
+    private readonly WindowSizingEdges _sizingEdges;
     private readonly int _frameWidth;
     private readonly int _frameHeight;
     private readonly double _aspectRatio;
@@ -17,14 +17,14 @@ internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
     public AspectRatioWindowResizeSession(
         WindowRectangle initialRectangle,
         PixelPoint initialPointerPosition,
-        WindowSizingEdge sizingEdge,
+        WindowSizingEdges sizingEdges,
         int frameWidth,
         int frameHeight,
         double aspectRatio)
     {
         _initialRectangle = initialRectangle;
         _initialPointerPosition = initialPointerPosition;
-        _sizingEdge = sizingEdge;
+        _sizingEdges = sizingEdges;
         _frameWidth = frameWidth;
         _frameHeight = frameHeight;
         _aspectRatio = aspectRatio;
@@ -41,7 +41,7 @@ internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
 
         return AspectRatioWindowSizing.Constrain(
             requestedRectangle,
-            _sizingEdge,
+            _sizingEdges,
             sizingBasis,
             _frameWidth,
             _frameHeight,
@@ -54,28 +54,20 @@ internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
     {
         WindowRectangle rectangle = _initialRectangle;
 
-        if ((_sizingEdge == WindowSizingEdge.Left)
-            || (_sizingEdge == WindowSizingEdge.TopLeft)
-            || (_sizingEdge == WindowSizingEdge.BottomLeft))
+        if (_sizingEdges.HasFlag(WindowSizingEdges.Left))
         {
             rectangle.Left += horizontalDelta;
         }
-        else if ((_sizingEdge == WindowSizingEdge.Right)
-            || (_sizingEdge == WindowSizingEdge.TopRight)
-            || (_sizingEdge == WindowSizingEdge.BottomRight))
+        else if (_sizingEdges.HasFlag(WindowSizingEdges.Right))
         {
             rectangle.Right += horizontalDelta;
         }
 
-        if ((_sizingEdge == WindowSizingEdge.Top)
-            || (_sizingEdge == WindowSizingEdge.TopLeft)
-            || (_sizingEdge == WindowSizingEdge.TopRight))
+        if (_sizingEdges.HasFlag(WindowSizingEdges.Top))
         {
             rectangle.Top += verticalDelta;
         }
-        else if ((_sizingEdge == WindowSizingEdge.Bottom)
-            || (_sizingEdge == WindowSizingEdge.BottomLeft)
-            || (_sizingEdge == WindowSizingEdge.BottomRight))
+        else if (_sizingEdges.HasFlag(WindowSizingEdges.Bottom))
         {
             rectangle.Bottom += verticalDelta;
         }
@@ -85,12 +77,15 @@ internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
 
     private WindowSizingBasis GetSizingBasis(int horizontalDelta, int verticalDelta)
     {
-        if ((_sizingEdge == WindowSizingEdge.Left) || (_sizingEdge == WindowSizingEdge.Right))
+        bool includesHorizontalEdge = _sizingEdges.IncludesHorizontalEdge();
+        bool includesVerticalEdge = _sizingEdges.IncludesVerticalEdge();
+
+        if (includesHorizontalEdge && !includesVerticalEdge)
         {
             return WindowSizingBasis.Width;
         }
 
-        if ((_sizingEdge == WindowSizingEdge.Top) || (_sizingEdge == WindowSizingEdge.Bottom))
+        if (includesVerticalEdge && !includesHorizontalEdge)
         {
             return WindowSizingBasis.Height;
         }

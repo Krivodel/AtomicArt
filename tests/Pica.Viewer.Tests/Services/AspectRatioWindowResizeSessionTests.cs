@@ -18,7 +18,7 @@ public sealed class AspectRatioWindowResizeSessionTests
         AspectRatioWindowResizeSession session = new(
             initialRectangle,
             new PixelPoint(100, 400),
-            WindowSizingEdge.Left,
+            WindowSizingEdges.Left,
             0,
             TitleBarHeight,
             AspectRatio);
@@ -36,7 +36,7 @@ public sealed class AspectRatioWindowResizeSessionTests
         AspectRatioWindowResizeSession session = new(
             initialRectangle,
             new PixelPoint(900, 586),
-            WindowSizingEdge.BottomRight,
+            WindowSizingEdges.BottomRight,
             0,
             TitleBarHeight,
             AspectRatio);

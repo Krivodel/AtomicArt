@@ -6,7 +6,7 @@ internal static class AspectRatioWindowSizing
 
     public static WindowRectangle Constrain(
         WindowRectangle requestedRectangle,
-        WindowSizingEdge sizingEdge,
+        WindowSizingEdges sizingEdges,
         WindowSizingBasis sizingBasis,
         int frameWidth,
         int frameHeight,
@@ -37,20 +37,18 @@ internal static class AspectRatioWindowSizing
         int targetWindowWidth = targetClientWidth + frameWidth;
         int targetWindowHeight = targetClientHeight + frameHeight;
         WindowRectangle result = requestedRectangle;
-        ApplyHorizontalEdge(ref result, sizingEdge, targetWindowWidth);
-        ApplyVerticalEdge(ref result, sizingEdge, targetWindowHeight);
+        ApplyHorizontalEdge(ref result, sizingEdges, targetWindowWidth);
+        ApplyVerticalEdge(ref result, sizingEdges, targetWindowHeight);
 
         return result;
     }
 
     private static void ApplyHorizontalEdge(
         ref WindowRectangle rectangle,
-        WindowSizingEdge sizingEdge,
+        WindowSizingEdges sizingEdges,
         int targetWidth)
     {
-        if ((sizingEdge == WindowSizingEdge.Left)
-            || (sizingEdge == WindowSizingEdge.TopLeft)
-            || (sizingEdge == WindowSizingEdge.BottomLeft))
+        if (sizingEdges.HasFlag(WindowSizingEdges.Left))
         {
             rectangle.Left = rectangle.Right - targetWidth;
             return;
@@ -61,12 +59,10 @@ internal static class AspectRatioWindowSizing
 
     private static void ApplyVerticalEdge(
         ref WindowRectangle rectangle,
-        WindowSizingEdge sizingEdge,
+        WindowSizingEdges sizingEdges,
         int targetHeight)
     {
-        if ((sizingEdge == WindowSizingEdge.Top)
-            || (sizingEdge == WindowSizingEdge.TopLeft)
-            || (sizingEdge == WindowSizingEdge.TopRight))
+        if (sizingEdges.HasFlag(WindowSizingEdges.Top))
         {
             rectangle.Top = rectangle.Bottom - targetHeight;
             return;

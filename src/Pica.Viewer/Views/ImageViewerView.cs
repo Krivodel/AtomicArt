@@ -216,56 +216,56 @@ internal sealed class ImageViewerView : IDisposable
             IsVisible = windowMode == ViewerWindowMode.Windowed
         };
         overlay.Children.Add(CreateWindowResizeBorder(
-            WindowSizingEdge.Left,
+            WindowSizingEdges.Left,
             WindowResizeBorderSize,
             double.NaN,
             HorizontalAlignment.Left,
             VerticalAlignment.Stretch,
             events));
         overlay.Children.Add(CreateWindowResizeBorder(
-            WindowSizingEdge.Right,
+            WindowSizingEdges.Right,
             WindowResizeBorderSize,
             double.NaN,
             HorizontalAlignment.Right,
             VerticalAlignment.Stretch,
             events));
         overlay.Children.Add(CreateWindowResizeBorder(
-            WindowSizingEdge.Top,
+            WindowSizingEdges.Top,
             double.NaN,
             WindowResizeBorderSize,
             HorizontalAlignment.Stretch,
             VerticalAlignment.Top,
             events));
         overlay.Children.Add(CreateWindowResizeBorder(
-            WindowSizingEdge.Bottom,
+            WindowSizingEdges.Bottom,
             double.NaN,
             WindowResizeBorderSize,
             HorizontalAlignment.Stretch,
             VerticalAlignment.Bottom,
             events));
         overlay.Children.Add(CreateWindowResizeBorder(
-            WindowSizingEdge.TopLeft,
+            WindowSizingEdges.TopLeft,
             WindowResizeCornerSize,
             WindowResizeCornerSize,
             HorizontalAlignment.Left,
             VerticalAlignment.Top,
             events));
         overlay.Children.Add(CreateWindowResizeBorder(
-            WindowSizingEdge.TopRight,
+            WindowSizingEdges.TopRight,
             WindowResizeCornerSize,
             WindowResizeCornerSize,
             HorizontalAlignment.Right,
             VerticalAlignment.Top,
             events));
         overlay.Children.Add(CreateWindowResizeBorder(
-            WindowSizingEdge.BottomLeft,
+            WindowSizingEdges.BottomLeft,
             WindowResizeCornerSize,
             WindowResizeCornerSize,
             HorizontalAlignment.Left,
             VerticalAlignment.Bottom,
             events));
         overlay.Children.Add(CreateWindowResizeBorder(
-            WindowSizingEdge.BottomRight,
+            WindowSizingEdges.BottomRight,
             WindowResizeCornerSize,
             WindowResizeCornerSize,
             HorizontalAlignment.Right,
@@ -319,7 +319,7 @@ internal sealed class ImageViewerView : IDisposable
     }
 
     private static Border CreateWindowResizeBorder(
-        WindowSizingEdge sizingEdge,
+        WindowSizingEdges sizingEdges,
         double width,
         double height,
         HorizontalAlignment horizontalAlignment,
@@ -331,9 +331,9 @@ internal sealed class ImageViewerView : IDisposable
             Width = width,
             Height = height,
             Background = Brushes.Transparent,
-            Cursor = GetWindowResizeCursor(sizingEdge),
+            Cursor = GetWindowResizeCursor(sizingEdges),
             HorizontalAlignment = horizontalAlignment,
-            Tag = sizingEdge,
+            Tag = sizingEdges,
             VerticalAlignment = verticalAlignment
         };
         border.PointerPressed += events.WindowResizePointerPressed;
@@ -343,15 +343,27 @@ internal sealed class ImageViewerView : IDisposable
         return border;
     }
 
-    private static Cursor GetWindowResizeCursor(WindowSizingEdge sizingEdge)
+    private static Cursor GetWindowResizeCursor(WindowSizingEdges sizingEdges)
     {
-        return sizingEdge switch
+        bool includesHorizontalEdge = sizingEdges.IncludesHorizontalEdge();
+        bool includesVerticalEdge = sizingEdges.IncludesVerticalEdge();
+
+        if (!includesVerticalEdge)
         {
-            WindowSizingEdge.Left or WindowSizingEdge.Right => HorizontalResizeCursor,
-            WindowSizingEdge.Top or WindowSizingEdge.Bottom => VerticalResizeCursor,
-            WindowSizingEdge.TopLeft or WindowSizingEdge.BottomRight => TopLeftResizeCursor,
-            _ => TopRightResizeCursor
-        };
+            return HorizontalResizeCursor;
+        }
+
+        if (!includesHorizontalEdge)
+        {
+            return VerticalResizeCursor;
+        }
+
+        bool slopesDownRight = sizingEdges.HasFlag(WindowSizingEdges.Top)
+            == sizingEdges.HasFlag(WindowSizingEdges.Left);
+
+        return slopesDownRight
+            ? TopLeftResizeCursor
+            : TopRightResizeCursor;
     }
 
     private static Border CreateFadeOverlay()
