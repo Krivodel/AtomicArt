@@ -396,11 +396,7 @@ public sealed class AttachedImagePreparationService :
 
         byte[]? pngBytes = losslessResult?.Candidate.Format == AttachedImageEncodingFormat.Png
             ? losslessResult.Candidate.Content
-            : _codec.EncodeLosslessly(
-                bitmap,
-                AttachedImageEncodingFormat.Png,
-                AttachedImageCompressionEffort.Fast,
-                ct);
+            : EncodePngFast(bitmap, ct);
 
         if (pngBytes is null)
         {
@@ -421,6 +417,15 @@ public sealed class AttachedImagePreparationService :
             selectedModel,
             AttachedImageEncodingFormat.Png,
             pngBytes,
+            ct);
+    }
+
+    private byte[]? EncodePngFast(SKBitmap bitmap, CancellationToken ct)
+    {
+        return _codec.EncodeLosslessly(
+            bitmap,
+            AttachedImageEncodingFormat.Png,
+            AttachedImageCompressionEffort.Fast,
             ct);
     }
 
@@ -645,11 +650,7 @@ public sealed class AttachedImagePreparationService :
 
                 if (format == AttachedImageEncodingFormat.Png)
                 {
-                    byte[]? pngBytes = _codec.EncodeLosslessly(
-                        currentBitmap,
-                        format,
-                        AttachedImageCompressionEffort.Fast,
-                        ct);
+                    byte[]? pngBytes = EncodePngFast(currentBitmap, ct);
 
                     if (pngBytes is null)
                     {
