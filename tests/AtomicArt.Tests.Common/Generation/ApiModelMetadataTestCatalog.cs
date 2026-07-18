@@ -44,51 +44,22 @@ public static class ApiModelMetadataTestCatalog
 
     public static string GetMetadataPath()
     {
-        foreach (string startPath in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
-        {
-            DirectoryInfo? directory = new(startPath);
+        string relativePath = Path.Combine(
+            "src",
+            GenerationModelCatalogDefaults.SourceProjectName,
+            GenerationModelCatalogDefaults.RelativePath);
 
-            while (directory is not null)
-            {
-                string metadataPath = Path.Combine(
-                    directory.FullName,
-                    "src",
-                    GenerationModelCatalogDefaults.SourceProjectName,
-                    GenerationModelCatalogDefaults.RelativePath);
-
-                if (File.Exists(metadataPath))
-                {
-                    return metadataPath;
-                }
-
-                directory = directory.Parent;
-            }
-        }
-
-        throw new InvalidOperationException("Generation model metadata JSON was not found.");
+        return TestRepositoryFiles.TryFindFromCurrentOrBaseDirectory(relativePath)
+            ?? throw new InvalidOperationException("Generation model metadata JSON was not found.");
     }
 
     private static string FindRepositoryFileDirectory(string relativePath)
     {
-        foreach (string startPath in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
-        {
-            DirectoryInfo? directory = new(startPath);
+        string filePath = TestRepositoryFiles.TryFindFromCurrentOrBaseDirectory(relativePath)
+            ?? throw new InvalidOperationException($"Repository file '{relativePath}' was not found.");
 
-            while (directory is not null)
-            {
-                string candidatePath = Path.Combine(directory.FullName, relativePath);
-
-                if (File.Exists(candidatePath))
-                {
-                    return Path.GetDirectoryName(candidatePath)
-                        ?? throw new InvalidOperationException("Repository file directory was not found.");
-                }
-
-                directory = directory.Parent;
-            }
-        }
-
-        throw new InvalidOperationException($"Repository file '{relativePath}' was not found.");
+        return Path.GetDirectoryName(filePath)
+            ?? throw new InvalidOperationException("Repository file directory was not found.");
     }
 
     private static GenerationModelMetadataDto LoadById(string modelId)

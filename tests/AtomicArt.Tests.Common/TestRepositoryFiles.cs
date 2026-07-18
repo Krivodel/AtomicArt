@@ -6,20 +6,41 @@ public static class TestRepositoryFiles
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
 
-        DirectoryInfo? directory = new(Directory.GetCurrentDirectory());
+        string[] startPaths = [Directory.GetCurrentDirectory()];
+        string? path = TryFind(relativePath, startPaths);
 
-        while (directory is not null)
+        return path
+            ?? throw new InvalidOperationException($"Repository file '{relativePath}' was not found.");
+    }
+
+    public static string? TryFindFromCurrentOrBaseDirectory(string relativePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
+
+        string[] startPaths = [Directory.GetCurrentDirectory(), AppContext.BaseDirectory];
+
+        return TryFind(relativePath, startPaths);
+    }
+
+    private static string? TryFind(string relativePath, IReadOnlyList<string> startPaths)
+    {
+        foreach (string startPath in startPaths)
         {
-            string candidatePath = Path.Combine(directory.FullName, relativePath);
+            DirectoryInfo? directory = new(startPath);
 
-            if (File.Exists(candidatePath))
+            while (directory is not null)
             {
-                return candidatePath;
-            }
+                string candidatePath = Path.Combine(directory.FullName, relativePath);
 
-            directory = directory.Parent;
+                if (File.Exists(candidatePath))
+                {
+                    return candidatePath;
+                }
+
+                directory = directory.Parent;
+            }
         }
 
-        throw new InvalidOperationException($"Repository file '{relativePath}' was not found.");
+        return null;
     }
 }
