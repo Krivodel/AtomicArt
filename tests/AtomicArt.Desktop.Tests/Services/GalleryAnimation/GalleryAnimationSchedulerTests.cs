@@ -9,6 +9,9 @@ namespace AtomicArt.Desktop.Tests.Services.GalleryAnimation;
 
 public sealed class GalleryAnimationSchedulerTests
 {
+    private static readonly MotionFrame StandardFirstFrame = new(0d, 0d, 1d, 0d, 0d);
+    private static readonly MotionFrame StandardLastFrame = new(100d, 50d, 2d, 20d, 1d);
+
     [Fact]
     public void AnimateAsync_WithFrames_AppliesFirstFrameImmediately()
     {
@@ -34,20 +37,12 @@ public sealed class GalleryAnimationSchedulerTests
     public void AnimateAsync_BeforeDelayElapsed_DoesNotAdvancePastFirstFrame()
     {
         SchedulerScenario scenario = CreateScenario();
-        MotionFrame firstFrame = new(0d, 0d, 1d, 0d, 0d);
-        MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
 
-        scenario.Scheduler.AnimateAsync(
-            scenario.Control,
-            new MotionFrame[] { firstFrame, lastFrame },
-            100,
-            50,
-            Identity);
-        scenario.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+        StartDelayedAnimation(scenario);
         scenario.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(40d));
 
         scenario.AppliedFrames.Should().HaveCount(1);
-        scenario.AppliedFrames[0].Frame.Should().Be(firstFrame);
+        scenario.AppliedFrames[0].Frame.Should().Be(StandardFirstFrame);
         scenario.Scheduler.HasActiveAnimations.Should().BeTrue();
     }
 
@@ -55,16 +50,8 @@ public sealed class GalleryAnimationSchedulerTests
     public void AnimateAsync_AfterDelayElapsed_InterpolatesWithReferenceFormula()
     {
         SchedulerScenario scenario = CreateScenario();
-        MotionFrame firstFrame = new(0d, 0d, 1d, 0d, 0d);
-        MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
 
-        scenario.Scheduler.AnimateAsync(
-            scenario.Control,
-            new MotionFrame[] { firstFrame, lastFrame },
-            100,
-            50,
-            Identity);
-        scenario.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+        StartDelayedAnimation(scenario);
         scenario.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(100d));
 
         MotionFrame interpolatedFrame = scenario.AppliedFrames[^1].Frame;
@@ -80,14 +67,10 @@ public sealed class GalleryAnimationSchedulerTests
     public async Task AnimateAsync_WhenRawProgressReachesOne_CompletesAndRemovesAnimation()
     {
         SchedulerScenario scenario = CreateScenario();
-        MotionFrame firstFrame = new(0d, 0d, 1d, 0d, 0d);
-        MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
         int completedCount = 0;
 
         Task animationTask = StartAnimation(
             scenario,
-            firstFrame,
-            lastFrame,
             () =>
             {
                 completedCount++;
@@ -96,7 +79,7 @@ public sealed class GalleryAnimationSchedulerTests
         scenario.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(100d));
         await animationTask;
 
-        scenario.AppliedFrames[^1].Frame.Should().Be(lastFrame);
+        scenario.AppliedFrames[^1].Frame.Should().Be(StandardLastFrame);
         completedCount.Should().Be(1);
         animationTask.IsCompletedSuccessfully.Should().BeTrue();
         scenario.Scheduler.HasActiveAnimations.Should().BeFalse();
@@ -106,14 +89,10 @@ public sealed class GalleryAnimationSchedulerTests
     public async Task Cancel_WithActiveControl_CompletesTaskWithoutCompletedAction()
     {
         SchedulerScenario scenario = CreateScenario();
-        MotionFrame firstFrame = new(0d, 0d, 1d, 0d, 0d);
-        MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
         int completedCount = 0;
 
         Task animationTask = StartAnimation(
             scenario,
-            firstFrame,
-            lastFrame,
             () =>
             {
                 completedCount++;
@@ -136,15 +115,24 @@ public sealed class GalleryAnimationSchedulerTests
         return new SchedulerScenario(frameScheduler, appliedFrames, scheduler, control);
     }
 
+    private static void StartDelayedAnimation(SchedulerScenario scenario)
+    {
+        scenario.Scheduler.AnimateAsync(
+            scenario.Control,
+            new MotionFrame[] { StandardFirstFrame, StandardLastFrame },
+            100,
+            50,
+            Identity);
+        scenario.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+    }
+
     private static Task StartAnimation(
         SchedulerScenario scenario,
-        MotionFrame firstFrame,
-        MotionFrame lastFrame,
         Action completed)
     {
         return scenario.Scheduler.AnimateAsync(
             scenario.Control,
-            new MotionFrame[] { firstFrame, lastFrame },
+            new MotionFrame[] { StandardFirstFrame, StandardLastFrame },
             100,
             0,
             Identity,
