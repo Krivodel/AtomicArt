@@ -108,17 +108,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
                 CancellationToken.None);
 
-            scenario.Window.Show();
-            scenario.Window.CaptureRenderedFrame();
-
-            try
-            {
-                AssertSingleVisibleCard(GetGalleryControl(scenario.Window));
-            }
-            finally
-            {
-                scenario.Window.Close();
-            }
+            ShowAndAssertSingleVisibleCard(scenario.Window);
         });
     }
 
@@ -134,17 +124,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 
             await scenario.ViewModel.RestoreAppStateCommand.ExecuteAsync(null);
 
-            scenario.Window.Show();
-            scenario.Window.CaptureRenderedFrame();
-
-            try
-            {
-                AssertSingleVisibleCard(GetGalleryControl(scenario.Window));
-            }
-            finally
-            {
-                scenario.Window.Close();
-            }
+            ShowAndAssertSingleVisibleCard(scenario.Window);
         });
     }
 
@@ -289,6 +269,21 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         card.Opacity.Should().Be(1d);
         card.Width.Should().BeGreaterThan(0d);
         card.Height.Should().BeGreaterThan(0d);
+    }
+
+    private static void ShowAndAssertSingleVisibleCard(Window window)
+    {
+        window.Show();
+        window.CaptureRenderedFrame();
+
+        try
+        {
+            AssertSingleVisibleCard(GetGalleryControl(window));
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     private static AnimatedGalleryControl GetGalleryControl(GalleryView view)
