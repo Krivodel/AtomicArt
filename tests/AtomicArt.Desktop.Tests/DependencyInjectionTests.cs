@@ -10,6 +10,10 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.ViewModels.Gallery;
+using AtomicArt.Desktop.ViewModels.Generation;
+using AtomicArt.Desktop.ViewModels.Settings;
+using AtomicArt.Desktop.Views;
 using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests;
@@ -128,6 +132,30 @@ public sealed class DependencyInjectionTests
             serviceProvider.GetRequiredService<IGenerationRunDispatcher>();
 
         firstDispatcher.Should().NotBeSameAs(secondDispatcher);
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithViewTemplates_RegistersMappingsInPriorityOrder()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+        Type[] expectedViewModelTypes =
+        [
+            typeof(GalleryViewModel),
+            typeof(IModelPanelViewModel),
+            typeof(SettingsViewModel),
+            typeof(ApiBaseAddressSettingViewModel),
+            typeof(SecretSettingViewModel),
+            typeof(ScaleSettingViewModel),
+            typeof(GpuResourceCacheSettingViewModel),
+            typeof(GenerationMetadataViewModel)
+        ];
+
+        IReadOnlyList<Type> viewModelTypes = serviceProvider
+            .GetServices<ViewTemplateRegistration>()
+            .Select(registration => registration.ViewModelType)
+            .ToList();
+
+        viewModelTypes.Should().Equal(expectedViewModelTypes);
     }
 
     [Fact]

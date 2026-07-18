@@ -16,9 +16,11 @@ using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.ViewModels;
+using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Settings;
 using AtomicArt.Desktop.ViewModels.Updates;
+using AtomicArt.Desktop.Views;
 using AtomicArt.Desktop.Views.Gallery;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Desktop.Views.Settings;
@@ -71,14 +73,18 @@ public static class DependencyInjection
     private static IServiceCollection AddShellServices(this IServiceCollection services)
     {
         services.AddTransient<MainWindow>();
-        services.AddTransient<GalleryView>();
-        services.AddTransient<GenerationPanelView>();
-        services.AddTransient<SettingsOverlayView>();
-        services.AddTransient<ApiBaseAddressSettingView>();
-        services.AddTransient<SecretSettingView>();
-        services.AddTransient<ScaleSettingView>();
-        services.AddTransient<GpuResourceCacheSettingView>();
-        services.AddTransient<GenerationMetadataOverlayView>();
+        services.AddViewTemplate<GalleryViewModel, GalleryView>();
+        services.AddViewTemplate<IModelPanelViewModel, GenerationPanelView>();
+        services.AddViewTemplate<SettingsViewModel, SettingsOverlayView>();
+        services.AddViewTemplate<ApiBaseAddressSettingViewModel, ApiBaseAddressSettingView>();
+        services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
+        services.AddViewTemplate<ScaleSettingViewModel, ScaleSettingView>();
+        services.AddViewTemplate<
+            GpuResourceCacheSettingViewModel,
+            GpuResourceCacheSettingView>();
+        services.AddViewTemplate<
+            GenerationMetadataViewModel,
+            GenerationMetadataOverlayView>();
         services.AddTransient<ApplicationUpdateToastPresenter>();
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<ApplicationUpdateViewModel>();

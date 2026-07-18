@@ -10,13 +10,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.ViewModels;
-using AtomicArt.Desktop.ViewModels.Gallery;
-using AtomicArt.Desktop.ViewModels.Generation;
-using AtomicArt.Desktop.ViewModels.Settings;
 using AtomicArt.Desktop.Views;
-using AtomicArt.Desktop.Views.Gallery;
-using AtomicArt.Desktop.Views.Generation;
-using AtomicArt.Desktop.Views.Settings;
 using AtomicArt.Desktop.Views.Shell;
 
 namespace AtomicArt.Desktop;
@@ -115,23 +109,9 @@ public class App : Avalonia.Application
 
     private void ConfigureViewTemplates()
     {
-        ViewTemplateRegistration[] registrations =
-        [
-            new(typeof(GalleryViewModel), GetRequiredService<GalleryView>),
-            new(typeof(IModelPanelViewModel), GetRequiredService<GenerationPanelView>),
-            new(typeof(SettingsViewModel), GetRequiredService<SettingsOverlayView>),
-            new(
-                typeof(ApiBaseAddressSettingViewModel),
-                GetRequiredService<ApiBaseAddressSettingView>),
-            new(typeof(SecretSettingViewModel), GetRequiredService<SecretSettingView>),
-            new(typeof(ScaleSettingViewModel), GetRequiredService<ScaleSettingView>),
-            new(
-                typeof(GpuResourceCacheSettingViewModel),
-                GetRequiredService<GpuResourceCacheSettingView>),
-            new(
-                typeof(GenerationMetadataViewModel),
-                GetRequiredService<GenerationMetadataOverlayView>)
-        ];
+        List<ViewTemplateRegistration> registrations = GetRequiredService<
+                IEnumerable<ViewTemplateRegistration>>()
+            .ToList();
 
         DataTemplates.Add(new ViewModelViewTemplate(registrations));
     }
