@@ -234,36 +234,18 @@ public sealed partial class ImageViewerWindow : SukiWindow
         long animationId = ++_settingsPanelAnimationId;
         double startOpacity = _view.SettingsPanel.Opacity;
         double startOffset = transform.Y;
-        DateTimeOffset startedAt = DateTimeOffset.UtcNow;
-        RequestAnimationFrame(OnFrame);
 
-        void OnFrame(TimeSpan frameTime)
-        {
-            _ = frameTime;
-
-            if (animationId != _settingsPanelAnimationId)
+        StartFrameAnimation(
+            SettingsPanelAnimationDuration,
+            () => animationId == _settingsPanelAnimationId,
+            progress =>
             {
-                return;
-            }
-
-            double elapsed = (DateTimeOffset.UtcNow - startedAt).TotalSeconds;
-            double progress = Math.Clamp(
-                elapsed / SettingsPanelAnimationDuration.TotalSeconds,
-                0d,
-                1d);
-            double easedProgress = 1d - Math.Pow(1d - progress, 3d);
-            _view.SettingsPanel.Opacity = startOpacity
-                + ((targetOpacity - startOpacity) * easedProgress);
-            transform.Y = startOffset + ((targetOffset - startOffset) * easedProgress);
-
-            if (progress < 1d)
-            {
-                RequestAnimationFrame(OnFrame);
-                return;
-            }
-
-            completed?.Invoke();
-        }
+                double easedProgress = 1d - Math.Pow(1d - progress, 3d);
+                _view.SettingsPanel.Opacity = startOpacity
+                    + ((targetOpacity - startOpacity) * easedProgress);
+                transform.Y = startOffset + ((targetOffset - startOffset) * easedProgress);
+            },
+            completed: completed);
     }
 
     private void CompleteSettingsPanelHide()

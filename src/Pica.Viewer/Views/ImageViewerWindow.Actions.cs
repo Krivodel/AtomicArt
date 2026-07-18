@@ -57,34 +57,17 @@ public sealed partial class ImageViewerWindow : SukiWindow
         TimeSpan duration)
     {
         TaskCompletionSource completion = new();
-        DateTimeOffset startedAt = DateTimeOffset.UtcNow;
-
-        RequestAnimationFrame(OnFrame);
+        StartFrameAnimation(
+            duration,
+            () => animationId == _copyFeedbackAnimationId,
+            progress =>
+            {
+                _view.FadeOverlay.Opacity = from + ((to - from) * progress);
+            },
+            () => completion.TrySetResult(),
+            () => completion.TrySetResult());
 
         return completion.Task;
-
-        void OnFrame(TimeSpan frameTime)
-        {
-            _ = frameTime;
-
-            if (animationId != _copyFeedbackAnimationId)
-            {
-                completion.TrySetResult();
-                return;
-            }
-
-            double elapsed = (DateTimeOffset.UtcNow - startedAt).TotalSeconds;
-            double progress = Math.Clamp(elapsed / duration.TotalSeconds, 0d, 1d);
-            _view.FadeOverlay.Opacity = from + ((to - from) * progress);
-
-            if (progress < 1d)
-            {
-                RequestAnimationFrame(OnFrame);
-                return;
-            }
-
-            completion.TrySetResult();
-        }
     }
 
     private async Task DispatchCurrentImageActionAsync(

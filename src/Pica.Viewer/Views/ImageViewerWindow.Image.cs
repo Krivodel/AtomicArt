@@ -525,32 +525,18 @@ public sealed partial class ImageViewerWindow : SukiWindow
         double startOffsetX = _offsetX;
         double startOffsetY = _offsetY;
         long animationId = ++_scaleAnimationId;
-        DateTimeOffset startedAt = DateTimeOffset.UtcNow;
 
-        RequestAnimationFrame(OnFrame);
-
-        void OnFrame(TimeSpan frameTime)
-        {
-            _ = frameTime;
-
-            if (animationId != _scaleAnimationId)
+        StartFrameAnimation(
+            ScaleAnimationDuration,
+            () => animationId == _scaleAnimationId,
+            progress =>
             {
-                return;
-            }
-
-            double elapsed = (DateTimeOffset.UtcNow - startedAt).TotalSeconds;
-            double progress = Math.Clamp(elapsed / ScaleAnimationDuration.TotalSeconds, 0d, 1d);
-            double easedProgress = 1d - Math.Pow(1d - progress, 3d);
-            _scale = startScale + ((targetScale - startScale) * easedProgress);
-            _offsetX = startOffsetX + ((targetOffsetX - startOffsetX) * easedProgress);
-            _offsetY = startOffsetY + ((targetOffsetY - startOffsetY) * easedProgress);
-            ApplyImageLayout();
-
-            if (progress < 1d)
-            {
-                RequestAnimationFrame(OnFrame);
-            }
-        }
+                double easedProgress = 1d - Math.Pow(1d - progress, 3d);
+                _scale = startScale + ((targetScale - startScale) * easedProgress);
+                _offsetX = startOffsetX + ((targetOffsetX - startOffsetX) * easedProgress);
+                _offsetY = startOffsetY + ((targetOffsetY - startOffsetY) * easedProgress);
+                ApplyImageLayout();
+            });
     }
 
     private bool TryGetResetImagePlacement(
@@ -747,30 +733,16 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         long animationId = ++_scaleAnimationId;
-        DateTimeOffset startedAt = DateTimeOffset.UtcNow;
 
-        RequestAnimationFrame(OnFrame);
-
-        void OnFrame(TimeSpan frameTime)
-        {
-            _ = frameTime;
-
-            if (animationId != _scaleAnimationId)
+        StartFrameAnimation(
+            ScaleAnimationDuration,
+            () => animationId == _scaleAnimationId,
+            progress =>
             {
-                return;
-            }
-
-            double elapsed = (DateTimeOffset.UtcNow - startedAt).TotalSeconds;
-            double progress = Math.Clamp(elapsed / ScaleAnimationDuration.TotalSeconds, 0d, 1d);
-            double easedProgress = 1d - Math.Pow(1d - progress, 3d);
-            double frameScale = startScale + ((clampedScale - startScale) * easedProgress);
-            ApplyScaleAtAnchor(frameScale, anchor, imageX, imageY);
-
-            if (progress < 1d)
-            {
-                RequestAnimationFrame(OnFrame);
-            }
-        }
+                double easedProgress = 1d - Math.Pow(1d - progress, 3d);
+                double frameScale = startScale + ((clampedScale - startScale) * easedProgress);
+                ApplyScaleAtAnchor(frameScale, anchor, imageX, imageY);
+            });
     }
 
     private void ApplyScaleAtAnchor(
