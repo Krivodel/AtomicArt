@@ -75,7 +75,7 @@ internal static class SmoothScrollTargetCalculator
     {
         targetOffset = default;
 
-        if (!CanScrollVertically(scrollViewer) || wheelDelta == 0d)
+        if (!CanApplyVerticalWheelDelta(scrollViewer, wheelDelta))
         {
             return false;
         }
@@ -101,9 +101,9 @@ internal static class SmoothScrollTargetCalculator
         out Vector targetOffset)
     {
         targetOffset = default;
-        double delta = wheelDelta.Y != 0d ? wheelDelta.Y : wheelDelta.X;
+        double delta = GetHorizontalWheelDelta(wheelDelta);
 
-        if (!CanScrollHorizontally(scrollViewer) || delta == 0d)
+        if (!CanApplyHorizontalWheelDelta(scrollViewer, delta))
         {
             return false;
         }
@@ -166,7 +166,7 @@ internal static class SmoothScrollTargetCalculator
         Vector targetOffset,
         double wheelDelta)
     {
-        if (!CanScrollVertically(scrollViewer) || wheelDelta == 0d)
+        if (!CanApplyVerticalWheelDelta(scrollViewer, wheelDelta))
         {
             return false;
         }
@@ -186,9 +186,9 @@ internal static class SmoothScrollTargetCalculator
         Vector targetOffset,
         Vector wheelDelta)
     {
-        double delta = wheelDelta.Y != 0d ? wheelDelta.Y : wheelDelta.X;
+        double delta = GetHorizontalWheelDelta(wheelDelta);
 
-        if (!CanScrollHorizontally(scrollViewer) || delta == 0d)
+        if (!CanApplyHorizontalWheelDelta(scrollViewer, delta))
         {
             return false;
         }
@@ -221,16 +221,27 @@ internal static class SmoothScrollTargetCalculator
         return IsSameCoordinate(targetValue, maximum);
     }
 
-    private static bool CanScrollVertically(ScrollViewer scrollViewer)
+    private static double GetHorizontalWheelDelta(Vector wheelDelta)
     {
-        return scrollViewer.VerticalScrollBarVisibility != ScrollBarVisibility.Disabled
-            && GetMaxVerticalOffset(scrollViewer) > 0d;
+        return wheelDelta.Y != 0d ? wheelDelta.Y : wheelDelta.X;
     }
 
-    private static bool CanScrollHorizontally(ScrollViewer scrollViewer)
+    private static bool CanApplyVerticalWheelDelta(
+        ScrollViewer scrollViewer,
+        double wheelDelta)
+    {
+        return scrollViewer.VerticalScrollBarVisibility != ScrollBarVisibility.Disabled
+            && GetMaxVerticalOffset(scrollViewer) > 0d
+            && wheelDelta != 0d;
+    }
+
+    private static bool CanApplyHorizontalWheelDelta(
+        ScrollViewer scrollViewer,
+        double wheelDelta)
     {
         return scrollViewer.HorizontalScrollBarVisibility != ScrollBarVisibility.Disabled
-            && GetMaxHorizontalOffset(scrollViewer) > 0d;
+            && GetMaxHorizontalOffset(scrollViewer) > 0d
+            && wheelDelta != 0d;
     }
 
     private static double GetMaxVerticalOffset(ScrollViewer scrollViewer)
