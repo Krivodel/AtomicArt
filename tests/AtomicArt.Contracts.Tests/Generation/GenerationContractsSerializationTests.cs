@@ -30,14 +30,13 @@ public sealed class GenerationContractsSerializationTests
             ],
             "high");
 
-        string json = JsonSerializer.Serialize(request, JsonOptions);
-        ImageGenerationRequestDto? deserialized = JsonSerializer.Deserialize<ImageGenerationRequestDto>(json, JsonOptions);
+        (string Json, ImageGenerationRequestDto? Deserialized) result = RoundTrip(request);
 
-        json.Should().Contain("\"modelId\"");
-        json.Should().Contain("\"temperature\":1");
-        json.Should().Contain("\"thinkingLevel\":\"high\"");
-        json.Should().Contain("\"attachedImages\"");
-        deserialized.Should().BeEquivalentTo(request);
+        result.Json.Should().Contain("\"modelId\"");
+        result.Json.Should().Contain("\"temperature\":1");
+        result.Json.Should().Contain("\"thinkingLevel\":\"high\"");
+        result.Json.Should().Contain("\"attachedImages\"");
+        result.Deserialized.Should().BeEquivalentTo(request);
     }
 
     [Fact]
@@ -46,24 +45,14 @@ public sealed class GenerationContractsSerializationTests
         GenerationBatchDto batch = new(
             BatchId,
             [
-                new(
-                    ItemId,
-                    ModelId,
-                    "Nano Banana 2",
-                    "Create a city skyline",
-                    "16:9",
-                    "1k",
-                    CreatedAtUtc,
-                    GenerationItemStatus.Generated,
-                    "images/result.png")
+                CreateGenerationItem(imagePath: "images/result.png")
             ]);
 
-        string json = JsonSerializer.Serialize(batch, JsonOptions);
-        GenerationBatchDto? deserialized = JsonSerializer.Deserialize<GenerationBatchDto>(json, JsonOptions);
+        (string Json, GenerationBatchDto? Deserialized) result = RoundTrip(batch);
 
-        json.Should().Contain("\"batchId\"");
-        json.Should().Contain("\"createdAtUtc\"");
-        deserialized.Should().BeEquivalentTo(batch);
+        result.Json.Should().Contain("\"batchId\"");
+        result.Json.Should().Contain("\"createdAtUtc\"");
+        result.Deserialized.Should().BeEquivalentTo(batch);
     }
 
     [Fact]
@@ -83,39 +72,27 @@ public sealed class GenerationContractsSerializationTests
     {
         GenerationImageContentDto content = new("image/png", "AQIDBA==");
 
-        string json = JsonSerializer.Serialize(content, JsonOptions);
-        GenerationImageContentDto? deserialized = JsonSerializer.Deserialize<GenerationImageContentDto>(json, JsonOptions);
+        (string Json, GenerationImageContentDto? Deserialized) result = RoundTrip(content);
 
-        json.Should().Contain("\"contentType\"");
-        json.Should().Contain("\"base64Data\"");
-        deserialized.Should().BeEquivalentTo(content);
+        result.Json.Should().Contain("\"contentType\"");
+        result.Json.Should().Contain("\"base64Data\"");
+        result.Deserialized.Should().BeEquivalentTo(content);
     }
 
     [Fact]
     public void GenerationItemDto_WithImageContent_SerializesContentFields()
     {
         GenerationImageContentDto content = new("image/png", "AQIDBA==");
-        GenerationItemDto item = new(
-            ItemId,
-            ModelId,
-            "Nano Banana 2",
-            "Create a city skyline",
-            "16:9",
-            "1k",
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            null,
-            content);
+        GenerationItemDto item = CreateGenerationItem(imageContent: content);
 
-        string json = JsonSerializer.Serialize(item, JsonOptions);
-        GenerationItemDto? deserialized = JsonSerializer.Deserialize<GenerationItemDto>(json, JsonOptions);
+        (string Json, GenerationItemDto? Deserialized) result = RoundTrip(item);
 
-        json.Should().Contain("\"imageContent\"");
-        json.Should().NotContain("previewContent");
-        json.Should().NotContain("previewPath");
-        json.Should().Contain("\"contentType\":\"image/png\"");
-        json.Should().Contain("\"base64Data\":\"AQIDBA==\"");
-        deserialized.Should().BeEquivalentTo(item);
+        result.Json.Should().Contain("\"imageContent\"");
+        result.Json.Should().NotContain("previewContent");
+        result.Json.Should().NotContain("previewPath");
+        result.Json.Should().Contain("\"contentType\":\"image/png\"");
+        result.Json.Should().Contain("\"base64Data\":\"AQIDBA==\"");
+        result.Deserialized.Should().BeEquivalentTo(item);
     }
 
     [Fact]
@@ -141,32 +118,22 @@ public sealed class GenerationContractsSerializationTests
             0.0678m,
             "USD",
             GenerationPriceSources.ActualProviderUsage);
-        GenerationItemDto item = new(
-            ItemId,
-            ModelId,
-            "Nano Banana 2",
-            "Create a city skyline",
-            "16:9",
-            "1k",
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            null,
-            new GenerationImageContentDto("image/png", "AQIDBA=="),
-            CreatedAtUtc.AddSeconds(30),
-            TimeSpan.FromSeconds(30),
-            price,
-            usage);
+        GenerationItemDto item = CreateGenerationItem(
+            imageContent: new GenerationImageContentDto("image/png", "AQIDBA=="),
+            completedAtUtc: CreatedAtUtc.AddSeconds(30),
+            generationDuration: TimeSpan.FromSeconds(30),
+            price: price,
+            usage: usage);
 
-        string json = JsonSerializer.Serialize(item, JsonOptions);
-        GenerationItemDto? deserialized = JsonSerializer.Deserialize<GenerationItemDto>(json, JsonOptions);
+        (string Json, GenerationItemDto? Deserialized) result = RoundTrip(item);
 
-        json.Should().Contain("\"completedAtUtc\"");
-        json.Should().Contain("\"generationDuration\"");
-        json.Should().Contain("\"price\"");
-        json.Should().Contain("\"usage\"");
-        json.Should().Contain(
+        result.Json.Should().Contain("\"completedAtUtc\"");
+        result.Json.Should().Contain("\"generationDuration\"");
+        result.Json.Should().Contain("\"price\"");
+        result.Json.Should().Contain("\"usage\"");
+        result.Json.Should().Contain(
             $"\"source\":\"{GenerationPriceSources.ActualProviderUsage}\"");
-        deserialized.Should().BeEquivalentTo(item);
+        result.Deserialized.Should().BeEquivalentTo(item);
     }
 
     [Fact]
@@ -177,16 +144,15 @@ public sealed class GenerationContractsSerializationTests
             TotalInputTokens: 1200,
             TotalOutputTokens: 1120);
 
-        string json = JsonSerializer.Serialize(usage, JsonOptions);
-        GenerationUsageDto? deserialized = JsonSerializer.Deserialize<GenerationUsageDto>(json, JsonOptions);
+        (string Json, GenerationUsageDto? Deserialized) result = RoundTrip(usage);
 
-        json.Should().Contain("\"totalTokens\"");
-        json.Should().Contain("\"totalInputTokens\"");
-        json.Should().Contain("\"totalOutputTokens\"");
-        json.Should().Contain("\"inputTokensByModality\":null");
-        json.Should().Contain("\"outputTokensByModality\":null");
-        json.Should().Contain("\"totalCachedTokens\":null");
-        deserialized.Should().BeEquivalentTo(usage);
+        result.Json.Should().Contain("\"totalTokens\"");
+        result.Json.Should().Contain("\"totalInputTokens\"");
+        result.Json.Should().Contain("\"totalOutputTokens\"");
+        result.Json.Should().Contain("\"inputTokensByModality\":null");
+        result.Json.Should().Contain("\"outputTokensByModality\":null");
+        result.Json.Should().Contain("\"totalCachedTokens\":null");
+        result.Deserialized.Should().BeEquivalentTo(usage);
     }
 
     [Fact]
@@ -218,5 +184,38 @@ public sealed class GenerationContractsSerializationTests
         item.GenerationDuration.Should().BeNull();
         item.Price.Should().BeNull();
         item.Usage.Should().BeNull();
+    }
+
+    private static GenerationItemDto CreateGenerationItem(
+        string? imagePath = null,
+        GenerationImageContentDto? imageContent = null,
+        DateTime? completedAtUtc = null,
+        TimeSpan? generationDuration = null,
+        GenerationPriceDto? price = null,
+        GenerationUsageDto? usage = null)
+    {
+        return new GenerationItemDto(
+            ItemId,
+            ModelId,
+            "Nano Banana 2",
+            "Create a city skyline",
+            "16:9",
+            "1k",
+            CreatedAtUtc,
+            GenerationItemStatus.Generated,
+            imagePath,
+            imageContent,
+            completedAtUtc,
+            generationDuration,
+            price,
+            usage);
+    }
+
+    private static (string Json, T? Deserialized) RoundTrip<T>(T value)
+    {
+        string json = JsonSerializer.Serialize(value, JsonOptions);
+        T? deserialized = JsonSerializer.Deserialize<T>(json, JsonOptions);
+
+        return (json, deserialized);
     }
 }
