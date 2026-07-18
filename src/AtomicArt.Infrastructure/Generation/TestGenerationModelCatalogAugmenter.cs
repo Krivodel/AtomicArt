@@ -19,7 +19,6 @@ public static class TestGenerationModelCatalogAugmenter
         "16:9"
     ];
     private static readonly IReadOnlyList<string> Resolutions = ["1K"];
-    private static readonly IReadOnlyList<int> GenerationCounts = [1, 2, 3, 4];
     private static readonly IReadOnlyList<string> SupportedContentTypes =
         GenerationImageFileFormats.All
             .Select(format => format.ContentType)
@@ -47,43 +46,38 @@ public static class TestGenerationModelCatalogAugmenter
         }
 
         List<GenerationModelMetadataDto> models = existingModels.ToList();
-        GenerationModelTemperatureMetadataDto temperature = existingModels
+        GenerationModelMetadataDto baseMetadata = existingModels
             .FirstOrDefault(model => string.Equals(
                 model.PanelId,
                 GenerationPanelIds.NanoBanana,
                 StringComparison.Ordinal))
-            ?.Temperature
             ?? throw new InvalidOperationException(
                 "Generation model catalog does not contain Nano Banana temperature metadata.");
-        models.Add(CreateTestModel(temperature));
+        models.Add(CreateTestModel(baseMetadata));
 
         return new GenerationModelCatalogDto(models.AsReadOnly());
     }
 
     private static GenerationModelMetadataDto CreateTestModel(
-        GenerationModelTemperatureMetadataDto temperature)
+        GenerationModelMetadataDto baseMetadata)
     {
-        ArgumentNullException.ThrowIfNull(temperature);
+        ArgumentNullException.ThrowIfNull(baseMetadata);
 
-        return new GenerationModelMetadataDto(
-            ModelId,
-            DisplayName,
-            GenerationProviderIds.Test,
-            ProviderModelId,
-            GenerationPanelIds.NanoBanana,
-            ContextWindowTokens: 131072,
-            MaxOutputTokens: 32768,
-            MaxPromptLength: 131072,
-            AspectRatios,
-            Resolutions,
-            GenerationCounts,
-            temperature,
-            new GenerationModelAttachmentMetadataDto(
-                MaxCount: 14,
-                MaxSingleFileBytes: 7340032,
-                MaxTotalBytes: 524288000,
-                SupportedContentTypes),
-            new GenerationModelPricingMetadataDto(
+        GenerationModelAttachmentMetadataDto attachments = baseMetadata.Attachments with
+        {
+            SupportedContentTypes = SupportedContentTypes
+        };
+
+        return baseMetadata with
+        {
+            Id = ModelId,
+            DisplayName = DisplayName,
+            Provider = GenerationProviderIds.Test,
+            ProviderModelId = ProviderModelId,
+            AspectRatios = AspectRatios,
+            Resolutions = Resolutions,
+            Attachments = attachments,
+            Pricing = new GenerationModelPricingMetadataDto(
                 "USD",
                 InputTokenUsdPerMillion: 0m,
                 TextOutputTokenUsdPerMillion: 0m,
@@ -92,6 +86,8 @@ public static class TestGenerationModelCatalogAugmenter
                 OutputImageTokensByResolution: Resolutions.ToDictionary(
                     resolution => resolution,
                     _ => 0,
-                    StringComparer.Ordinal)));
+                    StringComparer.Ordinal)),
+            Thinking = null
+        };
     }
 }
