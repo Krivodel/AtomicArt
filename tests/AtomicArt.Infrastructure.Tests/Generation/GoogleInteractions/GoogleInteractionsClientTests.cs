@@ -58,13 +58,8 @@ public sealed class GoogleInteractionsClientTests
             statusCode,
             """{"error":"secret detail"}""");
 
-        Func<Task> act = () => context.CreateInteractionAsync();
+        await AssertProviderFailureAsync(context, expectedFailureKind);
 
-        FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
-            await act.Should()
-                .ThrowAsync<ImageGenerationProviderException>()
-                .WithMessage("The generation provider returned an error.");
-        assertions.Which.FailureKind.Should().Be(expectedFailureKind);
         context.Handler.Requests.Should().ContainSingle();
     }
 
@@ -96,13 +91,10 @@ public sealed class GoogleInteractionsClientTests
             HttpStatusCode.BadRequest,
             responseJson);
 
-        Func<Task> act = () => context.CreateInteractionAsync();
+        await AssertProviderFailureAsync(
+            context,
+            ImageGenerationProviderFailureKind.RequestRejected);
 
-        FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
-            await act.Should()
-            .ThrowAsync<ImageGenerationProviderException>()
-            .WithMessage("The generation provider returned an error.");
-        assertions.Which.FailureKind.Should().Be(ImageGenerationProviderFailureKind.RequestRejected);
         string logText = context.LogMessages.Last();
         logText.Should().Contain("provider status INVALID_ARGUMENT");
         logText.Should().Contain("provider message Request format is invalid.");
@@ -279,13 +271,10 @@ public sealed class GoogleInteractionsClientTests
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""));
 
-        Func<Task> act = () => context.CreateInteractionAsync();
+        await AssertProviderFailureAsync(
+            context,
+            ImageGenerationProviderFailureKind.InternalError);
 
-        FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
-            await act.Should()
-                .ThrowAsync<ImageGenerationProviderException>()
-                .WithMessage("The generation provider returned an error.");
-        assertions.Which.FailureKind.Should().Be(ImageGenerationProviderFailureKind.InternalError);
         context.Handler.Requests.Should().HaveCount(5);
     }
 
@@ -346,6 +335,19 @@ public sealed class GoogleInteractionsClientTests
     private static string CreateRequestJson()
     {
         return $$"""{"model":"{{ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().ProviderModelId}}"}""";
+    }
+
+    private static async Task AssertProviderFailureAsync(
+        ClientTestContext context,
+        ImageGenerationProviderFailureKind expectedFailureKind)
+    {
+        Func<Task> act = () => context.CreateInteractionAsync();
+
+        FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
+            await act.Should()
+                .ThrowAsync<ImageGenerationProviderException>()
+                .WithMessage("The generation provider returned an error.");
+        assertions.Which.FailureKind.Should().Be(expectedFailureKind);
     }
 
     private sealed class ClientTestContext : IDisposable
