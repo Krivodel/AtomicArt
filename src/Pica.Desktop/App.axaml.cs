@@ -82,9 +82,7 @@ public sealed partial class App : Application
                 actionDispatcher,
                 CancellationToken.None);
 
-            window.Closed += OnMainWindowClosed;
-            desktopLifetime.MainWindow = window;
-            window.Show();
+            ShowMainWindow(desktopLifetime, window);
             _logger?.LogInformation(
                 "Pica viewer window opened with {ItemCount} images",
                 startupRequest.ViewerRequest.Items.Count);
@@ -93,10 +91,17 @@ public sealed partial class App : Application
         {
             _logger?.LogError(ex, "Pica failed to initialize");
             StartupErrorWindow errorWindow = new();
-            errorWindow.Closed += OnMainWindowClosed;
-            desktopLifetime.MainWindow = errorWindow;
-            errorWindow.Show();
+            ShowMainWindow(desktopLifetime, errorWindow);
         }
+    }
+
+    private void ShowMainWindow(
+        IClassicDesktopStyleApplicationLifetime desktopLifetime,
+        Window window)
+    {
+        window.Closed += OnMainWindowClosed;
+        desktopLifetime.MainWindow = window;
+        window.Show();
     }
 
     private TService GetRequiredService<TService>()
