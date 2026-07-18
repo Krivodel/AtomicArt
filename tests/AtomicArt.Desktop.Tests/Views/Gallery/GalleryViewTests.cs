@@ -32,13 +32,12 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             ServiceCollection services = new();
             services.AddDesktopServices();
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            GalleryViewModel viewModel = serviceProvider.GetRequiredService<GalleryViewModel>();
-            GalleryView view = CreateGalleryView(serviceProvider, viewModel);
-            Window window = Show(view);
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            Window window = Show(scenario.View);
 
             try
             {
-                AssertGalleryViewOperations(view);
+                AssertGalleryViewOperations(scenario.View);
             }
             finally
             {
@@ -52,22 +51,18 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            ServiceCollection services = new();
-            services.AddSingleton(TestApiConfiguration.Create());
-            services.AddDesktopServices();
-            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            GalleryViewModel viewModel = serviceProvider.GetRequiredService<GalleryViewModel>();
-            GalleryView view = CreateGalleryView(serviceProvider, viewModel);
-            Window window = Show(view);
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            Window window = Show(scenario.View);
 
             try
             {
-                await viewModel.RestoreStateAsync(
+                await scenario.ViewModel.RestoreStateAsync(
                     new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
                     CancellationToken.None);
                 window.CaptureRenderedFrame();
 
-                AssertSingleVisibleCard(GetGalleryControl(view));
+                AssertSingleVisibleCard(GetGalleryControl(scenario.View));
             }
             finally
             {
@@ -81,22 +76,18 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            ServiceCollection services = new();
-            services.AddSingleton(TestApiConfiguration.Create());
-            services.AddDesktopServices();
-            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            GalleryViewModel viewModel = serviceProvider.GetRequiredService<GalleryViewModel>();
-            GalleryView view = CreateGalleryView(serviceProvider, viewModel);
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
 
-            await viewModel.RestoreStateAsync(
+            await scenario.ViewModel.RestoreStateAsync(
                 new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
                 CancellationToken.None);
 
-            Window window = Show(view);
+            Window window = Show(scenario.View);
 
             try
             {
-                AssertSingleVisibleCard(GetGalleryControl(view));
+                AssertSingleVisibleCard(GetGalleryControl(scenario.View));
             }
             finally
             {
@@ -110,10 +101,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            ServiceCollection services = new();
-            services.AddSingleton(TestApiConfiguration.Create());
-            services.AddDesktopServices();
-            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
             MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
 
             await scenario.ViewModel.RestoreGalleryAsync(
@@ -140,11 +128,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             GalleryItemState savedItem = GalleryItemStateTestFactory.CreateGenerated();
-            ServiceCollection services = new();
-            services.AddSingleton(TestApiConfiguration.Create());
-            services.AddDesktopServices();
-            services.AddSingleton<IAppStateBootstrapper>(new FixedGalleryAppStateBootstrapper(savedItem));
-            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            await using ServiceProvider serviceProvider = CreateServiceProvider(
+                new FixedGalleryAppStateBootstrapper(savedItem));
             MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
 
             await scenario.ViewModel.RestoreAppStateCommand.ExecuteAsync(null);
@@ -169,11 +154,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             GalleryItemState savedItem = GalleryItemStateTestFactory.CreateGenerated();
-            ServiceCollection services = new();
-            services.AddSingleton(TestApiConfiguration.Create());
-            services.AddDesktopServices();
-            services.AddSingleton<IAppStateBootstrapper>(new FixedGalleryAppStateBootstrapper(savedItem));
-            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            await using ServiceProvider serviceProvider = CreateServiceProvider(
+                new FixedGalleryAppStateBootstrapper(savedItem));
             MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
 
             Task restoreTask = scenario.ViewModel.RestoreAppStateCommand.ExecuteAsync(null);
@@ -203,10 +185,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            ServiceCollection services = new();
-            services.AddSingleton(TestApiConfiguration.Create());
-            services.AddDesktopServices();
-            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
             MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
             IReadOnlyList<GalleryItemState> items = CreateSavedGalleryItems(itemCount);
 
@@ -238,14 +217,14 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         });
     }
 
-    private static GalleryView CreateGalleryView(
-        IServiceProvider serviceProvider,
-        GalleryViewModel viewModel)
+    private static GalleryViewScenario CreateGalleryViewScenario(
+        IServiceProvider serviceProvider)
     {
+        GalleryViewModel viewModel = serviceProvider.GetRequiredService<GalleryViewModel>();
         GalleryView view = serviceProvider.GetRequiredService<GalleryView>();
         view.DataContext = viewModel;
 
-        return view;
+        return new GalleryViewScenario(view, viewModel);
     }
 
     private static MainWindowScenario CreateMainWindowScenario(
@@ -259,6 +238,34 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             .Subject;
 
         return new MainWindowScenario(window, viewModel);
+    }
+
+    private static ServiceProvider CreateServiceProvider(
+        IAppStateBootstrapper? appStateBootstrapper = null)
+    {
+        ServiceCollection services = new();
+        services.AddSingleton(TestApiConfiguration.Create());
+        services.AddDesktopServices();
+
+        if (appStateBootstrapper is not null)
+        {
+            services.AddSingleton(appStateBootstrapper);
+        }
+
+        return services.BuildServiceProvider();
+    }
+
+    private static IReadOnlyList<GalleryItemState> CreateSavedGalleryItems(int count)
+    {
+        List<GalleryItemState> items = [];
+
+        for (int i = 0; i < count; i++)
+        {
+            string prompt = string.Concat("Saved prompt ", i.ToString(CultureInfo.InvariantCulture));
+            items.Add(GalleryItemStateTestFactory.CreateGenerated(prompt, i));
+        }
+
+        return items;
     }
 
     private static void AssertGalleryViewOperations(GalleryView view)
@@ -300,19 +307,6 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             .Single();
     }
 
-    private static IReadOnlyList<GalleryItemState> CreateSavedGalleryItems(int count)
-    {
-        List<GalleryItemState> items = [];
-
-        for (int i = 0; i < count; i++)
-        {
-            string prompt = string.Concat("Saved prompt ", i.ToString(CultureInfo.InvariantCulture));
-            items.Add(GalleryItemStateTestFactory.CreateGenerated(prompt, i));
-        }
-
-        return items;
-    }
-
     private static void RegisterGalleryViewTemplate(IServiceProvider serviceProvider)
     {
         Avalonia.Application.Current?.DataTemplates.Add(
@@ -328,6 +322,10 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     private sealed record MainWindowScenario(
         MainWindow Window,
         MainWindowViewModel ViewModel);
+
+    private sealed record GalleryViewScenario(
+        GalleryView View,
+        GalleryViewModel ViewModel);
 
     private sealed class FixedGalleryAppStateBootstrapper : IAppStateBootstrapper
     {
