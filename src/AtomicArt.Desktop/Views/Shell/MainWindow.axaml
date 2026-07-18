@@ -1,0 +1,121 @@
+<suki:SukiWindow xmlns="https://github.com/avaloniaui"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+                 xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+                 xmlns:resources="using:AtomicArt.Desktop.Resources"
+                 xmlns:suki="using:SukiUI.Controls"
+                 xmlns:viewModels="using:AtomicArt.Desktop.ViewModels"
+                 x:Class="AtomicArt.Desktop.Views.Shell.MainWindow"
+                 x:DataType="viewModels:MainWindowViewModel"
+                 Width="{StaticResource MainWindowWidth}"
+                 Height="{StaticResource MainWindowHeight}"
+                 MinWidth="{StaticResource MainWindowMinWidth}"
+                 MinHeight="{StaticResource MainWindowMinHeight}"
+                 CanFullScreen="True"
+                 CanPin="True"
+                 IsMenuVisible="False"
+                 behaviors:ImageDropBehavior.IsEnabled="True"
+                 behaviors:ImageDropBehavior.Overlay="{Binding #WindowDropOverlay}"
+                 behaviors:ImageDropBehavior.TargetKind="ExternalFiles"
+                 Icon="/Assets/AppIcon.ico"
+                 Title="{x:Static resources:UiStrings.AppTitle}"
+                 TitleBarAutoHideDelay="0"
+                 behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding ActiveGenerationPanel.AttachImageInputsCommand}"
+                 behaviors:ImageAttachmentBehavior.ErrorCommand="{Binding HandleExternalInputErrorCommand}"
+                 behaviors:ImageAttachmentBehavior.MaxInputBytes="{Binding ActiveGenerationPanel.AttachmentInputByteLimit}">
+    <suki:SukiWindow.LogoContent>
+        <Image Width="{StaticResource TitleLogoSize}"
+               Height="{StaticResource TitleLogoSize}"
+               Source="avares://AtomicArt/Assets/AppIcon.ico"
+               RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+    </suki:SukiWindow.LogoContent>
+
+    <suki:SukiWindow.RightWindowTitleBarControls>
+        <Button Classes="Icon title-action"
+                Command="{Binding OpenSettingsCommand}">
+            <PathIcon Data="{StaticResource AppSettingsIcon}" />
+        </Button>
+    </suki:SukiWindow.RightWindowTitleBarControls>
+
+    <suki:SukiWindow.Hosts>
+        <suki:SukiToastHost x:Name="UpdateToastHost"
+                            MaxToasts="1"
+                            Position="BottomRight" />
+    </suki:SukiWindow.Hosts>
+
+    <LayoutTransformControl>
+        <LayoutTransformControl.LayoutTransform>
+            <ScaleTransform ScaleX="{Binding UiScale}"
+                            ScaleY="{Binding UiScale}" />
+        </LayoutTransformControl.LayoutTransform>
+
+        <Grid>
+            <Grid x:Name="ShellContentGrid"
+                  behaviors:ImageDropBehavior.DropArea="{Binding #GenerationPanelHost}"
+                  behaviors:ImageDropBehavior.IsEnabled="True"
+                  behaviors:ImageDropBehavior.Overlay="{Binding #PanelDropOverlay}"
+                  behaviors:ImageDropBehavior.TargetKind="GalleryImage">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"
+                                   MinHeight="0" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Margin="{StaticResource GalleryViewportMargin}">
+                    <ContentControl Content="{Binding Gallery}" />
+                </Border>
+
+                <Border x:Name="GenerationPanelHost"
+                        Grid.Row="1"
+                        Width="{StaticResource GenerationPanelWidth}"
+                        Margin="{StaticResource GenerationPanelMargin}"
+                        Padding="0"
+                        HorizontalAlignment="Center"
+                        Classes="generation-panel"
+                        ClipToBounds="True">
+                    <Grid>
+                        <Border Padding="{StaticResource GenerationPanelPadding}">
+                            <ContentControl Content="{Binding ActiveGenerationPanel}" />
+                        </Border>
+
+                        <controls:ImageDropOverlayControl x:Name="PanelDropOverlay"
+                                                          ZIndex="20"
+                                                          BackdropCornerRadius="{StaticResource ShellCornerRadius}" />
+                    </Grid>
+                </Border>
+
+                <GridSplitter x:Name="GenerationPanelResizeGrip"
+                              Grid.Row="1"
+                              ZIndex="1"
+                              Height="{StaticResource GenerationPanelResizeGripHeight}"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Top"
+                              Background="Transparent"
+                              Cursor="SizeNorthSouth"
+                              ResizeBehavior="PreviousAndCurrent"
+                              ResizeDirection="Rows"
+                              ShowsPreview="False" />
+            </Grid>
+
+            <Grid ZIndex="10"
+                  IsVisible="{Binding IsSettingsOpen}">
+                <Button Classes="overlay-backdrop"
+                        Command="{Binding Settings.CloseCommand}" />
+                <ContentControl Margin="{StaticResource OverlayMargin}"
+                                Content="{Binding Settings}" />
+            </Grid>
+
+            <Grid ZIndex="11"
+                  IsVisible="{Binding Gallery.IsMetadataOpen}">
+                <Button Classes="overlay-backdrop"
+                        Command="{Binding Gallery.CloseOverlayCommand}" />
+                <ContentControl Content="{Binding Gallery.SelectedMetadata}" />
+            </Grid>
+
+            <controls:ImageDropOverlayControl x:Name="WindowDropOverlay"
+                                              IconSize="200"
+                                              ZIndex="30" />
+        </Grid>
+    </LayoutTransformControl>
+</suki:SukiWindow>

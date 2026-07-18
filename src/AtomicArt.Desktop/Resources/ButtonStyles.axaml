@@ -1,0 +1,234 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <Style Selector="Button">
+        <Setter Property="Cursor"
+                Value="Hand" />
+    </Style>
+
+    <Style Selector="MenuItem">
+        <Setter Property="Cursor"
+                Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.Icon">
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiText}" />
+        <Setter Property="HorizontalContentAlignment"
+                Value="Center" />
+        <Setter Property="VerticalContentAlignment"
+                Value="Center" />
+    </Style>
+
+    <Style Selector="Button.Icon:pointerover">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPrimaryColor5}" />
+    </Style>
+
+    <Style Selector="Button.Icon:pressed">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPrimaryColor0}" />
+    </Style>
+
+    <Style Selector="Button.Icon PathIcon">
+        <Setter Property="Width"
+                Value="{StaticResource GenerationCardActionIconSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource GenerationCardActionIconSize}" />
+    </Style>
+
+    <Style Selector="PathIcon.settings-icon">
+        <Setter Property="Data"
+                Value="{StaticResource AppSettingsIcon}" />
+    </Style>
+
+    <Style Selector="Button.generation-option">
+        <Setter Property="Width"
+                Value="{StaticResource GenerationOptionButtonSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource GenerationOptionButtonSize}" />
+        <Setter Property="MinWidth"
+                Value="{StaticResource ZeroSize}" />
+        <Setter Property="MinHeight"
+                Value="{StaticResource ZeroSize}" />
+    </Style>
+
+    <Style Selector="Button.generation-option PathIcon">
+        <Setter Property="Width"
+                Value="{StaticResource GenerationOptionIconSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource GenerationOptionIconSize}" />
+    </Style>
+
+    <Style Selector="Button.title-action">
+        <Setter Property="MinWidth"
+                Value="{StaticResource TitleButtonSize}" />
+        <Setter Property="MinHeight"
+                Value="{StaticResource TitleButtonSize}" />
+    </Style>
+
+    <Style Selector="Button.close-action">
+        <Setter Property="MinWidth"
+                Value="{StaticResource TitleButtonSize}" />
+        <Setter Property="MinHeight"
+                Value="{StaticResource TitleButtonSize}" />
+    </Style>
+
+    <Style Selector="Button.attach-image">
+        <Setter Property="Width"
+                Value="{StaticResource AttachmentButtonSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource AttachmentButtonSize}" />
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="HorizontalContentAlignment"
+                Value="Center" />
+        <Setter Property="VerticalContentAlignment"
+                Value="Center" />
+    </Style>
+
+    <Style Selector="Button.remove-attachment">
+        <Setter Property="Width"
+                Value="{StaticResource AttachmentRemoveButtonSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource AttachmentRemoveButtonSize}" />
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="HorizontalContentAlignment"
+                Value="Center" />
+        <Setter Property="VerticalContentAlignment"
+                Value="Center" />
+        <Setter Property="IsVisible"
+                Value="False" />
+        <Setter Property="Background"
+                Value="{DynamicResource SukiDangerColor}" />
+        <Setter Property="BorderBrush"
+                Value="{DynamicResource SukiDangerColor}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource AttachmentRemoveButtonCornerRadius}" />
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiDangerForeground}" />
+    </Style>
+
+    <Style Selector="Button.remove-attachment:pointerover">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiDangerMediumColor}" />
+        <Setter Property="BorderBrush"
+                Value="{DynamicResource SukiDangerMediumColor}" />
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiDangerForeground}" />
+    </Style>
+
+    <Style Selector="Button.remove-attachment:pressed">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiDangerDarkColor}" />
+        <Setter Property="BorderBrush"
+                Value="{DynamicResource SukiDangerDarkColor}" />
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiDangerForeground}" />
+    </Style>
+
+    <Style Selector="Border.attachment-preview:pointerover Button.remove-attachment">
+        <Setter Property="IsVisible"
+                Value="True" />
+    </Style>
+
+    <Style Selector="Button.card-action">
+        <Setter Property="Width"
+                Value="{StaticResource GenerationCardActionSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource GenerationCardActionSize}" />
+        <Setter Property="MinWidth"
+                Value="{StaticResource ZeroSize}" />
+        <Setter Property="MinHeight"
+                Value="{StaticResource ZeroSize}" />
+        <Setter Property="Margin"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Opacity"
+                Value="0" />
+        <Setter Property="HorizontalContentAlignment"
+                Value="Center" />
+        <Setter Property="VerticalContentAlignment"
+                Value="Center" />
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <DoubleTransition Property="Opacity"
+                                      Duration="0:0:0.15" />
+                </Transitions>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.generation-card:pointerover Button.card-action">
+        <Setter Property="Opacity"
+                Value="1" />
+    </Style>
+
+    <Style Selector="Border.generation-card.preview-expanded Button.card-action">
+        <Setter Property="Opacity"
+                Value="0" />
+    </Style>
+
+    <Style Selector="Button.card-zone-hit-target">
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="HorizontalContentAlignment"
+                Value="Stretch" />
+        <Setter Property="VerticalContentAlignment"
+                Value="Stretch" />
+    </Style>
+
+    <Style Selector="Button.card-zone-hit-target:pointerover">
+        <Setter Property="Background"
+                Value="Transparent" />
+    </Style>
+
+    <Style Selector="PathIcon.card-action-icon">
+        <Setter Property="Width"
+                Value="{StaticResource GenerationCardActionIconSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource GenerationCardActionIconSize}" />
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiText}" />
+    </Style>
+
+    <Style Selector="Button.card-hit-target">
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPrimaryColor0}" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="HorizontalContentAlignment"
+                Value="Stretch" />
+        <Setter Property="VerticalContentAlignment"
+                Value="Stretch" />
+    </Style>
+
+    <Style Selector="Button.card-hit-target:pointerover">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPrimaryColor5}" />
+    </Style>
+
+    <Style Selector="Button.overlay-backdrop">
+        <Setter Property="Background">
+            <Setter.Value>
+                <SolidColorBrush Color="{DynamicResource SukiDialogBackground}"
+                                 Opacity="{StaticResource OverlayBackdropOpacity}" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+</Styles>

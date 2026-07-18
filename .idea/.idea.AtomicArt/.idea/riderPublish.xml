@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="LocationsWithSilentDeleteHolder">
+    <option name="locations">
+      <list>
+        <option value="$PROJECT_DIR$/src/Pica.Desktop/bin/Release/net9.0/publish" />
+        <option value="$PROJECT_DIR$/src/AtomicArt.Desktop/bin/Release/net9.0/publish" />
+        <option value="$PROJECT_DIR$/publish/AtomicArt.Desktop/WindowsGitHub" />
+      </list>
+    </option>
+  </component>
+</project>

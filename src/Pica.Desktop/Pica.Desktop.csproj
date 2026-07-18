@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
+    <AssemblyName>Pica</AssemblyName>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>..\Pica.Viewer\Assets\AppIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract Condition="'$(RuntimeIdentifier)' != ''">true</IncludeNativeLibrariesForSelfExtract>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pica.Protocol\Pica.Protocol.csproj" />
+    <ProjectReference Include="..\Pica.Viewer\Pica.Viewer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.5" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="SukiUI" Version="7.0.2-nightly20260625" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\Colors.axaml"
+                      Link="Resources\Colors.axaml" />
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\Dimensions.axaml"
+                      Link="Resources\Dimensions.axaml" />
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\Icons.axaml"
+                      Link="Resources\Icons.axaml" />
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\ComboBoxStyles.axaml"
+                      Link="Resources\ComboBoxStyles.axaml" />
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\TextStyles.axaml"
+                      Link="Resources\TextStyles.axaml" />
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\ButtonStyles.axaml"
+                      Link="Resources\ButtonStyles.axaml" />
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\Templates.axaml"
+                      Link="Resources\Templates.axaml" />
+    <None Update="Assets\Info.plist">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Target Name="RemovePublishedSymbols" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release' and '$(PublishSingleFile)' == 'true'">
+    <ItemGroup>
+      <PublishedSymbolFiles Include="$(PublishDir)*.pdb" />
+    </ItemGroup>
+    <Delete Files="@(PublishedSymbolFiles)" />
+  </Target>
+
+  <Target Name="CreateMacAppBundleMetadata" AfterTargets="Publish" Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx-'))">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)/Assets/Info.plist"
+          DestinationFolder="$(PublishDir).." />
+  </Target>
+
+</Project>

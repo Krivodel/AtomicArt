@@ -1,0 +1,457 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+using FluentAssertions;
+using Moq;
+using Xunit;
+
+using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery.Deletion;
+using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Desktop.Tests.TestDoubles;
+
+namespace AtomicArt.Desktop.Tests.Services.Gallery.Deletion;
+
+public sealed class GalleryItemDeletionServiceTests
+{
+    private const string ModelId = "test-model";
+
+    private static readonly Guid BatchId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+    private static readonly Guid ItemId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+    private static readonly Guid OtherItemId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
+    [Fact]
+    public async Task DeleteFilesAsync_WithImageAndThumbnail_DeletesBothFiles()
+    {
+        string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithImageAndThumbnail_DeletesBothFiles));
+        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
+        string thumbnailPath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
+        GalleryItemDeletionService service = CreateService(new PassthroughTrustedImageFileService());
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, thumbnailPath);
+
+        await service.DeleteFilesAsync(request, CancellationToken.None);
+
+        File.Exists(imagePath).Should().BeFalse();
+        File.Exists(thumbnailPath).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WithMissingFiles_Completes()
+    {
+        string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithMissingFiles_Completes));
+        AtomicArtDataPathProvider pathProvider = new(directory);
+        string imagePath = Path.Combine(pathProvider.ArtDirectory, BuildManagedFileName(ItemId));
+        string thumbnailPath = Path.Combine(pathProvider.ThumbnailsDirectory, BuildManagedFileName(ItemId));
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
+        GalleryItemDeletionService service = CreateService(
+            CreateRealTrustedImageFileService(pathProvider),
+            loggerMock.Object);
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, thumbnailPath);
+
+        Func<Task> act = () => service.DeleteFilesAsync(request, CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        VerifyNoWarningLogged(loggerMock);
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WithMissingFile_ValidatesTrustBeforeTreatingAsDeleted()
+    {
+        string directory = CreateCleanDirectory(
+            nameof(DeleteFilesAsync_WithMissingFile_ValidatesTrustBeforeTreatingAsDeleted));
+        string imagePath = Path.Combine(directory, BuildManagedFileName(ItemId));
+        ModelScopedTrustedImageFileService trustedImageFileService = new(ModelId);
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
+        GalleryItemDeletionService service = CreateService(
+            trustedImageFileService,
+            loggerMock.Object);
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+
+        await service.DeleteFilesAsync(request, CancellationToken.None);
+
+        trustedImageFileService.DeletionModelIds.Should().ContainSingle().Which.Should().Be(ModelId);
+        trustedImageFileService.ReadModelIds.Should().BeEmpty();
+        VerifyNoWarningLogged(loggerMock);
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WithUntrustedPath_DoesNotDeleteFile()
+    {
+        string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithUntrustedPath_DoesNotDeleteFile));
+        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
+        GalleryItemDeletionService service = CreateService(
+            new RejectingTrustedImageFileService(),
+            loggerMock.Object);
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+
+        await service.DeleteFilesAsync(request, CancellationToken.None);
+
+        File.Exists(imagePath).Should().BeTrue();
+        VerifyWarningLogged(loggerMock, "path is not trusted");
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WithUntrustedPath_DoesNotThrow()
+    {
+        string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithUntrustedPath_DoesNotThrow));
+        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
+        GalleryItemDeletionService service = CreateService(new RejectingTrustedImageFileService());
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+
+        Func<Task> act = () => service.DeleteFilesAsync(request, CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        File.Exists(imagePath).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WithMissingUntrustedFile_ValidatesTrustAndLogsWarning()
+    {
+        string directory = CreateCleanDirectory(
+            nameof(DeleteFilesAsync_WithMissingUntrustedFile_ValidatesTrustAndLogsWarning));
+        string imagePath = Path.Combine(directory, BuildManagedFileName(ItemId));
+        ModelScopedTrustedImageFileService trustedImageFileService = new("other-model");
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
+        GalleryItemDeletionService service = CreateService(
+            trustedImageFileService,
+            loggerMock.Object);
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+
+        await service.DeleteFilesAsync(request, CancellationToken.None);
+
+        trustedImageFileService.DeletionModelIds.Should().ContainSingle().Which.Should().Be(ModelId);
+        trustedImageFileService.ReadModelIds.Should().BeEmpty();
+        VerifyWarningLogged(loggerMock, "path is not trusted");
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WithModelScopedTrustedPath_DeletesFile()
+    {
+        string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithModelScopedTrustedPath_DeletesFile));
+        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
+        ModelScopedTrustedImageFileService trustedImageFileService = new(ModelId);
+        GalleryItemDeletionService service = CreateService(trustedImageFileService);
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+
+        await service.DeleteFilesAsync(request, CancellationToken.None);
+
+        trustedImageFileService.DeletionModelIds.Should().ContainSingle().Which.Should().Be(ModelId);
+        File.Exists(imagePath).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WithRealTrustedService_DeletesManagedFile()
+    {
+        string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithRealTrustedService_DeletesManagedFile));
+        AtomicArtDataPathProvider pathProvider = new(directory);
+        TrustedImageFileService trustedImageFileService = CreateRealTrustedImageFileService(pathProvider);
+        GalleryItemDeletionService service = CreateService(trustedImageFileService);
+        Directory.CreateDirectory(pathProvider.ArtDirectory);
+        string imagePath = Path.Combine(pathProvider.ArtDirectory, BuildManagedFileName(ItemId));
+        await File.WriteAllBytesAsync(imagePath, GenerationImageTestData.ValidPngBytes);
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+
+        await service.DeleteFilesAsync(request, CancellationToken.None);
+
+        File.Exists(imagePath).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WhenFileDeleteFails_LogsAndContinues()
+    {
+        string directory = CreateCleanDirectory(
+            nameof(DeleteFilesAsync_WhenFileDeleteFails_LogsAndContinues));
+        AtomicArtDataPathProvider pathProvider = new(directory);
+        Directory.CreateDirectory(pathProvider.ArtDirectory);
+        Directory.CreateDirectory(pathProvider.ThumbnailsDirectory);
+        string imagePath = await WriteFileAsync(pathProvider.ArtDirectory, BuildManagedFileName(ItemId));
+        string thumbnailPath = await WriteFileAsync(pathProvider.ThumbnailsDirectory, BuildManagedFileName(ItemId));
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
+        GalleryItemDeletionService service = CreateService(
+            CreateRealTrustedImageFileService(pathProvider),
+            loggerMock.Object);
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, thumbnailPath);
+        
+        await using FileStream lockedImage = new(
+            imagePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.None);
+
+        Func<Task> act = () => service.DeleteFilesAsync(request, CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        File.Exists(imagePath).Should().BeTrue();
+        File.Exists(thumbnailPath).Should().BeFalse();
+        VerifyErrorLogged(loggerMock, "Failed to delete gallery item");
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WhenCanceled_ThrowsOperationCanceledException()
+    {
+        string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WhenCanceled_ThrowsOperationCanceledException));
+        string imagePath = Path.Combine(directory, BuildManagedFileName(ItemId));
+        GalleryItemDeletionService service = CreateService(new PassthroughTrustedImageFileService());
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+        using CancellationTokenSource cancellationTokenSource = new();
+        await cancellationTokenSource.CancelAsync();
+
+        Func<Task> act = () => service.DeleteFilesAsync(request, cancellationTokenSource.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WithTrustedPathForOtherItem_DoesNotDeleteFile()
+    {
+        string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithTrustedPathForOtherItem_DoesNotDeleteFile));
+        AtomicArtDataPathProvider pathProvider = new(directory);
+        TrustedImageFileService trustedImageFileService = CreateRealTrustedImageFileService(pathProvider);
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
+        GalleryItemDeletionService service = CreateService(trustedImageFileService, loggerMock.Object);
+        Directory.CreateDirectory(pathProvider.ArtDirectory);
+        string imagePath = Path.Combine(pathProvider.ArtDirectory, BuildManagedFileName(OtherItemId));
+        await File.WriteAllBytesAsync(imagePath, GenerationImageTestData.ValidPngBytes);
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+
+        await service.DeleteFilesAsync(request, CancellationToken.None);
+
+        File.Exists(imagePath).Should().BeTrue();
+        VerifyWarningLogged(loggerMock, "does not belong to the item", exceptionExpected: false);
+    }
+
+    [Fact]
+    public async Task DeleteFilesAsync_WhenResolvedPathBelongsToOtherItem_DoesNotDeleteFile()
+    {
+        string directory = CreateCleanDirectory(
+            nameof(DeleteFilesAsync_WhenResolvedPathBelongsToOtherItem_DoesNotDeleteFile));
+        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
+        string otherItemPath = await WriteFileAsync(directory, BuildManagedFileName(OtherItemId));
+        ResolvedPathTrustedImageFileService trustedImageFileService = new(otherItemPath);
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
+        GalleryItemDeletionService service = CreateService(trustedImageFileService, loggerMock.Object);
+        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+
+        await service.DeleteFilesAsync(request, CancellationToken.None);
+
+        trustedImageFileService.ValidateResolvedPathCallCount.Should().Be(1);
+        File.Exists(imagePath).Should().BeTrue();
+        File.Exists(otherItemPath).Should().BeTrue();
+        VerifyWarningLogged(loggerMock, "path is not trusted");
+    }
+
+    private static GalleryItemDeletionService CreateService(ITrustedImageFileService trustedImageFileService)
+    {
+        return CreateService(
+            trustedImageFileService,
+            Mock.Of<ILogger<GalleryItemDeletionService>>());
+    }
+
+    private static GalleryItemDeletionService CreateService(
+        ITrustedImageFileService trustedImageFileService,
+        ILogger<GalleryItemDeletionService> logger)
+    {
+        return new GalleryItemDeletionService(
+            trustedImageFileService,
+            new GenerationImageFileNamePolicy(),
+            logger);
+    }
+
+    private static string BuildManagedFileName(Guid itemId)
+    {
+        GenerationImageFileNamePolicy fileNamePolicy = new();
+
+        return fileNamePolicy.BuildFileName(BatchId, itemId, ".png");
+    }
+
+    private static TrustedImageFileService CreateRealTrustedImageFileService(
+        AtomicArtDataPathProvider pathProvider)
+    {
+        return new TrustedImageFileService(
+            pathProvider,
+            GenerationImageFormatRegistryTestFactory.Create(),
+            NullLogger<TrustedImageFileService>.Instance);
+    }
+
+    private static string CreateCleanDirectory(string name)
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            "AtomicArtDesktopTests",
+            nameof(GalleryItemDeletionServiceTests),
+            name);
+
+        if (Directory.Exists(directory))
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+
+        Directory.CreateDirectory(directory);
+
+        return directory;
+    }
+
+    private static async Task<string> WriteFileAsync(string directory, string fileName)
+    {
+        string path = Path.Combine(directory, fileName);
+        await File.WriteAllBytesAsync(path, [0x01, 0x02, 0x03]);
+
+        return path;
+    }
+
+    private static void VerifyWarningLogged(
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock,
+        string expectedMessage,
+        bool exceptionExpected = true)
+    {
+        if (exceptionExpected)
+        {
+            loggerMock.Verify(
+                logger => logger.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((state, _) =>
+                        (state.ToString() ?? string.Empty).Contains(expectedMessage, StringComparison.Ordinal)),
+                    It.IsAny<InvalidOperationException>(),
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.AtLeastOnce);
+
+            return;
+        }
+
+        loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) =>
+                    (state.ToString() ?? string.Empty).Contains(expectedMessage, StringComparison.Ordinal)),
+                It.Is<Exception?>(exception => exception == null),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    private static void VerifyNoWarningLogged(Mock<ILogger<GalleryItemDeletionService>> loggerMock)
+    {
+        loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    private static void VerifyErrorLogged(
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock,
+        string expectedMessage)
+    {
+        loggerMock.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) =>
+                    (state.ToString() ?? string.Empty).Contains(expectedMessage, StringComparison.Ordinal)),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    private sealed class ModelScopedTrustedImageFileService : ITrustedImageFileService
+    {
+        private readonly string _trustedModelId;
+        private readonly List<string> _readModelIds = [];
+        private readonly List<string> _deletionModelIds = [];
+
+        public IReadOnlyList<string> ReadModelIds => _readModelIds;
+        public IReadOnlyList<string> DeletionModelIds => _deletionModelIds;
+
+        public ModelScopedTrustedImageFileService(string trustedModelId)
+        {
+            _trustedModelId = trustedModelId;
+        }
+
+        public string? GetTrustedImagePathOrDefault(string? path, string modelId)
+        {
+            _readModelIds.Add(modelId);
+
+            return GetTrustedPathOrDefault(path, modelId);
+        }
+
+        public string GetTrustedImagePath(string? path, string modelId)
+        {
+            return GetTrustedImagePathOrDefault(path, modelId)
+                ?? throw new InvalidOperationException("Image path is not trusted.");
+        }
+
+        public void DeleteTrustedImageFileIfExists(
+            string? path,
+            string modelId,
+            Action<string> validateResolvedPath)
+        {
+            _deletionModelIds.Add(modelId);
+
+            string? trustedPath = GetTrustedPathOrDefault(path, modelId);
+
+            if (trustedPath is null)
+            {
+                throw new InvalidOperationException("Image path is not trusted.");
+            }
+
+            if (File.Exists(trustedPath))
+            {
+                validateResolvedPath(trustedPath);
+                File.Delete(trustedPath);
+            }
+        }
+
+        private string? GetTrustedPathOrDefault(string? path, string modelId)
+        {
+            if (string.Equals(modelId, _trustedModelId, StringComparison.Ordinal))
+            {
+                return path;
+            }
+
+            return null;
+        }
+    }
+
+    private sealed class ResolvedPathTrustedImageFileService : ITrustedImageFileService
+    {
+        private readonly string _resolvedPath;
+
+        public int ValidateResolvedPathCallCount { get; private set; }
+
+        public ResolvedPathTrustedImageFileService(string resolvedPath)
+        {
+            _resolvedPath = resolvedPath;
+        }
+
+        public string? GetTrustedImagePathOrDefault(string? path, string modelId)
+        {
+            return path;
+        }
+
+        public string GetTrustedImagePath(string? path, string modelId)
+        {
+            return path ?? throw new InvalidOperationException("Image path is not trusted.");
+        }
+
+        public void DeleteTrustedImageFileIfExists(
+            string? path,
+            string modelId,
+            Action<string> validateResolvedPath)
+        {
+            ValidateResolvedPathCallCount++;
+            validateResolvedPath(_resolvedPath);
+
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+}

@@ -1,0 +1,12 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:behaviors="using:AtomicArt.Desktop.Behaviors">
+    <Style Selector="ScrollViewer">
+        <Setter Property="behaviors:SmoothScrollBehavior.IsEnabled"
+                Value="True" />
+    </Style>
+
+    <Style Selector="TextBox.prompt-input /template/ ScrollViewer">
+        <Setter Property="behaviors:SmoothScrollBehavior.WheelMultiplier"
+                Value="48" />
+    </Style>
+</Styles>

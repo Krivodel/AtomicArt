@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Gallery"
+             xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             x:Class="AtomicArt.Desktop.Views.Gallery.GalleryView"
+             x:Name="GalleryRoot"
+             x:DataType="gallery:GalleryViewModel">
+    <Grid>
+        <TextBlock HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsEmpty}"
+                   Text="{x:Static resources:UiStrings.GalleryPlaceholder}" />
+
+        <controls:AnimatedGalleryControl x:Name="GalleryControl"
+                                         Operations="{Binding GalleryOperations, ElementName=GalleryRoot}"
+                                         Items="{Binding Items}"
+                                         DeleteOrCancelCommand="{Binding DeleteOrCancelCommand}"
+                                         OpenMetadataCommand="{Binding OpenMetadataCommand}"
+                                         OpenViewerCommand="{Binding OpenViewerCommand}"
+                                         RevealInFolderCommand="{Binding RevealInFolderCommand}" />
+
+        <TextBlock Margin="0,12,0,0"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Top"
+                   Classes="error-message"
+                   IsVisible="{Binding HasErrorMessage}"
+                   Text="{Binding ErrorMessage}" />
+    </Grid>
+</UserControl>

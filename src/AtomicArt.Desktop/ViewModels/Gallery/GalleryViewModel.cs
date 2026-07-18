@@ -1,0 +1,342 @@
+using System.Collections.ObjectModel;
+
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Services.Gallery.Deletion;
+using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Generation;
+
+namespace AtomicArt.Desktop.ViewModels.Gallery;
+
+public sealed partial class GalleryViewModel : ObservableObject, IDisposable
+{
+    public ReadOnlyObservableCollection<GenerationItemViewModel> Items { get; }
+    public bool IsEmpty => _itemsController.IsEmpty;
+    public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
+
+    private readonly IFileRevealService _fileRevealService;
+    private readonly IImageViewerService _imageViewerService;
+    private readonly IGalleryItemDeletionService _deletionService;
+    private readonly IGalleryStateService _galleryStateService;
+    private readonly GalleryLifecycleViewStateController _viewStateController;
+    private readonly GalleryItemsController _itemsController;
+    private readonly GalleryLifecycleController _lifecycleController;
+    private readonly IViewModelErrorHandler _errorHandler;
+    private readonly GenerationPriceFormatter _priceFormatter;
+    private readonly GenerationDurationFormatter _durationFormatter;
+    private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
+    [ObservableProperty]
+    private GenerationItemViewModel? _selectedItem;
+    [ObservableProperty]
+    private GenerationMetadataViewModel? _selectedMetadata;
+    [ObservableProperty]
+    private bool _isMetadataOpen;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasErrorMessage))]
+    private string? _errorMessage;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RevealInFolderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenViewerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteOrCancelCommand))]
+    private bool _isLoading;
+
+    public GalleryViewModel(
+        IFileRevealService fileRevealService,
+        IImageViewerService imageViewerService,
+        IGalleryItemDeletionService deletionService,
+        IGalleryStateService galleryStateService,
+        GalleryLifecycleViewStateController viewStateController,
+        GalleryItemsController itemsController,
+        GalleryLifecycleController lifecycleController,
+        IViewModelErrorHandler errorHandler,
+        GenerationPriceFormatter priceFormatter,
+        GenerationDurationFormatter durationFormatter)
+    {
+        ArgumentNullException.ThrowIfNull(fileRevealService);
+        ArgumentNullException.ThrowIfNull(imageViewerService);
+        ArgumentNullException.ThrowIfNull(deletionService);
+        ArgumentNullException.ThrowIfNull(galleryStateService);
+        ArgumentNullException.ThrowIfNull(viewStateController);
+        ArgumentNullException.ThrowIfNull(itemsController);
+        ArgumentNullException.ThrowIfNull(lifecycleController);
+        ArgumentNullException.ThrowIfNull(errorHandler);
+        ArgumentNullException.ThrowIfNull(priceFormatter);
+        ArgumentNullException.ThrowIfNull(durationFormatter);
+
+        _fileRevealService = fileRevealService;
+        _imageViewerService = imageViewerService;
+        _deletionService = deletionService;
+        _galleryStateService = galleryStateService;
+        _viewStateController = viewStateController;
+        _itemsController = itemsController;
+        Items = _itemsController.Items;
+        _itemsController.IsEmptyChanged += OnItemsEmptyChanged;
+        _lifecycleController = lifecycleController;
+        _errorHandler = errorHandler;
+        _priceFormatter = priceFormatter;
+        _durationFormatter = durationFormatter;
+    }
+
+    public void ConfigureImageViewerAttachments(
+        IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachImagesCommand)
+    {
+        ArgumentNullException.ThrowIfNull(attachImagesCommand);
+
+        _attachImagesCommand = attachImagesCommand;
+    }
+
+    public void AddGeneratedItems(IReadOnlyList<GenerationItemDto> items, int attachedImagesCount)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        IReadOnlyList<GenerationItemViewModel> addedItems =
+            _itemsController.CreateGeneratedItems(items, attachedImagesCount);
+        _itemsController.AddGeneratedItems(addedItems);
+        ObserveGalleryOperation(
+            ct => _viewStateController.GenerateFrontAsync(addedItems, ct),
+            CancellationToken.None);
+    }
+
+    public Task RestoreStateAsync(IReadOnlyList<GalleryItemState> items, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        return _viewStateController.RestoreAsync(items, ct);
+    }
+
+    public void Dispose()
+    {
+        _itemsController.IsEmptyChanged -= OnItemsEmptyChanged;
+        _lifecycleController.Dispose();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunCommand))]
+    private async Task RevealInFolderAsync(GenerationItemViewModel? item, CancellationToken ct)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            ErrorMessage = null;
+            await _fileRevealService.RevealAsync(item?.ImagePath, item?.ModelId ?? string.Empty, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (InvalidOperationException ex)
+        {
+            _errorHandler.Log(ex, nameof(RevealInFolderAsync));
+            ErrorMessage = _errorHandler.GetUserMessage(ex);
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.Log(ex, nameof(RevealInFolderAsync));
+            ErrorMessage = _errorHandler.GetUserMessage(ex);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OpenMetadata(GenerationItemViewModel? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        SelectedItem = item;
+        SelectedMetadata = GenerationMetadataViewModel.FromItem(
+            item,
+            CloseOverlayCommand,
+            _priceFormatter,
+            _durationFormatter);
+        IsMetadataOpen = true;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunCommand))]
+    private async Task DeleteOrCancelAsync(GenerationItemViewModel? item, CancellationToken ct)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        if (item is null)
+        {
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+            ErrorMessage = null;
+            if (!_itemsController.Contains(item))
+            {
+                return;
+            }
+
+            GalleryItemDeletionRequest deletionRequest = CreateDeletionRequest(item);
+            Guid removedItemId = item.Id;
+            _itemsController.Delete(item);
+            await _viewStateController.RemoveAsync(removedItemId, ct);
+            await _deletionService.DeleteFilesAsync(deletionRequest, ct);
+            IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
+            await _galleryStateService.SaveAsync(snapshot, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (InvalidOperationException ex)
+        {
+            _errorHandler.Log(ex, nameof(DeleteOrCancelAsync));
+            ErrorMessage = _errorHandler.GetUserMessage(ex);
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.Log(ex, nameof(DeleteOrCancelAsync));
+            ErrorMessage = _errorHandler.GetUserMessage(ex);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CloseOverlay()
+    {
+        IsMetadataOpen = false;
+    }
+
+    private void OnItemsEmptyChanged()
+    {
+        OnPropertyChanged(nameof(IsEmpty));
+    }
+
+    private void OnItemsEmptyChanged(object? sender, EventArgs args)
+    {
+        OnItemsEmptyChanged();
+    }
+
+    private bool CanRunCommand()
+    {
+        return !IsLoading;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunCommand), AllowConcurrentExecutions = true)]
+    private async Task OpenViewerAsync(GenerationItemViewModel? item, CancellationToken ct)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        if (item is null)
+        {
+            return;
+        }
+
+        try
+        {
+            ErrorMessage = null;
+            GalleryImageViewerRequest? request = CreateImageViewerRequestOrDefault(item);
+            if (request is null)
+            {
+                return;
+            }
+
+            await _imageViewerService.OpenAsync(request, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (InvalidOperationException ex)
+        {
+            _errorHandler.Log(ex, nameof(OpenViewerAsync));
+            ErrorMessage = _errorHandler.GetUserMessage(ex);
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.Log(ex, nameof(OpenViewerAsync));
+            ErrorMessage = _errorHandler.GetUserMessage(ex);
+        }
+    }
+
+    private static GalleryItemDeletionRequest CreateDeletionRequest(GenerationItemViewModel item)
+    {
+        return new GalleryItemDeletionRequest(
+            item.Id,
+            item.ModelId,
+            item.ImagePath,
+            item.ThumbnailPath);
+    }
+
+    private GalleryImageViewerRequest? CreateImageViewerRequestOrDefault(GenerationItemViewModel selectedItem)
+    {
+        List<GalleryImageViewerItem> viewerItems = [];
+
+        foreach (GenerationItemViewModel item in Items)
+        {
+            if (!item.ShowsGeneratedImage || string.IsNullOrWhiteSpace(item.ImagePath))
+            {
+                continue;
+            }
+
+            viewerItems.Add(new GalleryImageViewerItem(
+                item.Id,
+                new GalleryFileImageViewerSource(
+                    item.ModelId,
+                    item.ImagePath,
+                    item.ThumbnailPath)));
+        }
+
+        if (!viewerItems.Any(item => item.Id == selectedItem.Id))
+        {
+            return null;
+        }
+
+        return new GalleryImageViewerRequest(
+            new GalleryStaticImageViewerItemsSource(viewerItems),
+            selectedItem.Id,
+            _attachImagesCommand);
+    }
+
+    private void ObserveGalleryOperation(
+        Func<CancellationToken, Task> operation,
+        CancellationToken ct)
+    {
+        _ = ObserveGalleryOperationAsync(operation, ct);
+    }
+
+    private async Task ObserveGalleryOperationAsync(
+        Func<CancellationToken, Task> operation,
+        CancellationToken ct)
+    {
+        try
+        {
+            await operation(ct);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (InvalidOperationException ex)
+        {
+            _errorHandler.Log(ex, nameof(ObserveGalleryOperationAsync));
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.Log(ex, nameof(ObserveGalleryOperationAsync));
+        }
+    }
+}

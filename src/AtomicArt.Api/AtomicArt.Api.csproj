@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AtomicArt.Application\AtomicArt.Application.csproj" />
+    <ProjectReference Include="..\AtomicArt.Contracts\AtomicArt.Contracts.csproj" />
+    <ProjectReference Include="..\AtomicArt.Domain\AtomicArt.Domain.csproj" />
+    <ProjectReference Include="..\AtomicArt.Infrastructure\AtomicArt.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

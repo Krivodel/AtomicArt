@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:AtomicArt.Desktop.Views.Gallery"
+             xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             x:Class="AtomicArt.Desktop.Views.Gallery.GenerationCardControl"
+             x:DataType="gallery:GenerationItemViewModel">
+    <Border x:Name="GenerationCardRoot"
+            Classes="generation-card">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="{StaticResource GenerationCardPreviewHeight}" />
+                <RowDefinition Height="{StaticResource GenerationCardInfoHeight}" />
+            </Grid.RowDefinitions>
+
+            <Grid x:Name="PreviewExpansionHost"
+                  Grid.Row="0"
+                  Width="{StaticResource GenerationCardWidth}"
+                  Height="{StaticResource GenerationCardWidth}"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Top"
+                  IsHitTestVisible="False"
+                  ZIndex="10">
+                <Border x:Name="PreviewShadow"
+                        Classes="image-preview-shadow"
+                        Background="{DynamicResource SukiPopupBackground}"
+                        CornerRadius="{StaticResource GenerationCardCornerRadius}"
+                        Opacity="0" />
+                <Border Classes="generation-card-preview"
+                        CornerRadius="{StaticResource GenerationCardCornerRadius}">
+                    <Image x:Name="PreviewImage"
+                           Classes="generation-card-image"
+                           IsVisible="{Binding ShowsGeneratedImage}"
+                           Source="{Binding DisplayThumbnailPath,
+                                            Converter={StaticResource ImagePathToBitmapConverter}}" />
+                </Border>
+            </Grid>
+
+            <Border Grid.Row="0"
+                    Classes="generation-card-loading"
+                    IsVisible="{Binding ShowsGenerationProgress}" />
+
+            <Border Grid.Row="0"
+                    Classes="generation-card-empty"
+                    IsVisible="{Binding ShowsEmptyPreview}" />
+
+            <Border Grid.Row="0"
+                    Classes="generation-card-error"
+                    IsVisible="{Binding IsFailed}">
+                <TextBlock Classes="generation-card-error-text"
+                           Text="{x:Static resources:UiStrings.GenerationPreviewError}" />
+            </Border>
+
+            <Border x:Name="PreviewDragSource"
+                    Grid.Row="0"
+                    Background="Transparent"
+                    Cursor="Hand"
+                    PointerCaptureLost="OnPreviewDragSourcePointerCaptureLost"
+                    PointerMoved="OnPreviewDragSourcePointerMoved"
+                    PointerPressed="OnPreviewDragSourcePointerPressed"
+                    PointerReleased="OnPreviewDragSourcePointerReleased" />
+
+            <Border Grid.Row="1"
+                    Classes="generation-card-info">
+                <Grid RowDefinitions="*,Auto">
+                    <TextBlock Grid.Row="0"
+                               Classes="generation-card-prompt"
+                               Text="{Binding Prompt}" />
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Classes="generation-card-model"
+                                   Text="{Binding ModelDisplayName}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="generation-card-time"
+                                   Text="{Binding ElapsedText}" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Button Grid.Row="1"
+                    Classes="card-zone-hit-target"
+                    Cursor="Arrow"
+                    Command="{Binding $parent[controls:GenerationCardControl].OpenMetadataCommand}"
+                    CommandParameter="{Binding}" />
+
+            <Button x:Name="RevealInFolderButton"
+                    Grid.Row="0"
+                    Margin="{StaticResource GalleryCardActionMargin}"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Classes="Icon card-action card-action-left"
+                    ZIndex="20"
+                    Command="{Binding $parent[controls:GenerationCardControl].RevealInFolderCommand}"
+                    CommandParameter="{Binding}">
+                <PathIcon Classes="card-action-icon"
+                          Data="{StaticResource GalleryFolderIcon}" />
+            </Button>
+
+            <Button x:Name="DeleteOrCancelButton"
+                    Grid.Row="0"
+                    Margin="{StaticResource GalleryCardActionMargin}"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Classes="Icon card-action card-action-right"
+                    ZIndex="20"
+                    Command="{Binding $parent[controls:GenerationCardControl].DeleteOrCancelCommand}"
+                    CommandParameter="{Binding}">
+                <Grid>
+                    <PathIcon Classes="card-action-icon"
+                              IsVisible="{Binding IsGenerating}"
+                              Data="{StaticResource GalleryCancelIcon}" />
+                    <PathIcon Classes="card-action-icon"
+                              IsVisible="{Binding !IsGenerating}"
+                              Data="{StaticResource GalleryTrashIcon}" />
+                </Grid>
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

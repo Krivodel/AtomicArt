@@ -1,0 +1,637 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+
+using AtomicArt.Application.Features.Generation.Models;
+using AtomicArt.Contracts.Generation;
+
+namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
+
+internal sealed class GoogleInteractionsResponseParser
+{
+    private const string NoImageCategory = "no_image";
+    private const string TextOnlyCategory = "text_only";
+
+    private static readonly string[] CompletedStatuses =
+    [
+        "completed",
+        "complete",
+        "succeeded",
+        "success"
+    ];
+
+    private static readonly string[] FailedStatuses =
+    [
+        "failed",
+        "cancelled",
+        "canceled",
+        "incomplete"
+    ];
+
+    public GoogleInteractionsResult Parse(string responseJson)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(responseJson);
+
+        using JsonDocument document = JsonDocument.Parse(responseJson);
+        JsonElement root = document.RootElement;
+
+        ValidateStatus(root);
+
+        IReadOnlyList<GoogleInteractionImageContent> images = ExtractImages(root);
+
+        if (images.Count == 0)
+        {
+            throw new GoogleInteractionsException(
+                ImageGenerationProviderFailureKind.InvalidResponse,
+                "The generation provider did not return a JPEG image.",
+                CreateNoImageDiagnostics(root));
+        }
+
+        GenerationUsageDto usage = ExtractUsage(root);
+
+        return new GoogleInteractionsResult(images, usage);
+    }
+
+    private static void ValidateStatus(JsonElement root)
+    {
+        if (!TryGetProperty(root, "status", out JsonElement statusElement)
+            && !TryGetProperty(root, "state", out statusElement))
+        {
+            return;
+        }
+
+        if (statusElement.ValueKind != JsonValueKind.String)
+        {
+            throw new GoogleInteractionsException(
+                ImageGenerationProviderFailureKind.InvalidResponse,
+                "The generation provider returned an invalid status.");
+        }
+
+        string? status = statusElement.GetString();
+
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            throw new GoogleInteractionsException(
+                ImageGenerationProviderFailureKind.InvalidResponse,
+                "The generation provider returned an invalid status.");
+        }
+
+        if (CompletedStatuses.Contains(status, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (FailedStatuses.Contains(status, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new GoogleInteractionsException(
+                ImageGenerationProviderFailureKind.InvalidResponse,
+                "The generation provider did not complete image creation.");
+        }
+
+        throw new GoogleInteractionsException(
+            ImageGenerationProviderFailureKind.InvalidResponse,
+            "The generation provider returned an unknown status.");
+    }
+
+    private static IReadOnlyList<GoogleInteractionImageContent> ExtractImages(JsonElement root)
+    {
+        List<GoogleInteractionImageContent> images = [];
+
+        AddImagesFromProperty(root, "output_image", "outputImage", images);
+        AddImagesFromProperty(root, "output_images", "outputImages", images);
+        AddImagesFromProperty(root, "output", images);
+        AddImagesFromSteps(root, images);
+
+        return images;
+    }
+
+    private static void AddImagesFromSteps(
+        JsonElement root,
+        List<GoogleInteractionImageContent> images)
+    {
+        if (!TryGetProperty(root, "steps", out JsonElement stepsElement)
+            || stepsElement.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (JsonElement stepElement in stepsElement.EnumerateArray())
+        {
+            AddImagesFromProperty(stepElement, "content", images);
+            AddImagesFromProperty(stepElement, "model_output", "modelOutput", images);
+        }
+    }
+
+    private static void AddImagesFromElement(
+        JsonElement element,
+        List<GoogleInteractionImageContent> images)
+    {
+        GoogleInteractionImageContent? image = TryCreateImageContent(element);
+
+        if (image is not null)
+        {
+            images.Add(image);
+
+            return;
+        }
+
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement itemElement in element.EnumerateArray())
+            {
+                AddImagesFromElement(itemElement, images);
+            }
+
+            return;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        AddImagesFromProperty(element, "content", images);
+        AddImagesFromProperty(element, "model_output", "modelOutput", images);
+        AddImagesFromProperty(element, "output_image", "outputImage", images);
+        AddImagesFromProperty(element, "output_images", "outputImages", images);
+        AddImagesFromProperty(element, "output", images);
+    }
+
+    private static void AddImagesFromProperty(
+        JsonElement element,
+        string propertyName,
+        List<GoogleInteractionImageContent> images)
+    {
+        if (!TryGetProperty(element, propertyName, out JsonElement propertyElement))
+        {
+            return;
+        }
+
+        AddImagesFromElement(propertyElement, images);
+    }
+
+    private static void AddImagesFromProperty(
+        JsonElement element,
+        string firstName,
+        string secondName,
+        List<GoogleInteractionImageContent> images)
+    {
+        if (!TryGetProperty(element, firstName, secondName, out JsonElement propertyElement))
+        {
+            return;
+        }
+
+        AddImagesFromElement(propertyElement, images);
+    }
+
+    private static GoogleInteractionImageContent? TryCreateImageContent(JsonElement contentItemElement)
+    {
+        if (TryGetProperty(contentItemElement, "inline_data", "inlineData", out JsonElement inlineDataElement)
+            && inlineDataElement.ValueKind == JsonValueKind.Object)
+        {
+            return TryCreateImageContentFromFields(inlineDataElement);
+        }
+
+        return TryCreateImageContentFromFields(contentItemElement);
+    }
+
+    private static GoogleInteractionImageContent? TryCreateImageContentFromFields(JsonElement element)
+    {
+        if (!TryGetStringProperty(element, "data", out string? base64Data)
+            || string.IsNullOrWhiteSpace(base64Data))
+        {
+            return null;
+        }
+
+        if (!TryGetStringProperty(element, "mime_type", "mimeType", out string? contentType)
+            || string.IsNullOrWhiteSpace(contentType))
+        {
+            return null;
+        }
+
+        string normalizedContentType = contentType.Trim().ToLowerInvariant();
+
+        if (!string.Equals(
+                normalizedContentType,
+                GoogleInteractionsImageOutputContract.ContentType,
+                StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        if (!IsValidBase64(base64Data))
+        {
+            return null;
+        }
+
+        return new GoogleInteractionImageContent(normalizedContentType, base64Data);
+    }
+
+    private static bool IsValidBase64(string base64Data)
+    {
+        try
+        {
+            Convert.FromBase64String(base64Data);
+
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    private static GoogleInteractionsNoImageDiagnostics CreateNoImageDiagnostics(JsonElement root)
+    {
+        TextContentDiagnostics textContentDiagnostics = AnalyzeTextContent(root);
+        string category = textContentDiagnostics.TextContentItemCount > 0
+            ? TextOnlyCategory
+            : NoImageCategory;
+
+        return new GoogleInteractionsNoImageDiagnostics(
+            category,
+            ExtractStatus(root),
+            TryGetProperty(root, "output_image", "outputImage", out _),
+            TryGetProperty(root, "output", out _),
+            TryGetProperty(root, "output_images", "outputImages", out _),
+            textContentDiagnostics.HasStepsTextContent,
+            textContentDiagnostics.HasModelOutputTextContent,
+            textContentDiagnostics.HasContentTextContent,
+            textContentDiagnostics.TextContentLength,
+            textContentDiagnostics.TextContentItemCount);
+    }
+
+    private static TextContentDiagnostics AnalyzeTextContent(JsonElement root)
+    {
+        TextContentDiagnosticsBuilder builder = new();
+        AnalyzeTextContentElement(root, builder, false, false, false);
+
+        return builder.Build();
+    }
+
+    private static void AnalyzeTextContentElement(
+        JsonElement element,
+        TextContentDiagnosticsBuilder builder,
+        bool isInsideSteps,
+        bool isInsideModelOutput,
+        bool isInsideContent)
+    {
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement itemElement in element.EnumerateArray())
+            {
+                AnalyzeTextContentElement(
+                    itemElement,
+                    builder,
+                    isInsideSteps,
+                    isInsideModelOutput,
+                    isInsideContent);
+            }
+
+            return;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        AddTextContentDiagnostic(element, builder, isInsideSteps, isInsideModelOutput, isInsideContent);
+
+        foreach (JsonProperty property in element.EnumerateObject())
+        {
+            AnalyzeTextContentElement(
+                property.Value,
+                builder,
+                isInsideSteps || IsPropertyName(property, "steps"),
+                isInsideModelOutput || IsPropertyName(property, "model_output", "modelOutput"),
+                isInsideContent || IsPropertyName(property, "content"));
+        }
+    }
+
+    private static void AddTextContentDiagnostic(
+        JsonElement element,
+        TextContentDiagnosticsBuilder builder,
+        bool isInsideSteps,
+        bool isInsideModelOutput,
+        bool isInsideContent)
+    {
+        if (!TryGetStringProperty(element, "type", out string? type)
+            || !string.Equals(type, "text", StringComparison.OrdinalIgnoreCase)
+            || !TryGetStringProperty(element, "text", out string? text))
+        {
+            return;
+        }
+
+        builder.AddTextContent(
+            text.Length,
+            isInsideSteps,
+            isInsideModelOutput,
+            isInsideContent);
+    }
+
+    private static string? ExtractStatus(JsonElement root)
+    {
+        if (TryGetStringProperty(root, "status", out string? status))
+        {
+            return status;
+        }
+
+        if (TryGetStringProperty(root, "state", out status))
+        {
+            return status;
+        }
+
+        return null;
+    }
+
+    private static GenerationUsageDto ExtractUsage(JsonElement root)
+    {
+        if (!TryGetProperty(root, "usage", out JsonElement usageElement)
+            || usageElement.ValueKind != JsonValueKind.Object)
+        {
+            throw new GoogleInteractionsException(
+                ImageGenerationProviderFailureKind.InvalidResponse,
+                "The generation provider did not return usage data.");
+        }
+
+        if (!TryGetInt32Property(usageElement, "total_tokens", "totalTokens", out int totalTokens))
+        {
+            throw new GoogleInteractionsException(
+                ImageGenerationProviderFailureKind.InvalidResponse,
+                "The generation provider returned incomplete usage data.");
+        }
+
+        if (!TryGetInt32Property(usageElement, "total_input_tokens", "totalInputTokens", out int inputTokens)
+            || !TryGetInt32Property(usageElement, "total_output_tokens", "totalOutputTokens", out int outputTokens))
+        {
+            throw new GoogleInteractionsException(
+                ImageGenerationProviderFailureKind.InvalidResponse,
+                "The generation provider returned incomplete usage data.");
+        }
+
+        if (totalTokens < 0 || inputTokens < 0 || outputTokens < 0)
+        {
+            throw CreateInvalidUsageException();
+        }
+
+        IReadOnlyList<GenerationModalityTokensDto>? inputTokensByModality = ExtractModalityTokens(
+            usageElement,
+            "input_tokens_by_modality",
+            "inputTokensByModality");
+        IReadOnlyList<GenerationModalityTokensDto>? outputTokensByModality = ExtractModalityTokens(
+            usageElement,
+            "output_tokens_by_modality",
+            "outputTokensByModality");
+        int? thoughtTokens = ExtractOptionalNonNegativeInt32(
+            usageElement,
+            "total_thought_tokens",
+            "totalThoughtTokens");
+        int? toolUseTokens = ExtractOptionalNonNegativeInt32(
+            usageElement,
+            "total_tool_use_tokens",
+            "totalToolUseTokens");
+        int? cachedTokens = ExtractOptionalNonNegativeInt32(
+            usageElement,
+            "total_cached_tokens",
+            "totalCachedTokens");
+
+        return new GenerationUsageDto(
+            TotalTokens: totalTokens,
+            TotalInputTokens: inputTokens,
+            TotalOutputTokens: outputTokens,
+            InputTokensByModality: inputTokensByModality,
+            OutputTokensByModality: outputTokensByModality,
+            TotalThoughtTokens: thoughtTokens,
+            TotalToolUseTokens: toolUseTokens,
+            TotalCachedTokens: cachedTokens);
+    }
+
+    private static IReadOnlyList<GenerationModalityTokensDto>? ExtractModalityTokens(
+        JsonElement usageElement,
+        string firstName,
+        string secondName)
+    {
+        if (!TryGetProperty(usageElement, firstName, secondName, out JsonElement tokensElement))
+        {
+            return null;
+        }
+
+        if (tokensElement.ValueKind != JsonValueKind.Array)
+        {
+            throw CreateInvalidUsageException();
+        }
+
+        List<GenerationModalityTokensDto> modalityTokens = [];
+
+        foreach (JsonElement tokenElement in tokensElement.EnumerateArray())
+        {
+            if (tokenElement.ValueKind != JsonValueKind.Object
+                || !TryGetStringProperty(tokenElement, "modality", out string? modality)
+                || string.IsNullOrWhiteSpace(modality))
+            {
+                throw CreateInvalidUsageException();
+            }
+
+            int tokens = ExtractModalityTokenCount(tokenElement);
+            string normalizedModality = NormalizeModality(modality);
+
+            modalityTokens.Add(new GenerationModalityTokensDto(normalizedModality, tokens));
+        }
+
+        return modalityTokens.Count == 0
+            ? null
+            : modalityTokens;
+    }
+
+    private static int? ExtractOptionalNonNegativeInt32(
+        JsonElement element,
+        string firstName,
+        string secondName)
+    {
+        if (!TryGetProperty(element, firstName, secondName, out JsonElement propertyElement))
+        {
+            return null;
+        }
+
+        if (propertyElement.ValueKind != JsonValueKind.Number
+            || !propertyElement.TryGetInt32(out int value)
+            || value < 0)
+        {
+            throw CreateInvalidUsageException();
+        }
+
+        return value;
+    }
+
+    private static int ExtractModalityTokenCount(JsonElement element)
+    {
+        if (!TryGetProperty(element, "tokens", out JsonElement tokensElement)
+            && !TryGetProperty(element, "token_count", out tokensElement)
+            && !TryGetProperty(element, "tokenCount", out tokensElement))
+        {
+            throw CreateInvalidUsageException();
+        }
+
+        if (tokensElement.ValueKind != JsonValueKind.Number
+            || !tokensElement.TryGetInt32(out int value)
+            || value < 0)
+        {
+            throw CreateInvalidUsageException();
+        }
+
+        return value;
+    }
+
+    private static string NormalizeModality(string modality)
+    {
+        string normalizedModality = modality.Trim().ToLowerInvariant();
+
+        if (string.Equals(normalizedModality, GenerationUsageModalityNames.Image, StringComparison.Ordinal))
+        {
+            return GenerationUsageModalityNames.Image;
+        }
+
+        if (string.Equals(normalizedModality, GenerationUsageModalityNames.Text, StringComparison.Ordinal))
+        {
+            return GenerationUsageModalityNames.Text;
+        }
+
+        return normalizedModality;
+    }
+
+    private static GoogleInteractionsException CreateInvalidUsageException()
+    {
+        return new GoogleInteractionsException(
+            ImageGenerationProviderFailureKind.InvalidResponse,
+            "The generation provider returned invalid usage data.");
+    }
+
+    private static bool TryGetInt32Property(
+        JsonElement element,
+        string firstName,
+        string secondName,
+        out int value)
+    {
+        value = 0;
+
+        if (!TryGetProperty(element, firstName, secondName, out JsonElement propertyElement))
+        {
+            return false;
+        }
+
+        return propertyElement.ValueKind == JsonValueKind.Number
+            && propertyElement.TryGetInt32(out value);
+    }
+
+    private static bool TryGetStringProperty(
+        JsonElement element,
+        string name,
+        [NotNullWhen(true)] out string? value)
+    {
+        value = null;
+
+        if (!TryGetProperty(element, name, out JsonElement propertyElement)
+            || propertyElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = propertyElement.GetString();
+
+        return value is not null;
+    }
+
+    private static bool TryGetStringProperty(
+        JsonElement element,
+        string firstName,
+        string secondName,
+        [NotNullWhen(true)] out string? value)
+    {
+        value = null;
+
+        if (!TryGetProperty(element, firstName, secondName, out JsonElement propertyElement)
+            || propertyElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = propertyElement.GetString();
+
+        return value is not null;
+    }
+
+    private static bool TryGetProperty(
+        JsonElement element,
+        string propertyName,
+        out JsonElement propertyElement)
+    {
+        propertyElement = default;
+
+        return element.ValueKind == JsonValueKind.Object
+            && element.TryGetProperty(propertyName, out propertyElement);
+    }
+
+    private static bool TryGetProperty(
+        JsonElement element,
+        string firstName,
+        string secondName,
+        out JsonElement propertyElement)
+    {
+        if (TryGetProperty(element, firstName, out propertyElement))
+        {
+            return true;
+        }
+
+        return TryGetProperty(element, secondName, out propertyElement);
+    }
+
+    private static bool IsPropertyName(JsonProperty property, string name)
+    {
+        return string.Equals(property.Name, name, StringComparison.Ordinal);
+    }
+
+    private static bool IsPropertyName(JsonProperty property, string firstName, string secondName)
+    {
+        return IsPropertyName(property, firstName)
+            || IsPropertyName(property, secondName);
+    }
+
+    private sealed record TextContentDiagnostics(
+        bool HasStepsTextContent,
+        bool HasModelOutputTextContent,
+        bool HasContentTextContent,
+        int TextContentLength,
+        int TextContentItemCount);
+
+    private sealed class TextContentDiagnosticsBuilder
+    {
+        public bool HasStepsTextContent { get; private set; }
+        public bool HasModelOutputTextContent { get; private set; }
+        public bool HasContentTextContent { get; private set; }
+        public int TextContentLength { get; private set; }
+        public int TextContentItemCount { get; private set; }
+
+        public void AddTextContent(
+            int textLength,
+            bool isInsideSteps,
+            bool isInsideModelOutput,
+            bool isInsideContent)
+        {
+            TextContentLength += textLength;
+            TextContentItemCount++;
+            HasStepsTextContent = HasStepsTextContent || isInsideSteps;
+            HasModelOutputTextContent = HasModelOutputTextContent || isInsideModelOutput;
+            HasContentTextContent = HasContentTextContent || isInsideContent;
+        }
+
+        public TextContentDiagnostics Build()
+        {
+            return new TextContentDiagnostics(
+                HasStepsTextContent,
+                HasModelOutputTextContent,
+                HasContentTextContent,
+                TextContentLength,
+                TextContentItemCount);
+        }
+    }
+}

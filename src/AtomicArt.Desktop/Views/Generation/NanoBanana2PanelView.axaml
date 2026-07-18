@@ -1,0 +1,255 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+             xmlns:contracts="using:AtomicArt.Contracts.Generation"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+             xmlns:generation="using:AtomicArt.Desktop.ViewModels.Generation"
+             xmlns:models="using:AtomicArt.Desktop.Services"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:system="clr-namespace:System;assembly=System.Runtime"
+             x:Class="AtomicArt.Desktop.Views.Generation.NanoBanana2PanelView"
+             x:DataType="generation:UniversalNanoBananaPanelViewModel">
+    <Grid x:Name="PanelRoot">
+        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+                <ComboBox Grid.Column="0"
+                          MinWidth="{StaticResource GenerationModelComboMinWidth}"
+                          Margin="-5,0,0,0"
+                          HorizontalAlignment="Left"
+                          IsEnabled="{Binding HasLoadedCatalog}"
+                          ItemsSource="{Binding AvailableModels}"
+                          SelectedItem="{Binding SelectedModel}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:ImageModelOption">
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <ComboBox x:Name="AspectRatioComboBox"
+                          Grid.Column="1"
+                          MinWidth="{StaticResource GenerationAspectRatioComboMinWidth}"
+                          IsEnabled="{Binding HasLoadedCatalog}"
+                          ItemsSource="{Binding AspectRatios}"
+                          SelectedItem="{Binding SelectedAspectRatio}"
+                          DropDownOpened="OnAspectRatioDropDownOpened"
+                          DropDownClosed="OnAspectRatioDropDownClosed"
+                          ContainerPrepared="OnAspectRatioContainerPrepared"
+                          ContainerClearing="OnAspectRatioContainerClearing" />
+
+                <ComboBox x:Name="ResolutionComboBox"
+                          Grid.Column="2"
+                          MinWidth="{StaticResource GenerationResolutionComboMinWidth}"
+                          IsEnabled="{Binding HasLoadedCatalog}"
+                          ItemsSource="{Binding Resolutions}"
+                          SelectedItem="{Binding SelectedResolution}" />
+
+                <Button x:Name="TemperatureButton"
+                        Grid.Column="3"
+                        Margin="4,0,0,0"
+                        Classes="Icon generation-option"
+                        Click="OnTemperatureButtonClick"
+                        IsEnabled="{Binding HasLoadedCatalog}">
+                    <PathIcon Data="{StaticResource AppSettingsIcon}" />
+                </Button>
+
+                <Popup x:Name="TemperaturePopup"
+                       Grid.Column="3"
+                       InheritsTransform="True"
+                       IsLightDismissEnabled="False"
+                       Placement="Bottom"
+                       Closed="OnTemperaturePopupClosed"
+                       Opened="OnTemperaturePopupOpened"
+                       PlacementTarget="{Binding #TemperatureButton}">
+                    <ThemeVariantScope RequestedThemeVariant="{Binding #PanelRoot.ActualThemeVariant}">
+                        <FlyoutPresenter Padding="0">
+                            <Border x:Name="TemperatureFlyoutPanel"
+                                    Padding="12"
+                                    Background="{DynamicResource SukiPopupBackground}"
+                                    BorderBrush="{DynamicResource SukiMenuBorderBrush}"
+                                    BorderThickness="{StaticResource ShellBorderThickness}"
+                                    BoxShadow="{DynamicResource SukiPopupShadow}"
+                                    CornerRadius="{StaticResource OverlayCornerRadius}"
+                                    Opacity="0">
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                      RowDefinitions="Auto,Auto,Auto">
+                                    <PathIcon Grid.Row="0"
+                                              Grid.RowSpan="2"
+                                              Grid.Column="0"
+                                              Width="{StaticResource GenerationOptionIconSize}"
+                                              Height="{StaticResource GenerationOptionIconSize}"
+                                              Margin="0,0,10,0"
+                                              VerticalAlignment="Center"
+                                              Data="{StaticResource AppTemperatureIcon}" />
+                                    <TextBlock Grid.Row="0"
+                                               Grid.Column="1"
+                                               Margin="0,0,0,4"
+                                               HorizontalAlignment="Center"
+                                               Classes="panel-label"
+                                               Text="{Binding TemperatureText}" />
+                                    <Slider x:Name="TemperatureSlider"
+                                            Grid.Row="1"
+                                            Grid.Column="1"
+                                            Width="{StaticResource GenerationTemperatureSliderWidth}"
+                                            IsSnapToTickEnabled="True"
+                                            LargeChange="{Binding TemperatureStep}"
+                                            Maximum="{Binding MaximumTemperature}"
+                                            Minimum="{Binding MinimumTemperature}"
+                                            SmallChange="{Binding TemperatureStep}"
+                                            TickFrequency="{Binding TemperatureStep}"
+                                            Value="{Binding Temperature, Mode=TwoWay}" />
+                                    <Button Grid.Row="1"
+                                            Grid.Column="2"
+                                            Margin="8,0,0,0"
+                                            Classes="Icon generation-option"
+                                            Command="{Binding ResetTemperatureCommand}">
+                                        <PathIcon Data="{StaticResource AppResetIcon}" />
+                                    </Button>
+                                    <Grid Grid.Row="2"
+                                          Grid.Column="0"
+                                          Grid.ColumnSpan="3"
+                                          Margin="0,12,0,0"
+                                          ColumnDefinitions="Auto,*,Auto"
+                                          IsVisible="{Binding SupportsThinkingLevel}">
+                                        <PathIcon Grid.Column="0"
+                                                  Width="{StaticResource GenerationOptionIconSize}"
+                                                  Height="{StaticResource GenerationOptionIconSize}"
+                                                  Margin="0,0,10,0"
+                                                  VerticalAlignment="Center"
+                                                  Data="{StaticResource AppBrainIcon}" />
+                                        <ComboBox x:Name="ThinkingLevelComboBox"
+                                                  Grid.Column="1"
+                                                  MinWidth="{StaticResource GenerationTemperatureSliderWidth}"
+                                                  HorizontalAlignment="Stretch"
+                                                  ItemsSource="{Binding ThinkingLevels}"
+                                                  SelectedItem="{Binding SelectedThinkingLevel}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="contracts:GenerationModelThinkingLevelMetadataDto">
+                                                    <TextBlock Text="{Binding DisplayName}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <Button Grid.Column="2"
+                                                Margin="8,0,0,0"
+                                                Classes="Icon generation-option"
+                                                Command="{Binding ResetThinkingLevelCommand}">
+                                            <PathIcon Data="{StaticResource AppResetIcon}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </FlyoutPresenter>
+                    </ThemeVariantScope>
+                </Popup>
+
+                <ComboBox x:Name="GenerationCountComboBox"
+                          Grid.Column="5"
+                          MinWidth="{StaticResource GenerationCountComboMinWidth}"
+                          Margin="0,0,-5,0"
+                          HorizontalAlignment="Right"
+                          IsEnabled="{Binding HasLoadedCatalog}"
+                          ItemsSource="{Binding GenerationCounts}"
+                          SelectedItem="{Binding GenerationCount}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="system:Int32">
+                            <TextBlock Text="{Binding StringFormat='x{0}'}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
+
+            <Grid Grid.Row="1"
+                  Margin="{StaticResource GenerationPanelInnerSpacing}"
+                  ColumnDefinitions="Auto,Auto,*">
+                <Button Grid.Column="0"
+                        Classes="attach-image"
+                        IsEnabled="{Binding HasLoadedCatalog}"
+                        Content="{x:Static resources:UiStrings.AttachImageButtonGlyph}"
+                        Command="{Binding PickImageCommand}" />
+                <TextBlock Grid.Column="1"
+                           Margin="{StaticResource AttachmentListMargin}"
+                           MinWidth="36"
+                           VerticalAlignment="Center"
+                           Classes="panel-label"
+                           Text="{Binding AttachmentCounterText}" />
+                <Grid Grid.Column="2"
+                      Margin="{StaticResource AttachmentListMargin}">
+                    <controls:AnimatedAttachmentListControl Items="{Binding AttachedImages}"
+                                                            OpenAttachmentCommand="{Binding OpenAttachmentCommand}"
+                                                            ReorderAttachmentCommand="{Binding ReorderAttachmentCommand}"
+                                                            RemoveAttachmentCommand="{Binding RemoveAttachmentCommand}" />
+                </Grid>
+            </Grid>
+
+            <TextBox Grid.Row="2"
+                     Classes="prompt-input"
+                     MinHeight="{StaticResource PromptHeight}"
+                     Margin="{StaticResource GenerationPanelInnerSpacing}"
+                     VerticalContentAlignment="Top"
+                     AcceptsReturn="True"
+                     behaviors:ClipboardPasteBehavior.IsEnabled="True"
+                     IsEnabled="{Binding HasLoadedCatalog}"
+                     LostFocus="OnPromptLostFocus"
+                     PlaceholderText="{x:Static resources:UiStrings.PromptPlaceholder}"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     TextWrapping="Wrap"
+                     Text="{Binding Prompt}" />
+
+            <TextBlock Grid.Row="3"
+                       Margin="{StaticResource GenerationPanelInnerSpacing}"
+                       Classes="error-message"
+                       IsVisible="{Binding HasErrorMessage}"
+                       Text="{Binding ErrorMessage}" />
+
+            <Button Grid.Row="4"
+                    Margin="{StaticResource GenerationPanelInnerSpacing}"
+                    HorizontalAlignment="Stretch"
+                    Content="{Binding Quote.GenerateButtonText}"
+                    Command="{Binding GenerateCommand}" />
+        </Grid>
+
+        <Popup x:Name="AspectRatioHintPopup"
+               PlacementTarget="{Binding #PanelRoot}"
+               Placement="Top"
+               VerticalOffset="-12"
+               IsLightDismissEnabled="False"
+               IsHitTestVisible="True">
+            <Grid Background="Transparent"
+                  PointerPressed="OnAspectRatioHintPointerPressed">
+                <Border x:Name="AspectRatioHintHost"
+                        Margin="28"
+                        Opacity="0"
+                        Background="Transparent"
+                        RenderTransformOrigin="50%,50%">
+                    <Border x:Name="AspectRatioHintShape"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Classes="image-preview-shadow"
+                            Background="{DynamicResource SukiPopupBackground}"
+                            CornerRadius="8">
+                        <Border x:Name="AspectRatioHintBorder"
+                                ClipToBounds="True"
+                                CornerRadius="8">
+                            <Image Source="avares://AtomicArt/Assets/AspectRatioHint.png"
+                                   Stretch="UniformToFill"
+                                   RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                        </Border>
+                    </Border>
+                </Border>
+            </Grid>
+        </Popup>
+
+        <Canvas x:Name="CatalogLoadingIndicatorHost"
+                Height="1"
+                Margin="0,-2,0,0"
+                VerticalAlignment="Top"
+                ClipToBounds="True"
+                IsHitTestVisible="False"
+                IsVisible="{Binding IsCatalogLoading}">
+            <Border x:Name="CatalogLoadingIndicatorBar"
+                    Height="1"
+                    Background="{DynamicResource SukiAccentColor}" />
+        </Canvas>
+    </Grid>
+</UserControl>

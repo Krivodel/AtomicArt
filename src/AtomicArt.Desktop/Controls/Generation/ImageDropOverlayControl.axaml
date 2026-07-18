@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             x:Class="AtomicArt.Desktop.Controls.Generation.ImageDropOverlayControl"
+             x:Name="Root"
+             x:DataType="controls:ImageDropOverlayControl"
+             ClipToBounds="True"
+             IsHitTestVisible="False">
+    <Grid>
+        <Grid x:Name="OverlayChrome"
+              Opacity="0">
+            <Grid.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity"
+                                      Duration="0:0:0.18"
+                                      Easing="CubicEaseOut" />
+                </Transitions>
+            </Grid.Transitions>
+
+            <Border CornerRadius="{Binding #Root.BackdropCornerRadius}">
+                <Border.Background>
+                    <SolidColorBrush Color="{DynamicResource SukiDialogBackground}"
+                                     Opacity="{StaticResource OverlayBackdropOpacity}" />
+                </Border.Background>
+            </Border>
+
+            <controls:ImageDropMulticolorBorderControl Margin="10" />
+        </Grid>
+
+        <StackPanel x:Name="AnimatedContent"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Opacity="0"
+                    RenderTransform="scale(0.97) translate(0px, 8px)"
+                    RenderTransformOrigin="50%,50%"
+                    Spacing="7">
+            <StackPanel.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity"
+                                      Duration="0:0:0.18"
+                                      Easing="CubicEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform"
+                                                   Duration="0:0:0.22"
+                                                   Easing="CubicEaseOut" />
+                </Transitions>
+            </StackPanel.Transitions>
+
+            <Image Width="{Binding #Root.IconSize}"
+                   Height="{Binding #Root.IconSize}"
+                   HorizontalAlignment="Center"
+                   RenderOptions.BitmapInterpolationMode="MediumQuality"
+                   Source="avares://AtomicArt/Assets/DropIcon.png"
+                   Stretch="Uniform">
+                <Image.Effect>
+                    <DropShadowEffect BlurRadius="20"
+                                      Color="#000000"
+                                      OffsetX="0"
+                                      OffsetY="14"
+                                      Opacity="0.8" />
+                </Image.Effect>
+            </Image>
+
+            <TextBlock HorizontalAlignment="Center"
+                       FontFamily="Segoe UI"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       Opacity="0.8"
+                       Foreground="{DynamicResource SukiText}"
+                       Text="{x:Static resources:UiStrings.ImageDropLabel}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+             x:Class="AtomicArt.Desktop.Controls.Gallery.AnimatedGalleryControl">
+    <Grid>
+        <ScrollViewer x:Name="GalleryScrollViewer"
+                      behaviors:SmoothScrollBehavior.WheelMultiplier="192"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Visible">
+            <ScrollViewer.OpacityMask>
+                <LinearGradientBrush StartPoint="0%,0%"
+                                     EndPoint="0%,100%">
+                    <GradientStop Color="#FFFFFFFF"
+                                  Offset="0" />
+                    <GradientStop Color="#FFFFFFFF"
+                                  Offset="1" />
+                    <GradientStop Color="#00FFFFFF"
+                                  Offset="1" />
+                </LinearGradientBrush>
+            </ScrollViewer.OpacityMask>
+
+            <Canvas x:Name="GalleryPanel"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top" />
+        </ScrollViewer>
+
+        <Canvas x:Name="OverlayCanvas"
+                IsHitTestVisible="False" />
+    </Grid>
+</UserControl>

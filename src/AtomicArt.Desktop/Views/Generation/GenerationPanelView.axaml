@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:viewModels="using:AtomicArt.Desktop.ViewModels.Generation"
+             xmlns:views="using:AtomicArt.Desktop.Views.Generation"
+             x:Class="AtomicArt.Desktop.Views.Generation.GenerationPanelView"
+             x:DataType="viewModels:IModelPanelViewModel">
+    <ContentControl Content="{Binding}">
+        <ContentControl.DataTemplates>
+            <DataTemplate x:DataType="viewModels:UniversalNanoBananaPanelViewModel">
+                <views:NanoBanana2PanelView />
+            </DataTemplate>
+        </ContentControl.DataTemplates>
+    </ContentControl>
+</UserControl>

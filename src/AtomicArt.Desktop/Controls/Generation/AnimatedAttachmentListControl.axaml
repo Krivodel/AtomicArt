@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AtomicArt.Desktop.Controls.Generation.AnimatedAttachmentListControl">
+    <Grid>
+        <ScrollViewer x:Name="AttachmentScrollViewer"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled">
+            <Canvas x:Name="AttachmentPanel"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top" />
+        </ScrollViewer>
+
+        <Canvas x:Name="AttachmentOverlayCanvas"
+                IsHitTestVisible="False" />
+    </Grid>
+</UserControl>

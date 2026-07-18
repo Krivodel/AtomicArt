@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AtomicArt.Application\AtomicArt.Application.csproj" />
+    <ProjectReference Include="..\AtomicArt.Contracts\AtomicArt.Contracts.csproj" />
+    <ProjectReference Include="..\AtomicArt.Domain\AtomicArt.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Generation\Placeholders\**\*" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <GenerationModelCatalogMetadataPath>Generation\ModelMetadata\model-metadata.json</GenerationModelCatalogMetadataPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>GenerationModelCatalogMetadataPath</_Parameter1>
+      <_Parameter2>$(GenerationModelCatalogMetadataPath)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(GenerationModelCatalogMetadataPath)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>$(GenerationModelCatalogMetadataPath)</TargetPath>
+    </Content>
+  </ItemGroup>
+</Project>

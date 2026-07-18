@@ -1,0 +1,75 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: AtomicArt <noreply@atomicart.local>
+Date: Thu, 16 Jul 2026 20:57:17 +0300
+Subject: [PATCH] Enable dithering for Suki backgrounds
+
+---
+ Directory.Packages.props                         | 4 ++--
+ SukiUI/SukiUI.csproj                             | 5 +++--
+ SukiUI/Utilities/Effects/EffectBackgroundDraw.cs | 6 +++---
+ 3 files changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/Directory.Packages.props b/Directory.Packages.props
+index 857967d8..63b92d72 100644
+--- a/Directory.Packages.props
++++ b/Directory.Packages.props
+@@ -7,7 +7,7 @@
+   <ItemGroup>
+     <PackageVersion Include="Avalonia" Version="12.0.5" />
+     <PackageVersion Include="Avalonia.LinuxFramebuffer" Version="12.0.5" />
+-    <PackageVersion Include="Avalonia.Skia" Version="12.0.5" />
++    <PackageVersion Include="Avalonia.Skia" Version="12.0.6-atomicart.2" />
+     <PackageVersion Include="Avalonia.Desktop" Version="12.0.5" />
+     <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.0.5" />
+     <PackageVersion Include="Avalonia.Themes.Simple" Version="12.0.5" />
+@@ -32,4 +32,4 @@
+     <PackageVersion Include="System.Linq.Dynamic.Core" Version="1.7.2" />
+     <PackageVersion Include="System.Text.Json" Version="10.0.5" />
+   </ItemGroup>
+-</Project>
+\ No newline at end of file
++</Project>
+diff --git a/SukiUI/SukiUI.csproj b/SukiUI/SukiUI.csproj
+index 9b9d2e99..a5fe9c70 100644
+--- a/SukiUI/SukiUI.csproj
++++ b/SukiUI/SukiUI.csproj
+@@ -3,8 +3,9 @@
+   <PropertyGroup>
+     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+     <IsTrimmable>true</IsTrimmable>
+-    <TargetFramework>net8.0</TargetFramework>
+-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
++    <TargetFramework>net8.0</TargetFramework>
++    <PackageVersion Condition="'$(AtomicArtPackageVersion)' != ''">$(AtomicArtPackageVersion)</PackageVersion>
++    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+     <RootNamespace>SukiUI</RootNamespace>
+     <UserSecretsId>712f85e4-12d3-41b0-a417-5714a113666f</UserSecretsId>
+     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+diff --git a/SukiUI/Utilities/Effects/EffectBackgroundDraw.cs b/SukiUI/Utilities/Effects/EffectBackgroundDraw.cs
+index a9cc73e5..2e1a9339 100644
+--- a/SukiUI/Utilities/Effects/EffectBackgroundDraw.cs
++++ b/SukiUI/Utilities/Effects/EffectBackgroundDraw.cs
+@@ -46,14 +46,14 @@ namespace SukiUI.Utilities.Effects
+         {
+             if (Effect is not null)
+             {
+-                using var paint = new SKPaint();
++                using var paint = new SKPaint { IsDither = true };
+                 using var shader = EffectWithUniforms();
+                 paint.Shader = shader;
+                 canvas.DrawRect(rect, paint);
+             }
+             if (_oldEffect is not null)
+             {
+-                using var paint = new SKPaint();
++                using var paint = new SKPaint { IsDither = true };
+                 // TODO: Investigate how to blend the shaders better - currently the only problem with this system.
+                 // Blend modes effect the transition quite heavily, only these 3 seem to work in any reasonable way.
+                 // paint.BlendMode = SKBlendMode.ColorBurn; // - Okay
+@@ -83,4 +83,4 @@ namespace SukiUI.Utilities.Effects
+         private static double InverseLerp(double start, double end, double value) =>
+             Math.Max(0, Math.Min(1, (value - start) / (end - start)));
+     }
+-}
+\ No newline at end of file
++}

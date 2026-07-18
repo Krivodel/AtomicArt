@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <AssemblyName>AtomicArt</AssemblyName>
+    <Version>1.0.0</Version>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(PublishDir)' != ''">
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishTrimmed>false</PublishTrimmed>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AtomicArtGitHubPublishDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..\publish\AtomicArt.Desktop\WindowsGitHub'))</AtomicArtGitHubPublishDirectory>
+    <AtomicArtNormalizedPublishDirectory Condition="'$(PublishDir)' != ''">$([System.IO.Path]::GetFullPath('$(PublishDir)').TrimEnd('\'))</AtomicArtNormalizedPublishDirectory>
+    <IsAtomicArtGitHubPublish Condition="'$(AtomicArtNormalizedPublishDirectory)' == '$(AtomicArtGitHubPublishDirectory)'">true</IsAtomicArtGitHubPublish>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\AppIcon.ico" />
+    <AvaloniaResource Include="Assets\AspectRatioHint.png" />
+    <AvaloniaResource Include="Assets\DropIcon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AtomicArt.Contracts\AtomicArt.Contracts.csproj" />
+    <ProjectReference Include="..\Pica.Viewer\Pica.Viewer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.5" />
+    <PackageReference Include="Avalonia.Skia" Version="12.0.6-atomicart.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.5" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="SukiUI" Version="7.0.2.1-atomicart.3" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.9" />
+    <PackageReference Include="Velopack" Version="1.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="RemovePublishedExtraFiles" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release' and '$(PublishSingleFile)' == 'true'">
+    <ItemGroup>
+      <PublishedExtraFiles Include="$(PublishDir)**\*" Exclude="$(PublishDir)AtomicArt.exe;$(PublishDir)appsettings.json" />
+    </ItemGroup>
+    <Delete Files="@(PublishedExtraFiles)" />
+  </Target>
+
+  <Target Name="ValidateGitHubReleaseEnvironment" BeforeTargets="PrepareForPublish" Condition="'$(IsAtomicArtGitHubPublish)' == 'true'">
+    <Error Condition="'$(ATOMICART_CERTIFICATE_THUMBPRINT)' == ''"
+           Text="ATOMICART_CERTIFICATE_THUMBPRINT is required for the WindowsGitHub publish profile." />
+    <Error Condition="'$(GITHUB_TOKEN)' == ''"
+           Text="GITHUB_TOKEN is required for the WindowsGitHub publish profile." />
+  </Target>
+
+  <Target Name="PublishAtomicArtGitHubRelease" AfterTargets="RemovePublishedExtraFiles" Condition="'$(IsAtomicArtGitHubPublish)' == 'true'">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\eng\Publish-AtomicArtRelease.ps1&quot; -Version &quot;$(Version)&quot; -CertificateThumbprint &quot;$(ATOMICART_CERTIFICATE_THUMBPRINT)&quot; -PreparedApplicationDirectory &quot;$(AtomicArtNormalizedPublishDirectory)&quot; -PublishToGitHub" />
+  </Target>
+</Project>

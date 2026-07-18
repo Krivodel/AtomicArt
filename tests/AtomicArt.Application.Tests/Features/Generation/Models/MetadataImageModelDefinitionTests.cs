@@ -1,0 +1,246 @@
+using FluentAssertions;
+using Xunit;
+
+using AtomicArt.Application.Common.Models;
+using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
+using AtomicArt.Application.Features.Generation.Models;
+using AtomicArt.Application.Tests.Generation;
+using AtomicArt.Contracts.Generation;
+using AtomicArt.Domain.Generation;
+
+namespace AtomicArt.Application.Tests.Features.Generation.Models;
+
+public sealed class MetadataImageModelDefinitionTests
+{
+    private const string GifContentType = "image/gif";
+    private const string PngContentType = "image/png";
+    private static readonly byte[] GifBytes = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61];
+    private static readonly byte[] PngBytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
+
+    [Fact]
+    public void DisplayName_WithNanoBanana2_ReturnsDisplayName()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+
+        string displayName = definition.DisplayName;
+
+        displayName.Should().Be("Nano Banana 2");
+    }
+
+    [Fact]
+    public void GetSupportedContentTypes_WithNanoBanana2_ReturnsCatalogContentTypes()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+
+        IReadOnlyList<string> contentTypes = definition.GetSupportedContentTypes();
+
+        contentTypes.Should().Equal(metadata.Attachments.SupportedContentTypes);
+    }
+
+    [Fact]
+    public void MaxTotalAttachedImageBytes_WithNanoBanana2_ReturnsAggregateLimit()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+
+        long maxTotalAttachedImageBytes = definition.MaxTotalAttachedImageBytes;
+
+        maxTotalAttachedImageBytes.Should().BeGreaterThan(definition.MaxAttachedImageBytes);
+    }
+
+    [Fact]
+    public void Validate_WithUnsupportedResolution_ReturnsError()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        ImageGenerationRequestDto request = CreateRequest(resolution: "1x1");
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsValidationError.Should().BeTrue();
+        result.ErrorCode.Should().Be("ERR-GEN-002");
+    }
+
+    [Fact]
+    public void Validate_WithAutoAspectRatio_ReturnsSuccess()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        ImageGenerationRequestDto request = CreateRequest(aspectRatio: GenerationAspectRatios.Auto);
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_WithUnsupportedTemperature_ReturnsError()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        ImageGenerationRequestDto request = CreateRequest(temperature: 0.15d);
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsValidationError.Should().BeTrue();
+        result.ErrorCode.Should().Be("ERR-GEN-004");
+    }
+
+    [Fact]
+    public void Validate_WithoutThinkingLevel_AppliesMetadataDefault()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        ImageGenerationRequestDto request = CreateRequest();
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().NotBeNull();
+        result.Value?.ThinkingLevel.Should().Be("low");
+    }
+
+    [Fact]
+    public void Validate_WithUnsupportedThinkingLevel_ReturnsError()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        ImageGenerationRequestDto request = CreateRequest(thinkingLevel: "medium");
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsValidationError.Should().BeTrue();
+        result.ErrorCode.Should().Be("ERR-GEN-004");
+    }
+
+    [Fact]
+    public void Validate_WithThinkingLevelForNanoBananaPro_ReturnsError()
+    {
+        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
+        MetadataImageModelDefinition definition = CreateDefinition(metadata);
+        ImageGenerationRequestDto request = CreateRequest(metadata, thinkingLevel: "high");
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsValidationError.Should().BeTrue();
+        result.ErrorCode.Should().Be("ERR-GEN-004");
+    }
+
+    [Fact]
+    public void Validate_WithTooManyAttachments_ReturnsError()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        IReadOnlyList<AttachedImageDto> attachedImages = Enumerable
+            .Range(0, definition.MaxAttachedImages + 1)
+            .Select(index => CreateAttachedImage($"image-{index}.png"))
+            .ToList();
+        ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsValidationError.Should().BeTrue();
+        result.ErrorCode.Should().Be("ERR-GEN-004");
+    }
+
+    [Fact]
+    public void Validate_WithPromptLongerThanModelLimit_ReturnsError()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        string prompt = new('a', definition.MaxPromptLength.GetValueOrDefault() + 1);
+        ImageGenerationRequestDto request = CreateRequest(prompt: prompt);
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsValidationError.Should().BeTrue();
+        result.ErrorCode.Should().Be("ERR-GEN-004");
+    }
+
+    [Fact]
+    public void Validate_WithInvalidImageSignature_ReturnsError()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        AttachedImageDto attachedImage = new("image.png", PngContentType, [0x00, 0x01, 0x02]);
+        IReadOnlyList<AttachedImageDto> attachedImages = new List<AttachedImageDto> { attachedImage };
+        ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsValidationError.Should().BeTrue();
+        result.ErrorCode.Should().Be("ERR-GEN-004");
+    }
+
+    [Fact]
+    public void Validate_WithUnsupportedModelAttachmentContentType_ReturnsError()
+    {
+        MetadataImageModelDefinition definition = CreateDefinition();
+        AttachedImageDto attachedImage = new("image.gif", GifContentType, GifBytes);
+        IReadOnlyList<AttachedImageDto> attachedImages = new List<AttachedImageDto> { attachedImage };
+        ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsValidationError.Should().BeTrue();
+        result.ErrorCode.Should().Be("ERR-GEN-004");
+    }
+
+    private static MetadataImageModelDefinition CreateDefinition()
+    {
+        return CreateDefinition(ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata());
+    }
+
+    private static MetadataImageModelDefinition CreateDefinition(GenerationModelMetadataDto metadata)
+    {
+        return new MetadataImageModelDefinition(
+            metadata,
+            new GenerationModelRules([new MetadataGenerationModelRules()]),
+            CreateFormats());
+    }
+
+    private static IReadOnlyList<IAttachedImageFormat> CreateFormats()
+    {
+        return GenerationImageFileFormats.All
+            .Select<GenerationImageFileFormatDescriptor, IAttachedImageFormat>(format => new AttachedImageFormat(format))
+            .ToList();
+    }
+
+    private static ImageGenerationRequestDto CreateRequest(
+        string prompt = "Prompt",
+        string? aspectRatio = null,
+        string? resolution = null,
+        double? temperature = null,
+        IReadOnlyList<AttachedImageDto>? attachedImages = null,
+        string? thinkingLevel = null)
+    {
+        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+
+        return CreateRequest(
+            metadata,
+            prompt,
+            aspectRatio,
+            resolution,
+            temperature,
+            attachedImages,
+            thinkingLevel);
+    }
+
+    private static ImageGenerationRequestDto CreateRequest(
+        GenerationModelMetadataDto metadata,
+        string prompt = "Prompt",
+        string? aspectRatio = null,
+        string? resolution = null,
+        double? temperature = null,
+        IReadOnlyList<AttachedImageDto>? attachedImages = null,
+        string? thinkingLevel = null)
+    {
+
+        return new ImageGenerationRequestDto(
+            metadata.Id,
+            prompt,
+            aspectRatio ?? metadata.AspectRatios.First(),
+            resolution ?? metadata.Resolutions.First(),
+            temperature ?? metadata.Temperature.Default,
+            1,
+            attachedImages ?? [],
+            thinkingLevel);
+    }
+
+    private static AttachedImageDto CreateAttachedImage(string fileName)
+    {
+        return new AttachedImageDto(fileName, PngContentType, PngBytes);
+    }
+}

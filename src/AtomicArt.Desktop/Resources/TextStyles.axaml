@@ -1,0 +1,86 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <Style Selector="TextBox">
+        <Setter Property="Cursor"
+                Value="IBeam" />
+    </Style>
+
+    <Style Selector="ComboBox">
+        <Setter Property="Cursor"
+                Value="Hand" />
+    </Style>
+
+    <Style Selector="CheckBox">
+        <Setter Property="Cursor"
+                Value="Hand" />
+    </Style>
+
+    <Style Selector="Slider">
+        <Setter Property="Cursor"
+                Value="Hand" />
+    </Style>
+
+    <Style Selector="TextBlock.error-message">
+        <Setter Property="TextWrapping"
+                Value="Wrap" />
+    </Style>
+
+    <Style Selector="TextBlock.generation-card-title">
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+        <Setter Property="TextAlignment"
+                Value="Center" />
+        <Setter Property="TextWrapping"
+                Value="Wrap" />
+    </Style>
+
+    <Style Selector="TextBlock.generation-card-status">
+        <Setter Property="TextAlignment"
+                Value="Center" />
+    </Style>
+
+    <Style Selector="TextBlock.generation-card-prompt">
+        <Setter Property="MaxLines"
+                Value="3" />
+        <Setter Property="TextTrimming"
+                Value="CharacterEllipsis" />
+        <Setter Property="TextWrapping"
+                Value="Wrap" />
+    </Style>
+
+    <Style Selector="TextBlock.generation-card-model">
+        <Setter Property="Margin"
+                Value="0,0,8,0" />
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+        <Setter Property="TextTrimming"
+                Value="CharacterEllipsis" />
+    </Style>
+
+    <Style Selector="TextBlock.generation-card-time">
+        <Setter Property="TextAlignment"
+                Value="Right" />
+    </Style>
+
+    <Style Selector="TextBlock.generation-card-error-text">
+        <Setter Property="HorizontalAlignment"
+                Value="Center" />
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiDangerForeground}" />
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-label">
+        <Setter Property="Margin"
+                Value="{StaticResource MetadataLabelMargin}" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-value">
+        <Setter Property="Margin"
+                Value="{StaticResource MetadataValueMargin}" />
+        <Setter Property="TextWrapping"
+                Value="Wrap" />
+    </Style>
+</Styles>

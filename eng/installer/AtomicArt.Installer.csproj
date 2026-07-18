@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>AtomicArt-win-Setup</AssemblyName>
+    <AssemblyTitle>Atomic Art Installer Bootstrapper</AssemblyTitle>
+    <RootNamespace>AtomicArt.Installer</RootNamespace>
+    <ApplicationIcon>..\..\src\AtomicArt.Desktop\Assets\AppIcon.ico</ApplicationIcon>
+    <ApplicationManifest>AtomicArt.Installer.manifest</ApplicationManifest>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <OutputPath>$(InstallerOutputDirectory)\</OutputPath>
+    <Version>$(InstallerVersion)</Version>
+    <FileVersion>$(InstallerVersion).0</FileVersion>
+    <AssemblyVersion>$(InstallerVersion).0</AssemblyVersion>
+    <InformationalVersion>$(InstallerVersion)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Product>Atomic Art Installer</Product>
+    <Description>Atomic Art Installer Bootstrapper</Description>
+    <Company>Atomic Art</Company>
+    <Copyright>Atomic Art</Copyright>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(VelopackSetupPath)"
+                      Condition="'$(VelopackSetupPath)' != ''"
+                      LogicalName="AtomicArtVelopackSetup.exe" />
+    <EmbeddedResource Include="THIRD-PARTY-NOTICES.txt"
+                      LogicalName="THIRD-PARTY-NOTICES.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"
+                      Version="10.0.9"
+                      PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48"
+                      Version="1.0.3"
+                      PrivateAssets="all" />
+    <PackageReference Include="Ookii.Dialogs.WinForms"
+                      Version="4.0.0"
+                      PrivateAssets="all" />
+  </ItemGroup>
+
+  <Target Name="EmbedInstallerDependencies" AfterTargets="ResolveReferences">
+    <ItemGroup>
+      <EmbeddedResource Include="@(ReferenceCopyLocalPaths)"
+                        Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'"
+                        LogicalName="%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="ValidateInstallerBuildProperties" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(InstallerOutputDirectory)' == ''"
+           Text="InstallerOutputDirectory is required." />
+    <Error Condition="'$(InstallerVersion)' == ''"
+           Text="InstallerVersion is required." />
+    <Error Condition="'$(VelopackSetupPath)' == '' or !Exists('$(VelopackSetupPath)')"
+           Text="VelopackSetupPath must reference an existing Velopack setup executable." />
+  </Target>
+</Project>

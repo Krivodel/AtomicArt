@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:AtomicArt.Desktop.Models"
+             xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
+             x:Class="AtomicArt.Desktop.Views.Settings.ScaleSettingView"
+             x:DataType="settings:ScaleSettingViewModel">
+    <Grid RowDefinitions="Auto,Auto"
+          ColumnDefinitions="*,Auto">
+        <StackPanel>
+            <TextBlock Classes="metadata-label"
+                       Text="{Binding DisplayName}" />
+            <ComboBox ItemsSource="{Binding Options}"
+                      SelectedItem="{Binding SelectedOption, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:UiScaleOption">
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+        <Button Grid.Column="1"
+                Margin="{StaticResource SettingsActionButtonMargin}"
+                VerticalAlignment="Bottom"
+                Content="{Binding ApplyButtonText}"
+                Command="{Binding ApplyCommand}" />
+        <TextBlock Grid.Row="1"
+                   Grid.ColumnSpan="2"
+                   Classes="metadata-value"
+                   IsVisible="{Binding HasErrorMessage}"
+                   Text="{Binding ErrorMessage}" />
+    </Grid>
+</UserControl>
