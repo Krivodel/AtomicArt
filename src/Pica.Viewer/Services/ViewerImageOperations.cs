@@ -3,6 +3,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 
 using Pica.Protocol;
+using Pica.Viewer.Resources;
 
 namespace Pica.Viewer.Services;
 
@@ -175,7 +176,7 @@ internal sealed class ViewerImageOperations
         {
             FileTypeChoices = [fileType],
             SuggestedFileName = suggestedFileName,
-            Title = "Сохранить как"
+            Title = ViewerUiStrings.SaveAs
         };
 
         return await storageProvider.SaveFilePickerAsync(options);

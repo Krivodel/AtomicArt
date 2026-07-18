@@ -9,6 +9,7 @@ using Avalonia.Media.Imaging;
 
 using Pica.Protocol;
 using Pica.Viewer.Controls;
+using Pica.Viewer.Resources;
 using Pica.Viewer.Services;
 
 using ShapePath = Avalonia.Controls.Shapes.Path;
@@ -567,7 +568,7 @@ internal sealed class ImageViewerView : IDisposable
         }
 
         panel.Children.Add(CreateMenuButton(
-            "Сохранить как",
+            ViewerUiStrings.SaveAs,
             SaveIconGeometry,
             events.ContextSaveAsClicked,
             0d));
