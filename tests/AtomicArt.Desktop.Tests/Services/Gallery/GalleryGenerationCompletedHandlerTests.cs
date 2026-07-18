@@ -59,13 +59,8 @@ public sealed class GalleryGenerationCompletedHandlerTests
         GenerationResultStorage storage = CreateStorage(rootDirectory);
         IGenerationItemStatusDescriptorRegistry statusRegistry =
             GenerationItemStatusDescriptorRegistryTestFactory.Create();
-        GalleryItemsController itemsController = new(
-            new PassthroughTrustedImageFileService(),
-            statusRegistry);
-        GalleryLifecycleViewStateController viewStateController = new(
-            new ImmediateUiThreadDispatcher(),
-            new RecordingAnimatedGalleryOperations(),
-            itemsController);
+        GalleryLifecycleViewStateController viewStateController =
+            GalleryLifecycleTestFactory.CreateViewStateController(statusRegistry);
         RecordingGalleryStateService galleryStateService = new();
         RecordingGalleryThumbnailStorage thumbnailStorage = new("thumbnail.png");
         GalleryGenerationCompletedHandler handler = new(
@@ -81,7 +76,13 @@ public sealed class GalleryGenerationCompletedHandlerTests
             GenerationImageContentTypes.Png,
             Convert.ToBase64String(GenerationImageTestData.ValidPngBytes));
 
-        await viewStateController.ApplyStartedAsync(CreateStartedEvent(), CancellationToken.None);
+        GenerationLifecycleEvent startedEvent = GalleryLifecycleTestFactory.CreateStartedEvent(
+            CorrelationId,
+            CreatedAtUtc,
+            generationCount: 1,
+            attachedImagesCount: 0);
+
+        await viewStateController.ApplyStartedAsync(startedEvent, CancellationToken.None);
         await handler.HandleAsync(
             CreateCompletedEvent(CreateItem(imageContent: content)),
             CancellationToken.None);
@@ -250,26 +251,6 @@ public sealed class GalleryGenerationCompletedHandlerTests
             GenerationLifecycleStatus.Completed,
             null,
             batch,
-            null);
-    }
-
-    private static GenerationLifecycleEvent CreateStartedEvent()
-    {
-        GenerationStartSnapshot start = new(
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            "Prompt",
-            GenerationAspectRatios.Auto,
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            1,
-            0,
-            CreatedAtUtc);
-
-        return new GenerationLifecycleEvent(
-            CorrelationId,
-            GenerationLifecycleStatus.Started,
-            start,
-            null,
             null);
     }
 

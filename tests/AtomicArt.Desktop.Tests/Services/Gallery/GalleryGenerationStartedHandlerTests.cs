@@ -7,7 +7,6 @@ using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
-using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
@@ -22,19 +21,20 @@ public sealed class GalleryGenerationStartedHandlerTests
     {
         IGenerationItemStatusDescriptorRegistry statusRegistry =
             GenerationItemStatusDescriptorRegistryTestFactory.Create();
-        GalleryItemsController itemsController = new(
-            new PassthroughTrustedImageFileService(),
-            statusRegistry);
-        GalleryLifecycleViewStateController viewStateController = new(
-            new ImmediateUiThreadDispatcher(),
-            new RecordingAnimatedGalleryOperations(),
-            itemsController);
+        GalleryLifecycleViewStateController viewStateController =
+            GalleryLifecycleTestFactory.CreateViewStateController(statusRegistry);
         RecordingGalleryStateService galleryStateService = new();
         GalleryGenerationStartedHandler handler = new(
             viewStateController,
             galleryStateService);
 
-        await handler.HandleAsync(CreateStartedEvent(), CancellationToken.None);
+        GenerationLifecycleEvent startedEvent = GalleryLifecycleTestFactory.CreateStartedEvent(
+            CorrelationId,
+            RequestedAtUtc,
+            generationCount: 2,
+            attachedImagesCount: 1);
+
+        await handler.HandleAsync(startedEvent, CancellationToken.None);
 
         galleryStateService.SavedItems.Should().HaveCount(2);
         galleryStateService.SavedItems.Should().OnlyContain(item =>
@@ -44,26 +44,6 @@ public sealed class GalleryGenerationStartedHandlerTests
             .Select(item => item.GenerationOrdinal)
             .Should()
             .Equal(0, 1);
-    }
-
-    private static GenerationLifecycleEvent CreateStartedEvent()
-    {
-        GenerationStartSnapshot start = new(
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            "Prompt",
-            GenerationAspectRatios.Auto,
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            2,
-            1,
-            RequestedAtUtc);
-
-        return new GenerationLifecycleEvent(
-            CorrelationId,
-            GenerationLifecycleStatus.Started,
-            start,
-            null,
-            null);
     }
 
 }
