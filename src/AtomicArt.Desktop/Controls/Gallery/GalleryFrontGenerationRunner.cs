@@ -39,16 +39,14 @@ internal sealed class GalleryFrontGenerationRunner : IGalleryRetargetableOperati
     {
         ArgumentNullException.ThrowIfNull(operations);
 
-        return operations.Any(operation => operation.GetType() == OperationType);
+        return GalleryOperationTypeSelector.Contains(operations, OperationType);
     }
 
     public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)
     {
         ArgumentNullException.ThrowIfNull(operations);
 
-        return operations
-            .Where(operation => operation.GetType() == OperationType)
-            .ToList();
+        return GalleryOperationTypeSelector.Select(operations, OperationType);
     }
 
     public async Task RunAsync(

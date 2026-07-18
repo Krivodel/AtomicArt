@@ -34,7 +34,7 @@ internal sealed class GalleryRemoveRunner : IGalleryOperationRunner
     {
         ArgumentNullException.ThrowIfNull(operations);
 
-        return (operations.Count > 0) && operations.All(operation => operation.GetType() == OperationType);
+        return GalleryOperationTypeSelector.ContainsOnly(operations, OperationType);
     }
 
     public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)

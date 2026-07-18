@@ -28,7 +28,7 @@ internal sealed class GalleryMixedMutationRunner : IGalleryOperationRunner
     {
         ArgumentNullException.ThrowIfNull(operations);
 
-        return operations.Any(operation => operation.GetType() == OperationType);
+        return GalleryOperationTypeSelector.Contains(operations, OperationType);
     }
 
     public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)
@@ -136,12 +136,13 @@ internal sealed class GalleryMixedMutationRunner : IGalleryOperationRunner
 
     private List<object> GetFinalItems(IReadOnlyList<GalleryOperation> operations)
     {
-        for (int i = operations.Count - 1; i >= 0; i--)
+        GalleryOperation? operation = GalleryOperationTypeSelector.FindLast(
+            operations,
+            OperationType);
+
+        if (operation is not null)
         {
-            if (operations[i].GetType() == OperationType)
-            {
-                return operations[i].Items.ToList();
-            }
+            return operation.Items.ToList();
         }
 
         List<object> emptyItems = [];

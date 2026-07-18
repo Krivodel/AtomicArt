@@ -92,6 +92,7 @@ internal sealed class GalleryOperationBatchDispatcher
     {
         return _runnerRegistry
             .Runners
-            .Any(runner => runner.SupportsBatching && (runner.OperationType == operation.GetType()));
+            .Any(runner => runner.SupportsBatching
+                && GalleryOperationTypeSelector.Matches(operation, runner.OperationType));
     }
 }

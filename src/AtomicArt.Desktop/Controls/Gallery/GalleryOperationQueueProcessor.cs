@@ -60,7 +60,7 @@ internal sealed class GalleryOperationQueueProcessor
         lock (_syncRoot)
         {
             while (_pendingOperations.TryPeek(out GalleryOperation? operation)
-                   && (operation.GetType() == operationType))
+                   && GalleryOperationTypeSelector.Matches(operation, operationType))
             {
                 operations.Add(_pendingOperations.Dequeue());
             }
@@ -76,7 +76,7 @@ internal sealed class GalleryOperationQueueProcessor
         lock (_syncRoot)
         {
             return _pendingOperations.TryPeek(out GalleryOperation? operation)
-                   && (operation.GetType() == operationType);
+                   && GalleryOperationTypeSelector.Matches(operation, operationType);
         }
     }
 
@@ -85,7 +85,9 @@ internal sealed class GalleryOperationQueueProcessor
         IGalleryRetargetableOperationRunner? runner = _runnerRegistry
             .Runners
             .OfType<IGalleryRetargetableOperationRunner>()
-            .FirstOrDefault(candidate => candidate.OperationType == operation.GetType());
+            .FirstOrDefault(candidate => GalleryOperationTypeSelector.Matches(
+                operation,
+                candidate.OperationType));
         if (runner is { IsRunning: true })
         {
             runner.RequestRetarget();
