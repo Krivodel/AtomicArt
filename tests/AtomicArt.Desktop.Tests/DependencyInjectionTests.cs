@@ -6,6 +6,7 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
@@ -230,7 +231,8 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void DesktopAppSettings_WithDefaultApiBaseAddress_UsesLocalApiPort()
     {
-        string path = TestRepositoryFiles.Find(Path.Combine("src", "AtomicArt.Desktop", "appsettings.json"));
+        string path = TestRepositoryFiles.Find(
+            Path.Combine("src", "AtomicArt.Desktop", DesktopConfigurationFile.Name));
         string json = File.ReadAllText(path);
         using JsonDocument document = JsonDocument.Parse(json);
         string? baseAddress = document.RootElement

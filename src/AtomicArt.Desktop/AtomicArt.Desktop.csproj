@@ -5,6 +5,7 @@
     <AssemblyName>AtomicArt</AssemblyName>
     <Version>1.0.2</Version>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <DesktopConfigurationFileName>appsettings.json</DesktopConfigurationFileName>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(PublishDir)' != ''">
@@ -49,12 +50,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <AssemblyAttribute Include="AtomicArt.Desktop.DesktopConfigurationFileAttribute">
+      <_Parameter1>$(DesktopConfigurationFileName)</_Parameter1>
+    </AssemblyAttribute>
+    <None Update="$(DesktopConfigurationFileName)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="RemovePublishedExtraFiles" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release' and '$(PublishSingleFile)' == 'true'">
     <ItemGroup>
-      <PublishedExtraFiles Include="$(PublishDir)**\*" Exclude="$(PublishDir)AtomicArt.exe;$(PublishDir)appsettings.json" />
+      <PublishedExtraFiles Include="$(PublishDir)**\*" Exclude="$(PublishDir)AtomicArt.exe;$(PublishDir)$(DesktopConfigurationFileName)" />
     </ItemGroup>
     <Delete Files="@(PublishedExtraFiles)" />
   </Target>

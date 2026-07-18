@@ -77,7 +77,7 @@ public class App : Avalonia.Application
     {
         return new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile(DesktopConfigurationFile.Name, optional: false)
             .Build();
     }
 

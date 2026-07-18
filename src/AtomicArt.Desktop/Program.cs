@@ -74,7 +74,7 @@ internal sealed class Program
     {
         return new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile(DesktopConfigurationFile.Name, optional: true)
             .Build();
     }
 }
