@@ -22,68 +22,55 @@ public sealed class GenerationRunDispatcherTests
     [Fact]
     public async Task EnqueueAsync_WithDelayedApi_ReturnsBeforeGenerationCompletes()
     {
-        BlockingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        BlockingRunTestContext context = CreateBlockingRunContext();
         GenerationRunRequest request = CreateRunRequest();
 
-        Task enqueueTask = dispatcher.EnqueueAsync(request, CancellationToken.None);
+        Task enqueueTask = context.Dispatcher.EnqueueAsync(request, CancellationToken.None);
         await enqueueTask;
 
         enqueueTask.IsCompletedSuccessfully.Should().BeTrue();
-        lifecycleEventHub.PublishedEvents
+        context.LifecycleEventHub.PublishedEvents
             .Select(lifecycleEvent => lifecycleEvent.Status)
             .Take(2)
             .Should()
             .Equal(
                 GenerationLifecycleStatus.StartRequested,
                 GenerationLifecycleStatus.Started);
-        lifecycleEventHub.PublishedEvents
+        context.LifecycleEventHub.PublishedEvents
             .Should()
             .NotContain(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed);
 
-        await apiClient.WaitForCallCountAsync(1);
-        apiClient.Complete();
-        await WaitForStatusAsync(
-            lifecycleEventHub,
-            GenerationLifecycleStatus.Completed);
+        await context.ApiClient.WaitForCallCountAsync(1);
+        await CompleteRunAsync(context);
     }
 
     [Fact]
     public async Task EnqueueAsync_WithRequest_UsesProvidedRequestAndCredential()
     {
-        BlockingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        BlockingRunTestContext context = CreateBlockingRunContext();
         GenerationRunRequest runRequest = CreateRunRequest();
 
-        await dispatcher.EnqueueAsync(runRequest, CancellationToken.None);
-        await apiClient.WaitForCallCountAsync(1);
+        await context.Dispatcher.EnqueueAsync(runRequest, CancellationToken.None);
+        await context.ApiClient.WaitForCallCountAsync(1);
 
-        apiClient.CapturedRequests.Should().ContainSingle(request =>
+        context.ApiClient.CapturedRequests.Should().ContainSingle(request =>
             ReferenceEquals(request, runRequest.Request));
-        apiClient.CapturedProviderCredentials.Should().ContainSingle()
+        context.ApiClient.CapturedProviderCredentials.Should().ContainSingle()
             .Which.Should().Be(TestGenerationCredentials.ProviderCredential);
 
-        apiClient.Complete();
-        await WaitForStatusAsync(
-            lifecycleEventHub,
-            GenerationLifecycleStatus.Completed);
+        await CompleteRunAsync(context);
     }
 
     [Fact]
     public async Task EnqueueAsync_WhenApiThrows_PublishesFailedEvent()
     {
-        ThrowingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        RunTestContext context = CreateRunContext(new ThrowingImageGenerationApiClient());
 
         await EnqueueAndWaitForStatusAsync(
-            dispatcher,
-            lifecycleEventHub,
+            context,
             GenerationLifecycleStatus.Failed);
 
-        List<GenerationLifecycleEvent> events = lifecycleEventHub.PublishedEvents.ToList();
+        List<GenerationLifecycleEvent> events = context.LifecycleEventHub.PublishedEvents.ToList();
         GenerationLifecycleEvent failedEvent = events
             .Single(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Failed);
         GenerationLifecycleEvent startedEvent = events
@@ -99,189 +86,143 @@ public sealed class GenerationRunDispatcherTests
     public async Task EnqueueAsync_WhenCommandTokenCanceledAfterAcceptedRun_KeepsBackgroundGeneration()
     {
         using CancellationTokenSource cancellationTokenSource = new();
-        BlockingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        BlockingRunTestContext context = await CreateStartedBlockingRunContextAsync(
+            cancellationTokenSource.Token);
 
-        await dispatcher.EnqueueAsync(CreateRunRequest(), cancellationTokenSource.Token);
-        await apiClient.WaitForCallCountAsync(1);
-
-        CancellationToken runToken = apiClient.CapturedCancellationTokens.Should().ContainSingle()
+        CancellationToken runToken = context.ApiClient.CapturedCancellationTokens.Should().ContainSingle()
             .Which;
         runToken.CanBeCanceled.Should().BeTrue();
 
         await cancellationTokenSource.CancelAsync();
         runToken.IsCancellationRequested.Should().BeFalse();
-        apiClient.Complete();
+        await CompleteRunAsync(context);
 
-        await WaitForStatusAsync(
-            lifecycleEventHub,
-            GenerationLifecycleStatus.Completed);
-
-        lifecycleEventHub.PublishedEvents
-            .Should()
-            .NotContain(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.StartFailed);
-        lifecycleEventHub.PublishedEvents
-            .Should()
-            .NotContain(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Failed);
-        apiClient.ActiveCount.Should().Be(0);
+        AssertStatusesNotPublished(
+            context.LifecycleEventHub,
+            GenerationLifecycleStatus.StartFailed,
+            GenerationLifecycleStatus.Failed);
+        context.ApiClient.ActiveCount.Should().Be(0);
     }
 
     [Fact]
     public async Task EnqueueAsync_WithMoreThanLimit_LimitsConcurrentApiCalls()
     {
-        BlockingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        BlockingRunTestContext context = CreateBlockingRunContext();
+        IEnumerable<GenerationRunDispatcher> dispatchers = Enumerable.Repeat(
+            context.Dispatcher,
+            OverLimitRunCount);
 
-        for (int i = 0; i < OverLimitRunCount; i++)
-        {
-            await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-        }
-
-        await CompleteRunsAndAssertConcurrencyLimitAsync(apiClient, lifecycleEventHub);
+        await EnqueueAndAssertConcurrencyLimitAsync(context, dispatchers);
     }
 
     [Fact]
     public async Task EnqueueAsync_WithSharedLimiterAcrossDispatchers_LimitsConcurrentApiCalls()
     {
-        BlockingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
         GenerationConcurrencyLimiter limiter = new();
-        GenerationRunDispatcher firstDispatcher = CreateDispatcher(apiClient, lifecycleEventHub, limiter);
-        GenerationRunDispatcher secondDispatcher = CreateDispatcher(apiClient, lifecycleEventHub, limiter);
+        BlockingRunTestContext context = CreateBlockingRunContext(limiter);
+        GenerationRunDispatcher secondDispatcher = CreateDispatcher(
+            context.ApiClient,
+            context.LifecycleEventHub,
+            limiter);
+        IEnumerable<GenerationRunDispatcher> dispatchers = Enumerable
+            .Range(0, OverLimitRunCount)
+            .Select(index => (index % 2) == 0
+                ? context.Dispatcher
+                : secondDispatcher);
 
-        for (int i = 0; i < OverLimitRunCount; i++)
-        {
-            GenerationRunDispatcher dispatcher = (i % 2) == 0
-                ? firstDispatcher
-                : secondDispatcher;
-            await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-        }
-
-        await CompleteRunsAndAssertConcurrencyLimitAsync(apiClient, lifecycleEventHub);
+        await EnqueueAndAssertConcurrencyLimitAsync(context, dispatchers);
     }
 
     [Fact]
     public async Task EnqueueAsync_WithTwoRuns_PublishesSeparateCorrelationIds()
     {
-        SuccessfulImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        RunTestContext context = CreateRunContext(new SuccessfulImageGenerationApiClient());
 
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
+        await context.Dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
+        await context.Dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
 
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Count(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed) == 2,
-            CancellationToken.None);
+        await WaitForStatusCountAsync(
+            context.LifecycleEventHub,
+            GenerationLifecycleStatus.Completed,
+            2);
 
-        lifecycleEventHub.PublishedEvents
-            .Where(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Started)
-            .Select(lifecycleEvent => lifecycleEvent.CorrelationId)
-            .Should()
-            .OnlyHaveUniqueItems()
-            .And.HaveCount(2);
+        AssertUniqueStartedCorrelationIds(context.LifecycleEventHub, 2);
     }
 
     [Fact]
     public async Task EnqueueAsync_WithOverlappingRunsAndCanceledFirstCommandToken_DoesNotPublishStartFailed()
     {
         using CancellationTokenSource cancellationTokenSource = new();
-        BlockingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        BlockingRunTestContext context = CreateBlockingRunContext();
 
-        await dispatcher.EnqueueAsync(CreateRunRequest(), cancellationTokenSource.Token);
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-        await apiClient.WaitForCallCountAsync(2);
+        await context.Dispatcher.EnqueueAsync(CreateRunRequest(), cancellationTokenSource.Token);
+        await context.Dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
+        await context.ApiClient.WaitForCallCountAsync(2);
 
         await cancellationTokenSource.CancelAsync();
-        apiClient.Complete();
+        context.ApiClient.Complete();
 
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Count(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed) == 2,
-            CancellationToken.None);
+        await WaitForStatusCountAsync(
+            context.LifecycleEventHub,
+            GenerationLifecycleStatus.Completed,
+            2);
 
-        lifecycleEventHub.PublishedEvents
-            .Should()
-            .NotContain(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.StartFailed);
-        lifecycleEventHub.PublishedEvents
-            .Where(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Started)
-            .Select(lifecycleEvent => lifecycleEvent.CorrelationId)
-            .Should()
-            .OnlyHaveUniqueItems()
-            .And.HaveCount(2);
-        apiClient.ActiveCount.Should().Be(0);
+        AssertStatusesNotPublished(
+            context.LifecycleEventHub,
+            GenerationLifecycleStatus.StartFailed);
+        AssertUniqueStartedCorrelationIds(context.LifecycleEventHub, 2);
+        context.ApiClient.ActiveCount.Should().Be(0);
     }
 
     [Fact]
     public async Task Dispose_WithAcceptedStartedRun_PublishesFailedWithoutStartFailed()
     {
-        BlockingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
-
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-        await apiClient.WaitForCallCountAsync(1);
-        CancellationToken runToken = apiClient.CapturedCancellationTokens.Should().ContainSingle()
+        BlockingRunTestContext context = await CreateStartedBlockingRunContextAsync(
+            CancellationToken.None);
+        CancellationToken runToken = context.ApiClient.CapturedCancellationTokens.Should().ContainSingle()
             .Which;
 
-        dispatcher.Dispose();
-
-        await WaitForStatusAsync(
-            lifecycleEventHub,
-            GenerationLifecycleStatus.Failed);
+        await DisposeAndWaitForFailureAsync(context);
 
         runToken.IsCancellationRequested.Should().BeTrue();
-        lifecycleEventHub.PublishedEvents
-            .Should()
-            .NotContain(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.StartFailed);
-        lifecycleEventHub.PublishedEvents
-            .Should()
-            .NotContain(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed);
-        apiClient.ActiveCount.Should().Be(0);
+        AssertStatusesNotPublished(
+            context.LifecycleEventHub,
+            GenerationLifecycleStatus.StartFailed,
+            GenerationLifecycleStatus.Completed);
+        context.ApiClient.ActiveCount.Should().Be(0);
     }
 
     [Fact]
     public async Task Dispose_WithAcceptedRunBeforeApiStarts_PublishesFailedWithoutStartFailed()
     {
-        BlockingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
         ManualGenerationConcurrencyLimiter limiter = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub, limiter);
+        BlockingRunTestContext context = CreateBlockingRunContext(limiter);
 
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-        dispatcher.Dispose();
+        await context.Dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
+        context.Dispatcher.Dispose();
         limiter.ReleaseWait();
 
         await WaitForStatusAsync(
-            lifecycleEventHub,
+            context.LifecycleEventHub,
             GenerationLifecycleStatus.Failed);
 
-        apiClient.CapturedRequests.Should().BeEmpty();
-        lifecycleEventHub.PublishedEvents
-            .Should()
-            .NotContain(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.StartFailed);
-        lifecycleEventHub.PublishedEvents
-            .Should()
-            .NotContain(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed);
+        context.ApiClient.CapturedRequests.Should().BeEmpty();
+        AssertStatusesNotPublished(
+            context.LifecycleEventHub,
+            GenerationLifecycleStatus.StartFailed,
+            GenerationLifecycleStatus.Completed);
         limiter.ReleaseCount.Should().Be(0);
     }
 
     [Fact]
     public void Dispose_WhenCalledTwice_DoesNotThrow()
     {
-        SuccessfulImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        RunTestContext context = CreateRunContext(new SuccessfulImageGenerationApiClient());
 
         Action act = () =>
         {
-            dispatcher.Dispose();
-            dispatcher.Dispose();
+            context.Dispatcher.Dispose();
+            context.Dispatcher.Dispose();
         };
 
         act.Should().NotThrow();
@@ -290,37 +231,24 @@ public sealed class GenerationRunDispatcherTests
     [Fact]
     public async Task Dispose_AfterCompletedRun_DoesNotThrow()
     {
-        SuccessfulImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        RunTestContext context = CreateRunContext(new SuccessfulImageGenerationApiClient());
 
         await EnqueueAndWaitForStatusAsync(
-            dispatcher,
-            lifecycleEventHub,
+            context,
             GenerationLifecycleStatus.Completed);
 
-        Action act = dispatcher.Dispose;
-
-        act.Should().NotThrow();
+        AssertDisposeDoesNotThrow(context.Dispatcher);
     }
 
     [Fact]
     public async Task Dispose_AfterCanceledRun_DoesNotThrow()
     {
-        BlockingImageGenerationApiClient apiClient = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+        BlockingRunTestContext context = await CreateStartedBlockingRunContextAsync(
+            CancellationToken.None);
 
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-        await apiClient.WaitForCallCountAsync(1);
-        dispatcher.Dispose();
-        await WaitForStatusAsync(
-            lifecycleEventHub,
-            GenerationLifecycleStatus.Failed);
+        await DisposeAndWaitForFailureAsync(context);
 
-        Action act = dispatcher.Dispose;
-
-        act.Should().NotThrow();
+        AssertDisposeDoesNotThrow(context.Dispatcher);
     }
 
     [Fact]
@@ -328,25 +256,46 @@ public sealed class GenerationRunDispatcherTests
     {
         for (int i = 0; i < ConcurrentDisposeAttemptCount; i++)
         {
-            BlockingImageGenerationApiClient apiClient = new();
-            TestGenerationLifecycleEventHub lifecycleEventHub = new();
-            GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
+            BlockingRunTestContext context = await CreateStartedBlockingRunContextAsync(
+                CancellationToken.None);
 
-            await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-            await apiClient.WaitForCallCountAsync(1);
-
-            Task disposeTask = Task.Run(dispatcher.Dispose);
-            apiClient.Complete();
+            Task disposeTask = Task.Run(context.Dispatcher.Dispose);
+            context.ApiClient.Complete();
             Func<Task> act = async () => await disposeTask.ConfigureAwait(false);
 
             await act.Should().NotThrowAsync();
             await AsyncTestWaiter.WaitForConditionAsync(
-                () => lifecycleEventHub.PublishedEvents.Any(
+                () => context.LifecycleEventHub.PublishedEvents.Any(
                     lifecycleEvent => (lifecycleEvent.Status == GenerationLifecycleStatus.Completed)
                         || (lifecycleEvent.Status == GenerationLifecycleStatus.Failed)),
                 CancellationToken.None);
-            apiClient.ActiveCount.Should().Be(0);
+            context.ApiClient.ActiveCount.Should().Be(0);
         }
+    }
+
+    private static RunTestContext CreateRunContext(
+        IImageGenerationApiClient apiClient,
+        IGenerationConcurrencyLimiter? limiter = null)
+    {
+        TestGenerationLifecycleEventHub lifecycleEventHub = new();
+        GenerationRunDispatcher dispatcher = CreateDispatcher(
+            apiClient,
+            lifecycleEventHub,
+            limiter);
+
+        return new RunTestContext(lifecycleEventHub, dispatcher);
+    }
+
+    private static BlockingRunTestContext CreateBlockingRunContext(
+        IGenerationConcurrencyLimiter? limiter = null)
+    {
+        BlockingImageGenerationApiClient apiClient = new();
+        RunTestContext context = CreateRunContext(apiClient, limiter);
+
+        return new BlockingRunTestContext(
+            apiClient,
+            context.LifecycleEventHub,
+            context.Dispatcher);
     }
 
     private static GenerationRunDispatcher CreateDispatcher(
@@ -398,13 +347,100 @@ public sealed class GenerationRunDispatcherTests
             items);
     }
 
-    private static async Task EnqueueAndWaitForStatusAsync(
-        GenerationRunDispatcher dispatcher,
+    private static async Task<BlockingRunTestContext> CreateStartedBlockingRunContextAsync(
+        CancellationToken ct)
+    {
+        BlockingRunTestContext context = CreateBlockingRunContext();
+
+        await context.Dispatcher
+            .EnqueueAsync(CreateRunRequest(), ct)
+            .ConfigureAwait(false);
+        await context.ApiClient
+            .WaitForCallCountAsync(1)
+            .ConfigureAwait(false);
+
+        return context;
+    }
+
+    private static void AssertStatusesNotPublished(
         TestGenerationLifecycleEventHub lifecycleEventHub,
+        params GenerationLifecycleStatus[] statuses)
+    {
+        foreach (GenerationLifecycleStatus status in statuses)
+        {
+            lifecycleEventHub.PublishedEvents
+                .Should()
+                .NotContain(lifecycleEvent => lifecycleEvent.Status == status);
+        }
+    }
+
+    private static void AssertUniqueStartedCorrelationIds(
+        TestGenerationLifecycleEventHub lifecycleEventHub,
+        int expectedCount)
+    {
+        lifecycleEventHub.PublishedEvents
+            .Where(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Started)
+            .Select(lifecycleEvent => lifecycleEvent.CorrelationId)
+            .Should()
+            .OnlyHaveUniqueItems()
+            .And.HaveCount(expectedCount);
+    }
+
+    private static void AssertDisposeDoesNotThrow(GenerationRunDispatcher dispatcher)
+    {
+        Action act = dispatcher.Dispose;
+
+        act.Should().NotThrow();
+    }
+
+    private static async Task EnqueueAndWaitForStatusAsync(
+        RunTestContext context,
         GenerationLifecycleStatus status)
     {
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-        await WaitForStatusAsync(lifecycleEventHub, status);
+        await context.Dispatcher
+            .EnqueueAsync(CreateRunRequest(), CancellationToken.None)
+            .ConfigureAwait(false);
+        await WaitForStatusAsync(context.LifecycleEventHub, status).ConfigureAwait(false);
+    }
+
+    private static async Task EnqueueAndAssertConcurrencyLimitAsync(
+        BlockingRunTestContext context,
+        IEnumerable<GenerationRunDispatcher> dispatchers)
+    {
+        await EnqueueRunsAsync(dispatchers).ConfigureAwait(false);
+        await CompleteRunsAndAssertConcurrencyLimitAsync(
+            context.ApiClient,
+            context.LifecycleEventHub).ConfigureAwait(false);
+    }
+
+    private static async Task EnqueueRunsAsync(
+        IEnumerable<GenerationRunDispatcher> dispatchers)
+    {
+        foreach (GenerationRunDispatcher dispatcher in dispatchers)
+        {
+            await dispatcher
+                .EnqueueAsync(CreateRunRequest(), CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+    }
+
+    private static async Task CompleteRunAsync(BlockingRunTestContext context)
+    {
+        context.ApiClient.Complete();
+
+        await WaitForStatusAsync(
+            context.LifecycleEventHub,
+            GenerationLifecycleStatus.Completed).ConfigureAwait(false);
+    }
+
+    private static async Task DisposeAndWaitForFailureAsync(
+        BlockingRunTestContext context)
+    {
+        context.Dispatcher.Dispose();
+
+        await WaitForStatusAsync(
+            context.LifecycleEventHub,
+            GenerationLifecycleStatus.Failed).ConfigureAwait(false);
     }
 
     private static async Task WaitForStatusAsync(
@@ -414,26 +450,47 @@ public sealed class GenerationRunDispatcherTests
         await AsyncTestWaiter.WaitForConditionAsync(
             () => lifecycleEventHub.PublishedEvents.Any(
                 lifecycleEvent => lifecycleEvent.Status == status),
-            CancellationToken.None);
+            CancellationToken.None).ConfigureAwait(false);
+    }
+
+    private static async Task WaitForStatusCountAsync(
+        TestGenerationLifecycleEventHub lifecycleEventHub,
+        GenerationLifecycleStatus status,
+        int expectedCount)
+    {
+        await AsyncTestWaiter.WaitForConditionAsync(
+            () => lifecycleEventHub.PublishedEvents.Count(
+                lifecycleEvent => lifecycleEvent.Status == status) == expectedCount,
+            CancellationToken.None).ConfigureAwait(false);
     }
 
     private static async Task CompleteRunsAndAssertConcurrencyLimitAsync(
         BlockingImageGenerationApiClient apiClient,
         TestGenerationLifecycleEventHub lifecycleEventHub)
     {
-        await apiClient.WaitForCallCountAsync(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
+        await apiClient
+            .WaitForCallCountAsync(GenerationConcurrencyLimiter.MaxConcurrentGenerations)
+            .ConfigureAwait(false);
         apiClient.ActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
         apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
 
         apiClient.Complete();
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Count(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed)
-                == OverLimitRunCount,
-            CancellationToken.None);
+        await WaitForStatusCountAsync(
+            lifecycleEventHub,
+            GenerationLifecycleStatus.Completed,
+            OverLimitRunCount).ConfigureAwait(false);
 
         apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
     }
+
+    private sealed record RunTestContext(
+        TestGenerationLifecycleEventHub LifecycleEventHub,
+        GenerationRunDispatcher Dispatcher);
+
+    private sealed record BlockingRunTestContext(
+        BlockingImageGenerationApiClient ApiClient,
+        TestGenerationLifecycleEventHub LifecycleEventHub,
+        GenerationRunDispatcher Dispatcher);
 
     private sealed class BlockingImageGenerationApiClient : IImageGenerationApiClient
     {
