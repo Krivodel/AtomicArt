@@ -11,15 +11,7 @@ public sealed class FreeWindowResizeSessionTests
     [Fact]
     public void Calculate_WhenBottomRightCornerMoves_ChangesAxesIndependently()
     {
-        WindowRectangle initialRectangle = new()
-        {
-            Left = 100,
-            Top = 100,
-            Right = 900,
-            Bottom = 600
-        };
-        FreeWindowResizeSession session = new(
-            initialRectangle,
+        FreeWindowResizeSession session = CreateSession(
             new PixelPoint(900, 600),
             WindowSizingEdges.BottomRight);
 
@@ -34,15 +26,7 @@ public sealed class FreeWindowResizeSessionTests
     [Fact]
     public void Calculate_WhenLeftEdgeExceedsMinimum_KeepsMinimumWidthAndRightEdge()
     {
-        WindowRectangle initialRectangle = new()
-        {
-            Left = 100,
-            Top = 100,
-            Right = 900,
-            Bottom = 600
-        };
-        FreeWindowResizeSession session = new(
-            initialRectangle,
+        FreeWindowResizeSession session = CreateSession(
             new PixelPoint(100, 350),
             WindowSizingEdges.Left);
 
@@ -50,5 +34,23 @@ public sealed class FreeWindowResizeSessionTests
 
         result.Width.Should().Be(64);
         result.Right.Should().Be(900);
+    }
+
+    private static FreeWindowResizeSession CreateSession(
+        PixelPoint pointerPosition,
+        WindowSizingEdges sizingEdge)
+    {
+        WindowRectangle initialRectangle = new()
+        {
+            Left = 100,
+            Top = 100,
+            Right = 900,
+            Bottom = 600
+        };
+
+        return new FreeWindowResizeSession(
+            initialRectangle,
+            pointerPosition,
+            sizingEdge);
     }
 }
