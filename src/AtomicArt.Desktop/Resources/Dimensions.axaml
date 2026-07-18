@@ -6,7 +6,6 @@
     <x:Double x:Key="MainWindowMinHeight">340</x:Double>
     <x:Double x:Key="TitleLogoSize">28</x:Double>
     <x:Double x:Key="TitleButtonSize">32</x:Double>
-    <x:Double x:Key="PlaceholderFontSize">14</x:Double>
     <x:Double x:Key="OverlayBackdropOpacity">0.72</x:Double>
     <x:Double x:Key="GenerationPanelWidth">640</x:Double>
     <x:Double x:Key="GenerationPanelResizeGripHeight">20</x:Double>
@@ -24,7 +23,6 @@
     <GridLength x:Key="GenerationCardInfoHeight">102</GridLength>
     <x:Double x:Key="GenerationCardActionSize">32</x:Double>
     <x:Double x:Key="GenerationCardActionIconSize">16</x:Double>
-    <x:Double x:Key="GalleryActionGap">8</x:Double>
     <x:Double x:Key="ZeroSize">0</x:Double>
     <x:Double x:Key="MetadataOverlayWidth">620</x:Double>
     <x:Double x:Key="SettingsOverlayWidth">520</x:Double>
@@ -36,7 +34,6 @@
     <Thickness x:Key="GenerationPanelMargin">20,0,20,20</Thickness>
     <Thickness x:Key="GenerationPanelPadding">18</Thickness>
     <Thickness x:Key="GenerationPanelInnerSpacing">0,10,0,0</Thickness>
-    <Thickness x:Key="GenerationControlSpacing">-5,0,0,0</Thickness>
     <Thickness x:Key="AttachmentListMargin">12,0,0,0</Thickness>
     <Thickness x:Key="AttachmentPreviewMargin">0,0,8,0</Thickness>
     <Thickness x:Key="OverlayPadding">24</Thickness>
@@ -45,12 +42,10 @@
     <Thickness x:Key="GalleryCardMargin">0,0,16,16</Thickness>
     <Thickness x:Key="GalleryCardInfoPadding">12,8,12,8</Thickness>
     <Thickness x:Key="GalleryCardActionMargin">10</Thickness>
-    <Thickness x:Key="GalleryActionPanelMargin">0,10,0,0</Thickness>
     <Thickness x:Key="MetadataGridMargin">0,18,0,0</Thickness>
     <Thickness x:Key="MetadataLabelMargin">0,0,16,10</Thickness>
     <Thickness x:Key="MetadataValueMargin">0,0,0,10</Thickness>
     <Thickness x:Key="SettingsSectionMargin">0,18,0,0</Thickness>
-    <Thickness x:Key="SettingsActionsMargin">0,20,0,0</Thickness>
     <Thickness x:Key="SettingsActionButtonMargin">0,0,12,0</Thickness>
     <Thickness x:Key="ZeroThickness">0</Thickness>
     <Thickness x:Key="ShellBorderThickness">1</Thickness>
