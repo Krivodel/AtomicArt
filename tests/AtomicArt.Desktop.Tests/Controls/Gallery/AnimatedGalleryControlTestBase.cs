@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
-
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media;
@@ -77,7 +75,7 @@ public abstract class AnimatedGalleryControlTestBase
     private protected static IAnimatedGallerySceneFactory CreateSceneFactory(IUiFrameScheduler? frameScheduler)
     {
         GallerySceneServicesFactory servicesFactory = new(
-            topLevel => CreateScene(topLevel, frameScheduler));
+            topLevel => AnimatedGallerySceneTestFactory.Create(topLevel, frameScheduler));
 
         return new AnimatedGallerySceneFactory(servicesFactory);
     }
@@ -160,42 +158,6 @@ public abstract class AnimatedGalleryControlTestBase
             0,
             null,
             GenerationItemStatusDescriptorRegistryTestFactory.Create());
-    }
-
-    private static AnimatedGalleryScene CreateScene(TopLevel topLevel, IUiFrameScheduler? frameSchedulerOverride)
-    {
-        IUiFrameScheduler frameScheduler = frameSchedulerOverride ?? new AvaloniaUiFrameSchedulerFactory().Create(topLevel);
-        GalleryLayoutService galleryLayout = new();
-        GalleryAnimationScheduler animationScheduler = new(frameScheduler);
-        GalleryOverlayEffects overlayEffects = new(animationScheduler);
-        GalleryMotionAnimator motionAnimator = GalleryMotionAnimatorTestFactory.Create(
-            animationScheduler,
-            overlayEffects,
-            galleryLayout);
-        List<IGalleryOperationRunner> runners =
-        [
-            new GalleryAppendRunner(motionAnimator, galleryLayout, NullLogger<GalleryAppendRunner>.Instance),
-            new GalleryFrontGenerationRunner(
-                animationScheduler,
-                motionAnimator,
-                galleryLayout,
-                NullLogger<GalleryFrontGenerationRunner>.Instance,
-                new GalleryFrontGenerationRetargetWaiter(animationScheduler)),
-            new GalleryRemoveRunner(animationScheduler, motionAnimator, galleryLayout, NullLogger<GalleryRemoveRunner>.Instance),
-            new GalleryMixedMutationRunner(motionAnimator, galleryLayout, NullLogger<GalleryMixedMutationRunner>.Instance)
-        ];
-        IGalleryOperationRunnerRegistry runnerRegistry = new GalleryOperationRunnerRegistry(runners);
-        GalleryOperationCoordinator operationCoordinator = GalleryOperationCoordinatorTestFactory.Create(
-            frameScheduler,
-            runnerRegistry);
-
-        return new AnimatedGalleryScene(
-            galleryLayout,
-            animationScheduler,
-            motionAnimator,
-            operationCoordinator,
-            new GenerationCardControlFactory(),
-            NullLogger<AnimatedGalleryResizeController>.Instance);
     }
 
     private static Grid GetRootGrid(AnimatedGalleryControl control)

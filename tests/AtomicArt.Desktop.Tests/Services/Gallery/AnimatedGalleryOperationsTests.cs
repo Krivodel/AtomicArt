@@ -6,7 +6,6 @@ using Xunit;
 
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
 using AtomicArt.Desktop.Views.Gallery;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
@@ -81,38 +80,7 @@ public sealed class AnimatedGalleryOperationsTests
 
     private static AnimatedGalleryScene CreateScene(TopLevel topLevel)
     {
-        IUiFrameScheduler frameScheduler = new AvaloniaUiFrameSchedulerFactory().Create(topLevel);
-        GalleryLayoutService galleryLayout = new();
-        GalleryAnimationScheduler animationScheduler = new(frameScheduler);
-        GalleryOverlayEffects overlayEffects = new(animationScheduler);
-        GalleryMotionAnimator motionAnimator = GalleryMotionAnimatorTestFactory.Create(
-            animationScheduler,
-            overlayEffects,
-            galleryLayout);
-        List<IGalleryOperationRunner> runners =
-        [
-            new GalleryAppendRunner(motionAnimator, galleryLayout, NullLogger<GalleryAppendRunner>.Instance),
-            new GalleryFrontGenerationRunner(
-                animationScheduler,
-                motionAnimator,
-                galleryLayout,
-                NullLogger<GalleryFrontGenerationRunner>.Instance,
-                new GalleryFrontGenerationRetargetWaiter(animationScheduler)),
-            new GalleryRemoveRunner(animationScheduler, motionAnimator, galleryLayout, NullLogger<GalleryRemoveRunner>.Instance),
-            new GalleryMixedMutationRunner(motionAnimator, galleryLayout, NullLogger<GalleryMixedMutationRunner>.Instance)
-        ];
-        IGalleryOperationRunnerRegistry runnerRegistry = new GalleryOperationRunnerRegistry(runners);
-        GalleryOperationCoordinator operationCoordinator = GalleryOperationCoordinatorTestFactory.Create(
-            frameScheduler,
-            runnerRegistry);
-
-        return new AnimatedGalleryScene(
-            galleryLayout,
-            animationScheduler,
-            motionAnimator,
-            operationCoordinator,
-            new GenerationCardControlFactory(),
-            NullLogger<AnimatedGalleryResizeController>.Instance);
+        return AnimatedGallerySceneTestFactory.Create(topLevel);
     }
 
     private sealed class RecordingOperations : IAnimatedGalleryOperations
