@@ -20,113 +20,118 @@ public sealed class ApplicationUpdateViewModelTests
     [Fact]
     public async Task StartMonitoringCommand_WithUpdateDuringGeneration_OffersWaitAndUpdate()
     {
-        Mock<IApplicationUpdateService> updateServiceMock = CreateUpdateServiceMock();
-        IGenerationActivityTracker activityTracker = TestGenerationActivityTrackerFactory.Create();
-        activityTracker.Start(CorrelationId, GenerationActivityPhase.GenerationRequest);
-        using ApplicationUpdateViewModel viewModel = CreateViewModel(
-            updateServiceMock.Object,
-            Mock.Of<IApplicationUpdateRestartCoordinator>(),
-            activityTracker);
+        using ApplicationUpdateTestContext context = new();
+        context.StartGeneration();
 
-        await viewModel.StartMonitoringCommand.ExecuteAsync(null);
+        await StartMonitoringAsync(context.ViewModel);
 
-        viewModel.IsNotificationOpen.Should().BeTrue();
-        viewModel.State.Should().Be(ApplicationUpdateState.Available);
-        viewModel.UpdateActionText.Should().Be(UiStrings.UpdateWaitAndInstall);
-        viewModel.Message.Should().Contain(UpdateVersion);
+        context.ViewModel.IsNotificationOpen.Should().BeTrue();
+        context.ViewModel.State.Should().Be(ApplicationUpdateState.Available);
+        context.ViewModel.UpdateActionText.Should().Be(UiStrings.UpdateWaitAndInstall);
+        context.ViewModel.Message.Should().Contain(UpdateVersion);
     }
 
     [Fact]
     public async Task UpdateCommand_WithActiveGeneration_WaitsBeforeDownloadAndRestart()
     {
-        Mock<IApplicationUpdateService> updateServiceMock = CreateUpdateServiceMock();
-        updateServiceMock
+        using ApplicationUpdateTestContext context = new();
+        context.UpdateServiceMock
             .Setup(service => service.DownloadUpdateAsync(
                 It.IsAny<ApplicationUpdate>(),
                 It.IsAny<IProgress<int>>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        Mock<IApplicationUpdateRestartCoordinator> restartCoordinatorMock = new();
-        restartCoordinatorMock
+        context.RestartCoordinatorMock
             .Setup(coordinator => coordinator.ApplyAndRestartAsync(
                 It.IsAny<ApplicationUpdate>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        IGenerationActivityTracker activityTracker = TestGenerationActivityTrackerFactory.Create();
-        activityTracker.Start(CorrelationId, GenerationActivityPhase.GenerationRequest);
-        using ApplicationUpdateViewModel viewModel = CreateViewModel(
-            updateServiceMock.Object,
-            restartCoordinatorMock.Object,
-            activityTracker);
-        await viewModel.StartMonitoringCommand.ExecuteAsync(null);
+        context.StartGeneration();
+        await StartMonitoringAsync(context.ViewModel);
 
-        Task updateTask = viewModel.UpdateCommand.ExecuteAsync(null);
+        Task updateTask = context.ViewModel.UpdateCommand.ExecuteAsync(null);
         await Task.Yield();
 
-        viewModel.State.Should().Be(ApplicationUpdateState.WaitingForGeneration);
-        updateServiceMock.Verify(
+        context.ViewModel.State.Should().Be(ApplicationUpdateState.WaitingForGeneration);
+        context.UpdateServiceMock.Verify(
             service => service.DownloadUpdateAsync(
                 It.IsAny<ApplicationUpdate>(),
                 It.IsAny<IProgress<int>>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
 
-        activityTracker.Complete(CorrelationId, GenerationActivityPhase.GenerationRequest);
+        context.ActivityTracker.Complete(
+            CorrelationId,
+            GenerationActivityPhase.GenerationRequest);
         await updateTask;
 
-        updateServiceMock.Verify(
+        context.UpdateServiceMock.Verify(
             service => service.DownloadUpdateAsync(
                 It.Is<ApplicationUpdate>(update => update.Version == UpdateVersion),
                 It.IsAny<IProgress<int>>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
-        restartCoordinatorMock.Verify(
+        context.RestartCoordinatorMock.Verify(
             coordinator => coordinator.ApplyAndRestartAsync(
                 It.Is<ApplicationUpdate>(update => update.Version == UpdateVersion),
                 It.IsAny<CancellationToken>()),
             Times.Once);
-        viewModel.IsNotificationOpen.Should().BeFalse();
+        context.ViewModel.IsNotificationOpen.Should().BeFalse();
     }
 
     [Fact]
     public async Task UpdateLaterCommand_WithAvailableUpdate_HidesNotification()
     {
-        Mock<IApplicationUpdateService> updateServiceMock = CreateUpdateServiceMock();
-        using ApplicationUpdateViewModel viewModel = CreateViewModel(
-            updateServiceMock.Object,
-            Mock.Of<IApplicationUpdateRestartCoordinator>(),
-            TestGenerationActivityTrackerFactory.Create());
-        await viewModel.StartMonitoringCommand.ExecuteAsync(null);
+        using ApplicationUpdateTestContext context = new();
+        await StartMonitoringAsync(context.ViewModel);
 
-        viewModel.UpdateLaterCommand.Execute(null);
+        context.ViewModel.UpdateLaterCommand.Execute(null);
 
-        viewModel.IsNotificationOpen.Should().BeFalse();
-        viewModel.State.Should().Be(ApplicationUpdateState.Hidden);
+        context.ViewModel.IsNotificationOpen.Should().BeFalse();
+        context.ViewModel.State.Should().Be(ApplicationUpdateState.Hidden);
     }
 
-    private static Mock<IApplicationUpdateService> CreateUpdateServiceMock()
+    private static Task StartMonitoringAsync(ApplicationUpdateViewModel viewModel)
     {
-        Mock<IApplicationUpdateService> updateServiceMock = new();
-        updateServiceMock
-            .SetupGet(service => service.CanCheckForUpdates)
-            .Returns(true);
-        updateServiceMock
-            .Setup(service => service.CheckForUpdateAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ApplicationUpdate(UpdateVersion));
-
-        return updateServiceMock;
+        return viewModel.StartMonitoringCommand.ExecuteAsync(null);
     }
 
-    private static ApplicationUpdateViewModel CreateViewModel(
-        IApplicationUpdateService updateService,
-        IApplicationUpdateRestartCoordinator restartCoordinator,
-        IGenerationActivityTracker activityTracker)
+    private sealed class ApplicationUpdateTestContext : IDisposable
     {
-        return new ApplicationUpdateViewModel(
-            updateService,
-            restartCoordinator,
-            activityTracker,
-            new ImmediateUiThreadDispatcher(),
-            new TestViewModelErrorHandler());
+        public Mock<IApplicationUpdateService> UpdateServiceMock { get; }
+        public Mock<IApplicationUpdateRestartCoordinator> RestartCoordinatorMock { get; }
+        public IGenerationActivityTracker ActivityTracker { get; }
+        public ApplicationUpdateViewModel ViewModel { get; }
+
+        public ApplicationUpdateTestContext()
+        {
+            UpdateServiceMock = new Mock<IApplicationUpdateService>();
+            UpdateServiceMock
+                .SetupGet(service => service.CanCheckForUpdates)
+                .Returns(true);
+            UpdateServiceMock
+                .Setup(service => service.CheckForUpdateAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ApplicationUpdate(UpdateVersion));
+            RestartCoordinatorMock = new Mock<IApplicationUpdateRestartCoordinator>();
+            ActivityTracker = TestGenerationActivityTrackerFactory.Create();
+            ViewModel = new ApplicationUpdateViewModel(
+                UpdateServiceMock.Object,
+                RestartCoordinatorMock.Object,
+                ActivityTracker,
+                new ImmediateUiThreadDispatcher(),
+                new TestViewModelErrorHandler());
+        }
+
+        public void StartGeneration()
+        {
+            ActivityTracker.Start(
+                CorrelationId,
+                GenerationActivityPhase.GenerationRequest);
+        }
+
+        public void Dispose()
+        {
+            ViewModel.Dispose();
+        }
     }
 }
