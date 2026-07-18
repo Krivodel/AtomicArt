@@ -28,24 +28,24 @@ public sealed class MetadataImageModelDefinitionTests
     }
 
     [Fact]
-    public void GetSupportedContentTypes_WithNanoBanana2_ReturnsCatalogContentTypes()
+    public void Constraints_WithNanoBanana2_ReturnsCatalogContentTypes()
     {
         MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
 
-        IReadOnlyList<string> contentTypes = definition.GetSupportedContentTypes();
+        IReadOnlyList<string> contentTypes = definition.Constraints.SupportedContentTypes;
 
         contentTypes.Should().Equal(metadata.Attachments.SupportedContentTypes);
     }
 
     [Fact]
-    public void MaxTotalAttachedImageBytes_WithNanoBanana2_ReturnsAggregateLimit()
+    public void Constraints_WithNanoBanana2_ReturnsAggregateAttachmentLimit()
     {
         MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
 
-        long maxTotalAttachedImageBytes = definition.MaxTotalAttachedImageBytes;
+        long maxTotalAttachedImageBytes = definition.Constraints.MaxTotalAttachedImageBytes;
 
-        maxTotalAttachedImageBytes.Should().BeGreaterThan(definition.MaxAttachedImageBytes);
+        maxTotalAttachedImageBytes.Should().BeGreaterThan(definition.Constraints.MaxAttachedImageBytes);
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public sealed class MetadataImageModelDefinitionTests
     {
         MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         IReadOnlyList<AttachedImageDto> attachedImages = Enumerable
-            .Range(0, definition.MaxAttachedImages + 1)
+            .Range(0, definition.Constraints.MaxAttachedImages + 1)
             .Select(index => CreateAttachedImage($"image-{index}.png"))
             .ToList();
         ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
@@ -141,7 +141,7 @@ public sealed class MetadataImageModelDefinitionTests
     public void Validate_WithPromptLongerThanModelLimit_ReturnsError()
     {
         MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        string prompt = new('a', definition.MaxPromptLength.GetValueOrDefault() + 1);
+        string prompt = new('a', definition.Constraints.MaxPromptLength + 1);
         ImageGenerationRequestDto request = CreateRequest(prompt: prompt);
 
         Result<ImageGenerationRequestDto> result = definition.Validate(request);

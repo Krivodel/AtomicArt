@@ -13,17 +13,12 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
     private readonly GenerationModelConstraints _constraints;
     private readonly IReadOnlyList<AttachedImageSignatureRule> _signatureRules;
 
-    public string Id => _constraints.ModelId;
     public string DisplayName { get; }
     public string Provider { get; }
     public string ProviderModelId { get; }
     public string PanelId { get; }
     public int ContextWindowTokens { get; }
     public int MaxOutputTokens { get; }
-    public int MaxAttachedImages => _constraints.MaxAttachedImages;
-    public int? MaxPromptLength => _constraints.MaxPromptLength;
-    public long MaxAttachedImageBytes => _constraints.MaxAttachedImageBytes;
-    public long MaxTotalAttachedImageBytes => _constraints.MaxTotalAttachedImageBytes;
     public GenerationModelTemperatureMetadataDto Temperature { get; }
     public GenerationModelThinkingMetadataDto? Thinking { get; }
     public GenerationModelPricingMetadataDto Pricing { get; }
@@ -53,31 +48,11 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
         Pricing = metadata.Pricing;
     }
 
-    public IReadOnlyList<string> GetAspectRatios()
-    {
-        return _constraints.AspectRatios;
-    }
-
-    public IReadOnlyList<string> GetResolutions()
-    {
-        return _constraints.Resolutions;
-    }
-
-    public IReadOnlyList<int> GetGenerationCounts()
-    {
-        return _constraints.GenerationCounts;
-    }
-
-    public IReadOnlyList<string> GetSupportedContentTypes()
-    {
-        return _constraints.SupportedContentTypes;
-    }
-
     public Result<ImageGenerationRequestDto> Validate(ImageGenerationRequestDto request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!string.Equals(request.ModelId, Id, StringComparison.Ordinal))
+        if (!string.Equals(request.ModelId, _constraints.ModelId, StringComparison.Ordinal))
         {
             return Result<ImageGenerationRequestDto>.NotFound(
                 GenerationErrorCodes.ModelNotFound,

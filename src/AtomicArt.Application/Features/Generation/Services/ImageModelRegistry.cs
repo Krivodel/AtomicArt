@@ -1,6 +1,7 @@
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Domain.Generation;
 
 namespace AtomicArt.Application.Features.Generation.Services;
 
@@ -25,37 +26,21 @@ public sealed class ImageModelRegistry : IImageModelRegistry
 
         foreach (IImageModelDefinition definition in definitions)
         {
-            if (_definitionsById.ContainsKey(definition.Id))
+            string modelId = definition.Constraints.ModelId;
+
+            if (_definitionsById.ContainsKey(modelId))
             {
-                throw new InvalidOperationException($"Generation model '{definition.Id}' is registered more than once.");
+                throw new InvalidOperationException($"Generation model '{modelId}' is registered more than once.");
             }
 
-            _definitionsById.Add(definition.Id, definition);
+            _definitionsById.Add(modelId, definition);
         }
     }
 
     public IReadOnlyList<ImageModelOption> GetModels()
     {
         List<ImageModelOption> models = _definitions
-            .Select(definition => new ImageModelOption(
-                definition.Id,
-                definition.DisplayName,
-                definition.Provider,
-                definition.ProviderModelId,
-                definition.PanelId,
-                definition.ContextWindowTokens,
-                definition.MaxOutputTokens,
-                definition.GetAspectRatios(),
-                definition.GetResolutions(),
-                definition.GetGenerationCounts(),
-                definition.Temperature,
-                definition.MaxAttachedImages,
-                definition.MaxPromptLength,
-                definition.MaxAttachedImageBytes,
-                definition.MaxTotalAttachedImageBytes,
-                definition.GetSupportedContentTypes(),
-                definition.Pricing,
-                definition.Thinking))
+            .Select(CreateModelOption)
             .ToList();
 
         return models;
@@ -71,6 +56,31 @@ public sealed class ImageModelRegistry : IImageModelRegistry
         }
 
         return null;
+    }
+
+    private static ImageModelOption CreateModelOption(IImageModelDefinition definition)
+    {
+        GenerationModelConstraints constraints = definition.Constraints;
+
+        return new ImageModelOption(
+            constraints.ModelId,
+            definition.DisplayName,
+            definition.Provider,
+            definition.ProviderModelId,
+            definition.PanelId,
+            definition.ContextWindowTokens,
+            definition.MaxOutputTokens,
+            constraints.AspectRatios,
+            constraints.Resolutions,
+            constraints.GenerationCounts,
+            definition.Temperature,
+            constraints.MaxAttachedImages,
+            constraints.MaxPromptLength,
+            constraints.MaxAttachedImageBytes,
+            constraints.MaxTotalAttachedImageBytes,
+            constraints.SupportedContentTypes,
+            definition.Pricing,
+            definition.Thinking);
     }
 
     private static IReadOnlyList<IImageModelDefinition> CreateDefinitions(

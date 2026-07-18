@@ -147,35 +147,16 @@ public sealed class ImageModelRegistryTests
 
     private sealed class TestImageModelDefinition : IImageModelDefinition
     {
-        public string Id => _metadata.Id;
         public string DisplayName { get; }
         public string Provider => _metadata.Provider;
         public string ProviderModelId => _metadata.ProviderModelId;
         public string PanelId => _metadata.PanelId;
         public int ContextWindowTokens => _metadata.ContextWindowTokens;
         public int MaxOutputTokens => _metadata.MaxOutputTokens;
-        public int MaxAttachedImages => _metadata.Attachments.MaxCount;
-        public int? MaxPromptLength => _metadata.MaxPromptLength;
-        public long MaxAttachedImageBytes => _metadata.Attachments.MaxSingleFileBytes;
-        public long MaxTotalAttachedImageBytes => _metadata.Attachments.MaxTotalBytes;
         public GenerationModelTemperatureMetadataDto Temperature => _metadata.Temperature;
         public GenerationModelThinkingMetadataDto? Thinking => _metadata.Thinking;
         public GenerationModelPricingMetadataDto Pricing => _metadata.Pricing;
-        public GenerationModelConstraints Constraints => new(
-            _metadata.Id,
-            _metadata.MaxPromptLength,
-            _metadata.AspectRatios,
-            _metadata.Resolutions,
-            _metadata.GenerationCounts,
-            new GenerationModelTemperatureConstraints(
-                _metadata.Temperature.Minimum,
-                _metadata.Temperature.Maximum,
-                _metadata.Temperature.Default,
-                _metadata.Temperature.Step),
-            _metadata.Attachments.MaxCount,
-            _metadata.Attachments.MaxSingleFileBytes,
-            _metadata.Attachments.MaxTotalBytes,
-            _metadata.Attachments.SupportedContentTypes);
+        public GenerationModelConstraints Constraints { get; }
 
         private readonly GenerationModelMetadataDto _metadata;
 
@@ -186,26 +167,7 @@ public sealed class ImageModelRegistryTests
 
             _metadata = metadata;
             DisplayName = displayName;
-        }
-
-        public IReadOnlyList<string> GetAspectRatios()
-        {
-            return _metadata.AspectRatios;
-        }
-
-        public IReadOnlyList<string> GetResolutions()
-        {
-            return _metadata.Resolutions;
-        }
-
-        public IReadOnlyList<int> GetGenerationCounts()
-        {
-            return _metadata.GenerationCounts;
-        }
-
-        public IReadOnlyList<string> GetSupportedContentTypes()
-        {
-            return _metadata.Attachments.SupportedContentTypes;
+            Constraints = MetadataImageModelTestFactory.CreateDefinition(metadata).Constraints;
         }
 
         public Result<ImageGenerationRequestDto> Validate(ImageGenerationRequestDto request)
