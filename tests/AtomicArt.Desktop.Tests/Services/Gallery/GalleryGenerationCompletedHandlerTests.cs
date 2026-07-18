@@ -11,7 +11,6 @@ using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
-using AtomicArt.Desktop.Tests.Generation;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;

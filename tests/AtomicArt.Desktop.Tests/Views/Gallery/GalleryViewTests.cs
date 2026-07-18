@@ -14,7 +14,6 @@ using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
-using AtomicArt.Desktop.Tests.Generation;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views;

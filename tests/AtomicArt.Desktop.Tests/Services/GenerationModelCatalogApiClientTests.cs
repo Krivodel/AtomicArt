@@ -9,7 +9,6 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
-using AtomicArt.Desktop.Tests.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
 

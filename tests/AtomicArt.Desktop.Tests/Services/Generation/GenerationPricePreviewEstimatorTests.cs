@@ -4,7 +4,6 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
-using AtomicArt.Desktop.Tests.Generation;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 

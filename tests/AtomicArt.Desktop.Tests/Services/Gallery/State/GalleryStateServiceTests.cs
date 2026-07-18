@@ -8,7 +8,6 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
-using AtomicArt.Desktop.Tests.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery.State;

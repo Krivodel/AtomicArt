@@ -5,7 +5,6 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.State;
-using AtomicArt.Desktop.Tests.Generation;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation.State;
 

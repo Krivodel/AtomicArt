@@ -5,7 +5,6 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
-using AtomicArt.Desktop.Tests.Generation;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
