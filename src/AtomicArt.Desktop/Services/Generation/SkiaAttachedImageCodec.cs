@@ -4,15 +4,16 @@ namespace AtomicArt.Desktop.Services.Generation;
 
 public sealed class SkiaAttachedImageCodec : IAttachedImageCodec
 {
-    private const float FastLosslessWebpEffort = 35f;
-    private const float MaximumLosslessWebpEffort = 100f;
-
-    private static readonly SKPngEncoderOptions FastPngEncoderOptions = new(
-        SKPngEncoderFilterFlags.AllFilters,
-        3);
-    private static readonly SKPngEncoderOptions MaximumPngEncoderOptions = new(
-        SKPngEncoderFilterFlags.AllFilters,
-        9);
+    private static readonly AttachedImageCompressionOptions FastCompressionOptions = new(
+        35f,
+        new SKPngEncoderOptions(
+            SKPngEncoderFilterFlags.AllFilters,
+            3));
+    private static readonly AttachedImageCompressionOptions MaximumCompressionOptions = new(
+        100f,
+        new SKPngEncoderOptions(
+            SKPngEncoderFilterFlags.AllFilters,
+            9));
 
     public AttachedImageCodecInfo? ReadInfo(byte[]? content)
     {
@@ -37,11 +38,11 @@ public sealed class SkiaAttachedImageCodec : IAttachedImageCodec
             AttachedImageEncodingFormat.Webp => EncodeWebp(
                 bitmap,
                 SKWebpEncoderCompression.Lossless,
-                ResolveWebpEffort(effort),
+                ResolveCompressionOptions(effort).WebpEffort,
                 ct),
             AttachedImageEncodingFormat.Png => EncodePng(
                 bitmap,
-                ResolvePngOptions(effort),
+                ResolveCompressionOptions(effort).PngEncoderOptions,
                 ct),
             _ => throw new ArgumentOutOfRangeException(nameof(format), format, null)
         };
@@ -74,22 +75,13 @@ public sealed class SkiaAttachedImageCodec : IAttachedImageCodec
         return SkiaAttachedImageDecoder.Resize(sourceBitmap, targetSize);
     }
 
-    private static float ResolveWebpEffort(AttachedImageCompressionEffort effort)
+    private static AttachedImageCompressionOptions ResolveCompressionOptions(
+        AttachedImageCompressionEffort effort)
     {
         return effort switch
         {
-            AttachedImageCompressionEffort.Fast => FastLosslessWebpEffort,
-            AttachedImageCompressionEffort.Maximum => MaximumLosslessWebpEffort,
-            _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, null)
-        };
-    }
-
-    private static SKPngEncoderOptions ResolvePngOptions(AttachedImageCompressionEffort effort)
-    {
-        return effort switch
-        {
-            AttachedImageCompressionEffort.Fast => FastPngEncoderOptions,
-            AttachedImageCompressionEffort.Maximum => MaximumPngEncoderOptions,
+            AttachedImageCompressionEffort.Fast => FastCompressionOptions,
+            AttachedImageCompressionEffort.Maximum => MaximumCompressionOptions,
             _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, null)
         };
     }
@@ -134,4 +126,8 @@ public sealed class SkiaAttachedImageCodec : IAttachedImageCodec
 
         return data?.ToArray();
     }
+
+    private sealed record AttachedImageCompressionOptions(
+        float WebpEffort,
+        SKPngEncoderOptions PngEncoderOptions);
 }
