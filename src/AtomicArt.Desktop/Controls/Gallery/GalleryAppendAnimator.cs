@@ -3,13 +3,11 @@ using AtomicArt.Desktop.Services.GalleryAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryAppendAnimator
+internal sealed class GalleryAppendAnimator : GalleryScheduledAnimator
 {
-    private readonly GalleryAnimationScheduler _animationScheduler;
-
     public GalleryAppendAnimator(GalleryAnimationScheduler animationScheduler)
+        : base(animationScheduler)
     {
-        _animationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
     }
 
     public async Task AnimateAppendBatchAsync(
@@ -28,7 +26,7 @@ internal sealed class GalleryAppendAnimator
                 continue;
             }
 
-            animations.Add(_animationScheduler.AnimateAsync(
+            animations.Add(AnimationScheduler.AnimateAsync(
                 control,
                 new List<MotionFrame>
                 {

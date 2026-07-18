@@ -4,20 +4,14 @@ using AtomicArt.Desktop.Services.GalleryAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryExistingCardAnimator
+internal sealed class GalleryExistingCardAnimator : GalleryLayoutAnimator
 {
-    private readonly GalleryAnimationScheduler _animationScheduler;
-    private readonly GalleryOverlayEffects _overlayEffects;
-    private readonly GalleryLayoutService _galleryLayout;
-
     public GalleryExistingCardAnimator(
         GalleryAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects,
         GalleryLayoutService galleryLayout)
+        : base(animationScheduler, overlayEffects, galleryLayout)
     {
-        _animationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
-        _overlayEffects = overlayEffects ?? throw new ArgumentNullException(nameof(overlayEffects));
-        _galleryLayout = galleryLayout ?? throw new ArgumentNullException(nameof(galleryLayout));
     }
 
     internal Task AnimateLayoutShiftAsync(
@@ -180,7 +174,7 @@ internal sealed class GalleryExistingCardAnimator
         int order,
         ExistingAnimation animation)
     {
-        return _overlayEffects.AnimateWakeAsync(
+        return OverlayEffects.AnimateWakeAsync(
             context.OverlayCanvas,
             card.Last,
             order,
@@ -191,7 +185,7 @@ internal sealed class GalleryExistingCardAnimator
 
     private Task CreateCardAnimation(MovingGalleryCard card, ExistingAnimation animation)
     {
-        return _animationScheduler.AnimateAsync(
+        return AnimationScheduler.AnimateAsync(
             card.Control,
             animation.Frames,
             animation.Duration,
@@ -273,7 +267,7 @@ internal sealed class GalleryExistingCardAnimator
         Rect first,
         List<MovingGalleryCard> moving)
     {
-        if (!_galleryLayout.TryGetOverlayRect(pair.Value, context.OverlayCanvas, out Rect last))
+        if (!GalleryLayout.TryGetOverlayRect(pair.Value, context.OverlayCanvas, out Rect last))
         {
             return;
         }

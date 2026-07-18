@@ -4,20 +4,14 @@ using AtomicArt.Desktop.Services.GalleryAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GallerySpawnRetargetAnimator
+internal sealed class GallerySpawnRetargetAnimator : GalleryLayoutAnimator
 {
-    private readonly GalleryAnimationScheduler _animationScheduler;
-    private readonly GalleryOverlayEffects _overlayEffects;
-    private readonly GalleryLayoutService _galleryLayout;
-
     public GallerySpawnRetargetAnimator(
         GalleryAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects,
         GalleryLayoutService galleryLayout)
+        : base(animationScheduler, overlayEffects, galleryLayout)
     {
-        _animationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
-        _overlayEffects = overlayEffects ?? throw new ArgumentNullException(nameof(overlayEffects));
-        _galleryLayout = galleryLayout ?? throw new ArgumentNullException(nameof(galleryLayout));
     }
 
     internal async Task AnimateSpawnRetargetAsync(
@@ -128,7 +122,7 @@ internal sealed class GallerySpawnRetargetAnimator
             return emptyAnimations;
         }
 
-        return _overlayEffects
+        return OverlayEffects
             .CreateBurst(
                 context.OverlayCanvas,
                 packCenter,
@@ -153,7 +147,7 @@ internal sealed class GallerySpawnRetargetAnimator
             }
 
             MotionFrameApplier.Apply(control, new MotionFrame(0d, 0d, 1d, 0d, 0d));
-            if (_galleryLayout.TryGetOverlayRect(control, context.OverlayCanvas, out Rect rect)
+            if (GalleryLayout.TryGetOverlayRect(control, context.OverlayCanvas, out Rect rect)
                 && rect is { Width: > 0d, Height: > 0d })
             {
                 targets.Add(new GallerySpawnTarget(item, id, rect));
@@ -213,7 +207,7 @@ internal sealed class GallerySpawnRetargetAnimator
             startState.Opacity,
             packCenter);
 
-        return _animationScheduler.AnimateAsync(
+        return AnimationScheduler.AnimateAsync(
             clone,
             frames,
             startState.Duration,
@@ -239,7 +233,7 @@ internal sealed class GallerySpawnRetargetAnimator
 
         List<Task> animations =
         [
-            _overlayEffects.CreateTargetFlash(
+            OverlayEffects.CreateTargetFlash(
                 context.OverlayCanvas,
                 target.Rect,
                 index,
@@ -257,7 +251,7 @@ internal sealed class GallerySpawnRetargetAnimator
         GallerySpawnTarget target,
         GalleryFrontGenerationRunState state)
     {
-        Control clone = _overlayEffects.CreateOverlayCard(context, target.Item, target.Rect);
+        Control clone = OverlayEffects.CreateOverlayCard(context, target.Item, target.Rect);
         state.SpawnClones[target.Id] = clone;
         state.OverlayControls.Add(clone);
         state.RunningControls.Add(clone);

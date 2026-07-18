@@ -4,17 +4,13 @@ using AtomicArt.Desktop.Services.GalleryAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryRemoveAnimator
+internal sealed class GalleryRemoveAnimator : GalleryOverlayAnimator
 {
-    private readonly GalleryAnimationScheduler _animationScheduler;
-    private readonly GalleryOverlayEffects _overlayEffects;
-
     public GalleryRemoveAnimator(
         GalleryAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects)
+        : base(animationScheduler, overlayEffects)
     {
-        _animationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
-        _overlayEffects = overlayEffects ?? throw new ArgumentNullException(nameof(overlayEffects));
     }
 
     internal Task AnimateRemovedItemAsync(
@@ -27,11 +23,11 @@ internal sealed class GalleryRemoveAnimator
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(deleteOverlays);
 
-        Control ghost = _overlayEffects.CreateOverlayCard(context, item, rect);
+        Control ghost = OverlayEffects.CreateOverlayCard(context, item, rect);
         deleteOverlays.Add(ghost);
         double sign = rect.Center.X > (context.OverlayCanvas.Bounds.Width / 2d) ? 1d : -1d;
 
-        return _animationScheduler.AnimateAsync(
+        return AnimationScheduler.AnimateAsync(
             ghost,
             CreateRemoveFrames(sign),
             520,
