@@ -1,4 +1,5 @@
 using SkiaSharp;
+using AtomicArt.Desktop.Services;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
@@ -33,10 +34,7 @@ internal static class SkiaAttachedImageDecoder
                 info.Height,
                 info.AlphaType);
         }
-        catch (ArgumentNullException ex) when (string.Equals(
-            ex.ParamName,
-            "codec",
-            StringComparison.Ordinal))
+        catch (ArgumentNullException ex) when (SkiaImageDecodeFailure.IsInvalidImage(ex))
         {
             return null;
         }
@@ -57,10 +55,7 @@ internal static class SkiaAttachedImageDecoder
         {
             bitmap = SKBitmap.Decode(content);
         }
-        catch (ArgumentNullException ex) when (string.Equals(
-            ex.ParamName,
-            "codec",
-            StringComparison.Ordinal))
+        catch (ArgumentNullException ex) when (SkiaImageDecodeFailure.IsInvalidImage(ex))
         {
             return null;
         }

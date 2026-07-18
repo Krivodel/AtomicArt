@@ -1,4 +1,5 @@
 using SkiaSharp;
+using AtomicArt.Desktop.Services;
 
 namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
@@ -74,7 +75,7 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
             return SKBitmap.Decode(sourceBytes)
                 ?? throw new InvalidDataException(UnsupportedSourceImageMessage);
         }
-        catch (ArgumentNullException ex) when (string.Equals(ex.ParamName, "codec", StringComparison.Ordinal))
+        catch (ArgumentNullException ex) when (SkiaImageDecodeFailure.IsInvalidImage(ex))
         {
             throw new InvalidDataException(UnsupportedSourceImageMessage, ex);
         }
