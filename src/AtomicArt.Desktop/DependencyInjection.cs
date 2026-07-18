@@ -140,6 +140,8 @@ public static class DependencyInjection
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
         services.AddSingleton<IFileRevealService, FileRevealService>();
         services.AddPicaViewer();
+        services.AddSingleton<PicaViewerSessionDependencies>();
+        services.AddSingleton<PicaViewerSessionFactory>();
         services.AddSingleton<IImageViewerService, ImageViewerService>();
         services.AddSingleton<IUiFrameSchedulerFactory, AvaloniaUiFrameSchedulerFactory>();
 

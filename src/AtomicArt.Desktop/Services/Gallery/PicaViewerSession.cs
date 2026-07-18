@@ -15,32 +15,16 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 {
     public PicaViewerRequest? Request { get; private set; }
 
-    private readonly IClipboardImageWriter _clipboardImageWriter;
-    private readonly ITrustedImageFileService _trustedImageFileService;
-    private readonly IGenerationImageFormatRegistry _formatRegistry;
-    private readonly IUiThreadDispatcher _uiThreadDispatcher;
-    private readonly ILogger<PicaViewerSession> _logger;
+    private readonly PicaViewerSessionDependencies _dependencies;
     private readonly HashSet<string> _allowedImagePaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _sessionDirectory;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
     private ImageViewerWindow? _window;
     private bool _isDisposed;
 
-    public PicaViewerSession(
-        IClipboardImageWriter clipboardImageWriter,
-        ITrustedImageFileService trustedImageFileService,
-        IGenerationImageFormatRegistry formatRegistry,
-        IUiThreadDispatcher uiThreadDispatcher,
-        ILogger<PicaViewerSession> logger)
+    public PicaViewerSession(PicaViewerSessionDependencies dependencies)
     {
-        _clipboardImageWriter = clipboardImageWriter
-            ?? throw new ArgumentNullException(nameof(clipboardImageWriter));
-        _trustedImageFileService = trustedImageFileService
-            ?? throw new ArgumentNullException(nameof(trustedImageFileService));
-        _formatRegistry = formatRegistry ?? throw new ArgumentNullException(nameof(formatRegistry));
-        _uiThreadDispatcher = uiThreadDispatcher
-            ?? throw new ArgumentNullException(nameof(uiThreadDispatcher));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _dependencies = dependencies ?? throw new ArgumentNullException(nameof(dependencies));
         _sessionDirectory = Path.Combine(
             Path.GetTempPath(),
             AtomicArtPathNames.RootDirectory,
@@ -76,7 +60,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             sourceRequest.SelectedItemId,
             actions,
             null);
-        _logger.LogDebug(
+        _dependencies.Logger.LogDebug(
             "Prepared embedded Pica session with {ItemCount} images and {ActionCount} actions",
             items.Count,
             actions.Count);
@@ -106,7 +90,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         if (!CanDispatch(action))
         {
-            _logger.LogWarning(
+            _dependencies.Logger.LogWarning(
                 "Embedded Pica rejected unsupported action {ActionId} for item {ItemId}",
                 action.Id,
                 item.Id);
@@ -117,7 +101,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         if (!_allowedImagePaths.Contains(fullPath) || !File.Exists(fullPath))
         {
-            _logger.LogWarning(
+            _dependencies.Logger.LogWarning(
                 "Embedded Pica rejected an unavailable current-image action for item {ItemId}",
                 item.Id);
             return;
@@ -129,7 +113,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             GetContentType(item.FileName),
             content,
             ct).ConfigureAwait(false);
-        _logger.LogInformation(
+        _dependencies.Logger.LogInformation(
             "Embedded Pica attached current image {ItemId} with {ByteCount} bytes",
             item.Id,
             content.Length);
@@ -147,7 +131,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         if (!CanDispatch(action))
         {
-            _logger.LogWarning(
+            _dependencies.Logger.LogWarning(
                 "Embedded Pica rejected unsupported selection action {ActionId} for item {ItemId}",
                 action.Id,
                 item.Id);
@@ -159,7 +143,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             PicaImageFormats.PngContentType,
             pngContent,
             ct).ConfigureAwait(false);
-        _logger.LogInformation(
+        _dependencies.Logger.LogInformation(
             "Embedded Pica attached selection from item {ItemId} with {ByteCount} bytes",
             item.Id,
             pngContent.Length);
@@ -173,7 +157,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         }
 
         _isDisposed = true;
-        _logger.LogDebug("Disposing embedded Pica viewer session");
+        _dependencies.Logger.LogDebug("Disposing embedded Pica viewer session");
 
         if (_window is not null)
         {
@@ -189,15 +173,19 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             }
             catch (IOException ex)
             {
-                _logger.LogWarning(ex, "Failed to delete embedded Pica temporary files.");
+                _dependencies.Logger.LogWarning(
+                    ex,
+                    "Failed to delete embedded Pica temporary files.");
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning(ex, "Access was denied while deleting embedded Pica temporary files.");
+                _dependencies.Logger.LogWarning(
+                    ex,
+                    "Access was denied while deleting embedded Pica temporary files.");
             }
         }
 
-        _logger.LogInformation("Embedded Pica viewer session disposed");
+        _dependencies.Logger.LogInformation("Embedded Pica viewer session disposed");
         return ValueTask.CompletedTask;
     }
 
@@ -216,10 +204,13 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
     private PicaImageItem CreateFileItem(Guid itemId, GalleryFileImageViewerSource source)
     {
-        string trustedPath = _trustedImageFileService.GetTrustedImagePath(source.ImagePath, source.ModelId);
-        string? trustedThumbnailPath = _trustedImageFileService.GetTrustedImagePathOrDefault(
-            source.ThumbnailPath,
+        string trustedPath = _dependencies.TrustedImageFileService.GetTrustedImagePath(
+            source.ImagePath,
             source.ModelId);
+        string? trustedThumbnailPath =
+            _dependencies.TrustedImageFileService.GetTrustedImagePathOrDefault(
+                source.ThumbnailPath,
+                source.ModelId);
 
         return new PicaImageItem(
             itemId,
@@ -249,13 +240,17 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
     private string GetExtension(string fileName, string contentType)
     {
-        if (_formatRegistry.TryGetByContentType(contentType, out IGenerationImageFormat? contentFormat)
+        if (_dependencies.FormatRegistry.TryGetByContentType(
+                contentType,
+                out IGenerationImageFormat? contentFormat)
             && contentFormat is not null)
         {
             return contentFormat.Extension;
         }
 
-        if (_formatRegistry.TryGetByFileName(fileName, out IGenerationImageFormat? fileFormat)
+        if (_dependencies.FormatRegistry.TryGetByFileName(
+                fileName,
+                out IGenerationImageFormat? fileFormat)
             && fileFormat is not null)
         {
             return fileFormat.Extension;
@@ -266,7 +261,9 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
     private string GetContentType(string fileName)
     {
-        if (_formatRegistry.TryGetByFileName(fileName, out IGenerationImageFormat? format)
+        if (_dependencies.FormatRegistry.TryGetByFileName(
+                fileName,
+                out IGenerationImageFormat? format)
             && format is not null)
         {
             return format.ContentType;
@@ -285,25 +282,26 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         if (command is null)
         {
-            _logger.LogWarning("Embedded Pica attach action is unavailable for this session");
+            _dependencies.Logger.LogWarning(
+                "Embedded Pica attach action is unavailable for this session");
             return;
         }
 
         string safeFileName = Path.GetFileName(fileName);
         List<AttachedImageDto> images = [new(safeFileName, contentType, content)];
-        await _uiThreadDispatcher.InvokeAsync(
+        await _dependencies.UiThreadDispatcher.InvokeAsync(
             async () =>
             {
                 if (command.CanExecute(images))
                 {
                     await command.ExecuteAsync(images);
-                    _logger.LogDebug(
+                    _dependencies.Logger.LogDebug(
                         "Embedded Pica delivered {ImageCount} attachment to the generation panel",
                         images.Count);
                 }
                 else
                 {
-                    _logger.LogWarning(
+                    _dependencies.Logger.LogWarning(
                         "Embedded Pica attachment was rejected by the generation panel");
                 }
             },
@@ -315,7 +313,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         _ = sender;
         _ = e;
 
-        await _clipboardImageWriter.FlushAsync(CancellationToken.None);
+        await _dependencies.ClipboardImageWriter.FlushAsync(CancellationToken.None);
         await DisposeAsync();
     }
 }

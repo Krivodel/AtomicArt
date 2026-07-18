@@ -47,12 +47,11 @@ public sealed class PicaViewerSessionTests
             ItemId,
             null);
 
-        await using PicaViewerSession session = new(
+        await using PicaViewerSession session = CreateSession(
             clipboardImageWriterMock.Object,
             trustedImageFileServiceMock.Object,
             formatRegistryMock.Object,
-            uiThreadDispatcherMock.Object,
-            NullLogger<PicaViewerSession>.Instance);
+            uiThreadDispatcherMock.Object);
         await session.PrepareAsync(request, CancellationToken.None);
 
         PicaViewerRequest preparedRequest = session.Request
@@ -96,12 +95,11 @@ public sealed class PicaViewerSessionTests
             attachCommand);
         string materializedPath;
 
-        await using (PicaViewerSession session = new(
+        await using (PicaViewerSession session = CreateSession(
                          clipboardImageWriterMock.Object,
                          trustedImageFileServiceMock.Object,
                          formatRegistryMock.Object,
-                         uiThreadDispatcherMock.Object,
-                         NullLogger<PicaViewerSession>.Instance))
+                         uiThreadDispatcherMock.Object))
         {
             await session.PrepareAsync(request, CancellationToken.None);
 
@@ -173,12 +171,11 @@ public sealed class PicaViewerSessionTests
 
         try
         {
-            await using PicaViewerSession session = new(
+            await using PicaViewerSession session = CreateSession(
                 clipboardImageWriterMock.Object,
                 trustedImageFileServiceMock.Object,
                 formatRegistryMock.Object,
-                uiThreadDispatcherMock.Object,
-                NullLogger<PicaViewerSession>.Instance);
+                uiThreadDispatcherMock.Object);
             await session.PrepareAsync(request, CancellationToken.None);
             PicaViewerRequest preparedRequest = session.Request
                 ?? throw new InvalidOperationException("The Pica request was not prepared.");
@@ -197,5 +194,21 @@ public sealed class PicaViewerSessionTests
         {
             Directory.Delete(directoryPath, true);
         }
+    }
+
+    private static PicaViewerSession CreateSession(
+        IClipboardImageWriter clipboardImageWriter,
+        ITrustedImageFileService trustedImageFileService,
+        IGenerationImageFormatRegistry formatRegistry,
+        IUiThreadDispatcher uiThreadDispatcher)
+    {
+        PicaViewerSessionDependencies dependencies = new(
+            clipboardImageWriter,
+            trustedImageFileService,
+            formatRegistry,
+            uiThreadDispatcher,
+            NullLoggerFactory.Instance);
+
+        return new PicaViewerSession(dependencies);
     }
 }

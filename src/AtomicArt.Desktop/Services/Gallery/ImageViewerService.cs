@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Logging;
 
-using AtomicArt.Desktop.Services.Generation;
-
 using Pica.Protocol;
 using Pica.Viewer.Services;
 using Pica.Viewer.Views;
@@ -11,31 +9,17 @@ namespace AtomicArt.Desktop.Services.Gallery;
 public sealed class ImageViewerService : IImageViewerService
 {
     private readonly IImageViewerWindowFactory _windowFactory;
-    private readonly IClipboardImageWriter _clipboardImageWriter;
-    private readonly ITrustedImageFileService _trustedImageFileService;
-    private readonly IGenerationImageFormatRegistry _formatRegistry;
-    private readonly IUiThreadDispatcher _uiThreadDispatcher;
-    private readonly ILoggerFactory _loggerFactory;
+    private readonly PicaViewerSessionFactory _sessionFactory;
     private readonly ILogger<ImageViewerService> _logger;
 
     public ImageViewerService(
         IImageViewerWindowFactory windowFactory,
-        IClipboardImageWriter clipboardImageWriter,
-        ITrustedImageFileService trustedImageFileService,
-        IGenerationImageFormatRegistry formatRegistry,
-        IUiThreadDispatcher uiThreadDispatcher,
-        ILoggerFactory loggerFactory)
+        PicaViewerSessionFactory sessionFactory,
+        ILogger<ImageViewerService> logger)
     {
         _windowFactory = windowFactory ?? throw new ArgumentNullException(nameof(windowFactory));
-        _clipboardImageWriter = clipboardImageWriter
-            ?? throw new ArgumentNullException(nameof(clipboardImageWriter));
-        _trustedImageFileService = trustedImageFileService
-            ?? throw new ArgumentNullException(nameof(trustedImageFileService));
-        _formatRegistry = formatRegistry ?? throw new ArgumentNullException(nameof(formatRegistry));
-        _uiThreadDispatcher = uiThreadDispatcher
-            ?? throw new ArgumentNullException(nameof(uiThreadDispatcher));
-        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
-        _logger = loggerFactory.CreateLogger<ImageViewerService>();
+        _sessionFactory = sessionFactory ?? throw new ArgumentNullException(nameof(sessionFactory));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task OpenAsync(GalleryImageViewerRequest request, CancellationToken ct)
@@ -46,12 +30,7 @@ public sealed class ImageViewerService : IImageViewerService
             "Preparing an embedded Pica viewer session for selected item {ItemId}",
             request.SelectedItemId);
 
-        PicaViewerSession session = new(
-            _clipboardImageWriter,
-            _trustedImageFileService,
-            _formatRegistry,
-            _uiThreadDispatcher,
-            _loggerFactory.CreateLogger<PicaViewerSession>());
+        PicaViewerSession session = _sessionFactory.Create();
 
         try
         {
