@@ -12,8 +12,8 @@ public sealed class ImageViewerStateServiceTests
     [Fact]
     public async Task SaveAsync_WithWindowPlacement_RoundTripsState()
     {
-        string directoryPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        string stateFilePath = Path.Combine(directoryPath, "image-viewer.json");
+        using PicaTemporaryDirectory temporaryDirectory = PicaTemporaryDirectory.Create();
+        string stateFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "image-viewer.json");
         ImageViewerState state = new()
         {
             IsFilteringEnabled = false,
@@ -34,43 +34,33 @@ public sealed class ImageViewerStateServiceTests
         };
         ImageViewerStateService writer = CreateService(stateFilePath);
 
-        try
-        {
-            await writer.SaveAsync(state, CancellationToken.None);
-            ImageViewerStateService reader = CreateService(stateFilePath);
+        await writer.SaveAsync(state, CancellationToken.None);
+        ImageViewerStateService reader = CreateService(stateFilePath);
 
-            ImageViewerState restoredState = await reader.LoadAsync(CancellationToken.None);
+        ImageViewerState restoredState = await reader.LoadAsync(CancellationToken.None);
 
-            restoredState.IsFilteringEnabled.Should().BeFalse();
-            restoredState.MovementSpeed.Should().Be(2);
-            restoredState.ZoomSpeed.Should().Be(1);
-            restoredState.ExpandOnDoubleClick.Should().BeFalse();
-            restoredState.IsFastLoadingEnabled.Should().BeTrue();
-            restoredState.AllowFreeZoomOut.Should().BeTrue();
-            restoredState.IsSmoothPanningEnabled.Should().BeTrue();
-            restoredState.IsPanningInertiaEnabled.Should().BeTrue();
-            restoredState.ResizeBehavior.Should().Be(WindowResizeBehavior.FitWhenWindowed);
-            restoredState.RememberWindowPlacement.Should().BeTrue();
-            restoredState.IsWindowed.Should().BeTrue();
-            restoredState.WindowX.Should().Be(-1200);
-            restoredState.WindowY.Should().Be(80);
-            restoredState.WindowWidth.Should().Be(900d);
-            restoredState.WindowHeight.Should().Be(506.25d);
-        }
-        finally
-        {
-            if (Directory.Exists(directoryPath))
-            {
-                Directory.Delete(directoryPath, true);
-            }
-        }
+        restoredState.IsFilteringEnabled.Should().BeFalse();
+        restoredState.MovementSpeed.Should().Be(2);
+        restoredState.ZoomSpeed.Should().Be(1);
+        restoredState.ExpandOnDoubleClick.Should().BeFalse();
+        restoredState.IsFastLoadingEnabled.Should().BeTrue();
+        restoredState.AllowFreeZoomOut.Should().BeTrue();
+        restoredState.IsSmoothPanningEnabled.Should().BeTrue();
+        restoredState.IsPanningInertiaEnabled.Should().BeTrue();
+        restoredState.ResizeBehavior.Should().Be(WindowResizeBehavior.FitWhenWindowed);
+        restoredState.RememberWindowPlacement.Should().BeTrue();
+        restoredState.IsWindowed.Should().BeTrue();
+        restoredState.WindowX.Should().Be(-1200);
+        restoredState.WindowY.Should().Be(80);
+        restoredState.WindowWidth.Should().Be(900d);
+        restoredState.WindowHeight.Should().Be(506.25d);
     }
 
     [Fact]
     public async Task SaveAsync_WhenWindowPlacementIsNotRemembered_ClearsPlacement()
     {
-        string directoryPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        string stateFilePath = Path.Combine(directoryPath, "image-viewer.json");
+        using PicaTemporaryDirectory temporaryDirectory = PicaTemporaryDirectory.Create();
+        string stateFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "image-viewer.json");
         ImageViewerState state = new()
         {
             RememberWindowPlacement = false,
@@ -82,34 +72,23 @@ public sealed class ImageViewerStateServiceTests
         };
         ImageViewerStateService service = CreateService(stateFilePath);
 
-        try
-        {
-            await service.SaveAsync(state, CancellationToken.None);
+        await service.SaveAsync(state, CancellationToken.None);
 
-            ImageViewerState restoredState = await service.LoadAsync(CancellationToken.None);
+        ImageViewerState restoredState = await service.LoadAsync(CancellationToken.None);
 
-            restoredState.RememberWindowPlacement.Should().BeFalse();
-            restoredState.IsWindowed.Should().BeFalse();
-            restoredState.WindowX.Should().BeNull();
-            restoredState.WindowY.Should().BeNull();
-            restoredState.WindowWidth.Should().BeNull();
-            restoredState.WindowHeight.Should().BeNull();
-        }
-        finally
-        {
-            if (Directory.Exists(directoryPath))
-            {
-                Directory.Delete(directoryPath, true);
-            }
-        }
+        restoredState.RememberWindowPlacement.Should().BeFalse();
+        restoredState.IsWindowed.Should().BeFalse();
+        restoredState.WindowX.Should().BeNull();
+        restoredState.WindowY.Should().BeNull();
+        restoredState.WindowWidth.Should().BeNull();
+        restoredState.WindowHeight.Should().BeNull();
     }
 
     [Fact]
     public async Task LoadAsync_WithLegacyWindowPlacement_RestoresWindowedMode()
     {
-        string directoryPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        string stateFilePath = Path.Combine(directoryPath, "image-viewer.json");
-        Directory.CreateDirectory(directoryPath);
+        using PicaTemporaryDirectory temporaryDirectory = PicaTemporaryDirectory.Create();
+        string stateFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "image-viewer.json");
         const string legacyStateJson = """
             {
               "rememberWindowPlacement": true,
@@ -122,31 +101,21 @@ public sealed class ImageViewerStateServiceTests
         await File.WriteAllTextAsync(stateFilePath, legacyStateJson, CancellationToken.None);
         ImageViewerStateService service = CreateService(stateFilePath);
 
-        try
-        {
-            ImageViewerState restoredState = await service.LoadAsync(CancellationToken.None);
+        ImageViewerState restoredState = await service.LoadAsync(CancellationToken.None);
 
-            restoredState.IsWindowed.Should().BeTrue();
-            restoredState.IsFilteringEnabled.Should().BeTrue();
-            restoredState.IsFastLoadingEnabled.Should().BeFalse();
-            restoredState.AllowFreeZoomOut.Should().BeFalse();
-            restoredState.IsSmoothPanningEnabled.Should().BeTrue();
-            restoredState.IsPanningInertiaEnabled.Should().BeTrue();
-        }
-        finally
-        {
-            if (Directory.Exists(directoryPath))
-            {
-                Directory.Delete(directoryPath, true);
-            }
-        }
+        restoredState.IsWindowed.Should().BeTrue();
+        restoredState.IsFilteringEnabled.Should().BeTrue();
+        restoredState.IsFastLoadingEnabled.Should().BeFalse();
+        restoredState.AllowFreeZoomOut.Should().BeFalse();
+        restoredState.IsSmoothPanningEnabled.Should().BeTrue();
+        restoredState.IsPanningInertiaEnabled.Should().BeTrue();
     }
 
     [Fact]
     public async Task SaveAsync_WithInertiaWithoutSmoothPanning_DisablesInertia()
     {
-        string directoryPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        string stateFilePath = Path.Combine(directoryPath, "image-viewer.json");
+        using PicaTemporaryDirectory temporaryDirectory = PicaTemporaryDirectory.Create();
+        string stateFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "image-viewer.json");
         ImageViewerState state = new()
         {
             IsSmoothPanningEnabled = false,
@@ -154,23 +123,14 @@ public sealed class ImageViewerStateServiceTests
         };
         ImageViewerStateService service = CreateService(stateFilePath);
 
-        try
-        {
-            await service.SaveAsync(state, CancellationToken.None);
+        await service.SaveAsync(state, CancellationToken.None);
 
-            ImageViewerState restoredState = await service.LoadAsync(CancellationToken.None);
+        ImageViewerState restoredState = await service.LoadAsync(CancellationToken.None);
 
-            restoredState.IsSmoothPanningEnabled.Should().BeFalse();
-            restoredState.IsPanningInertiaEnabled.Should().BeFalse();
-        }
-        finally
-        {
-            if (Directory.Exists(directoryPath))
-            {
-                Directory.Delete(directoryPath, true);
-            }
-        }
+        restoredState.IsSmoothPanningEnabled.Should().BeFalse();
+        restoredState.IsPanningInertiaEnabled.Should().BeFalse();
     }
+
     private static ImageViewerStateService CreateService(string stateFilePath)
     {
         return new ImageViewerStateService(
