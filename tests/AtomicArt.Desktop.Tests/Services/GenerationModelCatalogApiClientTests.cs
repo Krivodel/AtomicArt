@@ -10,6 +10,7 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Tests.Generation;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services;
@@ -117,41 +118,6 @@ public sealed class GenerationModelCatalogApiClientTests
         GenerationModelCatalogDto catalog = ApiModelMetadataTestCatalog.LoadCatalog();
 
         return JsonSerializer.Serialize(catalog, JsonOptions);
-    }
-
-    private sealed class CapturingHttpMessageHandler : HttpMessageHandler
-    {
-        public HttpMethod? RequestMethod { get; private set; }
-        public Uri? RequestUri { get; private set; }
-
-        private readonly string _responseJson;
-
-        private readonly HttpStatusCode _statusCode;
-
-        public CapturingHttpMessageHandler(
-            string responseJson,
-            HttpStatusCode statusCode = HttpStatusCode.OK)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(responseJson);
-
-            _responseJson = responseJson;
-            _statusCode = statusCode;
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            RequestMethod = request.Method;
-            RequestUri = request.RequestUri;
-
-            HttpResponseMessage response = new(_statusCode)
-            {
-                Content = new StringContent(_responseJson, Encoding.UTF8, "application/json")
-            };
-
-            return Task.FromResult(response);
-        }
     }
 
     private sealed class DelayedCapturingHttpMessageHandler : HttpMessageHandler
