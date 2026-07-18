@@ -18,14 +18,7 @@ public sealed class GenerationUsagePriceCalculatorTests
     public void Calculate_WithNanoBanana2Usage_ReturnsMoneyAmount()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        GenerationUsageDto usage = new(
-            TotalInputTokens: 1200,
-            TotalOutputTokens: 1120,
-            TotalTokens: 2320,
-            OutputTokensByModality:
-            [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
-            ]);
+        GenerationUsageDto usage = GenerationUsageTestFactory.CreateNanoBananaImageUsage();
 
         GenerationPriceDto? price = _calculator.Calculate(
             metadata.Id,
@@ -98,14 +91,7 @@ public sealed class GenerationUsagePriceCalculatorTests
     public void Calculate_WithFourKImageUsage_UsesResolutionImageTokens()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        GenerationUsageDto usage = new(
-            TotalInputTokens: 1200,
-            TotalOutputTokens: 1120,
-            TotalTokens: 2320,
-            OutputTokensByModality:
-            [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
-            ]);
+        GenerationUsageDto usage = GenerationUsageTestFactory.CreateNanoBananaImageUsage();
 
         GenerationPriceDto? price = _calculator.Calculate(
             metadata.Id,
@@ -121,14 +107,7 @@ public sealed class GenerationUsagePriceCalculatorTests
     public void Calculate_WithMultipleGeneratedImages_UsesResolutionImageTokensForEachImage()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        GenerationUsageDto usage = new(
-            TotalInputTokens: 1200,
-            TotalOutputTokens: 1120,
-            TotalTokens: 2320,
-            OutputTokensByModality:
-            [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
-            ]);
+        GenerationUsageDto usage = GenerationUsageTestFactory.CreateNanoBananaImageUsage();
 
         GenerationPriceDto? price = _calculator.Calculate(
             metadata.Id,
@@ -338,14 +317,7 @@ public sealed class GenerationUsagePriceCalculatorTests
     public void Calculate_WithUnknownResolution_ReturnsUnavailableResult()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        GenerationUsageDto usage = new(
-            TotalInputTokens: 1200,
-            TotalOutputTokens: 1120,
-            TotalTokens: 2320,
-            OutputTokensByModality:
-            [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
-            ]);
+        GenerationUsageDto usage = GenerationUsageTestFactory.CreateNanoBananaImageUsage();
 
         GenerationPriceDto? price = _calculator.Calculate(
             metadata.Id,

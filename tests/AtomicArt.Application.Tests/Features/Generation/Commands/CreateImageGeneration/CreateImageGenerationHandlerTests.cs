@@ -71,14 +71,7 @@ public sealed class CreateImageGenerationHandlerTests
     {
         DateTime completedAtUtc = CreatedAtUtc.AddSeconds(30);
         TimeSpan generationDuration = TimeSpan.FromSeconds(30);
-        GenerationUsageDto usage = new(
-            TotalInputTokens: 1200,
-            TotalOutputTokens: 1120,
-            TotalTokens: 2320,
-            OutputTokensByModality:
-            [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
-            ]);
+        GenerationUsageDto usage = GenerationUsageTestFactory.CreateNanoBananaImageUsage();
         ImageGenerationContentResult content = new(
             "image/png",
             "iVBORw0KGgo=",
