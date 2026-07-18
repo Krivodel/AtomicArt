@@ -66,42 +66,28 @@ public sealed class GalleryAnimationSchedulerTests
     [Fact]
     public async Task AnimateAsync_WhenRawProgressReachesOne_CompletesAndRemovesAnimation()
     {
-        SchedulerScenario scenario = CreateScenario();
-        int completedCount = 0;
+        TrackedAnimationScenario context = new();
 
-        Task animationTask = StartAnimation(
-            scenario,
-            () =>
-            {
-                completedCount++;
-            });
-        scenario.FrameScheduler.RunNextFrame(TimeSpan.Zero);
-        scenario.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(100d));
-        await animationTask;
+        context.Scenario.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+        context.Scenario.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(100d));
+        await context.AnimationTask;
 
-        scenario.AppliedFrames[^1].Frame.Should().Be(StandardLastFrame);
-        completedCount.Should().Be(1);
-        animationTask.IsCompletedSuccessfully.Should().BeTrue();
-        scenario.Scheduler.HasActiveAnimations.Should().BeFalse();
+        context.Scenario.AppliedFrames[^1].Frame.Should().Be(StandardLastFrame);
+        context.CompletedCount.Should().Be(1);
+        context.AnimationTask.IsCompletedSuccessfully.Should().BeTrue();
+        context.Scenario.Scheduler.HasActiveAnimations.Should().BeFalse();
     }
 
     [Fact]
     public async Task Cancel_WithActiveControl_CompletesTaskWithoutCompletedAction()
     {
-        SchedulerScenario scenario = CreateScenario();
-        int completedCount = 0;
+        TrackedAnimationScenario context = new();
 
-        Task animationTask = StartAnimation(
-            scenario,
-            () =>
-            {
-                completedCount++;
-            });
-        scenario.Scheduler.Cancel(new Control[] { scenario.Control });
-        await animationTask;
+        context.Scenario.Scheduler.Cancel(new Control[] { context.Scenario.Control });
+        await context.AnimationTask;
 
-        completedCount.Should().Be(0);
-        scenario.Scheduler.HasActiveAnimations.Should().BeFalse();
+        context.CompletedCount.Should().Be(0);
+        context.Scenario.Scheduler.HasActiveAnimations.Should().BeFalse();
     }
 
     private static SchedulerScenario CreateScenario()
@@ -149,4 +135,22 @@ public sealed class GalleryAnimationSchedulerTests
         List<AppliedMotionFrame> AppliedFrames,
         GalleryAnimationScheduler Scheduler,
         Border Control);
+
+    private sealed class TrackedAnimationScenario
+    {
+        public SchedulerScenario Scenario { get; }
+        public Task AnimationTask { get; }
+        public int CompletedCount { get; private set; }
+
+        public TrackedAnimationScenario()
+        {
+            Scenario = CreateScenario();
+            AnimationTask = StartAnimation(Scenario, OnCompleted);
+        }
+
+        private void OnCompleted()
+        {
+            CompletedCount++;
+        }
+    }
 }
