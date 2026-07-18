@@ -2,6 +2,8 @@ namespace AtomicArt.Contracts.Generation;
 
 public static class GenerationImageFileFormats
 {
+    public const string PngExtension = ".png";
+
     public static IReadOnlyList<GenerationImageFileFormatDescriptor> All { get; } =
     [
         new(
@@ -59,7 +61,7 @@ public static class GenerationImageFileFormats
                 ]),
             new(
                 GenerationImageContentTypes.Png,
-                [".png"],
+                [PngExtension],
                 [
                     [
                         new(0, GenerationImageFileSignatures.Png.ToArray())

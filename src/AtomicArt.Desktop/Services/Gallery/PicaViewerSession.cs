@@ -261,7 +261,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             return fileFormat.Extension;
         }
 
-        return ".png";
+        return GenerationImageFileFormats.PngExtension;
     }
 
     private string GetContentType(string fileName)
