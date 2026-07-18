@@ -14,8 +14,8 @@ public sealed class LoggingBehaviorTests
     public async Task Handle_WhenHandlerFails_LogsCompletionAndDurationWithoutRequestContent()
     {
         const string secretPrompt = "private prompt that must not be logged";
-        RecordingLogger<LoggingBehavior<TestRequest, TestResponse>> logger = new();
-        LoggingBehavior<TestRequest, TestResponse> behavior = new(logger);
+        LoggingBehavior<TestRequest, TestResponse> behavior =
+            CreateBehavior(out RecordingLogger<LoggingBehavior<TestRequest, TestResponse>> logger);
         TestRequest request = new(secretPrompt);
         RequestHandlerDelegate<TestResponse> next = _ =>
             throw new InvalidOperationException("Safe test failure.");
@@ -26,7 +26,7 @@ public sealed class LoggingBehaviorTests
             CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
-        string logText = string.Join(Environment.NewLine, logger.Messages);
+        string logText = GetLogText(logger);
         logText.Should().Contain(nameof(TestRequest));
         logText.Should().Contain("failed after");
         logText.Should().Contain("ms");
@@ -37,15 +37,11 @@ public sealed class LoggingBehaviorTests
     public async Task Handle_WithFailedResult_LogsResultStatusAndErrorCode()
     {
         const string errorCode = "ERR-TEST-001";
-        RecordingLogger<LoggingBehavior<ResultRequest, Result<TestPayload>>> logger = new();
-        LoggingBehavior<ResultRequest, Result<TestPayload>> behavior = new(logger);
-        ResultRequest request = new();
-        RequestHandlerDelegate<Result<TestPayload>> next = _ =>
-            Task.FromResult(Result<TestPayload>.ValidationError(errorCode, "Test validation failed."));
+        Result<TestPayload> result =
+            Result<TestPayload>.ValidationError(errorCode, "Test validation failed.");
 
-        await behavior.Handle(request, next, CancellationToken.None);
+        string logText = await HandleResultAsync(result);
 
-        string logText = string.Join(Environment.NewLine, logger.Messages);
         logText.Should().Contain("completed with status ValidationError");
         logText.Should().Contain(errorCode);
     }
@@ -53,15 +49,10 @@ public sealed class LoggingBehaviorTests
     [Fact]
     public async Task Handle_WithSuccessfulResult_LogsSuccessStatusWithoutErrorCode()
     {
-        RecordingLogger<LoggingBehavior<ResultRequest, Result<TestPayload>>> logger = new();
-        LoggingBehavior<ResultRequest, Result<TestPayload>> behavior = new(logger);
-        ResultRequest request = new();
-        RequestHandlerDelegate<Result<TestPayload>> next = _ =>
-            Task.FromResult(Result<TestPayload>.Success(new TestPayload()));
+        Result<TestPayload> result = Result<TestPayload>.Success(new TestPayload());
 
-        await behavior.Handle(request, next, CancellationToken.None);
+        string logText = await HandleResultAsync(result);
 
-        string logText = string.Join(Environment.NewLine, logger.Messages);
         logText.Should().Contain("completed with status Success");
         logText.Should().NotContain("and error code");
     }
@@ -69,18 +60,50 @@ public sealed class LoggingBehaviorTests
     [Fact]
     public async Task Handle_WithOrdinaryResponse_LogsSuccessWithoutInspectingNamedProperties()
     {
-        RecordingLogger<LoggingBehavior<TestRequest, TestResponse>> logger = new();
-        LoggingBehavior<TestRequest, TestResponse> behavior = new(logger);
+        LoggingBehavior<TestRequest, TestResponse> behavior =
+            CreateBehavior(out RecordingLogger<LoggingBehavior<TestRequest, TestResponse>> logger);
         TestRequest request = new("safe prompt");
         RequestHandlerDelegate<TestResponse> next = _ =>
             Task.FromResult(new TestResponse("Custom", "ERR-IGNORED"));
 
         await behavior.Handle(request, next, CancellationToken.None);
 
-        string logText = string.Join(Environment.NewLine, logger.Messages);
+        string logText = GetLogText(logger);
         logText.Should().Contain("completed with status Success");
         logText.Should().NotContain("Custom");
         logText.Should().NotContain("ERR-IGNORED");
+    }
+
+    private static LoggingBehavior<TRequest, TResponse> CreateBehavior<TRequest, TResponse>(
+        out RecordingLogger<LoggingBehavior<TRequest, TResponse>> logger)
+        where TRequest : notnull, IRequest<TResponse>
+    {
+        logger = new RecordingLogger<LoggingBehavior<TRequest, TResponse>>();
+
+        return new LoggingBehavior<TRequest, TResponse>(logger);
+    }
+
+    private static string GetLogText<TCategory>(RecordingLogger<TCategory> logger)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+
+        return string.Join(Environment.NewLine, logger.Messages);
+    }
+
+    private static async Task<string> HandleResultAsync(Result<TestPayload> result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        LoggingBehavior<ResultRequest, Result<TestPayload>> behavior =
+            CreateBehavior(
+                out RecordingLogger<
+                    LoggingBehavior<ResultRequest, Result<TestPayload>>> logger);
+        ResultRequest request = new();
+        RequestHandlerDelegate<Result<TestPayload>> next = _ => Task.FromResult(result);
+
+        await behavior.Handle(request, next, CancellationToken.None);
+
+        return GetLogText(logger);
     }
 
     private sealed record TestRequest(string Prompt) : IRequest<TestResponse>;

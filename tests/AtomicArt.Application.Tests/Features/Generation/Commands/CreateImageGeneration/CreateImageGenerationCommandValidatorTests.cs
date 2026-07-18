@@ -42,10 +42,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
     {
         CreateImageGenerationCommand command = CreateCommand(modelId: string.Empty);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(error => error.PropertyName == "Request.ModelId");
+        AssertValidationError(command, "Request.ModelId");
     }
 
     [Fact]
@@ -53,10 +50,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
     {
         CreateImageGenerationCommand command = CreateCommand(prompt: "   ");
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(error => error.PropertyName == "Request.Prompt");
+        AssertValidationError(command, "Request.Prompt");
     }
 
     [Fact]
@@ -74,10 +68,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
             }
             """);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(error => error.PropertyName == "Request.AspectRatio");
+        AssertValidationError(command, "Request.AspectRatio");
     }
 
     [Fact]
@@ -95,10 +86,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
             }
             """);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(error => error.PropertyName == "Request.Resolution");
+        AssertValidationError(command, "Request.Resolution");
     }
 
     [Fact]
@@ -106,10 +94,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
     {
         CreateImageGenerationCommand command = CreateCommand(generationCount: 0);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(error => error.PropertyName == "Request.GenerationCount");
+        AssertValidationError(command, "Request.GenerationCount");
     }
 
     [Fact]
@@ -117,10 +102,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
     {
         CreateImageGenerationCommand command = CreateCommand(temperature: double.NaN);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(error => error.PropertyName == "Request.Temperature");
+        AssertValidationError(command, "Request.Temperature");
     }
 
     [Fact]
@@ -128,9 +110,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
     {
         CreateImageGenerationCommand command = CreateCommand(generationCount: 5);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -148,23 +128,25 @@ public sealed class CreateImageGenerationCommandValidatorTests
             }
             """);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
     public void Validate_WithNullAttachedImage_IsValid()
     {
-        CreateImageGenerationCommand command = CreateCommand(
-            attachedImages: new List<AttachedImageDto>
+        CreateImageGenerationCommand command = CreateCommandFromJson(
+            $$"""
             {
-                null!
-            });
+              "modelId": "{{ModelId}}",
+              "prompt": "Prompt",
+              "aspectRatio": "Авто",
+              "resolution": "1k",
+              "generationCount": 1,
+              "attachedImages": [null]
+            }
+            """);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -179,9 +161,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
             .ToList();
         CreateImageGenerationCommand command = CreateCommand(attachedImages: attachedImages);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -197,9 +177,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
                     content)
             ]);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -214,9 +192,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
                     PngBytes)
             ]);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -231,9 +207,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
                     [0x01, 0x02, 0x03])
             ]);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -248,9 +222,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
                     PngBytes)
             ]);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -265,9 +237,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
                     WebpBytes)
             ]);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -282,9 +252,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
                     GifBytes)
             ]);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -297,9 +265,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
                 resolution: "1k"),
             TestGenerationCredentials.ProviderCredential);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     [Fact]
@@ -307,10 +273,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
     {
         CreateImageGenerationCommand command = CreateCommand(providerCredential: null);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(error => error.PropertyName == "ProviderCredential");
+        AssertValidationError(command, "ProviderCredential");
     }
 
     [Fact]
@@ -320,9 +283,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
             modelId: LocalModelId,
             providerCredential: null);
 
-        ValidationResult result = _validator.Validate(command);
-
-        result.IsValid.Should().BeTrue();
+        AssertValid(command);
     }
 
     private static CreateImageGenerationCommand CreateCommand(
@@ -387,5 +348,27 @@ public sealed class CreateImageGenerationCommandValidatorTests
         return new CreateImageGenerationCommand(
             request,
             TestGenerationCredentials.ProviderCredential);
+    }
+
+    private void AssertValid(CreateImageGenerationCommand command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        ValidationResult result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    private void AssertValidationError(
+        CreateImageGenerationCommand command,
+        string expectedPropertyName)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedPropertyName);
+
+        ValidationResult result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(error => error.PropertyName == expectedPropertyName);
     }
 }
