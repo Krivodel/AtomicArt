@@ -23,8 +23,9 @@ public sealed class GalleryFrontGenerationRunnerTests
     public async Task RunAsync_WhenAnimationsComplete_ClearsOverlayCanvas()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryFrontGenerationRunner runner = CreateRunner(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         GalleryOperation operation = new GenerateFrontGalleryOperation(new List<object> { Guid.NewGuid() });
@@ -93,8 +94,9 @@ public sealed class GalleryFrontGenerationRunnerTests
     public async Task RunAsync_WhenGenerateFrontQueuedDuringActiveFlight_RetargetsFlyingCopyAndCleansOverlay()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryFrontGenerationRunner runner = CreateRunner(animationScheduler);
         GalleryOperationRunnerRegistry registry = new(
             new List<IGalleryOperationRunner> { runner });
@@ -124,8 +126,9 @@ public sealed class GalleryFrontGenerationRunnerTests
     public async Task RunAsync_WhenTopCardsWereVirtualizedBeforeFrontGeneration_AnimatesTopCards()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryLayoutService layout = new();
         GalleryFrontGenerationRunner runner = CreateRunner(animationScheduler, layout);
         List<object> existingItems = CreateFixedItems(ExistingItemCount, ExistingItemIdStart);
@@ -166,18 +169,6 @@ public sealed class GalleryFrontGenerationRunnerTests
             layout,
             NullLogger<GalleryFrontGenerationRunner>.Instance,
             new GalleryFrontGenerationRetargetWaiter(animationScheduler));
-    }
-
-    private static GalleryAnimationScheduler CreateAnimationScheduler(
-        TestUiFrameScheduler frameScheduler,
-        List<AppliedFrame> appliedFrames)
-    {
-        return new GalleryAnimationScheduler(
-            frameScheduler,
-            (control, frame) =>
-            {
-                appliedFrames.Add(new AppliedFrame(control, frame));
-            });
     }
 
     private static GalleryOperationCoordinator CreateContext(TestUiFrameScheduler frameScheduler)
@@ -247,7 +238,7 @@ public sealed class GalleryFrontGenerationRunnerTests
         return new Guid($"00000000-0000-0000-0000-{value:000000000000}");
     }
 
-    private static bool HasRetargetFrame(List<AppliedFrame> appliedFrames)
+    private static bool HasRetargetFrame(List<AppliedMotionFrame> appliedFrames)
     {
         return appliedFrames.Any(frame =>
             frame.Frame is { Opacity: 1d, Scale: >= 0.30d and <= 1.10d });
@@ -275,5 +266,4 @@ public sealed class GalleryFrontGenerationRunnerTests
         }
     }
 
-    private sealed record AppliedFrame(Control Control, MotionFrame Frame);
 }

@@ -3,6 +3,7 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Tests.Services.Gallery;
 
 namespace AtomicArt.Desktop.Tests.Services.GalleryAnimation;
 
@@ -12,8 +13,9 @@ public sealed class GalleryAnimationSchedulerTests
     public void AnimateAsync_WithFrames_AppliesFirstFrameImmediately()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler scheduler = CreateScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler scheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         Border control = new();
         MotionFrame firstFrame = new(0d, 14d, 0.96d, 0d, 0d);
         MotionFrame lastFrame = new(0d, 0d, 1d, 0d, 1d);
@@ -36,8 +38,9 @@ public sealed class GalleryAnimationSchedulerTests
     public void AnimateAsync_BeforeDelayElapsed_DoesNotAdvancePastFirstFrame()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler scheduler = CreateScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler scheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         Border control = new();
         MotionFrame firstFrame = new(0d, 0d, 1d, 0d, 0d);
         MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
@@ -60,8 +63,9 @@ public sealed class GalleryAnimationSchedulerTests
     public void AnimateAsync_AfterDelayElapsed_InterpolatesWithReferenceFormula()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler scheduler = CreateScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler scheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         Border control = new();
         MotionFrame firstFrame = new(0d, 0d, 1d, 0d, 0d);
         MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
@@ -88,8 +92,9 @@ public sealed class GalleryAnimationSchedulerTests
     public async Task AnimateAsync_WhenRawProgressReachesOne_CompletesAndRemovesAnimation()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler scheduler = CreateScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler scheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         Border control = new();
         MotionFrame firstFrame = new(0d, 0d, 1d, 0d, 0d);
         MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
@@ -119,8 +124,9 @@ public sealed class GalleryAnimationSchedulerTests
     public async Task Cancel_WithActiveControl_CompletesTaskWithoutCompletedAction()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler scheduler = CreateScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler scheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         Border control = new();
         MotionFrame firstFrame = new(0d, 0d, 1d, 0d, 0d);
         MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
@@ -143,22 +149,9 @@ public sealed class GalleryAnimationSchedulerTests
         scheduler.HasActiveAnimations.Should().BeFalse();
     }
 
-    private static GalleryAnimationScheduler CreateScheduler(
-        TestUiFrameScheduler frameScheduler,
-        List<AppliedFrame> appliedFrames)
-    {
-        return new GalleryAnimationScheduler(
-            frameScheduler,
-            (control, frame) =>
-            {
-                appliedFrames.Add(new AppliedFrame(control, frame));
-            });
-    }
-
     private static double Identity(double value)
     {
         return value;
     }
 
-    private sealed record AppliedFrame(Control Control, MotionFrame Frame);
 }

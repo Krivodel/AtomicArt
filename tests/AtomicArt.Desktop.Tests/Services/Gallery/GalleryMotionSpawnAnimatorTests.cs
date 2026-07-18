@@ -14,8 +14,9 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
     public void AnimateSpawnRetargetAsync_WhenTargetsProvided_CreatesTemporaryCopiesAndReferenceFirstFrames()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         Guid firstId = Guid.NewGuid();
@@ -57,8 +58,9 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
     public async Task AnimateSpawnRetargetAsync_WithEightItems_WaitsForLastTargetFlash()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         List<object> items = CreatePositionedItems(context, 8);
@@ -87,8 +89,9 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
     public void AnimateSpawnRetargetAsync_WithNineItems_CreatesTargetFlashOnlyThroughIndexSeven()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         List<object> items = CreatePositionedItems(context, 9);
@@ -109,8 +112,9 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
     public async Task AnimateSpawnRetargetAsync_WithCurrentSpawnRect_UsesRetargetTimingAndStartState()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         Guid itemId = Guid.NewGuid();

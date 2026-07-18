@@ -13,8 +13,9 @@ public sealed class GalleryMotionAppendAnimatorTests : GalleryMotionAnimatorTest
     public async Task AnimateAppendBatchAsync_WhenBatchAppended_UsesReferenceFramesDurationDelayAndEase()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         Guid firstId = Guid.NewGuid();

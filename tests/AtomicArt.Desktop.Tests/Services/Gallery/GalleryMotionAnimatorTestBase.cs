@@ -27,18 +27,6 @@ public abstract class GalleryMotionAnimatorTestBase
         return state;
     }
 
-    private protected static GalleryAnimationScheduler CreateAnimationScheduler(
-        TestUiFrameScheduler frameScheduler,
-        List<AppliedFrame> appliedFrames)
-    {
-        return new GalleryAnimationScheduler(
-            frameScheduler,
-            (control, frame) =>
-            {
-                appliedFrames.Add(new AppliedFrame(control, frame));
-            });
-    }
-
     private protected static GalleryOperationCoordinator CreateContext(TestUiFrameScheduler frameScheduler)
     {
         GalleryOperationCoordinator context = GalleryOperationCoordinatorTestFactory.Create(
@@ -105,7 +93,5 @@ public abstract class GalleryMotionAnimatorTestBase
     {
         return from + ((to - from) * amount);
     }
-
-    private protected sealed record AppliedFrame(Control Control, MotionFrame Frame);
 
 }

@@ -13,8 +13,9 @@ public sealed class GalleryMotionRemoveAnimatorTests : GalleryMotionAnimatorTest
     public void AnimateRemovedItemAsync_WhenItemRemoved_UsesReferenceFramesAndSign()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         context.OverlayCanvas.Arrange(new Rect(0d, 0d, 800d, 600d));

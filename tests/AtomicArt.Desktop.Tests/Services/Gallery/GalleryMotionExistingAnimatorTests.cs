@@ -14,8 +14,9 @@ public sealed class GalleryMotionExistingAnimatorTests : GalleryMotionAnimatorTe
     public async Task AnimateExistingAsync_WithMovedCard_UsesReferenceDelayDurationAndEase()
     {
         TestUiFrameScheduler frameScheduler = new();
-        List<AppliedFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler = CreateAnimationScheduler(frameScheduler, appliedFrames);
+        List<AppliedMotionFrame> appliedFrames = [];
+        GalleryAnimationScheduler animationScheduler =
+            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryMotionAnimator animator = CreateAnimator(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         Guid itemId = Guid.NewGuid();
