@@ -49,34 +49,25 @@ public sealed class ImageModelRegistryTests
     [Fact]
     public void Constructor_WithDuplicateIds_ThrowsInvalidOperationException()
     {
-        GenerationModelCatalogDto catalog = new(
-        [
+        GenerationModelCatalogDto catalog = CreateCatalog(
             CreateMetadata("duplicate"),
-                CreateMetadata("duplicate")
-        ]);
+            CreateMetadata("duplicate"));
 
-        Action action = () => MetadataImageModelTestFactory.CreateRegistry(catalog);
-
-        action.Should().Throw<InvalidOperationException>();
+        AssertRegistryConstructionFails(catalog);
     }
 
     [Fact]
     public void Constructor_WithEmptyCatalog_ThrowsInvalidOperationException()
     {
-        GenerationModelCatalogDto catalog = new([]);
+        GenerationModelCatalogDto catalog = CreateCatalog();
 
-        Action action = () => MetadataImageModelTestFactory.CreateRegistry(catalog);
-
-        action.Should().Throw<InvalidOperationException>();
+        AssertRegistryConstructionFails(catalog);
     }
 
     [Fact]
     public void GetModels_WithMultipleMatchingFactories_UsesHighestPriorityFactory()
     {
-        GenerationModelCatalogDto catalog = new(
-        [
-            CreateMetadata()
-        ]);
+        GenerationModelCatalogDto catalog = CreateCatalog(CreateMetadata());
         IImageModelDefinitionFactory[] factories =
         [
             new TestImageModelDefinitionFactory(priority: 0),
@@ -92,39 +83,34 @@ public sealed class ImageModelRegistryTests
     [Fact]
     public void Constructor_WithoutMatchingFactory_ThrowsInvalidOperationException()
     {
-        GenerationModelCatalogDto catalog = new(
-        [
-            CreateMetadata()
-        ]);
         IImageModelDefinitionFactory[] factories =
         [
             new TestImageModelDefinitionFactory(0, _ => false)
         ];
 
-        Action action = () => new ImageModelRegistry(catalog, factories);
-
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage("No generation model factory is registered for model 'test-model'.");
+        AssertFactorySelectionFails(
+            factories,
+            "No generation model factory is registered for model 'test-model'.");
     }
 
     [Fact]
     public void Constructor_WithMatchingFactoriesAtSameHighestPriority_ThrowsInvalidOperationException()
     {
-        GenerationModelCatalogDto catalog = new(
-        [
-            CreateMetadata()
-        ]);
         IImageModelDefinitionFactory[] factories =
         [
             new TestImageModelDefinitionFactory(priority: 10),
             new TestImageModelDefinitionFactory(priority: 10)
         ];
 
-        Action action = () => new ImageModelRegistry(catalog, factories);
+        AssertFactorySelectionFails(
+            factories,
+            "Multiple generation model factories with priority 10 are registered for model 'test-model'.");
+    }
 
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage(
-                "Multiple generation model factories with priority 10 are registered for model 'test-model'.");
+    private static GenerationModelCatalogDto CreateCatalog(
+        params GenerationModelMetadataDto[] models)
+    {
+        return new GenerationModelCatalogDto(models);
     }
 
     private static GenerationModelMetadataDto CreateMetadata(string modelId = "test-model")
@@ -157,6 +143,25 @@ public sealed class ImageModelRegistryTests
                 {
                     ["4k"] = 2520
                 }));
+    }
+
+    private static void AssertRegistryConstructionFails(GenerationModelCatalogDto catalog)
+    {
+        Action action = () => MetadataImageModelTestFactory.CreateRegistry(catalog);
+
+        action.Should().Throw<InvalidOperationException>();
+    }
+
+    private static void AssertFactorySelectionFails(
+        IImageModelDefinitionFactory[] factories,
+        string expectedMessage)
+    {
+        GenerationModelCatalogDto catalog = CreateCatalog(CreateMetadata());
+
+        Action action = () => new ImageModelRegistry(catalog, factories);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage(expectedMessage);
     }
 
     private sealed class TestImageModelDefinitionFactory : IImageModelDefinitionFactory
