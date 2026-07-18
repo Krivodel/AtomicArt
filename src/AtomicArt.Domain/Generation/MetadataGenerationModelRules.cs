@@ -80,16 +80,11 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
                 "Выбранная температура не поддерживается моделью.");
         }
 
-        if (constraints.Thinking is null)
-        {
-            if (!string.IsNullOrWhiteSpace(thinkingLevel))
-            {
-                return GenerationValidationResult.Invalid(
-                    GenerationErrorCodes.ModelRequestValidation,
-                    "Выбранный уровень рассуждения не поддерживается моделью.");
-            }
-        }
-        else if (!constraints.Thinking.IsSupported(thinkingLevel))
+        bool isThinkingLevelSupported = constraints.Thinking is null
+            ? string.IsNullOrWhiteSpace(thinkingLevel)
+            : constraints.Thinking.IsSupported(thinkingLevel);
+
+        if (!isThinkingLevelSupported)
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
