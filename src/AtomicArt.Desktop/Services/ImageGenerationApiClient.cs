@@ -7,24 +7,15 @@ using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Desktop.Services;
 
-public sealed class ImageGenerationApiClient : IImageGenerationApiClient
+public sealed class ImageGenerationApiClient
+    : AtomicArtApiClient, IImageGenerationApiClient
 {
-    private readonly HttpClient _httpClient;
-    private readonly IApiEndpointService _apiEndpointService;
-    private readonly ILogger<ImageGenerationApiClient> _logger;
-
     public ImageGenerationApiClient(
         HttpClient httpClient,
         IApiEndpointService apiEndpointService,
         ILogger<ImageGenerationApiClient> logger)
+        : base(httpClient, apiEndpointService, logger)
     {
-        ArgumentNullException.ThrowIfNull(httpClient);
-        ArgumentNullException.ThrowIfNull(apiEndpointService);
-        ArgumentNullException.ThrowIfNull(logger);
-
-        _httpClient = httpClient;
-        _apiEndpointService = apiEndpointService;
-        _logger = logger;
     }
 
     public async Task<GenerationBatchDto> CreateGenerationAsync(
@@ -35,12 +26,12 @@ public sealed class ImageGenerationApiClient : IImageGenerationApiClient
         ArgumentNullException.ThrowIfNull(request);
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        _logger.LogInformation(
+        Logger.LogInformation(
             "Sending image generation request with {GenerationCount} requested results and {AttachmentCount} attachments.",
             request.GenerationCount,
             request.AttachedImages.Count);
 
-        Uri requestUri = _apiEndpointService.CreateRequestUri(GenerationApiRoutes.Generations);
+        Uri requestUri = ApiEndpointService.CreateRequestUri(GenerationApiRoutes.Generations);
 
         if (!string.IsNullOrWhiteSpace(providerCredential))
         {
@@ -59,7 +50,7 @@ public sealed class ImageGenerationApiClient : IImageGenerationApiClient
                 providerCredential);
         }
 
-        using HttpResponseMessage response = await _httpClient
+        using HttpResponseMessage response = await HttpClient
             .SendAsync(requestMessage, ct)
             .ConfigureAwait(false);
 
@@ -67,10 +58,10 @@ public sealed class ImageGenerationApiClient : IImageGenerationApiClient
         {
             await SafeApiProblemDetailsReader
                 .LogResponseFailureAsync(
-                    _logger,
+                    Logger,
                     response,
                     SafeApiProblemDetailsApi.ImageGeneration,
-                    errorCode => _logger.LogWarning(
+                    errorCode => Logger.LogWarning(
                         "Image generation API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
                         (int)response.StatusCode,
                         errorCode,
@@ -90,7 +81,7 @@ public sealed class ImageGenerationApiClient : IImageGenerationApiClient
             throw new InvalidOperationException("Generation API returned an empty response.");
         }
 
-        _logger.LogInformation(
+        Logger.LogInformation(
             "Image generation API completed batch {BatchId} with {ItemCount} items after {ElapsedMilliseconds} ms.",
             batch.BatchId,
             batch.Items.Count,

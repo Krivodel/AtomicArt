@@ -7,33 +7,24 @@ using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Desktop.Services;
 
-public sealed class GenerationModelCatalogApiClient : IGenerationModelCatalogApiClient
+public sealed class GenerationModelCatalogApiClient
+    : AtomicArtApiClient, IGenerationModelCatalogApiClient
 {
-    private readonly HttpClient _httpClient;
-    private readonly IApiEndpointService _apiEndpointService;
-    private readonly ILogger<GenerationModelCatalogApiClient> _logger;
-
     public GenerationModelCatalogApiClient(
         HttpClient httpClient,
         IApiEndpointService apiEndpointService,
         ILogger<GenerationModelCatalogApiClient> logger)
+        : base(httpClient, apiEndpointService, logger)
     {
-        ArgumentNullException.ThrowIfNull(httpClient);
-        ArgumentNullException.ThrowIfNull(apiEndpointService);
-        ArgumentNullException.ThrowIfNull(logger);
-
-        _httpClient = httpClient;
-        _apiEndpointService = apiEndpointService;
-        _logger = logger;
     }
 
     public async Task<GenerationModelCatalogDto> GetCatalogAsync(CancellationToken ct = default)
     {
         Stopwatch stopwatch = Stopwatch.StartNew();
-        _logger.LogInformation("Loading generation model catalog from Atomic Art API.");
+        Logger.LogInformation("Loading generation model catalog from Atomic Art API.");
 
-        Uri requestUri = _apiEndpointService.CreateRequestUri(GenerationApiRoutes.Models);
-        using HttpResponseMessage response = await _httpClient
+        Uri requestUri = ApiEndpointService.CreateRequestUri(GenerationApiRoutes.Models);
+        using HttpResponseMessage response = await HttpClient
             .GetAsync(requestUri, ct)
             .ConfigureAwait(false);
 
@@ -41,10 +32,10 @@ public sealed class GenerationModelCatalogApiClient : IGenerationModelCatalogApi
         {
             await SafeApiProblemDetailsReader
                 .LogResponseFailureAsync(
-                    _logger,
+                    Logger,
                     response,
                     SafeApiProblemDetailsApi.GenerationModelCatalog,
-                    errorCode => _logger.LogWarning(
+                    errorCode => Logger.LogWarning(
                         "Generation model catalog API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
                         (int)response.StatusCode,
                         errorCode,
@@ -64,7 +55,7 @@ public sealed class GenerationModelCatalogApiClient : IGenerationModelCatalogApi
             throw new InvalidOperationException("Generation model catalog API returned an empty response.");
         }
 
-        _logger.LogInformation(
+        Logger.LogInformation(
             "Generation model catalog loaded with {ModelCount} models after {ElapsedMilliseconds} ms.",
             catalog.Models.Count,
             stopwatch.ElapsedMilliseconds);
