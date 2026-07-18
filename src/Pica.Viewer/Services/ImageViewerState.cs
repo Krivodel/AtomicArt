@@ -2,7 +2,7 @@ namespace Pica.Viewer.Services;
 
 public sealed class ImageViewerState
 {
-    public bool IsFilteringEnabled { get; init; } = true;
+    public bool IsFilteringEnabled { get; init; } = ViewerSettingsDefaults.FilteringEnabled;
     public int MovementSpeed { get; init; } = ViewerSettingsDefaults.MovementSpeed;
     public int ZoomSpeed { get; init; } = ViewerSettingsDefaults.ZoomSpeed;
     public bool ExpandOnDoubleClick { get; init; } = ViewerSettingsDefaults.ExpandOnDoubleClick;

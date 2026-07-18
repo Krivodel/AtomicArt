@@ -127,6 +127,7 @@ public sealed class ImageViewerStateServiceTests
             ImageViewerState restoredState = await service.LoadAsync(CancellationToken.None);
 
             restoredState.IsWindowed.Should().BeTrue();
+            restoredState.IsFilteringEnabled.Should().BeTrue();
             restoredState.IsFastLoadingEnabled.Should().BeFalse();
             restoredState.AllowFreeZoomOut.Should().BeFalse();
             restoredState.IsSmoothPanningEnabled.Should().BeTrue();

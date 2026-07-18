@@ -4,6 +4,7 @@ internal static class ViewerSettingsDefaults
 {
     public const int MovementSpeed = 3;
     public const int ZoomSpeed = 4;
+    public const bool FilteringEnabled = true;
     public const bool ExpandOnDoubleClick = true;
     public const bool FastLoadingEnabled = false;
     public const bool AllowFreeZoomOut = false;

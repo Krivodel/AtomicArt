@@ -128,7 +128,8 @@ public sealed class ImageViewerStateService : IImageViewerStateService
 
         return new ImageViewerState
         {
-            IsFilteringEnabled = state?.IsFilteringEnabled ?? true,
+            IsFilteringEnabled = state?.IsFilteringEnabled
+                ?? ViewerSettingsDefaults.FilteringEnabled,
             MovementSpeed = ViewerSettingsDefaults.NormalizeSpeed(
                 state?.MovementSpeed ?? ViewerSettingsDefaults.MovementSpeed,
                 ViewerSettingsDefaults.MovementSpeed),
