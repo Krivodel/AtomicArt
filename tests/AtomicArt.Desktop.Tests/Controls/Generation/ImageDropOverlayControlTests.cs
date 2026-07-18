@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Avalonia.Media;
+using Avalonia.VisualTree;
 using FluentAssertions;
 using Xunit;
 
@@ -29,6 +31,10 @@ public sealed class ImageDropOverlayControlTests : AnimatedGalleryControlTestBas
                     ?? throw new InvalidOperationException("Drop overlay chrome was not found.");
                 StackPanel animatedContent = overlay.FindControl<StackPanel>("AnimatedContent")
                     ?? throw new InvalidOperationException("Drop overlay content was not found.");
+                ImageDropDashedBorderControl dashedBorder = overlay
+                    .GetVisualDescendants()
+                    .OfType<ImageDropDashedBorderControl>()
+                    .Single();
 
                 overlayChrome.Bounds.Width.Should().BeApproximately(WindowWidth, 0.1d);
                 overlayChrome.Bounds.Height.Should().BeApproximately(WindowHeight, 0.1d);
@@ -36,6 +42,8 @@ public sealed class ImageDropOverlayControlTests : AnimatedGalleryControlTestBas
                 animatedContent.Bounds.Width.Should().BeLessThan(overlayChrome.Bounds.Width);
                 animatedContent.Bounds.Height.Should().BeLessThan(overlayChrome.Bounds.Height);
                 animatedContent.RenderTransform.Should().NotBeNull();
+                overlay.TryFindResource("ImageDropBorderColor", out object? borderColor).Should().BeTrue();
+                dashedBorder.StrokeColor.Should().Be(borderColor.Should().BeOfType<Color>().Subject);
             }
             finally
             {

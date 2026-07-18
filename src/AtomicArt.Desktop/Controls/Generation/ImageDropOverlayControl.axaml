@@ -25,7 +25,8 @@
                 </Border.Background>
             </Border>
 
-            <controls:ImageDropMulticolorBorderControl Margin="10" />
+            <controls:ImageDropDashedBorderControl Margin="10"
+                                                   StrokeColor="{DynamicResource ImageDropBorderColor}" />
         </Grid>
 
         <StackPanel x:Name="AnimatedContent"

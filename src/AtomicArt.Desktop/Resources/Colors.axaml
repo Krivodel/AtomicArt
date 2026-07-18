@@ -3,4 +3,5 @@
     <Color x:Key="SukiPopupBackground">#172133</Color>
     <Color x:Key="SukiLightBorderBrush">#214575</Color>
     <Color x:Key="SukiMenuBorderBrush">#2A4F80</Color>
+    <Color x:Key="ImageDropBorderColor">#1E385C</Color>
 </ResourceDictionary>
