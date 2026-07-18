@@ -19,12 +19,8 @@ public sealed class PicaExecutableLocatorTests
             PicaProtocolConstants.ExecutableName);
         File.WriteAllBytes(executablePath, Array.Empty<byte>());
         MakeExecutableOnUnix(executablePath);
-        FixedPicaExecutableSource source = new(executablePath);
-        PicaExecutableLocator locator = new(
-            new List<IPicaExecutableSource> { source },
-            NullLogger<PicaExecutableLocator>.Instance);
 
-        string? result = locator.FindExecutablePath();
+        string? result = FindExecutablePath(executablePath);
 
         result.Should().Be(Path.GetFullPath(executablePath));
     }
@@ -32,14 +28,21 @@ public sealed class PicaExecutableLocatorTests
     [Fact]
     public void FindExecutablePath_WhenCandidatesDoNotExist_ReturnsNull()
     {
-        FixedPicaExecutableSource source = new(@"Z:\Missing\Pica.exe");
+        string candidatePath = @"Z:\Missing\Pica.exe";
+
+        string? result = FindExecutablePath(candidatePath);
+
+        result.Should().BeNull();
+    }
+
+    private static string? FindExecutablePath(string candidatePath)
+    {
+        FixedPicaExecutableSource source = new(candidatePath);
         PicaExecutableLocator locator = new(
             new List<IPicaExecutableSource> { source },
             NullLogger<PicaExecutableLocator>.Instance);
 
-        string? result = locator.FindExecutablePath();
-
-        result.Should().BeNull();
+        return locator.FindExecutablePath();
     }
 
     private static void MakeExecutableOnUnix(string filePath)
