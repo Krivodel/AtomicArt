@@ -23,11 +23,17 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
 public sealed class GalleryViewModelTests
 {
-    [Fact]
-    public async Task DeleteOrCancel_WithGeneratedItem_RemovesItem()
+    [Theory]
+    [InlineData(GenerationItemStatus.Generated)]
+    [InlineData(GenerationItemStatus.Generating)]
+    public async Task DeleteOrCancel_WithRemovableItem_RemovesItem(
+        GenerationItemStatus status)
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
-        List<GenerationItemDto> items = [GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generated)];
+        List<GenerationItemDto> items =
+        [
+            GalleryViewModelTestFactory.CreateItem(status: status)
+        ];
         viewModel.AddGeneratedItems(items, 0);
         GenerationItemViewModel item = viewModel.Items[0];
 
@@ -184,20 +190,6 @@ public sealed class GalleryViewModelTests
         deletionService.Requests.Should().BeEmpty();
         galleryStateService.SaveCallCount.Should().Be(0);
         viewModel.Items.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task DeleteOrCancel_WithGeneratingItem_RemovesItem()
-    {
-        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
-        List<GenerationItemDto> items = [GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generating)];
-        viewModel.AddGeneratedItems(items, 0);
-        GenerationItemViewModel item = viewModel.Items[0];
-
-        await viewModel.DeleteOrCancelCommand.ExecuteAsync(item);
-
-        viewModel.Items.Should().BeEmpty();
-        viewModel.IsEmpty.Should().BeTrue();
     }
 
     [Fact]
