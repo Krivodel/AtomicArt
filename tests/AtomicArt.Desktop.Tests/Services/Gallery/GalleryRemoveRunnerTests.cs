@@ -14,94 +14,110 @@ public sealed class GalleryRemoveRunnerTests
     [Fact]
     public async Task RunAsync_WhenRemovalStarts_CompletesOperationBeforeOverlayAnimationCompletes()
     {
-        TestUiFrameScheduler frameScheduler = new();
-        GalleryAnimationScheduler animationScheduler = new(frameScheduler);
-        GalleryLayoutService layout = new();
-        GalleryMotionAnimator animator = GalleryMotionAnimatorTestFactory.Create(
-            animationScheduler,
-            new GalleryOverlayEffects(animationScheduler),
-            layout);
-        GalleryRemoveRunner runner = new(animationScheduler, animator, layout, NullLogger<GalleryRemoveRunner>.Instance);
-        Guid itemId = Guid.NewGuid();
-        List<object> items = [itemId];
-        GalleryOperationCoordinator context = CreateContext(frameScheduler, items);
-        GalleryOperation operation = new RemoveGalleryOperation(itemId);
-        layout.RenderCards(context);
+        RemoveTestContext context = CreateContext();
 
-        await runner.RunAsync(new List<GalleryOperation> { operation }, context, CancellationToken.None);
+        await context.RunAsync(CancellationToken.None);
 
-        context.OverlayCanvas.Children.Should().ContainSingle();
-        operation.Completion.Task.IsCompletedSuccessfully.Should().BeTrue();
+        context.Coordinator.OverlayCanvas.Children.Should().ContainSingle();
+        context.Operation.Completion.Task.IsCompletedSuccessfully.Should().BeTrue();
 
-        frameScheduler.RunNextFrame(TimeSpan.Zero);
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(519d));
+        context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+        context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(519d));
 
-        context.OverlayCanvas.Children.Should().ContainSingle();
+        context.Coordinator.OverlayCanvas.Children.Should().ContainSingle();
 
-        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(520d));
+        context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(520d));
 
-        context.OverlayCanvas.Children.Should().BeEmpty();
+        context.Coordinator.OverlayCanvas.Children.Should().BeEmpty();
     }
 
     [Fact]
     public async Task RunAsync_WhenCancelledBeforeRemoval_CancelsOperation()
     {
-        TestUiFrameScheduler frameScheduler = new();
-        GalleryAnimationScheduler animationScheduler = new(frameScheduler);
-        GalleryLayoutService layout = new();
-        GalleryMotionAnimator animator = GalleryMotionAnimatorTestFactory.Create(
-            animationScheduler,
-            new GalleryOverlayEffects(animationScheduler),
-            layout);
-        GalleryRemoveRunner runner = new(animationScheduler, animator, layout, NullLogger<GalleryRemoveRunner>.Instance);
-        Guid itemId = Guid.NewGuid();
-        List<object> items = [itemId];
-        GalleryOperationCoordinator context = CreateContext(frameScheduler, items);
-        GalleryOperation operation = new RemoveGalleryOperation(itemId);
-        CancellationTokenSource cancellationTokenSource = new();
-        layout.RenderCards(context);
+        RemoveTestContext context = CreateContext();
+        using CancellationTokenSource cancellationTokenSource = new();
         cancellationTokenSource.Cancel();
 
-        await runner.RunAsync(new List<GalleryOperation> { operation }, context, cancellationTokenSource.Token);
+        await context.RunAsync(cancellationTokenSource.Token);
 
-        context.OverlayCanvas.Children.Should().BeEmpty();
-        operation.Completion.Task.IsCanceled.Should().BeTrue();
+        context.Coordinator.OverlayCanvas.Children.Should().BeEmpty();
+        context.Operation.Completion.Task.IsCanceled.Should().BeTrue();
     }
 
     [Fact]
     public async Task RunAsync_WhenRemovalAnimationFails_ClearsOverlayCanvasAndFailsOperation()
     {
+        RemoveTestContext context = CreateContext(frameScheduler =>
+            new GalleryAnimationScheduler(
+                frameScheduler,
+                (_, _) =>
+                {
+                    throw new InvalidOperationException("Frame application failed.");
+                }));
+
+        await context.RunAsync(CancellationToken.None);
+
+        context.Coordinator.OverlayCanvas.Children.Should().BeEmpty();
+        context.Operation.Completion.Task.IsFaulted.Should().BeTrue();
+    }
+
+    private static RemoveTestContext CreateContext(
+        Func<TestUiFrameScheduler, GalleryAnimationScheduler>? animationSchedulerFactory = null)
+    {
         TestUiFrameScheduler frameScheduler = new();
-        GalleryAnimationScheduler animationScheduler = new(
-            frameScheduler,
-            (_, _) =>
-            {
-                throw new InvalidOperationException("Frame application failed.");
-            });
+        GalleryAnimationScheduler animationScheduler =
+            animationSchedulerFactory?.Invoke(frameScheduler)
+            ?? new GalleryAnimationScheduler(frameScheduler);
         GalleryLayoutService layout = new();
         GalleryMotionAnimator animator = GalleryMotionAnimatorTestFactory.Create(
             animationScheduler,
             new GalleryOverlayEffects(animationScheduler),
             layout);
-        GalleryRemoveRunner runner = new(animationScheduler, animator, layout, NullLogger<GalleryRemoveRunner>.Instance);
+        GalleryRemoveRunner runner = new(
+            animationScheduler,
+            animator,
+            layout,
+            NullLogger<GalleryRemoveRunner>.Instance);
         Guid itemId = Guid.NewGuid();
         List<object> items = [itemId];
-        GalleryOperationCoordinator context = CreateContext(frameScheduler, items);
-        GalleryOperation operation = new RemoveGalleryOperation(itemId);
-        layout.RenderCards(context);
-
-        await runner.RunAsync(new List<GalleryOperation> { operation }, context, CancellationToken.None);
-
-        context.OverlayCanvas.Children.Should().BeEmpty();
-        operation.Completion.Task.IsFaulted.Should().BeTrue();
-    }
-
-    private static GalleryOperationCoordinator CreateContext(
-        TestUiFrameScheduler frameScheduler,
-        IList<object> items)
-    {
-        return GalleryOperationCoordinatorTestFactory.CreateAttached(
+        GalleryOperationCoordinator coordinator = GalleryOperationCoordinatorTestFactory.CreateAttached(
             frameScheduler,
             items);
+        GalleryOperation operation = new RemoveGalleryOperation(itemId);
+        layout.RenderCards(coordinator);
+
+        return new RemoveTestContext(
+            frameScheduler,
+            runner,
+            coordinator,
+            operation);
+    }
+
+    private sealed class RemoveTestContext
+    {
+        public TestUiFrameScheduler FrameScheduler { get; }
+        public GalleryRemoveRunner Runner { get; }
+        public GalleryOperationCoordinator Coordinator { get; }
+        public GalleryOperation Operation { get; }
+
+        public RemoveTestContext(
+            TestUiFrameScheduler frameScheduler,
+            GalleryRemoveRunner runner,
+            GalleryOperationCoordinator coordinator,
+            GalleryOperation operation)
+        {
+            FrameScheduler = frameScheduler;
+            Runner = runner;
+            Coordinator = coordinator;
+            Operation = operation;
+        }
+
+        public Task RunAsync(CancellationToken ct)
+        {
+            return Runner.RunAsync(
+                new List<GalleryOperation> { Operation },
+                Coordinator,
+                ct);
+        }
     }
 }
