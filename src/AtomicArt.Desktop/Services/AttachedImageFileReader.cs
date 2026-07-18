@@ -10,6 +10,8 @@ namespace AtomicArt.Desktop.Services;
 public sealed class AttachedImageFileReader
 {
     private const string UnknownImageContentType = "application/octet-stream";
+    private const string AttachedImageTooLargeMessage =
+        "Attached image exceeds the safe input size limit.";
 
     private readonly IAttachedImageSignatureValidator _signatureValidator;
     private readonly ILogger<AttachedImageFileReader> _logger;
@@ -70,7 +72,7 @@ public sealed class AttachedImageFileReader
                 "Selected attachment exceeded the configured input limit of {MaxInputBytes} bytes.",
                 maxInputBytes);
             throw new InvalidDataException(
-                "Attached image exceeds the safe input size limit.");
+                AttachedImageTooLargeMessage);
         }
 
         await using Stream input = await file.OpenReadAsync()
@@ -129,7 +131,7 @@ public sealed class AttachedImageFileReader
         catch (InvalidOperationException ex)
         {
             throw new InvalidDataException(
-                "Attached image exceeds the safe input size limit.",
+                AttachedImageTooLargeMessage,
                 ex);
         }
 

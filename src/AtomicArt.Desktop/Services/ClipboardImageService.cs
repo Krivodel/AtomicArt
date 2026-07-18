@@ -14,6 +14,8 @@ namespace AtomicArt.Desktop.Services;
 public sealed class ClipboardImageService : IClipboardImageService, IClipboardAttachmentService
 {
     private const string ClipboardImageFileName = "clipboard.png";
+    private const string ClipboardImageTooLargeMessage =
+        "Clipboard image exceeds the safe input size limit.";
 
     private static readonly DataFormat<byte[]>[] PngClipboardFormats =
     [
@@ -94,7 +96,7 @@ public sealed class ClipboardImageService : IClipboardImageService, IClipboardAt
                     pngContent.LongLength,
                     maxInputBytes);
                 throw new InvalidDataException(
-                    "Clipboard image exceeds the safe input size limit.");
+                    ClipboardImageTooLargeMessage);
             }
 
             _logger.LogInformation(
@@ -167,7 +169,7 @@ public sealed class ClipboardImageService : IClipboardImageService, IClipboardAt
         catch (InvalidOperationException ex)
         {
             throw new InvalidDataException(
-                "Clipboard image exceeds the safe input size limit.",
+                ClipboardImageTooLargeMessage,
                 ex);
         }
 

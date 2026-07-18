@@ -4,6 +4,9 @@ namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
 public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
 {
+    private const string UnsupportedSourceImageMessage =
+        "Thumbnail source image format is not supported.";
+
     private readonly GalleryThumbnailImageFormat _thumbnailImageFormat;
 
     public GalleryThumbnailGenerator(GalleryThumbnailImageFormat thumbnailImageFormat)
@@ -69,11 +72,11 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
         try
         {
             return SKBitmap.Decode(sourceBytes)
-                ?? throw new InvalidDataException("Thumbnail source image format is not supported.");
+                ?? throw new InvalidDataException(UnsupportedSourceImageMessage);
         }
         catch (ArgumentNullException ex) when (string.Equals(ex.ParamName, "codec", StringComparison.Ordinal))
         {
-            throw new InvalidDataException("Thumbnail source image format is not supported.", ex);
+            throw new InvalidDataException(UnsupportedSourceImageMessage, ex);
         }
     }
 
