@@ -1,14 +1,12 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using FluentValidation;
 
 using AtomicArt.Application;
 using AtomicArt.Api.Authentication;
 using AtomicArt.Api.Filters;
 using AtomicArt.Api.Middleware;
 using AtomicArt.Api.ModelMetadata;
-using AtomicArt.Api.ErrorHandling;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain;
 using AtomicArt.Infrastructure;
@@ -73,9 +71,9 @@ app.UseExceptionHandler(exceptionApp =>
     {
         IExceptionHandlerPathFeature? exceptionFeature = context.Features.Get<IExceptionHandlerPathFeature>();
         Exception? exception = exceptionFeature?.Error;
-        ProblemDetails problemDetails = CreateProblemDetails(exception);
+        ProblemDetails problemDetails = CreateUnhandledProblemDetails();
 
-        LogException(context, exception);
+        LogUnhandledException(context, exception);
 
         context.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
         context.Response.ContentType = "application/problem+json";
@@ -94,13 +92,8 @@ app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
-static ProblemDetails CreateProblemDetails(Exception? exception)
+static ProblemDetails CreateUnhandledProblemDetails()
 {
-    if (exception is ValidationException validationException)
-    {
-        return ValidationProblemDetailsFactory.Create(validationException);
-    }
-
     return new ProblemDetails
     {
         Status = StatusCodes.Status500InternalServerError,
@@ -109,7 +102,7 @@ static ProblemDetails CreateProblemDetails(Exception? exception)
     };
 }
 
-static void LogException(HttpContext context, Exception? exception)
+static void LogUnhandledException(HttpContext context, Exception? exception)
 {
     if (exception is null)
     {
@@ -117,17 +110,6 @@ static void LogException(HttpContext context, Exception? exception)
     }
 
     ILogger<Program> logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-
-    if (exception is ValidationException)
-    {
-        logger.LogWarning(
-            exception,
-            "HTTP request {TraceIdentifier} with method {Method} failed validation.",
-            context.TraceIdentifier,
-            context.Request.Method);
-
-        return;
-    }
 
     logger.LogError(
         exception,
