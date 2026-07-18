@@ -228,7 +228,7 @@ public sealed class GalleryOperationCoordinatorTests
         {
         }
 
-        public override Task RunAsync(
+        protected override Task RunCoreAsync(
             IReadOnlyList<GalleryOperation> operations,
             GalleryOperationCoordinator context,
             CancellationToken ct)
@@ -273,7 +273,7 @@ public sealed class GalleryOperationCoordinatorTests
         {
         }
 
-        public override Task RunAsync(
+        protected override Task RunCoreAsync(
             IReadOnlyList<GalleryOperation> operations,
             GalleryOperationCoordinator context,
             CancellationToken ct)

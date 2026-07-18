@@ -22,10 +22,16 @@ internal abstract class GalleryOperationRunner : IGalleryOperationRunner
         return SelectOperationsCore(operations);
     }
 
-    public abstract Task RunAsync(
+    public Task RunAsync(
         IReadOnlyList<GalleryOperation> operations,
         GalleryOperationCoordinator context,
-        CancellationToken ct);
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(operations);
+        ArgumentNullException.ThrowIfNull(context);
+
+        return RunCoreAsync(operations, context, ct);
+    }
 
     protected virtual bool CanRunCore(IReadOnlyList<GalleryOperation> operations)
     {
@@ -37,4 +43,9 @@ internal abstract class GalleryOperationRunner : IGalleryOperationRunner
     {
         return GalleryOperationTypeSelector.Select(operations, OperationType);
     }
+
+    protected abstract Task RunCoreAsync(
+        IReadOnlyList<GalleryOperation> operations,
+        GalleryOperationCoordinator context,
+        CancellationToken ct);
 }

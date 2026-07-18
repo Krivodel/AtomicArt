@@ -25,14 +25,11 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
         _animationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
     }
 
-    public override async Task RunAsync(
+    protected override async Task RunCoreAsync(
         IReadOnlyList<GalleryOperation> operations,
         GalleryOperationCoordinator context,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(operations);
-        ArgumentNullException.ThrowIfNull(context);
-
         GalleryAnimationTracker deleteOverlays = [];
         GalleryAnimationTracker runningMoveControls = [];
 

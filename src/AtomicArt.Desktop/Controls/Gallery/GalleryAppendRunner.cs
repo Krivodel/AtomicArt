@@ -19,13 +19,11 @@ internal sealed class GalleryAppendRunner : GalleryAnimatedOperationRunner
     {
     }
 
-    public override async Task RunAsync(
+    protected override async Task RunCoreAsync(
         IReadOnlyList<GalleryOperation> operations,
         GalleryOperationCoordinator context,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(operations);
-        ArgumentNullException.ThrowIfNull(context);
         ct.ThrowIfCancellationRequested();
 
         GalleryLayout.SynchronizeCardControlIds(context);

@@ -32,14 +32,16 @@ internal sealed class GalleryFrontGenerationRunner :
         _retargetWaiter = retargetWaiter ?? throw new ArgumentNullException(nameof(retargetWaiter));
     }
 
-    public override async Task RunAsync(
+    public void RequestRetarget()
+    {
+        _retargetWaiter.RequestRetarget();
+    }
+
+    protected override async Task RunCoreAsync(
         IReadOnlyList<GalleryOperation> operations,
         GalleryOperationCoordinator context,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(operations);
-        ArgumentNullException.ThrowIfNull(context);
-
         GalleryFrontGenerationRunState state = new(operations);
 
         try
@@ -60,11 +62,6 @@ internal sealed class GalleryFrontGenerationRunner :
         {
             FinishRun(context, state);
         }
-    }
-
-    public void RequestRetarget()
-    {
-        _retargetWaiter.RequestRetarget();
     }
 
     private static IReadOnlyList<GalleryOperation> GetTrackedOperations(
