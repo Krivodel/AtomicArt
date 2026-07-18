@@ -10,6 +10,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 
 using AtomicArt.Desktop.Behaviors;
+using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.GalleryAnimation;
 using AtomicArt.Desktop.ViewModels.Generation;
@@ -41,9 +42,9 @@ public partial class AnimatedAttachmentListControl : UserControl
     private const int ImageRevealDurationMilliseconds = 520;
     private const int SpawnOrderDelayMilliseconds = 24;
 
+    private readonly CollectionChangedSubscription _itemsSubscription;
     private readonly Dictionary<Guid, AttachmentVisualEntry> _entries = [];
     private readonly List<AttachmentVisualEntry> _removingEntries = [];
-    private INotifyCollectionChanged? _collectionChangedSource;
     private GalleryAnimationScheduler? _animationScheduler;
     private AttachmentDragCandidate? _dragCandidate;
     private AttachmentDragState? _dragState;
@@ -72,6 +73,7 @@ public partial class AnimatedAttachmentListControl : UserControl
 
     public AnimatedAttachmentListControl()
     {
+        _itemsSubscription = new CollectionChangedSubscription(OnItemsCollectionChanged);
         InitializeComponent();
         UpdatePanelSize(0);
     }
@@ -82,7 +84,7 @@ public partial class AnimatedAttachmentListControl : UserControl
 
         _isAttached = true;
         EnsureAnimationScheduler();
-        SubscribeToItems(Items);
+        _itemsSubscription.ReplaceSource(Items);
         SynchronizeItems(AttachmentMutationMode.Instant);
     }
 
@@ -90,7 +92,7 @@ public partial class AnimatedAttachmentListControl : UserControl
     {
         _isAttached = false;
         CancelDrag();
-        _collectionChangedSource = UnsubscribeFromItems(_collectionChangedSource);
+        _itemsSubscription.Clear();
         CancelAllAnimations();
 
         foreach (AttachmentVisualEntry entry in _entries.Values.Concat(_removingEntries))
@@ -227,32 +229,12 @@ public partial class AnimatedAttachmentListControl : UserControl
     {
         if (_isAttached)
         {
-            SubscribeToItems(Items);
+            _itemsSubscription.ReplaceSource(Items);
             SynchronizeItems(AttachmentMutationMode.Animated);
             return;
         }
 
-        _collectionChangedSource = UnsubscribeFromItems(_collectionChangedSource);
-    }
-
-    private void SubscribeToItems(IEnumerable<AttachedImageViewModel>? items)
-    {
-        _collectionChangedSource = UnsubscribeFromItems(_collectionChangedSource);
-        if (items is INotifyCollectionChanged collectionChanged)
-        {
-            _collectionChangedSource = collectionChanged;
-            _collectionChangedSource.CollectionChanged += OnItemsCollectionChanged;
-        }
-    }
-
-    private INotifyCollectionChanged? UnsubscribeFromItems(INotifyCollectionChanged? source)
-    {
-        if (source is not null)
-        {
-            source.CollectionChanged -= OnItemsCollectionChanged;
-        }
-
-        return null;
+        _itemsSubscription.Clear();
     }
 
     private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

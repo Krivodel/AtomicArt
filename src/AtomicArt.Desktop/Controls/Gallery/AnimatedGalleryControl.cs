@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 
+using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views.Gallery;
@@ -78,12 +79,12 @@ public partial class AnimatedGalleryControl : UserControl
         _resizeController ?? throw new InvalidOperationException("Animated gallery resize controller was not created.");
     
     private readonly AnimatedGallerySceneController _sceneController;
+    private readonly CollectionChangedSubscription _itemsSubscription;
     private readonly Dictionary<Control, int> _previewOriginalZIndices = [];
     private readonly Dictionary<Control, IReadOnlyList<Visual>> _previewOverflowPaths = [];
     private readonly Dictionary<Visual, PreviewClipState> _previewClipStates = [];
     private readonly HashSet<Control> _previewOverflowCards = [];
 
-    private INotifyCollectionChanged? _collectionChangedSource;
     private AnimatedGalleryResizeController? _resizeController;
     private TopLevel? _previewTopLevel;
     private Point? _previewPointerPosition;
@@ -98,6 +99,7 @@ public partial class AnimatedGalleryControl : UserControl
 
     internal AnimatedGalleryControl(IAnimatedGallerySceneFactory? sceneFactory)
     {
+        _itemsSubscription = new CollectionChangedSubscription(OnItemsCollectionChanged);
         InitializeComponent();
         _sceneController = new AnimatedGallerySceneController(
             this,
@@ -219,7 +221,7 @@ public partial class AnimatedGalleryControl : UserControl
         _sceneController.EnsureScene();
         EnsureResizeController();
         ResizeController.Attach();
-        SubscribeToItems(Items);
+        _itemsSubscription.ReplaceSource(Items);
         _sceneController.RefreshItems();
         _sceneController.RefreshScene();
     }
@@ -232,7 +234,7 @@ public partial class AnimatedGalleryControl : UserControl
         DetachPreviewKeyboardHandlers();
         ResizeController.CancelResizeAnimation();
         ResizeController.Detach();
-        _collectionChangedSource = UnsubscribeFromItems(_collectionChangedSource);
+        _itemsSubscription.Clear();
         _previewPointerPosition = null;
         _previewPointerModifiers = KeyModifiers.None;
         ResetPreviewOverflow();
@@ -272,11 +274,11 @@ public partial class AnimatedGalleryControl : UserControl
     {
         if (_isAttached)
         {
-            SubscribeToItems(Items);
+            _itemsSubscription.ReplaceSource(Items);
         }
         else
         {
-            _collectionChangedSource = UnsubscribeFromItems(_collectionChangedSource);
+            _itemsSubscription.Clear();
         }
 
         _sceneController.RefreshItems();
@@ -295,26 +297,6 @@ public partial class AnimatedGalleryControl : UserControl
                || (property == OpenViewerCommandProperty)
                || (property == OpenMetadataCommandProperty)
                || (property == DeleteOrCancelCommandProperty);
-    }
-
-    private void SubscribeToItems(IEnumerable<IGalleryItemViewModel>? items)
-    {
-        _collectionChangedSource = UnsubscribeFromItems(_collectionChangedSource);
-        if (items is INotifyCollectionChanged collectionChanged)
-        {
-            _collectionChangedSource = collectionChanged;
-            _collectionChangedSource.CollectionChanged += OnItemsCollectionChanged;
-        }
-    }
-
-    private INotifyCollectionChanged? UnsubscribeFromItems(INotifyCollectionChanged? source)
-    {
-        if (source is not null)
-        {
-            source.CollectionChanged -= OnItemsCollectionChanged;
-        }
-
-        return null;
     }
 
     private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
