@@ -26,8 +26,6 @@
     <x:Double x:Key="GenerationCardHeight">322</x:Double>
     <GridLength x:Key="GenerationCardPreviewHeight">220</GridLength>
     <GridLength x:Key="GenerationCardInfoHeight">102</GridLength>
-    <x:Double x:Key="GenerationCardCellWidth">236</x:Double>
-    <x:Double x:Key="GenerationCardCellHeight">338</x:Double>
     <x:Double x:Key="GenerationCardActionSize">32</x:Double>
     <x:Double x:Key="GenerationCardActionIconSize">16</x:Double>
     <x:Double x:Key="GalleryActionGap">8</x:Double>
