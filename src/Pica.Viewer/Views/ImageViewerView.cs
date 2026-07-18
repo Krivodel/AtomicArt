@@ -103,10 +103,10 @@ internal sealed class ImageViewerView : IDisposable
         FullscreenSettingsButton = CreateFullscreenSettingsButton(events.SettingsClicked);
         WindowModeButton = CreateWindowModeButton(events.WindowModeClicked);
         CloseButton = CreateCloseButton(events.CloseClicked);
-        ContextMenuLayer = CreateContextMenuLayer();
+        ContextMenuLayer = CreateClippedMenuLayer();
         ContextMenu = CreateContextMenu(actions, events, out Button contextOpenWithButton);
         ContextOpenWithButton = contextOpenWithButton;
-        OpenWithMenuLayer = CreateOpenWithMenuLayer();
+        OpenWithMenuLayer = CreateClippedMenuLayer();
         OpenWithMenu = CreateOpenWithMenu(out StackPanel openWithMenuItems);
         OpenWithMenuItems = openWithMenuItems;
         SelectionOverlay = CreateSelectionOverlay(
@@ -593,7 +593,7 @@ internal sealed class ImageViewerView : IDisposable
         return CreateFloatingMenu(items);
     }
 
-    private static Canvas CreateOpenWithMenuLayer()
+    private static Canvas CreateClippedMenuLayer()
     {
         return new Canvas
         {
@@ -614,14 +614,6 @@ internal sealed class ImageViewerView : IDisposable
             Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
             Transitions = CreateOpacityTransition(ControlsFadeDuration),
             VerticalAlignment = VerticalAlignment.Top
-        };
-    }
-
-    private static Canvas CreateContextMenuLayer()
-    {
-        return new Canvas
-        {
-            ClipToBounds = true
         };
     }
 

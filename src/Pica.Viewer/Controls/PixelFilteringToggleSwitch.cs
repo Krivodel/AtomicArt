@@ -140,12 +140,7 @@ public sealed class PixelFilteringToggleSwitch : UserControl
 
     private static Canvas CreatePixelIcon()
     {
-        Canvas icon = new()
-        {
-            Width = IconSize,
-            Height = IconSize,
-            IsHitTestVisible = false
-        };
+        Canvas icon = CreateIconCanvas();
 
         AddSquare(icon, 2d, 2d);
         AddSquare(icon, 12d, 2d);
@@ -157,12 +152,7 @@ public sealed class PixelFilteringToggleSwitch : UserControl
 
     private static Canvas CreateFilteredIcon()
     {
-        Canvas icon = new()
-        {
-            Width = IconSize,
-            Height = IconSize,
-            IsHitTestVisible = false
-        };
+        Canvas icon = CreateIconCanvas();
 
         AddPull(icon, 6.5d, 4.5d, 7d, 3d);
         AddPull(icon, 6.5d, 14.5d, 7d, 3d);
@@ -174,6 +164,16 @@ public sealed class PixelFilteringToggleSwitch : UserControl
         AddDot(icon, 13d, 13d);
 
         return icon;
+    }
+
+    private static Canvas CreateIconCanvas()
+    {
+        return new Canvas
+        {
+            Width = IconSize,
+            Height = IconSize,
+            IsHitTestVisible = false
+        };
     }
 
     private static void AddSquare(Canvas icon, double x, double y)
