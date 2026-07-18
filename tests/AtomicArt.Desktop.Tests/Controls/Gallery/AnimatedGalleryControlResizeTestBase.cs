@@ -30,28 +30,26 @@ public abstract class AnimatedGalleryControlResizeTestBase : AnimatedGalleryCont
     private protected static void RunResizeScenario(
         Action<TestUiFrameScheduler, ResizeScenario> action)
     {
-        ArgumentNullException.ThrowIfNull(action);
-
-        TestUiFrameScheduler frameScheduler = new();
-        ResizeScenario scenario = ShowResizeScenario(frameScheduler);
-
-        try
-        {
-            action(frameScheduler, scenario);
-        }
-        finally
-        {
-            scenario.Window.Close();
-        }
+        RunScenario(ShowResizeScenario, scenario => scenario.Window, action);
     }
 
     private protected static void RunDetachScenario(
         Action<TestUiFrameScheduler, DetachScenario> action)
     {
+        RunScenario(ShowDetachScenario, scenario => scenario.Window, action);
+    }
+
+    private static void RunScenario<TScenario>(
+        Func<TestUiFrameScheduler, TScenario> showScenario,
+        Func<TScenario, Window> getWindow,
+        Action<TestUiFrameScheduler, TScenario> action)
+    {
+        ArgumentNullException.ThrowIfNull(showScenario);
+        ArgumentNullException.ThrowIfNull(getWindow);
         ArgumentNullException.ThrowIfNull(action);
 
         TestUiFrameScheduler frameScheduler = new();
-        DetachScenario scenario = ShowDetachScenario(frameScheduler);
+        TScenario scenario = showScenario(frameScheduler);
 
         try
         {
@@ -59,20 +57,16 @@ public abstract class AnimatedGalleryControlResizeTestBase : AnimatedGalleryCont
         }
         finally
         {
-            scenario.Window.Close();
+            getWindow(scenario).Close();
         }
     }
 
     private protected static ResizeScenario ShowResizeScenario(TestUiFrameScheduler frameScheduler)
     {
         List<GenerationItemViewModel> items = CreateResizeItems();
-        AnimatedGalleryControl control = new(CreateSceneFactory(frameScheduler))
-        {
-            Items = items
-        };
-        Window window = Show(control, 560d, 640d);
+        (AnimatedGalleryControl Control, Window Window) scene = ShowScene(items, frameScheduler);
 
-        return new ResizeScenario(control, window, items);
+        return new ResizeScenario(scene.Control, scene.Window, items);
     }
 
     private protected static DetachScenario ShowDetachScenario(TestUiFrameScheduler frameScheduler)
@@ -83,13 +77,22 @@ public abstract class AnimatedGalleryControlResizeTestBase : AnimatedGalleryCont
             CreateItem(),
             CreateItem()
         ];
+        (AnimatedGalleryControl Control, Window Window) scene = ShowScene(items, frameScheduler);
+
+        return new DetachScenario(scene.Control, scene.Window, items);
+    }
+
+    private static (AnimatedGalleryControl Control, Window Window) ShowScene(
+        IEnumerable<GenerationItemViewModel> items,
+        TestUiFrameScheduler frameScheduler)
+    {
         AnimatedGalleryControl control = new(CreateSceneFactory(frameScheduler))
         {
             Items = items
         };
         Window window = Show(control, 560d, 640d);
 
-        return new DetachScenario(control, window, items);
+        return (control, window);
     }
 
     private protected static void ChangeDetachedScene(DetachScenario scenario)
