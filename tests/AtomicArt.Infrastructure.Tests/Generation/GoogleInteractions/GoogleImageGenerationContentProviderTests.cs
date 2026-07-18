@@ -9,6 +9,7 @@ using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation.GoogleInteractions;
+using AtomicArt.Tests.Common;
 using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Infrastructure.Tests.Generation.GoogleInteractions;
@@ -104,7 +105,7 @@ public sealed class GoogleImageGenerationContentProviderTests
     public async Task GetContentAsync_WithTextOnlyResponse_LogsNoImageDiagnosticsAndDoesNotRetry()
     {
         TestGoogleInteractionsClient client = new(CreateTextOnlyResponse());
-        RecordingProviderLogger logger = new();
+        RecordingLogger<GoogleImageGenerationContentProvider> logger = new();
         GoogleImageGenerationContentProvider provider = new(
             new GoogleInteractionsRequestBuilder(),
             client,
@@ -119,8 +120,8 @@ public sealed class GoogleImageGenerationContentProviderTests
         await act.Should().ThrowAsync<GoogleInteractionsException>()
             .WithMessage("The generation provider did not return a JPEG image.");
         client.Calls.Should().Be(1);
-        RecordingProviderLoggerEntry entry = logger.Entries.Should().ContainSingle().Which;
-        entry.LogLevel.Should().Be(LogLevel.Warning);
+        TestLogEntry entry = logger.Entries.Should().ContainSingle().Which;
+        entry.Level.Should().Be(LogLevel.Warning);
         entry.Message.Should().Contain("Category text_only");
         entry.Message.Should().Contain("Status completed");
         entry.Message.Should().Contain("HasOutput True");
@@ -294,50 +295,4 @@ public sealed class GoogleImageGenerationContentProviderTests
         }
     }
 
-    private sealed record RecordingProviderLoggerEntry(
-        LogLevel LogLevel,
-        string Message);
-
-    private sealed class RecordingProviderLogger : ILogger<GoogleImageGenerationContentProvider>
-    {
-        private readonly List<RecordingProviderLoggerEntry> _entries = [];
-
-        public IReadOnlyList<RecordingProviderLoggerEntry> Entries => _entries;
-
-        public IDisposable BeginScope<TState>(TState state)
-            where TState : notnull
-        {
-            return NullDisposable.Instance;
-        }
-
-        public bool IsEnabled(LogLevel logLevel)
-        {
-            return true;
-        }
-
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-
-            _entries.Add(new RecordingProviderLoggerEntry(logLevel, formatter(state, exception)));
-        }
-    }
-
-    private sealed class NullDisposable : IDisposable
-    {
-        public static NullDisposable Instance { get; } = new();
-
-        private NullDisposable()
-        {
-        }
-
-        public void Dispose()
-        {
-        }
-    }
 }
