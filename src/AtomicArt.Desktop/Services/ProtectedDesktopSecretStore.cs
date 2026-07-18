@@ -14,7 +14,9 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
     private const int MaxProtectedSecretFileBytes = 64 * 1024;
 
     private static readonly string TrustedPathFailureMessage =
-        TrustedPathGuard.CreateFailureMessage("Secret path", "Secrets");
+        TrustedPathGuard.CreateFailureMessage(
+            "Secret path",
+            AtomicArtPathNames.SecretsDirectory);
     private readonly ConcurrentDictionary<string, string> _temporarySecrets = new();
     private readonly IAtomicArtDataPathProvider? _pathProvider;
     private readonly string _secretsDirectory;

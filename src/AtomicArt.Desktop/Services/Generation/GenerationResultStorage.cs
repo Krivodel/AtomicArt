@@ -7,7 +7,9 @@ namespace AtomicArt.Desktop.Services.Generation;
 public sealed class GenerationResultStorage : IGenerationResultStorage
 {
     private static readonly string TrustedPathFailureMessage =
-        TrustedPathGuard.CreateFailureMessage("Generation result path", "Art");
+        TrustedPathGuard.CreateFailureMessage(
+            "Generation result path",
+            AtomicArtPathNames.ArtDirectory);
     private readonly ILogger<GenerationResultStorage> _logger;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly GenerationImageFileNamePolicy _fileNamePolicy;

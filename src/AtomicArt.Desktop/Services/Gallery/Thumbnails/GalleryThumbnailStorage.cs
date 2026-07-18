@@ -11,7 +11,9 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
         "Failed to delete temporary gallery thumbnail file.";
 
     private static readonly string TrustedPathFailureMessage =
-        TrustedPathGuard.CreateFailureMessage("Gallery thumbnail path", "Thumbnails");
+        TrustedPathGuard.CreateFailureMessage(
+            "Gallery thumbnail path",
+            AtomicArtPathNames.ThumbnailsDirectory);
     private readonly ILogger<GalleryThumbnailStorage> _logger;
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly ITrustedImageFileService _trustedImageFileService;

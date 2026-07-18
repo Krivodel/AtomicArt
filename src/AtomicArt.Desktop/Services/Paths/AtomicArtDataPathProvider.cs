@@ -2,13 +2,6 @@ namespace AtomicArt.Desktop.Services.Paths;
 
 public sealed class AtomicArtDataPathProvider : IAtomicArtDataPathProvider
 {
-    private const string ArtDirectoryName = "Art";
-    private const string LogsDirectoryName = "Logs";
-    private const string SecretsDirectoryName = "Secrets";
-    private const string ThumbnailsDirectoryName = "Thumbnails";
-    private const string StateDirectoryName = "State";
-    private const string StateAttachmentsDirectoryName = "Attachments";
-
     public string RootDirectory { get; }
     public string ArtDirectory { get; }
     public string LogsDirectory { get; }
@@ -29,13 +22,18 @@ public sealed class AtomicArtDataPathProvider : IAtomicArtDataPathProvider
         ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
 
         RootDirectory = Path.GetFullPath(rootDirectory);
-        ArtDirectory = Path.GetFullPath(Path.Combine(RootDirectory, ArtDirectoryName));
-        LogsDirectory = Path.GetFullPath(Path.Combine(RootDirectory, LogsDirectoryName));
-        SecretsDirectory = Path.GetFullPath(Path.Combine(RootDirectory, SecretsDirectoryName));
-        ThumbnailsDirectory = Path.GetFullPath(Path.Combine(RootDirectory, ThumbnailsDirectoryName));
-        StateDirectory = Path.GetFullPath(Path.Combine(RootDirectory, StateDirectoryName));
+        ArtDirectory = Path.GetFullPath(
+            Path.Combine(RootDirectory, AtomicArtPathNames.ArtDirectory));
+        LogsDirectory = Path.GetFullPath(
+            Path.Combine(RootDirectory, AtomicArtPathNames.LogsDirectory));
+        SecretsDirectory = Path.GetFullPath(
+            Path.Combine(RootDirectory, AtomicArtPathNames.SecretsDirectory));
+        ThumbnailsDirectory = Path.GetFullPath(
+            Path.Combine(RootDirectory, AtomicArtPathNames.ThumbnailsDirectory));
+        StateDirectory = Path.GetFullPath(
+            Path.Combine(RootDirectory, AtomicArtPathNames.StateDirectory));
         StateAttachmentsDirectory = Path.GetFullPath(
-            Path.Combine(StateDirectory, StateAttachmentsDirectoryName));
+            Path.Combine(StateDirectory, AtomicArtPathNames.StateAttachmentsDirectory));
     }
 
     public void EnsureDirectoryExists(string directoryPath)

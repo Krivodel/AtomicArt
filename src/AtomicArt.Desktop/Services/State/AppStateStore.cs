@@ -14,7 +14,9 @@ public sealed class AppStateStore : IAppStateStore
         WriteIndented = true
     };
     private static readonly string TrustedPathFailureMessage =
-        TrustedPathGuard.CreateFailureMessage("State path", "State");
+        TrustedPathGuard.CreateFailureMessage(
+            "State path",
+            AtomicArtPathNames.StateDirectory);
 
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly ILogger<AppStateStore> _logger;

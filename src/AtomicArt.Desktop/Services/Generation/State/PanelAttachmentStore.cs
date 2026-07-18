@@ -11,7 +11,7 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
     private static readonly string TrustedPathFailureMessage =
         TrustedPathGuard.CreateFailureMessage(
             "Panel attachment path",
-            "State/Attachments");
+            AtomicArtPathNames.StateAttachmentsRelativePath);
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly IStatePathKeyEncoder _keyEncoder;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
