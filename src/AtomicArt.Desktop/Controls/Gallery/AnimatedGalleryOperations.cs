@@ -28,68 +28,48 @@ internal sealed class AnimatedGalleryOperations :
     {
         ArgumentNullException.ThrowIfNull(items);
 
-        IAnimatedGalleryOperations? operations = GetActiveOperations();
-        if (operations is null)
-        {
-            LogSkippedOperation(nameof(AppendBatchAsync), items.Count);
-            return Task.CompletedTask;
-        }
-
-        return operations.AppendBatchAsync(items, ct);
+        return ExecuteWithActiveOperationsAsync(
+            nameof(AppendBatchAsync),
+            items.Count,
+            operations => operations.AppendBatchAsync(items, ct));
     }
 
     public Task GenerateFrontAsync(IReadOnlyList<object> items, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(items);
 
-        IAnimatedGalleryOperations? operations = GetActiveOperations();
-        if (operations is null)
-        {
-            LogSkippedOperation(nameof(GenerateFrontAsync), items.Count);
-            return Task.CompletedTask;
-        }
-
-        return operations.GenerateFrontAsync(items, ct);
+        return ExecuteWithActiveOperationsAsync(
+            nameof(GenerateFrontAsync),
+            items.Count,
+            operations => operations.GenerateFrontAsync(items, ct));
     }
 
     public Task RemoveAsync(Guid itemId, CancellationToken ct)
     {
-        IAnimatedGalleryOperations? operations = GetActiveOperations();
-        if (operations is null)
-        {
-            LogSkippedOperation(nameof(RemoveAsync), 1);
-            return Task.CompletedTask;
-        }
-
-        return operations.RemoveAsync(itemId, ct);
+        return ExecuteWithActiveOperationsAsync(
+            nameof(RemoveAsync),
+            1,
+            operations => operations.RemoveAsync(itemId, ct));
     }
 
     public Task ApplyMixedMutationAsync(IReadOnlyList<object> finalItems, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(finalItems);
 
-        IAnimatedGalleryOperations? operations = GetActiveOperations();
-        if (operations is null)
-        {
-            LogSkippedOperation(nameof(ApplyMixedMutationAsync), finalItems.Count);
-            return Task.CompletedTask;
-        }
-
-        return operations.ApplyMixedMutationAsync(finalItems, ct);
+        return ExecuteWithActiveOperationsAsync(
+            nameof(ApplyMixedMutationAsync),
+            finalItems.Count,
+            operations => operations.ApplyMixedMutationAsync(finalItems, ct));
     }
 
     public Task RestoreSnapshotAsync(IReadOnlyList<object> finalItems, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(finalItems);
 
-        IAnimatedGalleryOperations? operations = GetActiveOperations();
-        if (operations is null)
-        {
-            LogSkippedOperation(nameof(RestoreSnapshotAsync), finalItems.Count);
-            return Task.CompletedTask;
-        }
-
-        return operations.RestoreSnapshotAsync(finalItems, ct);
+        return ExecuteWithActiveOperationsAsync(
+            nameof(RestoreSnapshotAsync),
+            finalItems.Count,
+            operations => operations.RestoreSnapshotAsync(finalItems, ct));
     }
 
     IAnimatedGallerySceneFactory IAnimatedGallerySceneFactoryProvider.SceneFactory => _sceneFactory;
@@ -133,6 +113,22 @@ internal sealed class AnimatedGalleryOperations :
         {
             return _activeOperations;
         }
+    }
+
+    private Task ExecuteWithActiveOperationsAsync(
+        string operationName,
+        int itemCount,
+        Func<IAnimatedGalleryOperations, Task> execute)
+    {
+        IAnimatedGalleryOperations? operations = GetActiveOperations();
+
+        if (operations is null)
+        {
+            LogSkippedOperation(operationName, itemCount);
+            return Task.CompletedTask;
+        }
+
+        return execute(operations);
     }
 
     private void LogSkippedOperation(string operationName, int itemCount)
