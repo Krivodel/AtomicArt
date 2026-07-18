@@ -63,13 +63,13 @@ internal sealed class WindowsFileActions : IPlatformFileActions
                 }
                 finally
                 {
-                    ReleaseComObject(handler);
+                    WindowsComObject.Release(handler);
                 }
             }
         }
         finally
         {
-            ReleaseComObject(handlers);
+            WindowsComObject.Release(handlers);
         }
 
         return applications
@@ -116,7 +116,7 @@ internal sealed class WindowsFileActions : IPlatformFileActions
         }
         finally
         {
-            ReleaseComObject(handler);
+            WindowsComObject.Release(handler);
         }
 
         return Task.CompletedTask;
@@ -178,14 +178,14 @@ internal sealed class WindowsFileActions : IPlatformFileActions
                     return handler;
                 }
 
-                ReleaseComObject(handler);
+                WindowsComObject.Release(handler);
             }
 
             return null;
         }
         finally
         {
-            ReleaseComObject(handlers);
+            WindowsComObject.Release(handlers);
         }
     }
 
@@ -226,14 +226,6 @@ internal sealed class WindowsFileActions : IPlatformFileActions
             {
                 Marshal.FreeCoTaskMem(valuePointer);
             }
-        }
-    }
-
-    private static void ReleaseComObject(object value)
-    {
-        if (Marshal.IsComObject(value))
-        {
-            Marshal.FinalReleaseComObject(value);
         }
     }
 }
