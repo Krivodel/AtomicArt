@@ -205,9 +205,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         if (_isSelectionArmed && isLeftButtonPressed)
         {
-            StartSelection(position);
-            e.Pointer.Capture(_view.ViewerArea);
-            e.Handled = true;
+            StartPointerSelection(position, e);
             return;
         }
 
@@ -245,9 +243,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         if (isLeftButtonPressed && IsControlModifierPressed(e.KeyModifiers))
         {
-            StartSelection(position);
-            e.Pointer.Capture(_view.ViewerArea);
-            e.Handled = true;
+            StartPointerSelection(position, e);
             return;
         }
 
@@ -411,16 +407,18 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
+        if (e.Key == Key.F)
+        {
+            _view.FilteringToggle.Toggle();
+            e.Handled = true;
+            return;
+        }
+
         if (_isSelectionActive)
         {
             if ((e.Key == Key.C) && IsControlModifierPressed(e.KeyModifiers))
             {
                 await CopySelectionAndCloseAsync(CancellationToken.None);
-                e.Handled = true;
-            }
-            else if (e.Key == Key.F)
-            {
-                _view.FilteringToggle.Toggle();
                 e.Handled = true;
             }
 
@@ -430,11 +428,6 @@ public sealed partial class ImageViewerWindow : SukiWindow
         if (e.Key == Key.Space)
         {
             BeginResetScaleAndCenterAnimation();
-            e.Handled = true;
-        }
-        else if (e.Key == Key.F)
-        {
-            _view.FilteringToggle.Toggle();
             e.Handled = true;
         }
         else if (e.Key == Key.Left)
@@ -477,6 +470,13 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         UpdateControlVisibility(_lastPointerHoverPosition);
+    }
+
+    private void StartPointerSelection(Point position, PointerPressedEventArgs e)
+    {
+        StartSelection(position);
+        e.Pointer.Capture(_view.ViewerArea);
+        e.Handled = true;
     }
 
     private bool HasPointerMovedPastClickTolerance(Point position)
