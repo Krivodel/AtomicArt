@@ -5,6 +5,7 @@ using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Settings;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Settings;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Settings;
@@ -355,19 +356,6 @@ public sealed class SettingsViewModelTests
         public string SaveButtonText => "Сохранить";
     }
 
-    private sealed class RecordingUiScaleService : IUiScaleService
-    {
-        public double CurrentScale { get; private set; } = 1.0;
-
-        public event EventHandler? ScaleChanged;
-
-        public void SetScale(double scale)
-        {
-            CurrentScale = scale;
-            ScaleChanged?.Invoke(this, EventArgs.Empty);
-        }
-    }
-
     private sealed class RecordingSettingsStateService : ISettingsStateService
     {
         private readonly IUiScaleService? _uiScaleService;
@@ -415,7 +403,7 @@ public sealed class SettingsViewModelTests
 
     private sealed class ThrowingUiScaleService : IUiScaleService
     {
-        public double CurrentScale => 1.0;
+        public double CurrentScale => UiScaleDefaults.DefaultScale;
 
         public event EventHandler? ScaleChanged
         {

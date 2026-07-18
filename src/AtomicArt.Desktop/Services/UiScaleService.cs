@@ -2,9 +2,7 @@ namespace AtomicArt.Desktop.Services;
 
 public sealed class UiScaleService : IUiScaleService
 {
-    private const double DefaultScale = 1.0;
-
-    public double CurrentScale { get; private set; } = DefaultScale;
+    public double CurrentScale { get; private set; } = UiScaleDefaults.DefaultScale;
 
     public event EventHandler? ScaleChanged;
 

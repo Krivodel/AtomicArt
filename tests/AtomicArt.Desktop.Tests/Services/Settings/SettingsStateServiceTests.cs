@@ -5,11 +5,14 @@ using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.Tests.TestDoubles;
 
 namespace AtomicArt.Desktop.Tests.Services.Settings;
 
 public sealed class SettingsStateServiceTests
 {
+    private const double InitialScale = 0.75;
+
     [Fact]
     public async Task SaveValueAsync_WithNonSecretDefinition_SchedulesStateWithDefinitionKey()
     {
@@ -64,7 +67,7 @@ public sealed class SettingsStateServiceTests
         SettingsStateService service = CreateService(
             new SettingsState(),
             scheduler,
-            new RecordingUiScaleService(),
+            new RecordingUiScaleService(InitialScale),
             secondaryDefinition);
         string scaleValue = CreateValueConverter().Format(new UiScale125OptionDefinition().Option.Value);
 
@@ -149,7 +152,7 @@ public sealed class SettingsStateServiceTests
     {
         UiScaleSettingDefinition definition = new();
         UiScaleOption scaleOption = new UiScale125OptionDefinition().Option;
-        RecordingUiScaleService scaleService = new();
+        RecordingUiScaleService scaleService = new(InitialScale);
         SettingsState state = new()
         {
             Values = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -173,7 +176,7 @@ public sealed class SettingsStateServiceTests
         const string unsupportedScale = "9.99";
 
         UiScaleSettingDefinition definition = new();
-        RecordingUiScaleService scaleService = new();
+        RecordingUiScaleService scaleService = new(InitialScale);
         double initialScale = scaleService.CurrentScale;
         SettingsState state = new()
         {
@@ -242,7 +245,7 @@ public sealed class SettingsStateServiceTests
         return CreateService(
             state,
             scheduler,
-            new RecordingUiScaleService());
+            new RecordingUiScaleService(InitialScale));
     }
 
     private static SettingsStateService CreateService(
@@ -317,21 +320,6 @@ public sealed class SettingsStateServiceTests
             catalog,
             new SettingsStateSection(),
             applicators);
-    }
-
-    private sealed class RecordingUiScaleService : IUiScaleService
-    {
-        private const double InitialScale = 0.75;
-
-        public double CurrentScale { get; private set; } = InitialScale;
-
-        public event EventHandler? ScaleChanged;
-
-        public void SetScale(double scale)
-        {
-            CurrentScale = scale;
-            ScaleChanged?.Invoke(this, EventArgs.Empty);
-        }
     }
 
     private sealed class SpoofedNonSecretSettingDefinition : ISettingsDefinition
