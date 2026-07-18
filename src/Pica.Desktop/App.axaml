@@ -6,10 +6,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <MergeResourceInclude Source="/Resources/Colors.axaml" />
-                <MergeResourceInclude Source="/Resources/Brushes.axaml" />
-                <MergeResourceInclude Source="/Resources/Dimensions.axaml" />
-                <MergeResourceInclude Source="/Resources/Icons.axaml" />
+                <MergeResourceInclude Source="/Resources/SharedResources.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
@@ -17,9 +14,7 @@
     <Application.Styles>
         <FluentTheme />
         <suki:SukiTheme ThemeColor="Blue" />
-        <StyleInclude Source="/Resources/ComboBoxStyles.axaml" />
-        <StyleInclude Source="/Resources/TextStyles.axaml" />
-        <StyleInclude Source="/Resources/ButtonStyles.axaml" />
+        <StyleInclude Source="/Resources/SharedControlStyles.axaml" />
         <StyleInclude Source="/Resources/Templates.axaml" />
     </Application.Styles>
 </Application>

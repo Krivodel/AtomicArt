@@ -6,10 +6,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <MergeResourceInclude Source="avares://AtomicArt/Resources/Colors.axaml" />
-                <MergeResourceInclude Source="avares://AtomicArt/Resources/Brushes.axaml" />
-                <MergeResourceInclude Source="avares://AtomicArt/Resources/Dimensions.axaml" />
-                <MergeResourceInclude Source="avares://AtomicArt/Resources/Icons.axaml" />
+                <MergeResourceInclude Source="avares://AtomicArt/Resources/SharedResources.axaml" />
                 <MergeResourceInclude Source="avares://AtomicArt/Resources/Converters.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
@@ -18,9 +15,7 @@
     <Application.Styles>
         <FluentTheme />
         <suki:SukiTheme ThemeColor="Blue" />
-        <StyleInclude Source="avares://AtomicArt/Resources/ComboBoxStyles.axaml" />
-        <StyleInclude Source="avares://AtomicArt/Resources/TextStyles.axaml" />
-        <StyleInclude Source="avares://AtomicArt/Resources/ButtonStyles.axaml" />
+        <StyleInclude Source="avares://AtomicArt/Resources/SharedControlStyles.axaml" />
         <StyleInclude Source="avares://AtomicArt/Resources/ScrollViewerStyles.axaml" />
         <StyleInclude Source="avares://AtomicArt/Resources/Templates.axaml" />
     </Application.Styles>

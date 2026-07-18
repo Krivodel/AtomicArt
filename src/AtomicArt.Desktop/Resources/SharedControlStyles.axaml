@@ -1,0 +1,5 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <StyleInclude Source="/Resources/ComboBoxStyles.axaml" />
+    <StyleInclude Source="/Resources/TextStyles.axaml" />
+    <StyleInclude Source="/Resources/ButtonStyles.axaml" />
+</Styles>

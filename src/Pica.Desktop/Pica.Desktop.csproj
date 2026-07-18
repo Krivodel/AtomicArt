@@ -51,6 +51,10 @@
                       Link="Resources\ButtonStyles.axaml" />
     <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\Templates.axaml"
                       Link="Resources\Templates.axaml" />
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\SharedResources.axaml"
+                      Link="Resources\SharedResources.axaml" />
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\SharedControlStyles.axaml"
+                      Link="Resources\SharedControlStyles.axaml" />
     <None Update="Assets\Info.plist">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
