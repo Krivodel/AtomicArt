@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Paths;
 
 using Pica.Protocol;
 using Pica.Viewer.Services;
@@ -14,7 +15,6 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 {
     public PicaViewerRequest? Request { get; private set; }
 
-    private const string SessionRootDirectoryName = "AtomicArt";
     private readonly IClipboardImageWriter _clipboardImageWriter;
     private readonly ITrustedImageFileService _trustedImageFileService;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
@@ -43,7 +43,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _sessionDirectory = Path.Combine(
             Path.GetTempPath(),
-            SessionRootDirectoryName,
+            AtomicArtPathNames.RootDirectory,
             PicaProtocolConstants.ApplicationName,
             Guid.NewGuid().ToString("N"));
     }

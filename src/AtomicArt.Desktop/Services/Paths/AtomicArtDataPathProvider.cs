@@ -2,7 +2,6 @@ namespace AtomicArt.Desktop.Services.Paths;
 
 public sealed class AtomicArtDataPathProvider : IAtomicArtDataPathProvider
 {
-    private const string RootDirectoryName = "AtomicArt";
     private const string ArtDirectoryName = "Art";
     private const string LogsDirectoryName = "Logs";
     private const string SecretsDirectoryName = "Secrets";
@@ -21,7 +20,7 @@ public sealed class AtomicArtDataPathProvider : IAtomicArtDataPathProvider
     public AtomicArtDataPathProvider()
         : this(Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            RootDirectoryName))
+            AtomicArtPathNames.RootDirectory))
     {
     }
 
