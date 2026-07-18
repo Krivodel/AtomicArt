@@ -24,13 +24,8 @@ public sealed class GenerationMetadataViewModelTests
                 "USD",
                 GenerationPriceSources.ActualProviderUsage),
             generationDuration: TimeSpan.FromSeconds(30));
-        GenerationItemViewModel itemViewModel = CreateItemViewModel(item);
 
-        GenerationMetadataViewModel viewModel = GenerationMetadataViewModel.FromItem(
-            itemViewModel,
-            new RelayCommand(() => { }),
-            new GenerationPriceFormatter(),
-            new GenerationDurationFormatter());
+        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
 
         viewModel.Price.Should().Be("$0.0678");
         viewModel.GenerationDuration.Should().Be("30с");
@@ -40,25 +35,26 @@ public sealed class GenerationMetadataViewModelTests
     public void FromItem_WithMissingPriceAndDuration_ShowsUnavailableText()
     {
         GenerationItemDto item = CreateItem();
-        GenerationItemViewModel itemViewModel = CreateItemViewModel(item);
 
-        GenerationMetadataViewModel viewModel = GenerationMetadataViewModel.FromItem(
-            itemViewModel,
-            new RelayCommand(() => { }),
-            new GenerationPriceFormatter(),
-            new GenerationDurationFormatter());
+        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
 
         viewModel.Price.Should().Be(UiStrings.MetadataUnavailable);
         viewModel.GenerationDuration.Should().Be(UiStrings.MetadataUnavailable);
     }
 
-    private static GenerationItemViewModel CreateItemViewModel(GenerationItemDto item)
+    private static GenerationMetadataViewModel CreateMetadataViewModel(GenerationItemDto item)
     {
-        return new GenerationItemViewModel(
+        GenerationItemViewModel itemViewModel = new(
             item,
             0,
             item.ImagePath,
             GenerationItemStatusDescriptorRegistryTestFactory.Create());
+
+        return GenerationMetadataViewModel.FromItem(
+            itemViewModel,
+            new RelayCommand(() => { }),
+            new GenerationPriceFormatter(),
+            new GenerationDurationFormatter());
     }
 
     private static GenerationItemDto CreateItem(
