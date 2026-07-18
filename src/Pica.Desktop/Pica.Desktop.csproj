@@ -1,8 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Pica.Build.props" />
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
-    <AssemblyName>Pica</AssemblyName>
+    <RuntimeIdentifiers>$(PicaRuntimeIdentifiers)</RuntimeIdentifiers>
+    <AssemblyName>$(PicaApplicationName)</AssemblyName>
+    <Version>$(PicaVersion)</Version>
     <ApplicationIcon>..\Pica.Viewer\Assets\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -61,6 +64,12 @@
   <Target Name="CreateMacAppBundleMetadata" AfterTargets="Publish" Condition="'$(PicaIsMacRuntime)' == 'true'">
     <Copy SourceFiles="$(MSBuildProjectDirectory)/Assets/Info.plist"
           DestinationFolder="$(PublishDir).." />
+    <XmlPoke XmlInputPath="$(PublishDir)../Info.plist"
+             Query="/plist/dict/key[.='CFBundleExecutable']/following-sibling::string[1]"
+             Value="$(PicaApplicationName)" />
+    <XmlPoke XmlInputPath="$(PublishDir)../Info.plist"
+             Query="/plist/dict/key[.='CFBundleShortVersionString']/following-sibling::string[1]"
+             Value="$(PicaVersion)" />
   </Target>
 
 </Project>

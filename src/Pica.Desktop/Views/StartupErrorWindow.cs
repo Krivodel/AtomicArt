@@ -26,7 +26,8 @@ internal sealed class StartupErrorWindow : Window
             {
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                Text = "Не удалось запустить Pica. Переустанови приложение, собери версию для своей ОС или пожалуйся разрабу.",
+                Text = $"Не удалось запустить {PicaProtocolConstants.ApplicationName}. "
+                    + "Переустанови приложение, собери версию для своей ОС или пожалуйся разрабу.",
                 TextAlignment = TextAlignment.Center,
                 TextWrapping = TextWrapping.Wrap
             }

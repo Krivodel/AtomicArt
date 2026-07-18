@@ -8,6 +8,6 @@
     <PublishProtocol>FileSystem</PublishProtocol>
     <PublishDir Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-'))">bin\$(Configuration)\$(TargetFramework)\publish\$(RuntimeIdentifier)\</PublishDir>
     <PublishDir Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux-'))">bin/$(Configuration)/$(TargetFramework)/publish/$(RuntimeIdentifier)/</PublishDir>
-    <PublishDir Condition="'$(PicaIsMacRuntime)' == 'true'">bin/$(Configuration)/$(TargetFramework)/publish/$(RuntimeIdentifier)/Pica.app/Contents/MacOS/</PublishDir>
+    <PublishDir Condition="'$(PicaIsMacRuntime)' == 'true'">bin/$(Configuration)/$(TargetFramework)/publish/$(RuntimeIdentifier)/$(PicaApplicationName).app/Contents/MacOS/</PublishDir>
   </PropertyGroup>
 </Project>
