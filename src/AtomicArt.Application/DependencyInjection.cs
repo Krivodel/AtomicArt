@@ -33,7 +33,6 @@ public static class DependencyInjection
         services.AddAttachedImageFormats();
         services.AddSingleton<IAttachedImageFormatRegistry, AttachedImageFormatRegistry>();
         services.AddSingleton<IImageModelRegistry, ImageModelRegistry>();
-        services.AddSingleton<IImageGenerationRequestNormalizer, ImageGenerationRequestNormalizer>();
         services.AddSingleton<GenerationUsagePriceCalculator>();
 
         return services;

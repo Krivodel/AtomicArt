@@ -14,7 +14,6 @@ namespace AtomicArt.Application.Features.Generation.Commands.CreateImageGenerati
 public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGenerationCommand, Result<GenerationBatchDto>>
 {
     private readonly IImageModelRegistry _modelRegistry;
-    private readonly IImageGenerationRequestNormalizer _requestNormalizer;
     private readonly IImageGenerationOutputPlanner _outputPlanner;
     private readonly IImageGenerationContentProvider _contentProvider;
     private readonly IDateTimeProvider _dateTimeProvider;
@@ -22,13 +21,11 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
 
     public CreateImageGenerationHandler(
         IImageModelRegistry modelRegistry,
-        IImageGenerationRequestNormalizer requestNormalizer,
         IImageGenerationOutputPlanner outputPlanner,
         IImageGenerationContentProvider contentProvider,
         IDateTimeProvider dateTimeProvider)
         : this(
             modelRegistry,
-            requestNormalizer,
             outputPlanner,
             contentProvider,
             dateTimeProvider,
@@ -38,21 +35,18 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
 
     public CreateImageGenerationHandler(
         IImageModelRegistry modelRegistry,
-        IImageGenerationRequestNormalizer requestNormalizer,
         IImageGenerationOutputPlanner outputPlanner,
         IImageGenerationContentProvider contentProvider,
         IDateTimeProvider dateTimeProvider,
         ILogger<CreateImageGenerationHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(modelRegistry);
-        ArgumentNullException.ThrowIfNull(requestNormalizer);
         ArgumentNullException.ThrowIfNull(outputPlanner);
         ArgumentNullException.ThrowIfNull(contentProvider);
         ArgumentNullException.ThrowIfNull(dateTimeProvider);
         ArgumentNullException.ThrowIfNull(logger);
 
         _modelRegistry = modelRegistry;
-        _requestNormalizer = requestNormalizer;
         _outputPlanner = outputPlanner;
         _contentProvider = contentProvider;
         _dateTimeProvider = dateTimeProvider;
@@ -90,7 +84,7 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
                 "Модель генерации не найдена.");
         }
 
-        Result<ImageGenerationRequestDto> normalizationResult = _requestNormalizer.Normalize(request, modelDefinition);
+        Result<ImageGenerationRequestDto> normalizationResult = modelDefinition.Validate(request);
 
         if (!normalizationResult.IsSuccess)
         {

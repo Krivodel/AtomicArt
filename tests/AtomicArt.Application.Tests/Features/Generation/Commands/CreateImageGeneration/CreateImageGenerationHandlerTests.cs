@@ -31,7 +31,6 @@ public sealed class CreateImageGenerationHandlerTests
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -90,7 +89,6 @@ public sealed class CreateImageGenerationHandlerTests
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(content: content);
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -117,7 +115,6 @@ public sealed class CreateImageGenerationHandlerTests
             captureContext: context => capturedContext = context);
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -147,7 +144,6 @@ public sealed class CreateImageGenerationHandlerTests
             captureRequest: request => contentRequest = request);
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -183,7 +179,6 @@ public sealed class CreateImageGenerationHandlerTests
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -223,7 +218,6 @@ public sealed class CreateImageGenerationHandlerTests
         ParallelTrackingContentProvider contentProvider = new(expectedRequestCount: 2);
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider,
             new TestDateTimeProvider());
@@ -255,7 +249,6 @@ public sealed class CreateImageGenerationHandlerTests
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -286,7 +279,6 @@ public sealed class CreateImageGenerationHandlerTests
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -328,7 +320,6 @@ public sealed class CreateImageGenerationHandlerTests
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -367,7 +358,6 @@ public sealed class CreateImageGenerationHandlerTests
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -403,7 +393,6 @@ public sealed class CreateImageGenerationHandlerTests
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -438,7 +427,6 @@ public sealed class CreateImageGenerationHandlerTests
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -475,7 +463,6 @@ public sealed class CreateImageGenerationHandlerTests
             Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
             CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
@@ -548,7 +535,6 @@ public sealed class CreateImageGenerationHandlerTests
             .ThrowsAsync(exception);
         CreateImageGenerationHandler handler = new(
             registry,
-            new ImageGenerationRequestNormalizer(),
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
