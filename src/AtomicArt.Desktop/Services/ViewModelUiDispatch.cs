@@ -11,11 +11,14 @@ internal static class ViewModelUiDispatch
     {
         ArgumentNullException.ThrowIfNull(uiThreadDispatcher);
         ArgumentNullException.ThrowIfNull(action);
-        ArgumentNullException.ThrowIfNull(errorHandler);
-        ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
 
-        return RunCoreAsync(
-            () => uiThreadDispatcher.InvokeAsync(action, ct),
+        return RunAsync(
+            uiThreadDispatcher,
+            () =>
+            {
+                action();
+                return Task.CompletedTask;
+            },
             ct,
             errorHandler,
             operationName);
