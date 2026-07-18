@@ -294,10 +294,7 @@ public sealed class AppStateStore : IAppStateStore
 
     private static void ValidateSectionFileName(IStateSection section)
     {
-        string fileName = Path.GetFileName(section.FileName);
-
-        if (!string.Equals(fileName, section.FileName, StringComparison.Ordinal)
-            || section.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        if (!SafeFileName.IsValid(section.FileName))
         {
             throw new InvalidOperationException(
                 $"State section '{section.Key}' file name must be a safe file name.");

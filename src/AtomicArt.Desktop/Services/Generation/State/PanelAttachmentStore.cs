@@ -217,10 +217,7 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(internalFileName);
 
-        string fileName = Path.GetFileName(internalFileName);
-
-        if (!string.Equals(fileName, internalFileName, StringComparison.Ordinal)
-            || internalFileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        if (!SafeFileName.IsValid(internalFileName))
         {
             throw new IOException("Panel attachment internal file name must be a safe file name.");
         }
