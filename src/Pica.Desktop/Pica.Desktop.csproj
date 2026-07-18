@@ -37,6 +37,8 @@
   <ItemGroup>
     <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\Colors.axaml"
                       Link="Resources\Colors.axaml" />
+    <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\Brushes.axaml"
+                      Link="Resources\Brushes.axaml" />
     <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\Dimensions.axaml"
                       Link="Resources\Dimensions.axaml" />
     <AvaloniaResource Include="..\AtomicArt.Desktop\Resources\Icons.axaml"

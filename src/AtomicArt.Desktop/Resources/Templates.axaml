@@ -3,12 +3,8 @@
     <Style Selector="Border.shell-section">
         <Setter Property="Padding"
                 Value="{StaticResource ShellSectionPadding}" />
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="{DynamicResource SukiGlassCardBackground}"
-                                 Opacity="{DynamicResource GlassOpacity}" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Background"
+                Value="{DynamicResource GlassCardBrush}" />
         <Setter Property="BorderBrush"
                 Value="{DynamicResource GlassBorderBrush}" />
         <Setter Property="BorderThickness"
@@ -20,12 +16,8 @@
     <Style Selector="Border.generation-panel">
         <Setter Property="Padding"
                 Value="{StaticResource GenerationPanelPadding}" />
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="{DynamicResource SukiGlassCardBackground}"
-                                 Opacity="{DynamicResource GlassOpacity}" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Background"
+                Value="{DynamicResource GlassCardBrush}" />
         <Setter Property="BorderBrush"
                 Value="{DynamicResource GlassBorderBrush}" />
         <Setter Property="BorderThickness"
@@ -74,12 +66,8 @@
                 Value="{StaticResource AttachmentItemSize}" />
         <Setter Property="Margin"
                 Value="{StaticResource AttachmentPreviewMargin}" />
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="{DynamicResource SukiGlassCardBackground}"
-                                 Opacity="{DynamicResource GlassOpacity}" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Background"
+                Value="{DynamicResource GlassCardBrush}" />
         <Setter Property="BorderThickness"
                 Value="{StaticResource ZeroThickness}" />
         <Setter Property="ClipToBounds"
@@ -97,12 +85,8 @@
                 Value="{StaticResource GalleryCardMargin}" />
         <Setter Property="Padding"
                 Value="{StaticResource ZeroThickness}" />
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="{DynamicResource SukiGlassCardBackground}"
-                                 Opacity="{DynamicResource GlassOpacity}" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Background"
+                Value="{DynamicResource GlassCardBrush}" />
         <Setter Property="BorderThickness"
                 Value="{StaticResource ZeroThickness}" />
         <Setter Property="ClipToBounds"
@@ -117,12 +101,8 @@
     </Style>
 
     <Style Selector="Border.generation-card-preview">
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="{DynamicResource SukiGlassCardBackground}"
-                                 Opacity="{DynamicResource GlassOpacity}" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Background"
+                Value="{DynamicResource GlassCardBrush}" />
         <Setter Property="ClipToBounds"
                 Value="True" />
     </Style>
@@ -163,12 +143,8 @@
     </Style>
 
     <Style Selector="Border.generation-card-empty">
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="{DynamicResource SukiGlassCardBackground}"
-                                 Opacity="{DynamicResource GlassOpacity}" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Background"
+                Value="{DynamicResource GlassCardBrush}" />
     </Style>
 
     <Style Selector="Border.generation-card-error">
@@ -186,12 +162,8 @@
     <Style Selector="Border.generation-card-info">
         <Setter Property="Padding"
                 Value="{StaticResource GalleryCardInfoPadding}" />
-        <Setter Property="Background">
-            <Setter.Value>
-                <SolidColorBrush Color="{DynamicResource SukiGlassCardBackground}"
-                                 Opacity="{DynamicResource GlassOpacity}" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Background"
+                Value="{DynamicResource GlassCardBrush}" />
     </Style>
 
     <Style Selector="Image.generation-card-image">

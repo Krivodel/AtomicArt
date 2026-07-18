@@ -7,6 +7,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <MergeResourceInclude Source="avares://AtomicArt/Resources/Colors.axaml" />
+                <MergeResourceInclude Source="avares://AtomicArt/Resources/Brushes.axaml" />
                 <MergeResourceInclude Source="avares://AtomicArt/Resources/Dimensions.axaml" />
                 <MergeResourceInclude Source="avares://AtomicArt/Resources/Icons.axaml" />
                 <MergeResourceInclude Source="avares://AtomicArt/Resources/Converters.axaml" />
