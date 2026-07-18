@@ -89,6 +89,44 @@ public sealed class ImageModelRegistryTests
             .Which.DisplayName.Should().Be("Test Factory 10");
     }
 
+    [Fact]
+    public void Constructor_WithoutMatchingFactory_ThrowsInvalidOperationException()
+    {
+        GenerationModelCatalogDto catalog = new(
+        [
+            CreateMetadata()
+        ]);
+        IImageModelDefinitionFactory[] factories =
+        [
+            new TestImageModelDefinitionFactory(0, _ => false)
+        ];
+
+        Action action = () => new ImageModelRegistry(catalog, factories);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("No generation model factory is registered for model 'test-model'.");
+    }
+
+    [Fact]
+    public void Constructor_WithMatchingFactoriesAtSameHighestPriority_ThrowsInvalidOperationException()
+    {
+        GenerationModelCatalogDto catalog = new(
+        [
+            CreateMetadata()
+        ]);
+        IImageModelDefinitionFactory[] factories =
+        [
+            new TestImageModelDefinitionFactory(priority: 10),
+            new TestImageModelDefinitionFactory(priority: 10)
+        ];
+
+        Action action = () => new ImageModelRegistry(catalog, factories);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage(
+                "Multiple generation model factories with priority 10 are registered for model 'test-model'.");
+    }
+
     private static GenerationModelMetadataDto CreateMetadata(string modelId = "test-model")
     {
         return new GenerationModelMetadataDto(
@@ -125,16 +163,26 @@ public sealed class ImageModelRegistryTests
     {
         public int Priority { get; }
 
+        private readonly Func<GenerationModelMetadataDto, bool> _canCreate;
+
         public TestImageModelDefinitionFactory(int priority)
+            : this(priority, _ => true)
+        {
+        }
+
+        public TestImageModelDefinitionFactory(
+            int priority,
+            Func<GenerationModelMetadataDto, bool> canCreate)
         {
             Priority = priority;
+            _canCreate = canCreate ?? throw new ArgumentNullException(nameof(canCreate));
         }
 
         public bool CanCreate(GenerationModelMetadataDto metadata)
         {
             ArgumentNullException.ThrowIfNull(metadata);
 
-            return true;
+            return _canCreate(metadata);
         }
 
         public IImageModelDefinition Create(GenerationModelMetadataDto metadata)

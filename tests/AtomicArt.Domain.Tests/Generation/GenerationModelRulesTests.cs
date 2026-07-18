@@ -178,6 +178,59 @@ public sealed class GenerationModelRulesTests
     }
 
     [Fact]
+    public void Validate_WithMultipleMatchingRules_UsesHighestPriorityRule()
+    {
+        GenerationValidationResult expectedResult = GenerationValidationResult.Invalid(
+            "ERR-TEST-001",
+            "Selected highest-priority rule.");
+        IGenerationModelRules[] modelRules =
+        [
+            new TestGenerationModelRules(0, _ => true, GenerationValidationResult.Valid()),
+            new TestGenerationModelRules(10, _ => true, expectedResult)
+        ];
+        GenerationModelRules rules = new(modelRules);
+        GenerationModelConstraints constraints = CreateConstraints();
+
+        GenerationValidationResult result = Validate(rules, constraints);
+
+        result.Should().Be(expectedResult);
+    }
+
+    [Fact]
+    public void Validate_WithoutMatchingRules_ThrowsInvalidOperationException()
+    {
+        IGenerationModelRules[] modelRules =
+        [
+            new TestGenerationModelRules(0, _ => false, GenerationValidationResult.Valid())
+        ];
+        GenerationModelRules rules = new(modelRules);
+        GenerationModelConstraints constraints = CreateConstraints();
+
+        Action action = () => Validate(rules, constraints);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage($"No rules are registered for generation model '{constraints.ModelId}'.");
+    }
+
+    [Fact]
+    public void Validate_WithMatchingRulesAtSameHighestPriority_ThrowsInvalidOperationException()
+    {
+        IGenerationModelRules[] modelRules =
+        [
+            new TestGenerationModelRules(10, _ => true, GenerationValidationResult.Valid()),
+            new TestGenerationModelRules(10, _ => true, GenerationValidationResult.Valid())
+        ];
+        GenerationModelRules rules = new(modelRules);
+        GenerationModelConstraints constraints = CreateConstraints();
+
+        Action action = () => Validate(rules, constraints);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage(
+                $"Multiple rules with priority 10 are registered for generation model '{constraints.ModelId}'.");
+    }
+
+    [Fact]
     public void Resolutions_WithConstraints_ReturnsReadOnlyValues()
     {
         GenerationModelConstraints constraints = CreateConstraints();
@@ -203,6 +256,20 @@ public sealed class GenerationModelRulesTests
         return ApiModelMetadataTestCatalog.LoadNanoBanana2Constraints(modelId);
     }
 
+    private static GenerationValidationResult Validate(
+        GenerationModelRules rules,
+        GenerationModelConstraints constraints)
+    {
+        return rules.Validate(
+            constraints,
+            "Prompt",
+            constraints.AspectRatios.First(),
+            constraints.Resolutions.First(),
+            constraints.Temperature.Default,
+            1,
+            Array.Empty<GenerationAttachedImage>());
+    }
+
     private static IReadOnlyList<GenerationAttachedImage> CreateAttachedImages(long sizeInBytes)
     {
         return
@@ -214,5 +281,48 @@ public sealed class GenerationModelRulesTests
     private static GenerationAttachedImage CreateAttachedImage(long sizeInBytes)
     {
         return new GenerationAttachedImage("image/png", sizeInBytes);
+    }
+
+    private sealed class TestGenerationModelRules : IGenerationModelRules
+    {
+        public int Priority { get; }
+
+        private readonly Func<GenerationModelConstraints, bool> _canValidate;
+        private readonly GenerationValidationResult _result;
+
+        public TestGenerationModelRules(
+            int priority,
+            Func<GenerationModelConstraints, bool> canValidate,
+            GenerationValidationResult result)
+        {
+            Priority = priority;
+            _canValidate = canValidate ?? throw new ArgumentNullException(nameof(canValidate));
+            _result = result ?? throw new ArgumentNullException(nameof(result));
+        }
+
+        public bool CanValidate(GenerationModelConstraints constraints)
+        {
+            ArgumentNullException.ThrowIfNull(constraints);
+
+            return _canValidate(constraints);
+        }
+
+        public GenerationValidationResult Validate(
+            GenerationModelConstraints constraints,
+            string? prompt,
+            string aspectRatio,
+            string resolution,
+            double temperature,
+            int generationCount,
+            IReadOnlyList<GenerationAttachedImage> attachedImages,
+            string? thinkingLevel = null)
+        {
+            ArgumentNullException.ThrowIfNull(constraints);
+            ArgumentNullException.ThrowIfNull(aspectRatio);
+            ArgumentNullException.ThrowIfNull(resolution);
+            ArgumentNullException.ThrowIfNull(attachedImages);
+
+            return _result;
+        }
     }
 }
