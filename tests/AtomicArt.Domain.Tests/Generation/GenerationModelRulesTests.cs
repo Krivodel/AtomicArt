@@ -1,7 +1,10 @@
 using FluentAssertions;
 using Xunit;
 
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain.Generation;
+using CommonApiModelMetadataTestCatalog =
+    AtomicArt.Tests.Common.Generation.ApiModelMetadataTestCatalog;
 
 namespace AtomicArt.Domain.Tests.Generation;
 
@@ -253,7 +256,24 @@ public sealed class GenerationModelRulesTests
 
     private static GenerationModelConstraints CreateConstraints(string? modelId = null)
     {
-        return ApiModelMetadataTestCatalog.LoadNanoBanana2Constraints(modelId);
+        GenerationModelMetadataDto metadata =
+            CommonApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+
+        return new GenerationModelConstraints(
+            modelId ?? metadata.Id,
+            metadata.MaxPromptLength,
+            metadata.AspectRatios,
+            metadata.Resolutions,
+            metadata.GenerationCounts,
+            new GenerationModelTemperatureConstraints(
+                metadata.Temperature.Minimum,
+                metadata.Temperature.Maximum,
+                metadata.Temperature.Default,
+                metadata.Temperature.Step),
+            metadata.Attachments.MaxCount,
+            metadata.Attachments.MaxSingleFileBytes,
+            metadata.Attachments.MaxTotalBytes,
+            metadata.Attachments.SupportedContentTypes);
     }
 
     private static GenerationValidationResult Validate(
