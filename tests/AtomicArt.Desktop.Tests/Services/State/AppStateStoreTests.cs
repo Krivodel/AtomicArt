@@ -41,20 +41,15 @@ public sealed class AppStateStoreTests
 
         try
         {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            RecordingLogger<AppStateStore> logger = new RecordingLogger<AppStateStore>();
-            AppStateStore store = CreateStore(pathProvider, logger);
-            TestStateSection section = new();
-            Directory.CreateDirectory(pathProvider.StateDirectory);
+            LoadFailureTestContext context = CreateLoadFailureContext(rootDirectory);
             await File.WriteAllTextAsync(
-                Path.Combine(pathProvider.StateDirectory, section.FileName),
+                Path.Combine(
+                    context.PathProvider.StateDirectory,
+                    context.Section.FileName),
                 "{ invalid json",
                 CancellationToken.None);
 
-            TestState state = await store.LoadAsync<TestState>(section, CancellationToken.None);
-
-            state.Value.Should().Be(TestStateSection.DefaultValue);
-            logger.WarningCount.Should().Be(1);
+            await AssertLoadFailureAsync(context);
         }
         finally
         {
@@ -158,32 +153,43 @@ public sealed class AppStateStoreTests
 
         try
         {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            RecordingLogger<AppStateStore> logger = new RecordingLogger<AppStateStore>();
-            AppStateStore store = CreateStore(pathProvider, logger);
-            TestStateSection section = new();
-            Directory.CreateDirectory(pathProvider.StateDirectory);
+            LoadFailureTestContext context = CreateLoadFailureContext(rootDirectory);
             StateEnvelope<TestState> envelope = new StateEnvelope<TestState>
             {
-                SchemaVersion = section.SchemaVersion + 1,
+                SchemaVersion = context.Section.SchemaVersion + 1,
                 SavedAtUtc = new DateTimeOffset(2026, 7, 6, 8, 0, 0, TimeSpan.Zero),
                 Payload = new TestState("unsupported")
             };
-            string statePath = Path.Combine(pathProvider.StateDirectory, section.FileName);
+            string statePath = Path.Combine(
+                context.PathProvider.StateDirectory,
+                context.Section.FileName);
             await using (FileStream stream = File.Create(statePath))
             {
                 await JsonSerializer.SerializeAsync(stream, envelope, cancellationToken: CancellationToken.None);
             }
 
-            TestState state = await store.LoadAsync<TestState>(section, CancellationToken.None);
-
-            state.Value.Should().Be(TestStateSection.DefaultValue);
-            logger.WarningCount.Should().Be(1);
+            await AssertLoadFailureAsync(context);
         }
         finally
         {
             TestDirectories.DeleteIfExists(rootDirectory);
         }
+    }
+
+    private static LoadFailureTestContext CreateLoadFailureContext(
+        string rootDirectory)
+    {
+        AtomicArtDataPathProvider pathProvider = new(rootDirectory);
+        RecordingLogger<AppStateStore> logger = new();
+        AppStateStore store = CreateStore(pathProvider, logger);
+        TestStateSection section = new();
+        Directory.CreateDirectory(pathProvider.StateDirectory);
+
+        return new LoadFailureTestContext(
+            pathProvider,
+            logger,
+            store,
+            section);
     }
 
     private static AppStateStore CreateStore(string rootDirectory)
@@ -198,6 +204,42 @@ public sealed class AppStateStoreTests
         return new AppStateStore(
             pathProvider,
             logger ?? new RecordingLogger<AppStateStore>());
+    }
+
+    private static async Task AssertLoadFailureAsync(
+        LoadFailureTestContext context)
+    {
+        TestState state = await context.Store.LoadAsync<TestState>(
+            context.Section,
+            CancellationToken.None);
+
+        state.Value.Should().Be(TestStateSection.DefaultValue);
+        context.Logger.WarningCount.Should().Be(1);
+    }
+
+    private sealed class LoadFailureTestContext
+    {
+        public AtomicArtDataPathProvider PathProvider { get; }
+        public RecordingLogger<AppStateStore> Logger { get; }
+        public AppStateStore Store { get; }
+        public TestStateSection Section { get; }
+
+        public LoadFailureTestContext(
+            AtomicArtDataPathProvider pathProvider,
+            RecordingLogger<AppStateStore> logger,
+            AppStateStore store,
+            TestStateSection section)
+        {
+            ArgumentNullException.ThrowIfNull(pathProvider);
+            ArgumentNullException.ThrowIfNull(logger);
+            ArgumentNullException.ThrowIfNull(store);
+            ArgumentNullException.ThrowIfNull(section);
+
+            PathProvider = pathProvider;
+            Logger = logger;
+            Store = store;
+            Section = section;
+        }
     }
 
     private sealed class TestStateSection : TestStateSectionTestDouble
