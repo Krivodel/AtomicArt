@@ -24,7 +24,8 @@ public sealed class GoogleImageGenerationContentProviderTests
     [Fact]
     public async Task GetContentAsync_WithCompletedResponse_ReturnsImageUsageAndDuration()
     {
-        TestGoogleInteractionsClient client = new(CreateCompletedResponse());
+        TestGoogleInteractionsClient client = new(
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponse());
         TestDateTimeProvider dateTimeProvider = new(
             StartedAtUtc,
             CompletedAtUtc);
@@ -55,7 +56,24 @@ public sealed class GoogleImageGenerationContentProviderTests
     [Fact]
     public async Task GetContentAsync_WithFourKRequest_UsesResolutionImageTokensForPrice()
     {
-        TestGoogleInteractionsClient client = new(CreateCompletedFourKResponse());
+        string responseJson = GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponse(
+            """
+            "total_input_tokens": 1200,
+            "total_output_tokens": 1120,
+            "total_thought_tokens": 5,
+            "total_tokens": 2335,
+            "output_tokens_by_modality": [
+              {
+                "modality": "image",
+                "tokens": 1120
+              },
+              {
+                "modality": "text",
+                "tokens": 10
+              }
+            ]
+            """);
+        TestGoogleInteractionsClient client = new(responseJson);
         TestDateTimeProvider dateTimeProvider = new(
             StartedAtUtc,
             CompletedAtUtc);
@@ -82,7 +100,8 @@ public sealed class GoogleImageGenerationContentProviderTests
     [Fact]
     public async Task GetContentAsync_WithoutProviderCredential_DoesNotCallClient()
     {
-        TestGoogleInteractionsClient client = new(CreateCompletedResponse());
+        TestGoogleInteractionsClient client = new(
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponse());
         GoogleImageGenerationContentProvider provider = CreateProvider(
             client,
             new TestDateTimeProvider(StartedAtUtc));
@@ -167,67 +186,6 @@ public sealed class GoogleImageGenerationContentProviderTests
                 ["1K"] = 1120,
                 ["4K"] = 2520
             });
-    }
-
-    private static string CreateCompletedResponse()
-    {
-        return """
-            {
-              "status": "completed",
-              "steps": [
-                {
-                  "content": [
-                    {
-                      "type": "image",
-                      "mime_type": "image/jpeg",
-                      "data": "/9j/4AAQSkZJRg=="
-                    }
-                  ]
-                }
-              ],
-              "usage": {
-                "total_input_tokens": 1200,
-                "total_output_tokens": 1120,
-                "total_tokens": 2320
-              }
-            }
-            """;
-    }
-
-    private static string CreateCompletedFourKResponse()
-    {
-        return """
-            {
-              "status": "completed",
-              "steps": [
-                {
-                  "content": [
-                    {
-                      "type": "image",
-                      "mime_type": "image/jpeg",
-                      "data": "/9j/4AAQSkZJRg=="
-                    }
-                  ]
-                }
-              ],
-              "usage": {
-                "total_input_tokens": 1200,
-                "total_output_tokens": 1120,
-                "total_thought_tokens": 5,
-                "total_tokens": 2335,
-                "output_tokens_by_modality": [
-                  {
-                    "modality": "image",
-                    "tokens": 1120
-                  },
-                  {
-                    "modality": "text",
-                    "tokens": 10
-                  }
-                ]
-              }
-            }
-            """;
     }
 
     private static string CreateTextOnlyResponse()

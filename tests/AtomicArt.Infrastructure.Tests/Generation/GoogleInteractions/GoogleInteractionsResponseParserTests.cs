@@ -14,27 +14,8 @@ public sealed class GoogleInteractionsResponseParserTests
     public void Parse_WithCompletedImageResponse_ReturnsImageContentAndUsage()
     {
         GoogleInteractionsResponseParser parser = new();
-        string responseJson = """
-            {
-              "status": "completed",
-              "steps": [
-                {
-                  "content": [
-                    {
-                      "type": "image",
-                      "mime_type": "image/jpeg",
-                      "data": "/9j/4AAQSkZJRg=="
-                    }
-                  ]
-                }
-              ],
-              "usage": {
-                "total_input_tokens": 1200,
-                "total_output_tokens": 1120,
-                "total_tokens": 2320
-              }
-            }
-            """;
+        string responseJson =
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponse();
 
         GoogleInteractionsResult result = parser.Parse(responseJson);
         GenerationUsageDto usage = result.Usage
@@ -150,7 +131,8 @@ public sealed class GoogleInteractionsResponseParserTests
     public void Parse_WithPresentNonArrayModalityBreakdown_ThrowsProviderException(string breakdownJson)
     {
         GoogleInteractionsResponseParser parser = new();
-        string responseJson = CreateCompletedImageResponseJson(
+        string responseJson =
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
             $"""
             ,
                 "input_tokens_by_modality": {breakdownJson}
@@ -170,7 +152,8 @@ public sealed class GoogleInteractionsResponseParserTests
     public void Parse_WithMalformedInputModalityBreakdownItem_ThrowsProviderException(string breakdownJson)
     {
         GoogleInteractionsResponseParser parser = new();
-        string responseJson = CreateCompletedImageResponseJson(
+        string responseJson =
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
             $"""
             ,
                 "input_tokens_by_modality": {breakdownJson}
@@ -190,7 +173,8 @@ public sealed class GoogleInteractionsResponseParserTests
     public void Parse_WithMalformedOutputModalityBreakdownItem_ThrowsProviderException(string breakdownJson)
     {
         GoogleInteractionsResponseParser parser = new();
-        string responseJson = CreateCompletedImageResponseJson(
+        string responseJson =
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
             $"""
             ,
                 "output_tokens_by_modality": {breakdownJson}
@@ -213,7 +197,8 @@ public sealed class GoogleInteractionsResponseParserTests
         string valueJson)
     {
         GoogleInteractionsResponseParser parser = new();
-        string responseJson = CreateCompletedImageResponseJson(
+        string responseJson =
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
             $"""
             ,
                 "{propertyName}": {valueJson}
@@ -255,26 +240,11 @@ public sealed class GoogleInteractionsResponseParserTests
     public void Parse_WithIncompleteUsage_ThrowsProviderException()
     {
         GoogleInteractionsResponseParser parser = new();
-        string responseJson = """
-            {
-              "status": "completed",
-              "steps": [
-                {
-                  "content": [
-                    {
-                      "type": "image",
-                      "mime_type": "image/jpeg",
-                      "data": "/9j/4AAQSkZJRg=="
-                    }
-                  ]
-                }
-              ],
-              "usage": {
-                "total_input_tokens": 1200,
-                "total_tokens": 2320
-              }
-            }
-            """;
+        string responseJson = GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponse(
+            """
+            "total_input_tokens": 1200,
+            "total_tokens": 2320
+            """);
 
         Action act = () => parser.Parse(responseJson);
 
@@ -391,31 +361,6 @@ public sealed class GoogleInteractionsResponseParserTests
 
         act.Should().Throw<InvalidOperationException>()
             .Which.Message.Should().NotContain("iVBORw0KGgo=");
-    }
-
-    private static string CreateCompletedImageResponseJson(string usageProperties)
-    {
-        return $$"""
-            {
-              "status": "completed",
-              "steps": [
-                {
-                  "content": [
-                    {
-                      "type": "image",
-                      "mime_type": "image/jpeg",
-                      "data": "/9j/4AAQSkZJRg=="
-                    }
-                  ]
-                }
-              ],
-              "usage": {
-                "total_input_tokens": 1200,
-                "total_output_tokens": 1120,
-                "total_tokens": 2320{{usageProperties}}
-              }
-            }
-            """;
     }
 
     private static void AssertInvalidUsage(Action act)
