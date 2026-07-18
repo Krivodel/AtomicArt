@@ -17,6 +17,8 @@ public sealed class GenerationCardControlTests
 
     private static readonly Guid ItemId = Guid.Parse("99999999-9999-9999-9999-999999999999");
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 8, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly Size PreviewSize = new(220d, 220d);
+    private static readonly Rect DefaultViewportBounds = new(0d, 0d, 1000d, 600d);
 
     [Theory]
     [InlineData(KeyModifiers.None, false)]
@@ -37,16 +39,10 @@ public sealed class GenerationCardControlTests
     [Fact]
     public void Calculate_WithWideSource_ScalesFullAspectRatioAndFitsRightViewportEdge()
     {
-        Size previewSize = new(220d, 220d);
         Size sourceSize = new(440d, 220d);
         Rect previewBounds = new(780d, 40d, 220d, 220d);
-        Rect viewportBounds = new(0d, 0d, 1000d, 600d);
 
-        (Size size, Vector translation) = GenerationPreviewExpansionCalculator.Calculate(
-            previewSize,
-            sourceSize,
-            previewBounds,
-            viewportBounds);
+        (Size size, Vector translation) = Calculate(sourceSize, previewBounds);
 
         size.Should().Be(new Size(748d, 374d));
         translation.Should().Be(new Vector(-528d, -40d));
@@ -55,16 +51,10 @@ public sealed class GenerationCardControlTests
     [Fact]
     public void Calculate_WithTallSource_ScalesFullAspectRatioAndFitsViewportStart()
     {
-        Size previewSize = new(220d, 220d);
         Size sourceSize = new(220d, 440d);
         Rect previewBounds = new(40d, 380d, 220d, 220d);
-        Rect viewportBounds = new(0d, 0d, 1000d, 600d);
 
-        (Size size, Vector translation) = GenerationPreviewExpansionCalculator.Calculate(
-            previewSize,
-            sourceSize,
-            previewBounds,
-            viewportBounds);
+        (Size size, Vector translation) = Calculate(sourceSize, previewBounds);
 
         size.Should().Be(new Size(374d, 748d));
         translation.Should().Be(new Vector(-40d, -380d));
@@ -73,16 +63,10 @@ public sealed class GenerationCardControlTests
     [Fact]
     public void Calculate_WithCenteredWideSource_ExpandsEvenlyAroundPreview()
     {
-        Size previewSize = new(220d, 220d);
         Size sourceSize = new(330d, 220d);
         Rect previewBounds = new(390d, 40d, 220d, 220d);
-        Rect viewportBounds = new(0d, 0d, 1000d, 600d);
 
-        (Size size, Vector translation) = GenerationPreviewExpansionCalculator.Calculate(
-            previewSize,
-            sourceSize,
-            previewBounds,
-            viewportBounds);
+        (Size size, Vector translation) = Calculate(sourceSize, previewBounds);
 
         size.Should().Be(new Size(561d, 374d));
         translation.Should().Be(new Vector(-170.5d, -40d));
@@ -91,13 +75,11 @@ public sealed class GenerationCardControlTests
     [Fact]
     public void Calculate_WithOffsetViewport_FitsExpandedPreviewInsideActualVisibleBounds()
     {
-        Size previewSize = new(220d, 220d);
         Size sourceSize = new(440d, 220d);
         Rect previewBounds = new(780d, 40d, 220d, 220d);
         Rect viewportBounds = new(20d, 0d, 960d, 600d);
 
-        (Size size, Vector translation) = GenerationPreviewExpansionCalculator.Calculate(
-            previewSize,
+        (Size size, Vector translation) = Calculate(
             sourceSize,
             previewBounds,
             viewportBounds);
@@ -189,6 +171,18 @@ public sealed class GenerationCardControlTests
             0,
             imagePath,
             GenerationItemStatusDescriptorRegistryTestFactory.Create());
+    }
+
+    private static (Size Size, Vector Translation) Calculate(
+        Size sourceSize,
+        Rect previewBounds,
+        Rect? viewportBounds = null)
+    {
+        return GenerationPreviewExpansionCalculator.Calculate(
+            PreviewSize,
+            sourceSize,
+            previewBounds,
+            viewportBounds ?? DefaultViewportBounds);
     }
 
     private sealed class ExistingImagePaths : IDisposable
