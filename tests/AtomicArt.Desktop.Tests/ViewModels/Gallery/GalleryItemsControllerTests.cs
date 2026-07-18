@@ -102,9 +102,9 @@ public sealed class GalleryItemsControllerTests
         };
     }
 
-    private sealed class RejectingThumbnailTrustedImageFileService : ITrustedImageFileService
+    private sealed class RejectingThumbnailTrustedImageFileService : TrustedImageFileServiceTestDouble
     {
-        public string? GetTrustedImagePathOrDefault(string? path, string modelId)
+        public override string? GetTrustedImagePathOrDefault(string? path, string modelId)
         {
             if (string.Equals(path, "thumbnail.png", StringComparison.Ordinal))
             {
@@ -114,13 +114,7 @@ public sealed class GalleryItemsControllerTests
             return path;
         }
 
-        public string GetTrustedImagePath(string? path, string modelId)
-        {
-            return GetTrustedImagePathOrDefault(path, modelId)
-                ?? throw new InvalidOperationException("Image path is not trusted.");
-        }
-
-        public void DeleteTrustedImageFileIfExists(
+        public override void DeleteTrustedImageFileIfExists(
             string? path,
             string modelId,
             Action<string> validateResolvedPath)

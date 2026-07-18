@@ -1,20 +1,18 @@
-using AtomicArt.Desktop.Services;
-
 namespace AtomicArt.Desktop.Tests.TestDoubles;
 
-internal sealed class PassthroughTrustedImageFileService : ITrustedImageFileService
+internal sealed class PassthroughTrustedImageFileService : TrustedImageFileServiceTestDouble
 {
-    public string? GetTrustedImagePathOrDefault(string? path, string modelId)
+    public override string? GetTrustedImagePathOrDefault(string? path, string modelId)
     {
         return path;
     }
 
-    public string GetTrustedImagePath(string? path, string modelId)
+    public override string GetTrustedImagePath(string? path, string modelId)
     {
         return path ?? throw new InvalidOperationException("Image path is required.");
     }
 
-    public void DeleteTrustedImageFileIfExists(
+    public override void DeleteTrustedImageFileIfExists(
         string? path,
         string modelId,
         Action<string> validateResolvedPath)

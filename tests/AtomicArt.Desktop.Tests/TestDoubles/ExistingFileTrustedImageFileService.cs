@@ -1,10 +1,8 @@
-using AtomicArt.Desktop.Services;
-
 namespace AtomicArt.Desktop.Tests.TestDoubles;
 
-internal sealed class ExistingFileTrustedImageFileService : ITrustedImageFileService
+internal sealed class ExistingFileTrustedImageFileService : TrustedImageFileServiceTestDouble
 {
-    public string? GetTrustedImagePathOrDefault(string? path, string modelId)
+    public override string? GetTrustedImagePathOrDefault(string? path, string modelId)
     {
         if (path is not null && File.Exists(path))
         {
@@ -14,13 +12,7 @@ internal sealed class ExistingFileTrustedImageFileService : ITrustedImageFileSer
         return null;
     }
 
-    public string GetTrustedImagePath(string? path, string modelId)
-    {
-        return GetTrustedImagePathOrDefault(path, modelId)
-            ?? throw new InvalidOperationException("Image path is not trusted.");
-    }
-
-    public void DeleteTrustedImageFileIfExists(
+    public override void DeleteTrustedImageFileIfExists(
         string? path,
         string modelId,
         Action<string> validateResolvedPath)

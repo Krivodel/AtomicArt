@@ -344,7 +344,7 @@ public sealed class GalleryItemDeletionServiceTests
             Times.AtLeastOnce);
     }
 
-    private sealed class ModelScopedTrustedImageFileService : ITrustedImageFileService
+    private sealed class ModelScopedTrustedImageFileService : TrustedImageFileServiceTestDouble
     {
         private readonly string _trustedModelId;
         private readonly List<string> _readModelIds = [];
@@ -358,32 +358,21 @@ public sealed class GalleryItemDeletionServiceTests
             _trustedModelId = trustedModelId;
         }
 
-        public string? GetTrustedImagePathOrDefault(string? path, string modelId)
+        public override string? GetTrustedImagePathOrDefault(string? path, string modelId)
         {
             _readModelIds.Add(modelId);
 
             return GetTrustedPathOrDefault(path, modelId);
         }
 
-        public string GetTrustedImagePath(string? path, string modelId)
-        {
-            return GetTrustedImagePathOrDefault(path, modelId)
-                ?? throw new InvalidOperationException("Image path is not trusted.");
-        }
-
-        public void DeleteTrustedImageFileIfExists(
+        public override void DeleteTrustedImageFileIfExists(
             string? path,
             string modelId,
             Action<string> validateResolvedPath)
         {
             _deletionModelIds.Add(modelId);
 
-            string? trustedPath = GetTrustedPathOrDefault(path, modelId);
-
-            if (trustedPath is null)
-            {
-                throw new InvalidOperationException("Image path is not trusted.");
-            }
+            string trustedPath = GetRequiredTrustedPath(GetTrustedPathOrDefault(path, modelId));
 
             if (File.Exists(trustedPath))
             {
@@ -403,7 +392,7 @@ public sealed class GalleryItemDeletionServiceTests
         }
     }
 
-    private sealed class ResolvedPathTrustedImageFileService : ITrustedImageFileService
+    private sealed class ResolvedPathTrustedImageFileService : TrustedImageFileServiceTestDouble
     {
         private readonly string _resolvedPath;
 
@@ -414,17 +403,12 @@ public sealed class GalleryItemDeletionServiceTests
             _resolvedPath = resolvedPath;
         }
 
-        public string? GetTrustedImagePathOrDefault(string? path, string modelId)
+        public override string? GetTrustedImagePathOrDefault(string? path, string modelId)
         {
             return path;
         }
 
-        public string GetTrustedImagePath(string? path, string modelId)
-        {
-            return path ?? throw new InvalidOperationException("Image path is not trusted.");
-        }
-
-        public void DeleteTrustedImageFileIfExists(
+        public override void DeleteTrustedImageFileIfExists(
             string? path,
             string modelId,
             Action<string> validateResolvedPath)
