@@ -44,10 +44,9 @@ public sealed class GenerationRunDispatcherTests
 
         await apiClient.WaitForCallCountAsync(1);
         apiClient.Complete();
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Any(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed),
-            CancellationToken.None);
+        await WaitForStatusAsync(
+            lifecycleEventHub,
+            GenerationLifecycleStatus.Completed);
     }
 
     [Fact]
@@ -67,10 +66,9 @@ public sealed class GenerationRunDispatcherTests
             .Which.Should().Be(TestGenerationCredentials.ProviderCredential);
 
         apiClient.Complete();
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Any(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed),
-            CancellationToken.None);
+        await WaitForStatusAsync(
+            lifecycleEventHub,
+            GenerationLifecycleStatus.Completed);
     }
 
     [Fact]
@@ -80,12 +78,10 @@ public sealed class GenerationRunDispatcherTests
         TestGenerationLifecycleEventHub lifecycleEventHub = new();
         GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
 
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Any(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Failed),
-            CancellationToken.None);
+        await EnqueueAndWaitForStatusAsync(
+            dispatcher,
+            lifecycleEventHub,
+            GenerationLifecycleStatus.Failed);
 
         List<GenerationLifecycleEvent> events = lifecycleEventHub.PublishedEvents.ToList();
         GenerationLifecycleEvent failedEvent = events
@@ -118,10 +114,9 @@ public sealed class GenerationRunDispatcherTests
         runToken.IsCancellationRequested.Should().BeFalse();
         apiClient.Complete();
 
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Any(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed),
-            CancellationToken.None);
+        await WaitForStatusAsync(
+            lifecycleEventHub,
+            GenerationLifecycleStatus.Completed);
 
         lifecycleEventHub.PublishedEvents
             .Should()
@@ -236,10 +231,9 @@ public sealed class GenerationRunDispatcherTests
 
         dispatcher.Dispose();
 
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Any(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Failed),
-            CancellationToken.None);
+        await WaitForStatusAsync(
+            lifecycleEventHub,
+            GenerationLifecycleStatus.Failed);
 
         runToken.IsCancellationRequested.Should().BeTrue();
         lifecycleEventHub.PublishedEvents
@@ -263,10 +257,9 @@ public sealed class GenerationRunDispatcherTests
         dispatcher.Dispose();
         limiter.ReleaseWait();
 
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Any(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Failed),
-            CancellationToken.None);
+        await WaitForStatusAsync(
+            lifecycleEventHub,
+            GenerationLifecycleStatus.Failed);
 
         apiClient.CapturedRequests.Should().BeEmpty();
         lifecycleEventHub.PublishedEvents
@@ -301,11 +294,10 @@ public sealed class GenerationRunDispatcherTests
         TestGenerationLifecycleEventHub lifecycleEventHub = new();
         GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
 
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Any(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed),
-            CancellationToken.None);
+        await EnqueueAndWaitForStatusAsync(
+            dispatcher,
+            lifecycleEventHub,
+            GenerationLifecycleStatus.Completed);
 
         Action act = dispatcher.Dispose;
 
@@ -322,10 +314,9 @@ public sealed class GenerationRunDispatcherTests
         await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
         await apiClient.WaitForCallCountAsync(1);
         dispatcher.Dispose();
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Any(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Failed),
-            CancellationToken.None);
+        await WaitForStatusAsync(
+            lifecycleEventHub,
+            GenerationLifecycleStatus.Failed);
 
         Action act = dispatcher.Dispose;
 
@@ -405,6 +396,25 @@ public sealed class GenerationRunDispatcherTests
         return new GenerationBatchDto(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             items);
+    }
+
+    private static async Task EnqueueAndWaitForStatusAsync(
+        GenerationRunDispatcher dispatcher,
+        TestGenerationLifecycleEventHub lifecycleEventHub,
+        GenerationLifecycleStatus status)
+    {
+        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
+        await WaitForStatusAsync(lifecycleEventHub, status);
+    }
+
+    private static async Task WaitForStatusAsync(
+        TestGenerationLifecycleEventHub lifecycleEventHub,
+        GenerationLifecycleStatus status)
+    {
+        await AsyncTestWaiter.WaitForConditionAsync(
+            () => lifecycleEventHub.PublishedEvents.Any(
+                lifecycleEvent => lifecycleEvent.Status == status),
+            CancellationToken.None);
     }
 
     private static async Task CompleteRunsAndAssertConcurrencyLimitAsync(
