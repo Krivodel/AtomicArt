@@ -23,6 +23,33 @@ public sealed class ImageViewerState
         return (ImageViewerState)MemberwiseClone();
     }
 
+    internal ImageViewerState CreateNormalizedCopy()
+    {
+        ImageViewerState normalizedState = CreateCopy();
+        normalizedState.MovementSpeed = ViewerSettingsDefaults.NormalizeSpeed(
+            MovementSpeed,
+            ViewerSettingsDefaults.MovementSpeed);
+        normalizedState.ZoomSpeed = ViewerSettingsDefaults.NormalizeSpeed(
+            ZoomSpeed,
+            ViewerSettingsDefaults.ZoomSpeed);
+        normalizedState.IsPanningInertiaEnabled =
+            IsSmoothPanningEnabled && IsPanningInertiaEnabled;
+        normalizedState.ResizeBehavior =
+            ViewerSettingsDefaults.NormalizeResizeBehavior(ResizeBehavior);
+        normalizedState.IsWindowed = RememberWindowPlacement
+            && (IsWindowed ?? HasCompleteWindowPlacement());
+        normalizedState.WindowX = RememberWindowPlacement ? WindowX : null;
+        normalizedState.WindowY = RememberWindowPlacement ? WindowY : null;
+        normalizedState.WindowWidth = RememberWindowPlacement
+            ? NormalizeDimension(WindowWidth)
+            : null;
+        normalizedState.WindowHeight = RememberWindowPlacement
+            ? NormalizeDimension(WindowHeight)
+            : null;
+
+        return normalizedState;
+    }
+
     internal ImageViewerState CreateSnapshot(
         bool isWindowed,
         int? windowX,
@@ -38,5 +65,20 @@ public sealed class ImageViewerState
         snapshot.WindowHeight = RememberWindowPlacement ? windowHeight : null;
 
         return snapshot;
+    }
+
+    private static double? NormalizeDimension(double? dimension)
+    {
+        return dimension is > 0d && double.IsFinite(dimension.Value)
+            ? dimension
+            : null;
+    }
+
+    private bool HasCompleteWindowPlacement()
+    {
+        return WindowX is not null
+            && WindowY is not null
+            && WindowWidth is not null
+            && WindowHeight is not null;
     }
 }

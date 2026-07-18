@@ -66,7 +66,7 @@ public sealed class ImageViewerStateService : IImageViewerStateService
             ImageViewerState? state = await JsonSerializer
                 .DeserializeAsync<ImageViewerState>(stream, SerializerOptions, ct)
                 .ConfigureAwait(false);
-            _currentState = Normalize(state);
+            _currentState = (state ?? new ImageViewerState()).CreateNormalizedCopy();
             _logger.LogInformation("Loaded and normalized Pica viewer state");
 
             return _currentState;
@@ -90,7 +90,7 @@ public sealed class ImageViewerStateService : IImageViewerStateService
 
         try
         {
-            ImageViewerState normalizedState = Normalize(state);
+            ImageViewerState normalizedState = state.CreateNormalizedCopy();
             string? directoryPath = Path.GetDirectoryName(_stateFilePath);
 
             if (string.IsNullOrWhiteSpace(directoryPath))
@@ -118,54 +118,6 @@ public sealed class ImageViewerStateService : IImageViewerStateService
         {
             _stateLock.Release();
         }
-    }
-
-    private static ImageViewerState Normalize(ImageViewerState? state)
-    {
-        ImageViewerState sourceState = state ?? new ImageViewerState();
-        bool rememberWindowPlacement = sourceState.RememberWindowPlacement;
-        bool smoothPanningEnabled = sourceState.IsSmoothPanningEnabled;
-
-        return new ImageViewerState
-        {
-            IsFilteringEnabled = sourceState.IsFilteringEnabled,
-            MovementSpeed = ViewerSettingsDefaults.NormalizeSpeed(
-                sourceState.MovementSpeed,
-                ViewerSettingsDefaults.MovementSpeed),
-            ZoomSpeed = ViewerSettingsDefaults.NormalizeSpeed(
-                sourceState.ZoomSpeed,
-                ViewerSettingsDefaults.ZoomSpeed),
-            ExpandOnDoubleClick = sourceState.ExpandOnDoubleClick,
-            IsFastLoadingEnabled = sourceState.IsFastLoadingEnabled,
-            AllowFreeZoomOut = sourceState.AllowFreeZoomOut,
-            IsSmoothPanningEnabled = smoothPanningEnabled,
-            IsPanningInertiaEnabled = smoothPanningEnabled
-                && sourceState.IsPanningInertiaEnabled,
-            ResizeBehavior = ViewerSettingsDefaults.NormalizeResizeBehavior(
-                sourceState.ResizeBehavior),
-            RememberWindowPlacement = rememberWindowPlacement,
-            IsWindowed = rememberWindowPlacement
-                && (sourceState.IsWindowed ?? HasCompleteWindowPlacement(sourceState)),
-            WindowX = rememberWindowPlacement ? sourceState.WindowX : null,
-            WindowY = rememberWindowPlacement ? sourceState.WindowY : null,
-            WindowWidth = rememberWindowPlacement ? NormalizeDimension(sourceState.WindowWidth) : null,
-            WindowHeight = rememberWindowPlacement ? NormalizeDimension(sourceState.WindowHeight) : null
-        };
-    }
-
-    private static double? NormalizeDimension(double? dimension)
-    {
-        return dimension is > 0d && double.IsFinite(dimension.Value)
-            ? dimension
-            : null;
-    }
-
-    private static bool HasCompleteWindowPlacement(ImageViewerState state)
-    {
-        return state.WindowX is not null
-            && state.WindowY is not null
-            && state.WindowWidth is not null
-            && state.WindowHeight is not null;
     }
 
     private static string CreateDefaultStateFilePath()
