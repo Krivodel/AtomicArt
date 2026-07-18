@@ -188,19 +188,8 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
     private static Result<GenerationBatchDto> CreateProviderFailure(
         ImageGenerationProviderException exception)
     {
-        string errorCode = exception.FailureKind switch
-        {
-            ImageGenerationProviderFailureKind.RequestRejected => ImageGenerationProviderErrorCodes.RequestRejected,
-            ImageGenerationProviderFailureKind.Authentication => ImageGenerationProviderErrorCodes.Authentication,
-            ImageGenerationProviderFailureKind.Authorization => ImageGenerationProviderErrorCodes.Authorization,
-            ImageGenerationProviderFailureKind.ResourceNotFound => ImageGenerationProviderErrorCodes.ResourceNotFound,
-            ImageGenerationProviderFailureKind.RateLimited => ImageGenerationProviderErrorCodes.RateLimited,
-            ImageGenerationProviderFailureKind.InternalError => ImageGenerationProviderErrorCodes.InternalError,
-            ImageGenerationProviderFailureKind.Timeout => ImageGenerationProviderErrorCodes.Timeout,
-            ImageGenerationProviderFailureKind.InvalidResponse => ImageGenerationProviderErrorCodes.InvalidResponse,
-            ImageGenerationProviderFailureKind.Unavailable => ImageGenerationProviderErrorCodes.Unavailable,
-            _ => ImageGenerationProviderErrorCodes.Unknown
-        };
+        string errorCode =
+            ImageGenerationProviderFailureCatalog.GetErrorCode(exception.FailureKind);
 
         return Result<GenerationBatchDto>.Unavailable(
             errorCode,

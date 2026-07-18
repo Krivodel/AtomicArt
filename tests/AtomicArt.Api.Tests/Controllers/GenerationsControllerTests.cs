@@ -342,21 +342,42 @@ public sealed class GenerationsControllerTests
     }
 
     [Theory]
-    [InlineData(ImageGenerationProviderErrorCodes.Authentication, StatusCodes.Status401Unauthorized)]
-    [InlineData(ImageGenerationProviderErrorCodes.Authorization, StatusCodes.Status403Forbidden)]
-    [InlineData(ImageGenerationProviderErrorCodes.RateLimited, StatusCodes.Status429TooManyRequests)]
-    [InlineData(ImageGenerationProviderErrorCodes.RequestRejected, StatusCodes.Status502BadGateway)]
-    [InlineData(ImageGenerationProviderErrorCodes.ResourceNotFound, StatusCodes.Status502BadGateway)]
-    [InlineData(ImageGenerationProviderErrorCodes.InternalError, StatusCodes.Status502BadGateway)]
-    [InlineData(ImageGenerationProviderErrorCodes.InvalidResponse, StatusCodes.Status502BadGateway)]
-    [InlineData(ImageGenerationProviderErrorCodes.Unknown, StatusCodes.Status502BadGateway)]
-    [InlineData(ImageGenerationProviderErrorCodes.Timeout, StatusCodes.Status504GatewayTimeout)]
-    [InlineData(ImageGenerationProviderErrorCodes.Unavailable, StatusCodes.Status503ServiceUnavailable)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Authentication,
+        StatusCodes.Status401Unauthorized)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Authorization,
+        StatusCodes.Status403Forbidden)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.RateLimited,
+        StatusCodes.Status429TooManyRequests)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.RequestRejected,
+        StatusCodes.Status502BadGateway)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.ResourceNotFound,
+        StatusCodes.Status502BadGateway)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.InternalError,
+        StatusCodes.Status502BadGateway)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.InvalidResponse,
+        StatusCodes.Status502BadGateway)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Unknown,
+        StatusCodes.Status502BadGateway)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Timeout,
+        StatusCodes.Status504GatewayTimeout)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Unavailable,
+        StatusCodes.Status503ServiceUnavailable)]
     public async Task CreateAsync_WithProviderUnavailableResult_ReturnsProviderStatusProblemDetails(
-        string errorCode,
+        ImageGenerationProviderFailureKind failureKind,
         int expectedStatusCode)
     {
         string rawErrorMessage = "Provider failed with secret response body";
+        string errorCode = ImageGenerationProviderFailureCatalog.GetErrorCode(failureKind);
         Result<GenerationBatchDto> result = Result<GenerationBatchDto>.Unavailable(errorCode, rawErrorMessage);
         Mock<IMediator> mediator = CreateMediator(result);
         GenerationsController controller = CreateController(mediator.Object);

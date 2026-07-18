@@ -108,19 +108,26 @@ public sealed class GenerationsController : ControllerBase
 
     private static int GetCreateUnavailableStatusCode(string? errorCode)
     {
-        return errorCode switch
+        if (!ImageGenerationProviderFailureCatalog.TryGetFailureKind(
+            errorCode,
+            out ImageGenerationProviderFailureKind failureKind))
         {
-            ImageGenerationProviderErrorCodes.Authentication => StatusCodes.Status401Unauthorized,
-            ImageGenerationProviderErrorCodes.Authorization => StatusCodes.Status403Forbidden,
-            ImageGenerationProviderErrorCodes.RateLimited => StatusCodes.Status429TooManyRequests,
-            ImageGenerationProviderErrorCodes.RequestRejected
-                or ImageGenerationProviderErrorCodes.ResourceNotFound
-                or ImageGenerationProviderErrorCodes.InternalError
-                or ImageGenerationProviderErrorCodes.Unknown
+            return StatusCodes.Status500InternalServerError;
+        }
+
+        return failureKind switch
+        {
+            ImageGenerationProviderFailureKind.Authentication => StatusCodes.Status401Unauthorized,
+            ImageGenerationProviderFailureKind.Authorization => StatusCodes.Status403Forbidden,
+            ImageGenerationProviderFailureKind.RateLimited => StatusCodes.Status429TooManyRequests,
+            ImageGenerationProviderFailureKind.RequestRejected
+                or ImageGenerationProviderFailureKind.ResourceNotFound
+                or ImageGenerationProviderFailureKind.InternalError
+                or ImageGenerationProviderFailureKind.Unknown
                 => StatusCodes.Status502BadGateway,
-            ImageGenerationProviderErrorCodes.InvalidResponse => StatusCodes.Status502BadGateway,
-            ImageGenerationProviderErrorCodes.Timeout => StatusCodes.Status504GatewayTimeout,
-            ImageGenerationProviderErrorCodes.Unavailable => StatusCodes.Status503ServiceUnavailable,
+            ImageGenerationProviderFailureKind.InvalidResponse => StatusCodes.Status502BadGateway,
+            ImageGenerationProviderFailureKind.Timeout => StatusCodes.Status504GatewayTimeout,
+            ImageGenerationProviderFailureKind.Unavailable => StatusCodes.Status503ServiceUnavailable,
             _ => StatusCodes.Status500InternalServerError
         };
     }
