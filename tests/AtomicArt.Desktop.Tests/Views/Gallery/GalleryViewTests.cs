@@ -1,6 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
-
 using System.Globalization;
+
+using Microsoft.Extensions.DependencyInjection;
 
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -63,7 +63,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             try
             {
                 await viewModel.RestoreStateAsync(
-                    [GalleryItemStateTestFactory.CreateGenerated()],
+                    new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
                     CancellationToken.None);
                 window.CaptureRenderedFrame();
 
@@ -89,7 +89,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             GalleryView view = CreateGalleryView(serviceProvider, viewModel);
 
             await viewModel.RestoreStateAsync(
-                [GalleryItemStateTestFactory.CreateGenerated()],
+                new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
                 CancellationToken.None);
 
             Window window = Show(view);
@@ -114,27 +114,22 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            RegisterGalleryViewTemplate(serviceProvider);
-            MainWindow window = serviceProvider.GetRequiredService<MainWindow>();
-            MainWindowViewModel viewModel = window.DataContext
-                .Should()
-                .BeOfType<MainWindowViewModel>()
-                .Subject;
+            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
 
-            await viewModel.RestoreGalleryAsync(
-                [GalleryItemStateTestFactory.CreateGenerated()],
+            await scenario.ViewModel.RestoreGalleryAsync(
+                new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
                 CancellationToken.None);
 
-            window.Show();
-            window.CaptureRenderedFrame();
+            scenario.Window.Show();
+            scenario.Window.CaptureRenderedFrame();
 
             try
             {
-                AssertSingleVisibleCard(GetGalleryControl(window));
+                AssertSingleVisibleCard(GetGalleryControl(scenario.Window));
             }
             finally
             {
-                window.Close();
+                scenario.Window.Close();
             }
         });
     }
@@ -150,25 +145,20 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             services.AddDesktopServices();
             services.AddSingleton<IAppStateBootstrapper>(new FixedGalleryAppStateBootstrapper(savedItem));
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            RegisterGalleryViewTemplate(serviceProvider);
-            MainWindow window = serviceProvider.GetRequiredService<MainWindow>();
-            MainWindowViewModel viewModel = window.DataContext
-                .Should()
-                .BeOfType<MainWindowViewModel>()
-                .Subject;
+            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
 
-            await viewModel.RestoreAppStateCommand.ExecuteAsync(null);
+            await scenario.ViewModel.RestoreAppStateCommand.ExecuteAsync(null);
 
-            window.Show();
-            window.CaptureRenderedFrame();
+            scenario.Window.Show();
+            scenario.Window.CaptureRenderedFrame();
 
             try
             {
-                AssertSingleVisibleCard(GetGalleryControl(window));
+                AssertSingleVisibleCard(GetGalleryControl(scenario.Window));
             }
             finally
             {
-                window.Close();
+                scenario.Window.Close();
             }
         });
     }
@@ -184,27 +174,22 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             services.AddDesktopServices();
             services.AddSingleton<IAppStateBootstrapper>(new FixedGalleryAppStateBootstrapper(savedItem));
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            RegisterGalleryViewTemplate(serviceProvider);
-            MainWindow window = serviceProvider.GetRequiredService<MainWindow>();
-            MainWindowViewModel viewModel = window.DataContext
-                .Should()
-                .BeOfType<MainWindowViewModel>()
-                .Subject;
+            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
 
-            Task restoreTask = viewModel.RestoreAppStateCommand.ExecuteAsync(null);
-            window.Show();
-            window.CaptureRenderedFrame();
+            Task restoreTask = scenario.ViewModel.RestoreAppStateCommand.ExecuteAsync(null);
+            scenario.Window.Show();
+            scenario.Window.CaptureRenderedFrame();
 
             try
             {
                 await restoreTask;
-                window.CaptureRenderedFrame();
+                scenario.Window.CaptureRenderedFrame();
 
-                AssertSingleVisibleCard(GetGalleryControl(window));
+                AssertSingleVisibleCard(GetGalleryControl(scenario.Window));
             }
             finally
             {
-                window.Close();
+                scenario.Window.Close();
             }
         });
     }
@@ -222,23 +207,18 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            RegisterGalleryViewTemplate(serviceProvider);
-            MainWindow window = serviceProvider.GetRequiredService<MainWindow>();
-            MainWindowViewModel viewModel = window.DataContext
-                .Should()
-                .BeOfType<MainWindowViewModel>()
-                .Subject;
+            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
             IReadOnlyList<GalleryItemState> items = CreateSavedGalleryItems(itemCount);
 
-            await viewModel.RestoreGalleryAsync(items, CancellationToken.None);
+            await scenario.ViewModel.RestoreGalleryAsync(items, CancellationToken.None);
 
-            window.Show();
-            window.CaptureRenderedFrame();
+            scenario.Window.Show();
+            scenario.Window.CaptureRenderedFrame();
 
             try
             {
-                viewModel.Gallery.Items.Should().HaveCount(itemCount);
-                AnimatedGalleryControl control = window
+                scenario.ViewModel.Gallery.Items.Should().HaveCount(itemCount);
+                AnimatedGalleryControl control = scenario.Window
                     .GetVisualDescendants()
                     .OfType<AnimatedGalleryControl>()
                     .Single();
@@ -253,7 +233,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             }
             finally
             {
-                window.Close();
+                scenario.Window.Close();
             }
         });
     }
@@ -266,6 +246,19 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         view.DataContext = viewModel;
 
         return view;
+    }
+
+    private static MainWindowScenario CreateMainWindowScenario(
+        IServiceProvider serviceProvider)
+    {
+        RegisterGalleryViewTemplate(serviceProvider);
+        MainWindow window = serviceProvider.GetRequiredService<MainWindow>();
+        MainWindowViewModel viewModel = window.DataContext
+            .Should()
+            .BeOfType<MainWindowViewModel>()
+            .Subject;
+
+        return new MainWindowScenario(window, viewModel);
     }
 
     private static void AssertGalleryViewOperations(GalleryView view)
@@ -324,12 +317,17 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         Avalonia.Application.Current?.DataTemplates.Add(
             new ViewModelViewTemplate(
-            [
-                new ViewTemplateRegistration(
-                    typeof(GalleryViewModel),
-                    serviceProvider.GetRequiredService<GalleryView>)
-            ]));
+                new ViewTemplateRegistration[]
+                {
+                    new ViewTemplateRegistration(
+                        typeof(GalleryViewModel),
+                        serviceProvider.GetRequiredService<GalleryView>)
+                }));
     }
+
+    private sealed record MainWindowScenario(
+        MainWindow Window,
+        MainWindowViewModel ViewModel);
 
     private sealed class FixedGalleryAppStateBootstrapper : IAppStateBootstrapper
     {
@@ -342,7 +340,9 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 
         public Task RestoreAsync(IAppStateRestoreTarget target, CancellationToken ct)
         {
-            return target.RestoreGalleryAsync([_savedItem], ct);
+            GalleryItemState[] savedItems = [_savedItem];
+
+            return target.RestoreGalleryAsync(savedItems, ct);
         }
 
         public Task FlushAsync(IAppStateFlushTarget target, CancellationToken ct)
