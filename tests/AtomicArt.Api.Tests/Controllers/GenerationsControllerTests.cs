@@ -74,35 +74,15 @@ public sealed class GenerationsControllerTests
             Times.Once);
     }
 
-    [Fact]
-    public async Task CreateAsync_WithHttpsBoundary_ReturnsOkResponse()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CreateAsync_WithNonLoopbackBoundary_ReturnsOkResponse(bool isHttps)
     {
         GenerationBatchDto batch = CreateBatchWithContent();
         ControllerTestContext context = CreateControllerTestContext(
             Result<GenerationBatchDto>.Success(batch),
-            isHttps: true,
-            remoteIpAddress: IPAddress.Parse("203.0.113.10"));
-
-        IActionResult actionResult = await context.Controller.CreateAsync(
-            context.Request,
-            CancellationToken.None);
-
-        OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().Be(batch);
-        context.Mediator.Verify(
-            currentMediator => currentMediator.Send(
-                It.IsAny<CreateImageGenerationCommand>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithNonLoopbackHttpBoundary_ReturnsOkResponse()
-    {
-        GenerationBatchDto batch = CreateBatchWithContent();
-        ControllerTestContext context = CreateControllerTestContext(
-            Result<GenerationBatchDto>.Success(batch),
-            isHttps: false,
+            isHttps: isHttps,
             remoteIpAddress: IPAddress.Parse("203.0.113.10"));
 
         IActionResult actionResult = await context.Controller.CreateAsync(
