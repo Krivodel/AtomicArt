@@ -19,16 +19,16 @@ namespace AtomicArt.Infrastructure.Tests.Generation.GoogleInteractions;
 
 public sealed class GoogleInteractionsClientTests
 {
+    private const string CompletedResponseJson = """{"status":"completed"}""";
+    private const string InternalServerErrorResponseJson = """{"error":"flex unavailable"}""";
+
     [Fact]
     public async Task CreateInteractionAsync_WithProviderCredential_SendsApiKeyHeaderWithoutQueryString()
     {
-        using ClientTestContext context = CreateClient(
-            HttpStatusCode.OK,
-            """{"status":"completed"}""");
+        using ClientTestContext context = CreateClient(HttpStatusCode.OK, CompletedResponseJson);
 
-        string responseJson = await context.CreateInteractionAsync();
+        await CreateInteractionAndAssertCompletedAsync(context);
 
-        responseJson.Should().Be("""{"status":"completed"}""");
         HttpRequestMessage request = context.Handler.Requests.Single();
         request.Method.Should().Be(HttpMethod.Post);
         request.RequestUri.Should().NotBeNull();
@@ -168,20 +168,15 @@ public sealed class GoogleInteractionsClientTests
     public async Task CreateInteractionAsync_WithLargeErrorBody_LogsFirst512MessageCharacters()
     {
         string providerMessage = new('x', 20 * 1024);
-        string responseJson = JsonSerializer.Serialize(new
-        {
-            error = new
-            {
-                code = 429,
-                status = "RESOURCE_EXHAUSTED",
-                message = providerMessage
-            }
-        });
-        (IReadOnlyList<string> logMessages, _) = await GetProviderFailureAsync(
+        string responseJson = CreateProviderErrorResponseJson(
+            429,
+            "RESOURCE_EXHAUSTED",
+            providerMessage);
+
+        string logText = await GetLastProviderFailureLogAsync(
             HttpStatusCode.TooManyRequests,
             responseJson);
 
-        string logText = logMessages.Last();
         logText.Should().Contain("provider code 429");
         logText.Should().Contain("provider status RESOURCE_EXHAUSTED");
         logText.Should().Contain(new string('x', 512));
@@ -192,20 +187,15 @@ public sealed class GoogleInteractionsClientTests
     public async Task CreateInteractionAsync_WithControlCharactersInMessage_LogsSingleLineMessage()
     {
         const string providerMessage = "First line\r\nSecond\tsegment\u0001done";
-        string responseJson = JsonSerializer.Serialize(new
-        {
-            error = new
-            {
-                code = 400,
-                status = "INVALID_ARGUMENT",
-                message = providerMessage
-            }
-        });
-        (IReadOnlyList<string> logMessages, _) = await GetProviderFailureAsync(
+        string responseJson = CreateProviderErrorResponseJson(
+            400,
+            "INVALID_ARGUMENT",
+            providerMessage);
+
+        string logText = await GetLastProviderFailureLogAsync(
             HttpStatusCode.BadRequest,
             responseJson);
 
-        string logText = logMessages.Last();
         logText.Should().Contain("provider message First line Second segment done.");
         logText.Should().NotContain("\r");
         logText.Should().NotContain("\n");
@@ -234,26 +224,19 @@ public sealed class GoogleInteractionsClientTests
     [Fact]
     public async Task CreateInteractionAsync_WithInternalServerErrorThenSuccess_RetriesAndReturnsResponse()
     {
-        using ClientTestContext context = CreateClient(
-            (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
-            (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
-            (HttpStatusCode.OK, """{"status":"completed"}"""));
+        using ClientTestContext context = CreateInternalServerErrorClient(
+            2,
+            (HttpStatusCode.OK, CompletedResponseJson));
 
-        string responseJson = await context.CreateInteractionAsync();
+        await CreateInteractionAndAssertCompletedAsync(context);
 
-        responseJson.Should().Be("""{"status":"completed"}""");
         context.Handler.Requests.Should().HaveCount(3);
     }
 
     [Fact]
     public async Task CreateInteractionAsync_WithPersistentInternalServerError_ThrowsAfterRetryAttempts()
     {
-        using ClientTestContext context = CreateClient(
-            (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
-            (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
-            (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
-            (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
-            (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""));
+        using ClientTestContext context = CreateInternalServerErrorClient(5);
 
         await AssertProviderFailureAsync(
             context,
@@ -273,6 +256,36 @@ public sealed class GoogleInteractionsClientTests
             null);
     }
 
+    private static ClientTestContext CreateInternalServerErrorClient(
+        int errorCount,
+        params (HttpStatusCode StatusCode, string ResponseJson)[] trailingResponses)
+    {
+        List<(HttpStatusCode StatusCode, string ResponseJson)> responses = Enumerable
+            .Repeat(
+                (HttpStatusCode.InternalServerError, InternalServerErrorResponseJson),
+                errorCount)
+            .ToList();
+        responses.AddRange(trailingResponses);
+
+        return CreateClient(responses.ToArray());
+    }
+
+    private static string CreateProviderErrorResponseJson(
+        int code,
+        string status,
+        string message)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            error = new
+            {
+                code,
+                status,
+                message
+            }
+        });
+    }
+
     private static ClientTestContext CreateRecordingClient(
         HttpStatusCode statusCode,
         string responseJson)
@@ -284,24 +297,6 @@ public sealed class GoogleInteractionsClientTests
             responseJson,
             logger,
             logger);
-    }
-
-    private static async Task<(
-        IReadOnlyList<string> LogMessages,
-        ImageGenerationProviderException Exception)> GetProviderFailureAsync(
-            HttpStatusCode statusCode,
-            string responseJson,
-            string? requestJson = null,
-            string providerCredential = TestGenerationCredentials.ProviderCredential)
-    {
-        using ClientTestContext context = CreateRecordingClient(statusCode, responseJson);
-        Func<Task> act = () => context.CreateInteractionAsync(requestJson, providerCredential);
-
-        FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
-            await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        IReadOnlyList<string> logMessages = context.LogMessages.ToList();
-
-        return (logMessages, assertions.Which);
     }
 
     private static ClientTestContext CreateClient(
@@ -339,6 +334,45 @@ public sealed class GoogleInteractionsClientTests
         return $$"""{"model":"{{ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().ProviderModelId}}"}""";
     }
 
+    private static async Task CreateInteractionAndAssertCompletedAsync(
+        ClientTestContext context)
+    {
+        string responseJson = await context.CreateInteractionAsync().ConfigureAwait(false);
+
+        responseJson.Should().Be(CompletedResponseJson);
+    }
+
+    private static async Task<string> GetLastProviderFailureLogAsync(
+        HttpStatusCode statusCode,
+        string responseJson)
+    {
+        (IReadOnlyList<string> logMessages, _) = await GetProviderFailureAsync(
+            statusCode,
+            responseJson).ConfigureAwait(false);
+
+        return logMessages.Last();
+    }
+
+    private static async Task<(
+        IReadOnlyList<string> LogMessages,
+        ImageGenerationProviderException Exception)> GetProviderFailureAsync(
+            HttpStatusCode statusCode,
+            string responseJson,
+            string? requestJson = null,
+            string providerCredential = TestGenerationCredentials.ProviderCredential)
+    {
+        using ClientTestContext context = CreateRecordingClient(statusCode, responseJson);
+        Func<Task> act = () => context.CreateInteractionAsync(requestJson, providerCredential);
+
+        FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
+            await act.Should()
+                .ThrowAsync<ImageGenerationProviderException>()
+                .ConfigureAwait(false);
+        IReadOnlyList<string> logMessages = context.LogMessages.ToList();
+
+        return (logMessages, assertions.Which);
+    }
+
     private static async Task AssertProviderFailureAsync(
         ClientTestContext context,
         ImageGenerationProviderFailureKind expectedFailureKind)
@@ -348,7 +382,8 @@ public sealed class GoogleInteractionsClientTests
         FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
             await act.Should()
                 .ThrowAsync<ImageGenerationProviderException>()
-                .WithMessage("The generation provider returned an error.");
+                .WithMessage("The generation provider returned an error.")
+                .ConfigureAwait(false);
         assertions.Which.FailureKind.Should().Be(expectedFailureKind);
     }
 
