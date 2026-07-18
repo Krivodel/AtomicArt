@@ -1,0 +1,32 @@
+<Project>
+  <PropertyGroup>
+    <WebPublishMethod>FileSystem</WebPublishMethod>
+    <PublishProvider>FileSystem</PublishProvider>
+    <PublishProtocol>FileSystem</PublishProtocol>
+    <_TargetId>Folder</_TargetId>
+    <LaunchSiteAfterPublish>false</LaunchSiteAfterPublish>
+    <DeleteExistingFiles>true</DeleteExistingFiles>
+
+    <LastUsedBuildConfiguration>Release</LastUsedBuildConfiguration>
+    <LastUsedPlatform>Any CPU</LastUsedPlatform>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishIISAssets>false</PublishIISAssets>
+    <PublishTrimmed>false</PublishTrimmed>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+
+    <PublishUrl>$(MSBuildProjectDirectory)\..\..\publish\AtomicArt.Api\$(ServerPublishProfileName)\</PublishUrl>
+    <PublishDir>$(MSBuildProjectDirectory)\..\..\publish\AtomicArt.Api\$(ServerPublishProfileName)\</PublishDir>
+  </PropertyGroup>
+
+  <Target Name="RemovePublishedExtraFiles" AfterTargets="Publish">
+    <ItemGroup>
+      <PublishedExtraFiles Include="$(PublishDir)**\*"
+                           Exclude="$(PublishDir)$(ServerExecutableName);$(PublishDir)appsettings.json;$(PublishDir)Generation\**\*" />
+    </ItemGroup>
+    <Delete Files="@(PublishedExtraFiles)" />
+  </Target>
+</Project>
