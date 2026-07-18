@@ -1,7 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\AtomicArt.Infrastructure\AtomicArt.Infrastructure.csproj" />
     <ProjectReference Include="..\AtomicArt.Tests.Common\AtomicArt.Tests.Common.csproj" />
