@@ -26,30 +26,26 @@ public sealed class GalleryThumbnailStorageTests
     [Fact]
     public async Task SaveAsync_WithGeneratedImage_WritesThumbnailToThumbnailsDirectory()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(SaveAsync_WithGeneratedImage_WritesThumbnailToThumbnailsDirectory));
-        AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        string sourceImagePath = await WriteSourceImageAsync(pathProvider);
-        GalleryThumbnailStorage storage = CreateStorage(pathProvider, CreateGenerator());
+        StorageTestContext context = await CreateContextAsync(
+            nameof(SaveAsync_WithGeneratedImage_WritesThumbnailToThumbnailsDirectory));
 
-        await storage.SaveAsync(
+        await context.Storage.SaveAsync(
             BatchId,
             ItemId,
             ModelId,
-            sourceImagePath,
+            context.SourceImagePath,
             CancellationToken.None);
-        string? thumbnailPath = storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
+        string? thumbnailPath = context.Storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
 
         thumbnailPath.Should().NotBeNull();
         File.Exists(thumbnailPath).Should().BeTrue();
-        Path.GetDirectoryName(thumbnailPath).Should().Be(Path.GetFullPath(pathProvider.ThumbnailsDirectory));
+        Path.GetDirectoryName(thumbnailPath).Should().Be(
+            Path.GetFullPath(context.PathProvider.ThumbnailsDirectory));
     }
 
     [Fact]
     public async Task SaveAsync_WithExistingThumbnail_ReplacesThumbnail()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(SaveAsync_WithExistingThumbnail_ReplacesThumbnail));
-        AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        string sourceImagePath = await WriteSourceImageAsync(pathProvider);
         byte[] redThumbnail = GalleryThumbnailTestImages.CreatePngBytes(
             GalleryThumbnailSpecification.ShortSidePixels,
             GalleryThumbnailSpecification.ShortSidePixels,
@@ -59,26 +55,40 @@ public sealed class GalleryThumbnailStorageTests
             GalleryThumbnailSpecification.ShortSidePixels,
             SKColors.Blue);
         Mock<IGalleryThumbnailGenerator> generatorMock = new();
-        generatorMock
-            .SetupSequence(generator => generator.CreateThumbnailAsync(sourceImagePath, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(redThumbnail)
-            .ReturnsAsync(blueThumbnail);
-        GalleryThumbnailStorage storage = CreateStorage(pathProvider, generatorMock.Object);
+        StorageTestContext context = await CreateContextAsync(
+            nameof(SaveAsync_WithExistingThumbnail_ReplacesThumbnail),
+            sourceImagePath =>
+            {
+                generatorMock
+                    .SetupSequence(generator => generator.CreateThumbnailAsync(
+                        sourceImagePath,
+                        It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(redThumbnail)
+                    .ReturnsAsync(blueThumbnail);
 
-        await storage.SaveAsync(
+                return generatorMock.Object;
+            });
+
+        await context.Storage.SaveAsync(
             BatchId,
             ItemId,
             ModelId,
-            sourceImagePath,
+            context.SourceImagePath,
             CancellationToken.None);
-        string? firstThumbnailPath = storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
-        await storage.SaveAsync(
+        string? firstThumbnailPath = context.Storage.GetThumbnailPathOrDefault(
+            BatchId,
+            ItemId,
+            ModelId);
+        await context.Storage.SaveAsync(
             BatchId,
             ItemId,
             ModelId,
-            sourceImagePath,
+            context.SourceImagePath,
             CancellationToken.None);
-        string? secondThumbnailPath = storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
+        string? secondThumbnailPath = context.Storage.GetThumbnailPathOrDefault(
+            BatchId,
+            ItemId,
+            ModelId);
 
         firstThumbnailPath.Should().Be(secondThumbnailPath);
         secondThumbnailPath.Should().NotBeNull();
@@ -88,19 +98,16 @@ public sealed class GalleryThumbnailStorageTests
     [Fact]
     public async Task GetThumbnailPathOrDefault_WithSavedThumbnail_ReturnsTrustedPath()
     {
-        string rootDirectory = CreateCleanDirectory(
+        StorageTestContext context = await CreateContextAsync(
             nameof(GetThumbnailPathOrDefault_WithSavedThumbnail_ReturnsTrustedPath));
-        AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        string sourceImagePath = await WriteSourceImageAsync(pathProvider);
-        GalleryThumbnailStorage storage = CreateStorage(pathProvider, CreateGenerator());
 
-        await storage.SaveAsync(
+        await context.Storage.SaveAsync(
             BatchId,
             ItemId,
             ModelId,
-            sourceImagePath,
+            context.SourceImagePath,
             CancellationToken.None);
-        string? thumbnailPath = storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
+        string? thumbnailPath = context.Storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
 
         thumbnailPath.Should().NotBeNull();
         thumbnailPath.Should().Be(Path.GetFullPath(thumbnailPath));
@@ -110,55 +117,56 @@ public sealed class GalleryThumbnailStorageTests
     [Fact]
     public async Task SaveAsync_WhenGeneratorThrows_LogsAndThrows()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(SaveAsync_WhenGeneratorThrows_LogsAndThrows));
-        AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        string sourceImagePath = await WriteSourceImageAsync(pathProvider);
         InvalidDataException exception = new("Invalid test image.");
         Mock<IGalleryThumbnailGenerator> generatorMock = new();
-        generatorMock
-            .Setup(generator => generator.CreateThumbnailAsync(sourceImagePath, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(exception);
         Mock<ILogger<GalleryThumbnailStorage>> loggerMock = new();
-        GalleryThumbnailStorage storage = CreateStorage(pathProvider, generatorMock.Object, loggerMock.Object);
+        StorageTestContext context = await CreateContextAsync(
+            nameof(SaveAsync_WhenGeneratorThrows_LogsAndThrows),
+            sourceImagePath =>
+            {
+                generatorMock
+                    .Setup(generator => generator.CreateThumbnailAsync(
+                        sourceImagePath,
+                        It.IsAny<CancellationToken>()))
+                    .ThrowsAsync(exception);
 
-        Func<Task> act = () => storage.SaveAsync(
+                return generatorMock.Object;
+            },
+            loggerMock.Object);
+
+        Func<Task> act = () => context.Storage.SaveAsync(
             BatchId,
             ItemId,
             ModelId,
-            sourceImagePath,
+            context.SourceImagePath,
             CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidDataException>();
-        storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId).Should().BeNull();
+        context.Storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId).Should().BeNull();
         VerifyWarningLogged(loggerMock, "Failed to create gallery thumbnail");
     }
 
     [Fact]
     public async Task BuildFileName_ForFullImageAndThumbnail_UsesGenerationImageFileNamePolicy()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(BuildFileName_ForFullImageAndThumbnail_UsesGenerationImageFileNamePolicy));
-        AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        string sourceImagePath = await WriteSourceImageAsync(pathProvider);
         GenerationImageFileNamePolicy fileNamePolicy = new();
         GalleryThumbnailImageFormat thumbnailImageFormat = new();
-        GalleryThumbnailStorage storage = CreateStorage(
-            pathProvider,
-            CreateGenerator(),
-            NullLogger<GalleryThumbnailStorage>.Instance,
-            fileNamePolicy,
-            thumbnailImageFormat);
+        StorageTestContext context = await CreateContextAsync(
+            nameof(BuildFileName_ForFullImageAndThumbnail_UsesGenerationImageFileNamePolicy),
+            fileNamePolicy: fileNamePolicy,
+            thumbnailImageFormat: thumbnailImageFormat);
         string expectedFileName = fileNamePolicy.BuildFileName(
             BatchId,
             ItemId,
             thumbnailImageFormat.Extension);
 
-        await storage.SaveAsync(
+        await context.Storage.SaveAsync(
             BatchId,
             ItemId,
             ModelId,
-            sourceImagePath,
+            context.SourceImagePath,
             CancellationToken.None);
-        string? thumbnailPath = storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
+        string? thumbnailPath = context.Storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
 
         thumbnailPath.Should().NotBeNull();
         Path.GetFileName(thumbnailPath).Should().Be(expectedFileName);
@@ -173,19 +181,11 @@ public sealed class GalleryThumbnailStorageTests
         Mock<ILogger<GalleryThumbnailStorage>> loggerMock = new();
         GalleryThumbnailStorage storage = CreateStorage(pathProvider, generatorMock.Object, loggerMock.Object);
 
-        await storage.SaveAsync(
-            BatchId,
-            ItemId,
-            ModelId,
+        await AssertSourceRejectedAsync(
+            storage,
             string.Empty,
-            CancellationToken.None);
-        string? thumbnailPath = storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
-
-        thumbnailPath.Should().BeNull();
-        generatorMock.Verify(
-            generator => generator.CreateThumbnailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        VerifyWarningLogged(loggerMock, "Gallery thumbnail source image path is not trusted");
+            generatorMock,
+            loggerMock);
     }
 
     [Fact]
@@ -206,51 +206,23 @@ public sealed class GalleryThumbnailStorageTests
         Mock<ILogger<GalleryThumbnailStorage>> loggerMock = new();
         GalleryThumbnailStorage storage = CreateStorage(pathProvider, generatorMock.Object, loggerMock.Object);
 
-        await storage.SaveAsync(
-            BatchId,
-            ItemId,
-            ModelId,
+        await AssertSourceRejectedAsync(
+            storage,
             sourceImagePath,
-            CancellationToken.None);
-        string? thumbnailPath = storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
-
-        thumbnailPath.Should().BeNull();
-        generatorMock.Verify(
-            generator => generator.CreateThumbnailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
-        VerifyWarningLogged(loggerMock, "Gallery thumbnail source image path is not trusted");
-    }
-
-    private static GalleryThumbnailStorage CreateStorage(
-        AtomicArtDataPathProvider pathProvider,
-        IGalleryThumbnailGenerator thumbnailGenerator)
-    {
-        return CreateStorage(
-            pathProvider,
-            thumbnailGenerator,
-            NullLogger<GalleryThumbnailStorage>.Instance);
+            generatorMock,
+            loggerMock);
     }
 
     private static GalleryThumbnailStorage CreateStorage(
         AtomicArtDataPathProvider pathProvider,
         IGalleryThumbnailGenerator thumbnailGenerator,
-        ILogger<GalleryThumbnailStorage> logger)
+        ILogger<GalleryThumbnailStorage>? logger = null,
+        GenerationImageFileNamePolicy? fileNamePolicy = null,
+        GalleryThumbnailImageFormat? thumbnailImageFormat = null)
     {
-        return CreateStorage(
-            pathProvider,
-            thumbnailGenerator,
-            logger,
-            new GenerationImageFileNamePolicy(),
-            new GalleryThumbnailImageFormat());
-    }
-
-    private static GalleryThumbnailStorage CreateStorage(
-        AtomicArtDataPathProvider pathProvider,
-        IGalleryThumbnailGenerator thumbnailGenerator,
-        ILogger<GalleryThumbnailStorage> logger,
-        GenerationImageFileNamePolicy fileNamePolicy,
-        GalleryThumbnailImageFormat thumbnailImageFormat)
-    {
+        logger ??= NullLogger<GalleryThumbnailStorage>.Instance;
+        fileNamePolicy ??= new GenerationImageFileNamePolicy();
+        thumbnailImageFormat ??= new GalleryThumbnailImageFormat();
         TrustedImageFileService trustedImageFileService = new(
             pathProvider,
             GenerationImageFormatRegistryTestFactory.Create(),
@@ -263,6 +235,32 @@ public sealed class GalleryThumbnailStorageTests
             thumbnailImageFormat,
             thumbnailGenerator,
             logger);
+    }
+
+    private static async Task<StorageTestContext> CreateContextAsync(
+        string testName,
+        Func<string, IGalleryThumbnailGenerator>? thumbnailGeneratorFactory = null,
+        ILogger<GalleryThumbnailStorage>? logger = null,
+        GenerationImageFileNamePolicy? fileNamePolicy = null,
+        GalleryThumbnailImageFormat? thumbnailImageFormat = null)
+    {
+        string rootDirectory = CreateCleanDirectory(testName);
+        AtomicArtDataPathProvider pathProvider = new(rootDirectory);
+        string sourceImagePath = await WriteSourceImageAsync(pathProvider);
+        IGalleryThumbnailGenerator thumbnailGenerator =
+            thumbnailGeneratorFactory?.Invoke(sourceImagePath)
+            ?? CreateGenerator();
+        GalleryThumbnailStorage storage = CreateStorage(
+            pathProvider,
+            thumbnailGenerator,
+            logger,
+            fileNamePolicy,
+            thumbnailImageFormat);
+
+        return new StorageTestContext(
+            pathProvider,
+            sourceImagePath,
+            storage);
     }
 
     private static GalleryThumbnailGenerator CreateGenerator()
@@ -283,6 +281,29 @@ public sealed class GalleryThumbnailStorageTests
         return sourceImagePath;
     }
 
+    private static async Task AssertSourceRejectedAsync(
+        GalleryThumbnailStorage storage,
+        string sourceImagePath,
+        Mock<IGalleryThumbnailGenerator> generatorMock,
+        Mock<ILogger<GalleryThumbnailStorage>> loggerMock)
+    {
+        await storage.SaveAsync(
+            BatchId,
+            ItemId,
+            ModelId,
+            sourceImagePath,
+            CancellationToken.None);
+        string? thumbnailPath = storage.GetThumbnailPathOrDefault(BatchId, ItemId, ModelId);
+
+        thumbnailPath.Should().BeNull();
+        generatorMock.Verify(
+            generator => generator.CreateThumbnailAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        VerifyWarningLogged(loggerMock, "Gallery thumbnail source image path is not trusted");
+    }
+
     private static void VerifyWarningLogged(
         Mock<ILogger<GalleryThumbnailStorage>> loggerMock,
         string expectedMessage)
@@ -296,5 +317,22 @@ public sealed class GalleryThumbnailStorageTests
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce);
+    }
+
+    private sealed class StorageTestContext
+    {
+        public AtomicArtDataPathProvider PathProvider { get; }
+        public string SourceImagePath { get; }
+        public GalleryThumbnailStorage Storage { get; }
+
+        public StorageTestContext(
+            AtomicArtDataPathProvider pathProvider,
+            string sourceImagePath,
+            GalleryThumbnailStorage storage)
+        {
+            PathProvider = pathProvider;
+            SourceImagePath = sourceImagePath;
+            Storage = storage;
+        }
     }
 }
