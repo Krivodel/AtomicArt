@@ -27,32 +27,15 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
         DataTransfer dataTransfer = new();
         dataTransfer.Add(DataTransferItem.CreateFile(fileMock.Object));
 
-        bool acceptsWindow = ImageDropBehavior.AcceptsData(
-            dataTransfer,
-            ImageDropTargetKind.ExternalFiles);
-        bool acceptsPanel = ImageDropBehavior.AcceptsData(
-            dataTransfer,
-            ImageDropTargetKind.GalleryImage);
-
-        acceptsWindow.Should().BeTrue();
-        acceptsPanel.Should().BeFalse();
+        AssertAcceptedTargets(dataTransfer, true, false);
     }
 
     [Fact]
     public void AcceptsData_WithGalleryImage_AcceptsOnlyGenerationPanel()
     {
-        Mock<IStorageFile> fileMock = new();
-        DataTransfer dataTransfer = GalleryImageDragData.Create(fileMock.Object);
+        DataTransfer dataTransfer = CreateGalleryImageDataTransfer();
 
-        bool acceptsWindow = ImageDropBehavior.AcceptsData(
-            dataTransfer,
-            ImageDropTargetKind.ExternalFiles);
-        bool acceptsPanel = ImageDropBehavior.AcceptsData(
-            dataTransfer,
-            ImageDropTargetKind.GalleryImage);
-
-        acceptsWindow.Should().BeFalse();
-        acceptsPanel.Should().BeTrue();
+        AssertAcceptedTargets(dataTransfer, false, true);
     }
 
     [Theory]
@@ -65,8 +48,7 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            Mock<IStorageFile> fileMock = new();
-            DataTransfer dataTransfer = GalleryImageDragData.Create(fileMock.Object);
+            DataTransfer dataTransfer = CreateGalleryImageDataTransfer();
             Border child = new()
             {
                 Background = Avalonia.Media.Brushes.Transparent
@@ -84,23 +66,20 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
             panel.Children.Add(child);
             panel.Children.Add(overlay);
             ImageDropBehavior.SetDropArea(panel, dropArea);
-            ImageDropBehavior.SetOverlay(panel, overlay);
-            ImageDropBehavior.SetTargetKind(panel, ImageDropTargetKind.GalleryImage);
-            ImageDropBehavior.SetIsEnabled(panel, true);
+            ConfigureGalleryDropTarget(panel, overlay);
             child.AddHandler(
                 DragDrop.DragOverEvent,
                 MarkHandled,
                 RoutingStrategies.Bubble);
-            Window window = Show(panel, 320d, 180d);
+            Window window = ShowTestWindow(panel);
 
             try
             {
-                window.DragDrop(
+                RaiseDragDrop(
+                    window,
                     new Point(x, y),
                     RawDragEventType.DragOver,
-                    dataTransfer,
-                    DragDropEffects.Copy,
-                    RawInputModifiers.None);
+                    dataTransfer);
 
                 overlay.IsActive.Should().Be(expectedIsActive);
             }
@@ -116,34 +95,28 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            Mock<IStorageFile> fileMock = new();
-            DataTransfer dataTransfer = GalleryImageDragData.Create(fileMock.Object);
-            ImageDropOverlayControl overlay = new();
-            Grid panel = new();
-            panel.Children.Add(overlay);
-            ImageDropBehavior.SetOverlay(panel, overlay);
-            ImageDropBehavior.SetTargetKind(panel, ImageDropTargetKind.GalleryImage);
-            ImageDropBehavior.SetIsEnabled(panel, true);
-            Window window = Show(panel, 320d, 180d);
+            DataTransfer dataTransfer = CreateGalleryImageDataTransfer();
+            OverlayPanelTestContext context = CreateOverlayPanelContext();
+            ConfigureGalleryDropTarget(context.Panel, context.Overlay);
+            Window window = ShowTestWindow(context.Panel);
 
             try
             {
-                window.DragDrop(
-                    new Point(160d, 90d),
+                Point pointerPosition = new(160d, 90d);
+                RaiseDragDrop(
+                    window,
+                    pointerPosition,
                     RawDragEventType.DragEnter,
-                    dataTransfer,
-                    DragDropEffects.Copy,
-                    RawInputModifiers.None);
-                window.DragDrop(
-                    new Point(160d, 90d),
+                    dataTransfer);
+                RaiseDragDrop(
+                    window,
+                    pointerPosition,
                     RawDragEventType.DragLeave,
-                    dataTransfer,
-                    DragDropEffects.Copy,
-                    RawInputModifiers.None);
+                    dataTransfer);
 
                 await Task.Delay(OverlayHideWaitMilliseconds);
 
-                overlay.IsActive.Should().BeFalse();
+                context.Overlay.IsActive.Should().BeFalse();
             }
             finally
             {
@@ -157,21 +130,18 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            ImageDropOverlayControl overlay = new();
-            Grid panel = new();
-            panel.Children.Add(overlay);
-            ImageDropBehavior.SetOverlay(panel, overlay);
-            Window window = Show(panel, 320d, 180d);
+            OverlayPanelTestContext context = CreateOverlayPanelContext();
+            Window window = ShowTestWindow(context.Panel);
 
             try
             {
-                overlay.IsActive = true;
-                ImageDropBehavior.ScheduleOverlayHide(panel);
-                ImageDropBehavior.CancelScheduledOverlayHide(panel);
+                context.Overlay.IsActive = true;
+                ImageDropBehavior.ScheduleOverlayHide(context.Panel);
+                ImageDropBehavior.CancelScheduledOverlayHide(context.Panel);
 
                 await Task.Delay(OverlayHideWaitMilliseconds);
 
-                overlay.IsActive.Should().BeTrue();
+                context.Overlay.IsActive.Should().BeTrue();
             }
             finally
             {
@@ -180,10 +150,74 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
         });
     }
 
+    private static DataTransfer CreateGalleryImageDataTransfer()
+    {
+        Mock<IStorageFile> fileMock = new();
+
+        return GalleryImageDragData.Create(fileMock.Object);
+    }
+
+    private static OverlayPanelTestContext CreateOverlayPanelContext()
+    {
+        ImageDropOverlayControl overlay = new();
+        Grid panel = new();
+        panel.Children.Add(overlay);
+
+        return new OverlayPanelTestContext(overlay, panel);
+    }
+
+    private static void AssertAcceptedTargets(
+        DataTransfer dataTransfer,
+        bool expectedExternalFiles,
+        bool expectedGalleryImage)
+    {
+        bool acceptsWindow = ImageDropBehavior.AcceptsData(
+            dataTransfer,
+            ImageDropTargetKind.ExternalFiles);
+        bool acceptsPanel = ImageDropBehavior.AcceptsData(
+            dataTransfer,
+            ImageDropTargetKind.GalleryImage);
+
+        acceptsWindow.Should().Be(expectedExternalFiles);
+        acceptsPanel.Should().Be(expectedGalleryImage);
+    }
+
+    private static void ConfigureGalleryDropTarget(
+        Grid panel,
+        ImageDropOverlayControl overlay)
+    {
+        ImageDropBehavior.SetOverlay(panel, overlay);
+        ImageDropBehavior.SetTargetKind(panel, ImageDropTargetKind.GalleryImage);
+        ImageDropBehavior.SetIsEnabled(panel, true);
+    }
+
+    private static Window ShowTestWindow(Grid panel)
+    {
+        return Show(panel, 320d, 180d);
+    }
+
+    private static void RaiseDragDrop(
+        Window window,
+        Point position,
+        RawDragEventType eventType,
+        DataTransfer dataTransfer)
+    {
+        window.DragDrop(
+            position,
+            eventType,
+            dataTransfer,
+            DragDropEffects.Copy,
+            RawInputModifiers.None);
+    }
+
     private static void MarkHandled(object? sender, DragEventArgs e)
     {
         _ = sender;
 
         e.Handled = true;
     }
+
+    private sealed record OverlayPanelTestContext(
+        ImageDropOverlayControl Overlay,
+        Grid Panel);
 }
