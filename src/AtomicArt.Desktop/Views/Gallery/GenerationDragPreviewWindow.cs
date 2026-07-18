@@ -7,6 +7,8 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using AtomicArt.Desktop.Services;
+
 namespace AtomicArt.Desktop.Views.Gallery;
 
 internal sealed class GenerationDragPreviewWindow : Window, IDisposable
@@ -177,16 +179,16 @@ internal sealed class GenerationDragPreviewWindow : Window, IDisposable
         return false;
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
     private static extern bool GetCursorPos(out NativePoint point);
 
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
     private static extern nint GetWindowLongPtr(nint windowHandle, int index);
 
-    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
     private static extern nint SetWindowLongPtr(nint windowHandle, int index, nint value);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
     private static extern bool SetWindowPos(
         nint windowHandle,
         nint insertAfterWindowHandle,

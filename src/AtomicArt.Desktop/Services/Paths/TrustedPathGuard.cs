@@ -3,6 +3,8 @@ using System.Text;
 
 using Microsoft.Win32.SafeHandles;
 
+using AtomicArt.Desktop.Services;
+
 namespace AtomicArt.Desktop.Services.Paths;
 
 internal static class TrustedPathGuard
@@ -756,7 +758,7 @@ internal static class TrustedPathGuard
         return finalPath;
     }
 
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.Kernel32, CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern SafeFileHandle CreateFile(
         string lpFileName,
         uint dwDesiredAccess,
@@ -766,7 +768,7 @@ internal static class TrustedPathGuard
         uint dwFlagsAndAttributes,
         IntPtr hTemplateFile);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.Kernel32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetFileInformationByHandle(
         SafeFileHandle hFile,
@@ -774,7 +776,7 @@ internal static class TrustedPathGuard
         ref FileDispositionInfo lpFileInformation,
         uint dwBufferSize);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.Kernel32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetFileInformationByHandle(
         SafeFileHandle hFile,
@@ -782,7 +784,7 @@ internal static class TrustedPathGuard
         IntPtr lpFileInformation,
         uint dwBufferSize);
 
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.Kernel32, CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern uint GetFinalPathNameByHandle(
         SafeFileHandle hFile,
         StringBuilder lpszFilePath,

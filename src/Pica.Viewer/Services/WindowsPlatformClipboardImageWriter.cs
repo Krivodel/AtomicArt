@@ -196,34 +196,34 @@ internal sealed class WindowsPlatformClipboardImageWriter : IPlatformClipboardIm
         return new Win32Exception(Marshal.GetLastWin32Error(), message);
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool OpenClipboard(IntPtr newOwner);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool CloseClipboard();
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool EmptyClipboard();
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
     private static extern IntPtr SetClipboardData(uint format, IntPtr memory);
 
-    [DllImport("user32.dll", EntryPoint = "RegisterClipboardFormatW", CharSet = CharSet.Unicode, SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, EntryPoint = "RegisterClipboardFormatW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern uint RegisterClipboardFormatNative(string formatName);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.Kernel32, SetLastError = true)]
     private static extern IntPtr GlobalAlloc(uint flags, nuint bytes);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.Kernel32, SetLastError = true)]
     private static extern IntPtr GlobalLock(IntPtr memory);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.Kernel32, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GlobalUnlock(IntPtr memory);
 
-    [DllImport("kernel32.dll", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.Kernel32, SetLastError = true)]
     private static extern IntPtr GlobalFree(IntPtr memory);
 }

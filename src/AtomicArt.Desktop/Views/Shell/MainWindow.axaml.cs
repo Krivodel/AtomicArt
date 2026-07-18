@@ -75,10 +75,10 @@ public partial class MainWindow : SukiWindow
         base.OnClosed(e);
     }
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "RemovePropW", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, CharSet = CharSet.Unicode, EntryPoint = "RemovePropW", SetLastError = true)]
     private static extern nint RemoveWindowProperty(nint windowHandle, string propertyName);
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SetPropW", SetLastError = true)]
+    [DllImport(WindowsNativeLibraryNames.User32, CharSet = CharSet.Unicode, EntryPoint = "SetPropW", SetLastError = true)]
     private static extern bool SetWindowProperty(nint windowHandle, string propertyName, nint value);
 
     private void InitializeGenerationPanelMinimumHeight()
