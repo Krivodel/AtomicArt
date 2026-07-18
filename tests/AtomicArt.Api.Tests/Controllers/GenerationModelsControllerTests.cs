@@ -82,7 +82,7 @@ public sealed class GenerationModelsControllerTests
     [Fact]
     public async Task GetAsync_WithCatalog_ReturnsOkResponse()
     {
-        GenerationModelCatalogDto catalog = CreateMinimalCatalog();
+        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
         Mock<IMediator> mediator = new();
         mediator
             .Setup(currentMediator => currentMediator.Send(
@@ -133,40 +133,5 @@ public sealed class GenerationModelsControllerTests
     {
         ApiContentRootTestFiles.CopyModelMetadata(contentRoot.DirectoryPath);
         ApiContentRootTestFiles.WriteAppSettings(contentRoot.DirectoryPath, appSettingsJson);
-    }
-
-    private static GenerationModelCatalogDto CreateMinimalCatalog()
-    {
-        return new GenerationModelCatalogDto(
-        [
-            new(
-                    "test-model",
-                    "Test Model",
-                    "google",
-                    "provider-test-model",
-                    GenerationPanelIds.NanoBanana,
-                    1000,
-                    500,
-                    100,
-                    [GenerationAspectRatios.Auto],
-                    ["1k"],
-                    [1],
-                    new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),
-                    new GenerationModelAttachmentMetadataDto(
-                        1,
-                        1024,
-                        2048,
-                        [GenerationImageContentTypes.Png]),
-                    new GenerationModelPricingMetadataDto(
-                        "USD",
-                        0.25m,
-                        1.50m,
-                        30.00m,
-                        1120,
-                        new Dictionary<string, int>
-                        {
-                            ["1k"] = 1120
-                        }))
-        ]);
     }
 }
