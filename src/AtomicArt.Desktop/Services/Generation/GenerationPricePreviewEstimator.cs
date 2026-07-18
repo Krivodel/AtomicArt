@@ -4,8 +4,6 @@ namespace AtomicArt.Desktop.Services.Generation;
 
 public sealed class GenerationPricePreviewEstimator
 {
-    public const string Source = "EstimatedModelMetadata";
-
     private const decimal TokenPriceUnit = 1_000_000m;
     private const decimal CharactersPerTextToken = 4m;
 
@@ -39,7 +37,10 @@ public sealed class GenerationPricePreviewEstimator
         decimal amount = CalculateTokenPrice(inputTokens, pricing.InputTokenUsdPerMillion)
             + CalculateTokenPrice(outputTokens, pricing.ImageOutputTokenUsdPerMillion);
 
-        return new GenerationPriceDto(amount, pricing.CurrencyCode, Source);
+        return new GenerationPriceDto(
+            amount,
+            pricing.CurrencyCode,
+            GenerationPriceSources.EstimatedModelMetadata);
     }
 
     private static decimal EstimatePromptTokens(string? prompt)

@@ -27,7 +27,10 @@ public sealed class GenerationUsagePriceCalculatorTests
             OneKResolution,
             1);
 
-        price.Should().BeEquivalentTo(new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"));
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]
@@ -50,7 +53,10 @@ public sealed class GenerationUsagePriceCalculatorTests
             OneKResolution,
             1);
 
-        price.Should().BeEquivalentTo(new GenerationPriceDto(0.1364m, "USD", "ActualProviderUsage"));
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.1364m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]
@@ -84,7 +90,10 @@ public sealed class GenerationUsagePriceCalculatorTests
             OneKResolution,
             1);
 
-        price.Should().BeEquivalentTo(new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"));
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]
@@ -100,7 +109,10 @@ public sealed class GenerationUsagePriceCalculatorTests
             FourKResolution,
             1);
 
-        price.Should().BeEquivalentTo(new GenerationPriceDto(0.1518m, "USD", "ActualProviderUsage"));
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.1518m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]
@@ -116,7 +128,10 @@ public sealed class GenerationUsagePriceCalculatorTests
             FourKResolution,
             2);
 
-        price.Should().BeEquivalentTo(new GenerationPriceDto(0.303m, "USD", "ActualProviderUsage"));
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.303m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]
@@ -142,7 +157,10 @@ public sealed class GenerationUsagePriceCalculatorTests
             FourKResolution,
             1);
 
-        price.Should().BeEquivalentTo(new GenerationPriceDto(0.15395m, "USD", "ActualProviderUsage"));
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.15395m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]
@@ -170,7 +188,10 @@ public sealed class GenerationUsagePriceCalculatorTests
             OneKResolution,
             1);
 
-        price.Should().BeEquivalentTo(new GenerationPriceDto(0.06836m, "USD", "ActualProviderUsage"));
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.06836m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]
@@ -310,7 +331,10 @@ public sealed class GenerationUsagePriceCalculatorTests
             OneKResolution,
             1);
 
-        price.Should().BeEquivalentTo(new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"));
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]
@@ -349,7 +373,10 @@ public sealed class GenerationUsagePriceCalculatorTests
             OneKResolution,
             1);
 
-        price.Should().BeEquivalentTo(new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"));
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]

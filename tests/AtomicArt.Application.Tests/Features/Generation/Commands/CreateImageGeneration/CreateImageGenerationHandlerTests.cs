@@ -72,7 +72,10 @@ public sealed class CreateImageGenerationHandlerTests
             "image/png",
             "iVBORw0KGgo=",
             usage,
-            new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"),
+            new GenerationPriceDto(
+                0.0678m,
+                "USD",
+                GenerationPriceSources.ActualProviderUsage),
             completedAtUtc,
             generationDuration);
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
@@ -88,7 +91,10 @@ public sealed class CreateImageGenerationHandlerTests
         item.CompletedAtUtc.Should().Be(completedAtUtc);
         item.GenerationDuration.Should().Be(generationDuration);
         item.Usage.Should().BeSameAs(usage);
-        item.Price.Should().BeEquivalentTo(new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"));
+        item.Price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
     }
 
     [Fact]

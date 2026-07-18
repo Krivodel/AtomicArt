@@ -30,7 +30,7 @@ public sealed class GenerationPricePreviewEstimatorTests
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.0902005m,
             metadata.Pricing.CurrencyCode,
-            GenerationPricePreviewEstimator.Source));
+            GenerationPriceSources.EstimatedModelMetadata));
     }
 
     [Fact]

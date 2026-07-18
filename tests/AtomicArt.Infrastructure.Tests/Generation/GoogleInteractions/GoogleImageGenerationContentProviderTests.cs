@@ -41,7 +41,10 @@ public sealed class GoogleImageGenerationContentProviderTests
         result.Base64Data.Should().Be("/9j/4AAQSkZJRg==");
         result.CompletedAtUtc.Should().Be(CompletedAtUtc);
         result.GenerationDuration.Should().Be(TimeSpan.FromSeconds(30));
-        result.Price.Should().BeEquivalentTo(new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"));
+        result.Price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
         result.Usage.Should().BeEquivalentTo(new
         {
             TotalInputTokens = 1200,
@@ -86,7 +89,10 @@ public sealed class GoogleImageGenerationContentProviderTests
 
         ImageGenerationContentResult result = await provider.GetContentAsync(context, CancellationToken.None);
 
-        result.Price.Should().BeEquivalentTo(new GenerationPriceDto(0.151845m, "USD", "ActualProviderUsage"));
+        result.Price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.151845m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage));
         result.Price?.Amount.Should().NotBe(0.0672m);
         result.Usage.Should().BeEquivalentTo(new
         {

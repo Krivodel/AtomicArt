@@ -71,7 +71,10 @@ public sealed class GenerationItemViewModelTests
             TotalInputTokens: 1200,
             TotalOutputTokens: 1120,
             TotalTokens: 2320);
-        GenerationPriceDto price = new(0.0678m, "USD", "ActualProviderUsage");
+        GenerationPriceDto price = new(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage);
         DateTime completedAtUtc = CreatedAtUtc.AddSeconds(30);
         GenerationItemDto item = GenerationItemDtoTestFactory.Create(
             id: ItemId,

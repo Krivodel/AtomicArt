@@ -19,7 +19,10 @@ public sealed class GenerationMetadataViewModelTests
     public void FromItem_WithPriceAndDuration_ShowsNewProperties()
     {
         GenerationItemDto item = CreateItem(
-            price: new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"),
+            price: new GenerationPriceDto(
+                0.0678m,
+                "USD",
+                GenerationPriceSources.ActualProviderUsage),
             generationDuration: TimeSpan.FromSeconds(30));
         GenerationItemViewModel itemViewModel = CreateItemViewModel(item);
 

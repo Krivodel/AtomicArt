@@ -137,7 +137,10 @@ public sealed class GenerationContractsSerializationTests
             TotalThoughtTokens: 0,
             TotalToolUseTokens: 0,
             TotalCachedTokens: 0);
-        GenerationPriceDto price = new(0.0678m, "USD", "ActualProviderUsage");
+        GenerationPriceDto price = new(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage);
         GenerationItemDto item = new(
             ItemId,
             ModelId,
@@ -161,7 +164,8 @@ public sealed class GenerationContractsSerializationTests
         json.Should().Contain("\"generationDuration\"");
         json.Should().Contain("\"price\"");
         json.Should().Contain("\"usage\"");
-        json.Should().Contain("\"source\":\"ActualProviderUsage\"");
+        json.Should().Contain(
+            $"\"source\":\"{GenerationPriceSources.ActualProviderUsage}\"");
         deserialized.Should().BeEquivalentTo(item);
     }
 

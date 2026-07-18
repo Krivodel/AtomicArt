@@ -5,8 +5,6 @@ namespace AtomicArt.Application.Features.Generation.Services;
 
 public sealed class GenerationUsagePriceCalculator
 {
-    private const string ActualProviderUsageSource = "ActualProviderUsage";
-
     public GenerationPriceDto? Calculate(
         string modelId,
         GenerationModelPricingMetadataDto pricing,
@@ -55,7 +53,7 @@ public sealed class GenerationUsagePriceCalculator
         return new GenerationPriceDto(
             amount,
             pricing.CurrencyCode,
-            ActualProviderUsageSource);
+            GenerationPriceSources.ActualProviderUsage);
     }
 
     private static OutputTokenCounts? CalculateOutputTokenCounts(

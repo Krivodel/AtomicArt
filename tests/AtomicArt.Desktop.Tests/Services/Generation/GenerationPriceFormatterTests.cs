@@ -13,7 +13,10 @@ public sealed class GenerationPriceFormatterTests
     [Fact]
     public void Format_WithUsdAmount_ReturnsDollarText()
     {
-        GenerationPriceDto price = new(0.0678m, "USD", "ActualProviderUsage");
+        GenerationPriceDto price = new(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage);
 
         string? result = _formatter.Format(price);
 
