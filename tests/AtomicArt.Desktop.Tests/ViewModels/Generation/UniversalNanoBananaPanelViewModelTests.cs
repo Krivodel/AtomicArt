@@ -14,6 +14,7 @@ using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Generation;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Generation;
@@ -88,7 +89,8 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     public async Task GenerateCommand_WhenApiUnavailable_PublishesFailedEvent()
     {
         TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        ThrowingImageGenerationApiClient apiClient = new();
+        ThrowingImageGenerationApiClient apiClient =
+            ThrowingImageGenerationApiClient.CreateUnavailableWithRequiredProviderCredential();
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(apiClient, lifecycleEventHub);
         viewModel.Prompt = "Prompt";
 

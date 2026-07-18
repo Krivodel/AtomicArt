@@ -637,17 +637,6 @@ public sealed class GalleryViewModelTests
         return ((GalleryFileImageViewerSource)item.Source).ImagePath;
     }
 
-    private sealed class ThrowingImageGenerationApiClient : IImageGenerationApiClient
-    {
-        public Task<GenerationBatchDto> CreateGenerationAsync(
-            ImageGenerationRequestDto request,
-            string providerCredential,
-            CancellationToken ct = default)
-        {
-            throw new HttpRequestException("Generation API failed.");
-        }
-    }
-
     private sealed class RecordingGalleryItemDeletionService : IGalleryItemDeletionService
     {
         private readonly List<GalleryItemDeletionRequest> _requests = [];

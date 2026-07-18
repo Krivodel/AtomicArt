@@ -7,6 +7,7 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
@@ -556,17 +557,6 @@ public sealed class GenerationRunDispatcherTests
                     return;
                 }
             }
-        }
-    }
-
-    private sealed class ThrowingImageGenerationApiClient : IImageGenerationApiClient
-    {
-        public Task<GenerationBatchDto> CreateGenerationAsync(
-            ImageGenerationRequestDto request,
-            string providerCredential,
-            CancellationToken ct = default)
-        {
-            throw new HttpRequestException("Generation API failed.");
         }
     }
 
