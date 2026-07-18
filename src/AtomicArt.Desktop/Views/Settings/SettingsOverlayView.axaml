@@ -1,29 +1,18 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.SettingsOverlayView"
              x:DataType="settings:SettingsViewModel">
-    <Border MaxWidth="{StaticResource SettingsOverlayWidth}"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Top"
-            Classes="overlay-panel modal-glass-panel">
-        <Border Classes="modal-popup-layer">
-            <Grid RowDefinitions="Auto,Auto">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Classes="overlay-title"
-                               Text="{x:Static resources:UiStrings.SettingsTitle}" />
-                    <Button Grid.Column="1"
-                            Classes="Icon close-action"
-                            Command="{Binding CloseCommand}">
-                        <PathIcon Data="{StaticResource AppCloseIcon}" />
-                    </Button>
-                </Grid>
-
-                <ItemsControl Grid.Row="1"
-                              Margin="{StaticResource SettingsSectionMargin}"
-                              ItemsSource="{Binding Settings}" />
-            </Grid>
-        </Border>
-    </Border>
+    <controls:ModalOverlayControl MaxWidth="{StaticResource SettingsOverlayWidth}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Top"
+                                  Title="{x:Static resources:UiStrings.SettingsTitle}"
+                                  CloseCommand="{Binding CloseCommand}">
+        <controls:ModalOverlayControl.Body>
+            <ItemsControl Margin="{StaticResource SettingsSectionMargin}"
+                          ItemsSource="{Binding Settings}" />
+        </controls:ModalOverlayControl.Body>
+    </controls:ModalOverlayControl>
 </UserControl>
