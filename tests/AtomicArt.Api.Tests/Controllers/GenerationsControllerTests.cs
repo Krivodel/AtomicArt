@@ -50,9 +50,7 @@ public sealed class GenerationsControllerTests
         ControllerTestContext context = CreateControllerTestContext(
             Result<GenerationBatchDto>.Success(batch));
 
-        IActionResult actionResult = await context.Controller.CreateAsync(
-            context.Request,
-            CancellationToken.None);
+        IActionResult actionResult = await CreateAsync(context);
 
         OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().Be(batch);
@@ -85,9 +83,7 @@ public sealed class GenerationsControllerTests
             isHttps: isHttps,
             remoteIpAddress: IPAddress.Parse("203.0.113.10"));
 
-        IActionResult actionResult = await context.Controller.CreateAsync(
-            context.Request,
-            CancellationToken.None);
+        IActionResult actionResult = await CreateAsync(context);
 
         OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().Be(batch);
@@ -206,14 +202,9 @@ public sealed class GenerationsControllerTests
             "Invalid request");
         ControllerTestContext context = CreateControllerTestContext(result);
 
-        IActionResult actionResult = await context.Controller.CreateAsync(
-            context.Request,
-            CancellationToken.None);
+        IActionResult actionResult = await CreateAsync(context);
 
-        ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
-        ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        problemDetails.Extensions.Should().ContainKey("code");
+        AssertProblemDetails(actionResult, StatusCodes.Status400BadRequest);
     }
 
     [Fact]
@@ -227,14 +218,9 @@ public sealed class GenerationsControllerTests
             result,
             request: request);
 
-        IActionResult actionResult = await context.Controller.CreateAsync(
-            context.Request,
-            CancellationToken.None);
+        IActionResult actionResult = await CreateAsync(context);
 
-        ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
-        ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        problemDetails.Extensions.Should().ContainKey("code");
+        AssertProblemDetails(actionResult, StatusCodes.Status400BadRequest);
         context.Mediator.Verify(
             currentMediator => currentMediator.Send(
                 It.Is<CreateImageGenerationCommand>(command => CommandHasSingleNullAttachedImage(command)),
@@ -290,15 +276,12 @@ public sealed class GenerationsControllerTests
             "Model not found");
         ControllerTestContext context = CreateControllerTestContext(result);
 
-        IActionResult actionResult = await context.Controller.CreateAsync(
-            context.Request,
-            CancellationToken.None);
+        IActionResult actionResult = await CreateAsync(context);
 
-        ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
-        ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        ProblemDetails problemDetails = AssertProblemDetails(
+            actionResult,
+            StatusCodes.Status400BadRequest);
         problemDetails.Detail.Should().NotBe("Model not found");
-        problemDetails.Extensions.Should().ContainKey("code");
     }
 
     [Fact]
@@ -308,15 +291,12 @@ public sealed class GenerationsControllerTests
         Result<GenerationBatchDto> result = Result<GenerationBatchDto>.Unavailable("ERR-GEN-999", rawErrorMessage);
         ControllerTestContext context = CreateControllerTestContext(result);
 
-        IActionResult actionResult = await context.Controller.CreateAsync(
-            context.Request,
-            CancellationToken.None);
+        IActionResult actionResult = await CreateAsync(context);
 
-        ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
-        ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        ProblemDetails problemDetails = AssertProblemDetails(
+            actionResult,
+            StatusCodes.Status500InternalServerError);
         problemDetails.Detail.Should().NotBe(rawErrorMessage);
-        problemDetails.Extensions.Should().ContainKey("code");
     }
 
     [Theory]
@@ -359,16 +339,30 @@ public sealed class GenerationsControllerTests
         Result<GenerationBatchDto> result = Result<GenerationBatchDto>.Unavailable(errorCode, rawErrorMessage);
         ControllerTestContext context = CreateControllerTestContext(result);
 
-        IActionResult actionResult = await context.Controller.CreateAsync(
+        IActionResult actionResult = await CreateAsync(context);
+
+        ProblemDetails problemDetails = AssertProblemDetails(actionResult, expectedStatusCode);
+        problemDetails.Detail.Should().NotBe(rawErrorMessage);
+        problemDetails.Extensions["code"].Should().Be(errorCode);
+    }
+
+    private static async Task<IActionResult> CreateAsync(ControllerTestContext context)
+    {
+        return await context.Controller.CreateAsync(
             context.Request,
             CancellationToken.None);
+    }
 
+    private static ProblemDetails AssertProblemDetails(
+        IActionResult actionResult,
+        int expectedStatusCode)
+    {
         ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
         objectResult.StatusCode.Should().Be(expectedStatusCode);
-        problemDetails.Detail.Should().NotBe(rawErrorMessage);
         problemDetails.Extensions.Should().ContainKey("code");
-        problemDetails.Extensions["code"].Should().Be(errorCode);
+
+        return problemDetails;
     }
 
     private static ControllerTestContext CreateControllerTestContext(
