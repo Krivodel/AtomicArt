@@ -12,8 +12,6 @@ namespace AtomicArt.Infrastructure.Generation;
 
 internal sealed class FileSystemPlaceholderImageProvider : IPlaceholderImageProvider
 {
-    private const int CopyBufferSize = 81920;
-
     private static readonly int MaxSignatureBytes = GenerationImageFileFormats.All
         .SelectMany(format => format.SignatureAlternatives)
         .SelectMany(alternative => alternative)
@@ -203,7 +201,13 @@ internal sealed class FileSystemPlaceholderImageProvider : IPlaceholderImageProv
             }
 
             stream.Position = 0;
-            byte[] content = await ReadContentAsync(stream, maxImageBytes, ct).ConfigureAwait(false);
+            byte[] content = await BoundedStreamReader
+                .ReadToEndAsync(
+                    stream,
+                    maxImageBytes,
+                    CreateImageTooLargeException,
+                    ct)
+                .ConfigureAwait(false);
 
             return new PlaceholderImage(contentType, content);
         }
@@ -232,7 +236,7 @@ internal sealed class FileSystemPlaceholderImageProvider : IPlaceholderImageProv
             FileMode.Open,
             FileAccess.Read,
             FileShare.ReadWrite | FileShare.Delete,
-            bufferSize: CopyBufferSize,
+            bufferSize: BoundedStreamReader.BufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
     }
 
@@ -280,39 +284,9 @@ internal sealed class FileSystemPlaceholderImageProvider : IPlaceholderImageProv
         return totalBytesRead;
     }
 
-    private static async Task<byte[]> ReadContentAsync(
-        Stream stream,
-        long maxImageBytes,
-        CancellationToken ct)
+    private static IOException CreateImageTooLargeException()
     {
-        byte[] buffer = new byte[CopyBufferSize];
-        long totalBytesRead = 0L;
-        using MemoryStream memoryStream = new();
-
-        while (true)
-        {
-            int bytesRead = await stream
-                .ReadAsync(buffer.AsMemory(0, buffer.Length), ct)
-                .ConfigureAwait(false);
-
-            if (bytesRead == 0)
-            {
-                break;
-            }
-
-            totalBytesRead += bytesRead;
-
-            if (totalBytesRead > maxImageBytes)
-            {
-                throw new IOException("The test image exceeds the allowed size.");
-            }
-
-            await memoryStream
-                .WriteAsync(buffer.AsMemory(0, bytesRead), ct)
-                .ConfigureAwait(false);
-        }
-
-        return memoryStream.ToArray();
+        return new IOException("The test image exceeds the allowed size.");
     }
 
     private static ImageGenerationProviderException CreateDirectoryReadException()

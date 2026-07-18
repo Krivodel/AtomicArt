@@ -5,7 +5,6 @@ namespace AtomicArt.Infrastructure.Generation;
 internal sealed class EmbeddedPlaceholderImageProvider : IPlaceholderImageProvider
 {
     private const string JpegContentType = "image/jpeg";
-    private const int CopyBufferSize = 81920;
     private const long MaxPlaceholderImageBytes = 128L * 1024L * 1024L;
     private const string PlaceholdersResourceSegment = ".Placeholders.";
     private const string PngContentType = "image/png";
@@ -65,34 +64,13 @@ internal sealed class EmbeddedPlaceholderImageProvider : IPlaceholderImageProvid
             throw CreateResourceTooLargeException(resourceName);
         }
 
-        byte[] buffer = new byte[CopyBufferSize];
-        long totalBytesRead = 0L;
-        using MemoryStream memoryStream = new();
-
-        while (true)
-        {
-            int bytesRead = await resourceStream
-                .ReadAsync(buffer.AsMemory(0, buffer.Length), ct)
-                .ConfigureAwait(false);
-
-            if (bytesRead == 0)
-            {
-                break;
-            }
-
-            totalBytesRead += bytesRead;
-
-            if (totalBytesRead > MaxPlaceholderImageBytes)
-            {
-                throw CreateResourceTooLargeException(resourceName);
-            }
-
-            await memoryStream
-                .WriteAsync(buffer.AsMemory(0, bytesRead), ct)
-                .ConfigureAwait(false);
-        }
-
-        return memoryStream.ToArray();
+        return await BoundedStreamReader
+            .ReadToEndAsync(
+                resourceStream,
+                MaxPlaceholderImageBytes,
+                () => CreateResourceTooLargeException(resourceName),
+                ct)
+            .ConfigureAwait(false);
     }
 
     private static bool IsPlaceholderImageResource(string resourceName)
