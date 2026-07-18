@@ -57,7 +57,7 @@ public sealed class DialogService : IDialogService, IDialogWindowAttachmentServi
 
         Window dialog = new()
         {
-            Title = UiStrings.UnhandledExceptionTitle,
+            Title = UiStrings.Error,
             Width = DialogWidth,
             MinHeight = DialogMinHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,

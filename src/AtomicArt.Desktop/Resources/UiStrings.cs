@@ -10,8 +10,7 @@ public static class UiStrings
     public static string Exit => "Выход";
     public static string SettingsTitle => "Настройки";
     public static string GalleryPlaceholder => "В галерее пусто";
-    public static string GenerationPreviewError => "Ошибка";
-    public static string UnhandledExceptionTitle => "Ошибка";
+    public static string Error => "Ошибка";
     public static string UnhandledExceptionMessage => "Неизвестная ошибка.";
     public static string AttachmentCounterFormat => "{0}/{1}";
     public static string TemperatureValueFormat => "{0:0.0}";

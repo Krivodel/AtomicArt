@@ -48,7 +48,7 @@
                     Classes="generation-card-error"
                     IsVisible="{Binding IsFailed}">
                 <TextBlock Classes="generation-card-error-text"
-                           Text="{x:Static resources:UiStrings.GenerationPreviewError}" />
+                           Text="{x:Static resources:UiStrings.Error}" />
             </Border>
 
             <Border x:Name="PreviewDragSource"
