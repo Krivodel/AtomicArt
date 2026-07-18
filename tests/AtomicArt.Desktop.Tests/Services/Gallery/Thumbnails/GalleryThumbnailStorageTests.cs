@@ -10,6 +10,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
 
 using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
@@ -308,15 +309,11 @@ public sealed class GalleryThumbnailStorageTests
         Mock<ILogger<GalleryThumbnailStorage>> loggerMock,
         string expectedMessage)
     {
-        loggerMock.Verify(
-            logger => logger.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) =>
-                    (state.ToString() ?? string.Empty).Contains(expectedMessage, StringComparison.Ordinal)),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        LoggerMockAssertions.VerifyLog(
+            loggerMock,
+            LogLevel.Warning,
+            Times.AtLeastOnce(),
+            expectedMessage);
     }
 
     private sealed class StorageTestContext

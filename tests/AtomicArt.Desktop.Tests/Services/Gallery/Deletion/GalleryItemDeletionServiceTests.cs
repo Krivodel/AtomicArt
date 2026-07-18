@@ -9,6 +9,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 
@@ -301,57 +302,35 @@ public sealed class GalleryItemDeletionServiceTests
         string expectedMessage,
         bool exceptionExpected = true)
     {
-        if (exceptionExpected)
-        {
-            loggerMock.Verify(
-                logger => logger.Log(
-                    LogLevel.Warning,
-                    It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((state, _) =>
-                        (state.ToString() ?? string.Empty).Contains(expectedMessage, StringComparison.Ordinal)),
-                    It.IsAny<InvalidOperationException>(),
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                Times.AtLeastOnce);
+        Func<Exception?, bool> exceptionPredicate = exceptionExpected
+            ? exception => exception is InvalidOperationException
+            : exception => exception is null;
 
-            return;
-        }
-
-        loggerMock.Verify(
-            logger => logger.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) =>
-                    (state.ToString() ?? string.Empty).Contains(expectedMessage, StringComparison.Ordinal)),
-                It.Is<Exception?>(exception => exception == null),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        LoggerMockAssertions.VerifyLog(
+            loggerMock,
+            LogLevel.Warning,
+            Times.AtLeastOnce(),
+            expectedMessage,
+            exceptionPredicate);
     }
 
     private static void VerifyNoWarningLogged(Mock<ILogger<GalleryItemDeletionService>> loggerMock)
     {
-        loggerMock.Verify(
-            logger => logger.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+        LoggerMockAssertions.VerifyLog(
+            loggerMock,
+            LogLevel.Warning,
+            Times.Never());
     }
 
     private static void VerifyErrorLogged(
         Mock<ILogger<GalleryItemDeletionService>> loggerMock,
         string expectedMessage)
     {
-        loggerMock.Verify(
-            logger => logger.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((state, _) =>
-                    (state.ToString() ?? string.Empty).Contains(expectedMessage, StringComparison.Ordinal)),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        LoggerMockAssertions.VerifyLog(
+            loggerMock,
+            LogLevel.Error,
+            Times.AtLeastOnce(),
+            expectedMessage);
     }
 
     private sealed class ModelScopedTrustedImageFileService : TrustedImageFileServiceTestDouble

@@ -8,6 +8,7 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
@@ -117,13 +118,9 @@ public sealed class GalleryLifecycleControllerTests
         Mock<ILogger<GalleryLifecycleController>> loggerMock,
         Times times)
     {
-        loggerMock.Verify(
-            logger => logger.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+        LoggerMockAssertions.VerifyLog(
+            loggerMock,
+            LogLevel.Warning,
             times);
     }
 }
