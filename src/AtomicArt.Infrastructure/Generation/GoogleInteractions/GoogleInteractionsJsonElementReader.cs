@@ -38,8 +38,7 @@ internal static class GoogleInteractionsJsonElementReader
         value = 0;
 
         return TryGetProperty(element, propertyName, out JsonElement propertyElement)
-            && propertyElement.ValueKind == JsonValueKind.Number
-            && propertyElement.TryGetInt32(out value);
+            && TryReadInt32(propertyElement, out value);
     }
 
     public static bool TryGetInt32Property(
@@ -51,8 +50,7 @@ internal static class GoogleInteractionsJsonElementReader
         value = 0;
 
         return TryGetProperty(element, firstName, secondName, out JsonElement propertyElement)
-            && propertyElement.ValueKind == JsonValueKind.Number
-            && propertyElement.TryGetInt32(out value);
+            && TryReadInt32(propertyElement, out value);
     }
 
     public static bool TryGetStringProperty(
@@ -62,15 +60,8 @@ internal static class GoogleInteractionsJsonElementReader
     {
         value = null;
 
-        if (!TryGetProperty(element, propertyName, out JsonElement propertyElement)
-            || propertyElement.ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        value = propertyElement.GetString();
-
-        return value is not null;
+        return TryGetProperty(element, propertyName, out JsonElement propertyElement)
+            && TryReadString(propertyElement, out value);
     }
 
     public static bool TryGetStringProperty(
@@ -81,13 +72,30 @@ internal static class GoogleInteractionsJsonElementReader
     {
         value = null;
 
-        if (!TryGetProperty(element, firstName, secondName, out JsonElement propertyElement)
-            || propertyElement.ValueKind != JsonValueKind.String)
+        return TryGetProperty(element, firstName, secondName, out JsonElement propertyElement)
+            && TryReadString(propertyElement, out value);
+    }
+
+    private static bool TryReadInt32(JsonElement element, out int value)
+    {
+        value = 0;
+
+        return element.ValueKind == JsonValueKind.Number
+            && element.TryGetInt32(out value);
+    }
+
+    private static bool TryReadString(
+        JsonElement element,
+        [NotNullWhen(true)] out string? value)
+    {
+        value = null;
+
+        if (element.ValueKind != JsonValueKind.String)
         {
             return false;
         }
 
-        value = propertyElement.GetString();
+        value = element.GetString();
 
         return value is not null;
     }

@@ -409,25 +409,34 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static string? ExtractStatus(JsonElement root)
     {
-        foreach (string propertyName in StatusPropertyNames)
+        if (!TryGetStatusElementMatching(
+            root,
+            static statusElement => statusElement.ValueKind == JsonValueKind.String,
+            out JsonElement stringStatusElement))
         {
-            if (TryGetStringProperty(root, propertyName, out string? status))
-            {
-                return status;
-            }
+            return null;
         }
 
-        return null;
+        return stringStatusElement.GetString();
     }
 
     private static bool TryGetStatusElement(JsonElement root, out JsonElement statusElement)
+    {
+        return TryGetStatusElementMatching(root, static _ => true, out statusElement);
+    }
+
+    private static bool TryGetStatusElementMatching(
+        JsonElement root,
+        Func<JsonElement, bool> predicate,
+        out JsonElement statusElement)
     {
         foreach (string propertyName in StatusPropertyNames)
         {
             if (GoogleInteractionsJsonElementReader.TryGetProperty(
                 root,
                 propertyName,
-                out statusElement))
+                out statusElement)
+                && predicate(statusElement))
             {
                 return true;
             }
@@ -550,14 +559,7 @@ internal sealed class GoogleInteractionsResponseParser
             return null;
         }
 
-        if (propertyElement.ValueKind != JsonValueKind.Number
-            || !propertyElement.TryGetInt32(out int value)
-            || value < 0)
-        {
-            throw CreateInvalidUsageException();
-        }
-
-        return value;
+        return ReadNonNegativeInt32(propertyElement);
     }
 
     private static int ExtractModalityTokenCount(JsonElement element)
@@ -578,8 +580,13 @@ internal sealed class GoogleInteractionsResponseParser
             throw CreateInvalidUsageException();
         }
 
-        if (tokensElement.ValueKind != JsonValueKind.Number
-            || !tokensElement.TryGetInt32(out int value)
+        return ReadNonNegativeInt32(tokensElement);
+    }
+
+    private static int ReadNonNegativeInt32(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Number
+            || !element.TryGetInt32(out int value)
             || value < 0)
         {
             throw CreateInvalidUsageException();
