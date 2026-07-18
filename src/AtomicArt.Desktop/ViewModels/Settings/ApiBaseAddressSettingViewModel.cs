@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Settings;
+using AtomicArt.Desktop.ViewModels;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
@@ -106,28 +107,19 @@ public sealed partial class ApiBaseAddressSettingViewModel :
             return;
         }
 
-        try
-        {
-            IsLoading = true;
-            ErrorMessage = null;
-            string normalizedValue = baseAddress.ToString();
-            _settingsStateService.ApplyValue(_definition, normalizedValue);
-            await _settingsStateService.SaveValueAsync(_definition, normalizedValue, ct);
-            Value = normalizedValue;
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            ErrorMessage = null;
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(SaveAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        await ViewModelAsyncOperation.RunAsync(
+            async () =>
+            {
+                string normalizedValue = baseAddress.ToString();
+                _settingsStateService.ApplyValue(_definition, normalizedValue);
+                await _settingsStateService.SaveValueAsync(_definition, normalizedValue, ct);
+                Value = normalizedValue;
+            },
+            ct,
+            _errorHandler,
+            nameof(SaveAsync),
+            value => IsLoading = value,
+            value => ErrorMessage = value);
     }
 
     private bool CanSave()

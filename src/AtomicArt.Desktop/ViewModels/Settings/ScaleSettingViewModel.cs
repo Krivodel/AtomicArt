@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Settings;
+using AtomicArt.Desktop.ViewModels;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
@@ -65,27 +66,18 @@ public sealed partial class ScaleSettingViewModel : ObservableObject, ISettingIt
             return;
         }
 
-        try
-        {
-            IsLoading = true;
-            ErrorMessage = null;
-            string value = _valueConverter.Format(SelectedOption.Value);
-            _settingsStateService.ApplyValue(_definition, value);
-            await _settingsStateService.SaveValueAsync(_definition, value, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            ErrorMessage = null;
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(ApplyAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        await ViewModelAsyncOperation.RunAsync(
+            async () =>
+            {
+                string value = _valueConverter.Format(SelectedOption.Value);
+                _settingsStateService.ApplyValue(_definition, value);
+                await _settingsStateService.SaveValueAsync(_definition, value, ct);
+            },
+            ct,
+            _errorHandler,
+            nameof(ApplyAsync),
+            value => IsLoading = value,
+            value => ErrorMessage = value);
     }
 
     private bool CanApply()

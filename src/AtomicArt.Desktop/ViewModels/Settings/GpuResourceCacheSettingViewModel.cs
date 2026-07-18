@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Settings;
+using AtomicArt.Desktop.ViewModels;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
@@ -67,25 +68,13 @@ public sealed partial class GpuResourceCacheSettingViewModel : ObservableObject,
             return;
         }
 
-        try
-        {
-            IsLoading = true;
-            ErrorMessage = null;
-            await _settingsStateService.SaveValueAsync(_definition, SelectedOption.Value, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            ErrorMessage = null;
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(SaveAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        await ViewModelAsyncOperation.RunAsync(
+            () => _settingsStateService.SaveValueAsync(_definition, SelectedOption.Value, ct),
+            ct,
+            _errorHandler,
+            nameof(SaveAsync),
+            value => IsLoading = value,
+            value => ErrorMessage = value);
     }
 
     private bool CanSave()

@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.ViewModels;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
@@ -49,28 +50,20 @@ public sealed partial class SecretSettingViewModel : ObservableObject, ISettingI
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync(CancellationToken ct)
     {
-        try
-        {
-            IsLoading = true;
-            ErrorMessage = null;
-            await _secretStore.SetSecretAsync(
-                SecretName,
-                Value,
-                ct);
-            Value = string.Empty;
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(SaveAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        await ViewModelAsyncOperation.RunAsync(
+            async () =>
+            {
+                await _secretStore.SetSecretAsync(
+                    SecretName,
+                    Value,
+                    ct);
+                Value = string.Empty;
+            },
+            ct,
+            _errorHandler,
+            nameof(SaveAsync),
+            value => IsLoading = value,
+            value => ErrorMessage = value);
     }
 
     private bool CanSave()
