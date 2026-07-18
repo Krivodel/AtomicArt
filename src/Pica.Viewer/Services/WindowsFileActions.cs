@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -81,13 +80,7 @@ internal sealed class WindowsFileActions : IPlatformFileActions
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ct.ThrowIfCancellationRequested();
-        ProcessStartInfo startInfo = new("explorer.exe")
-        {
-            UseShellExecute = false
-        };
-        startInfo.ArgumentList.Add("/select,");
-        startInfo.ArgumentList.Add(filePath);
-        using Process? process = Process.Start(startInfo);
+        WindowsFileReveal.Reveal(filePath);
 
         return Task.CompletedTask;
     }

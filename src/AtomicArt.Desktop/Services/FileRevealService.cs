@@ -1,12 +1,11 @@
 using System.ComponentModel;
-using System.Diagnostics;
+
+using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.Services;
 
 public sealed class FileRevealService : IFileRevealService
 {
-    private const string ExplorerFileName = "explorer.exe";
-    private const string ExplorerSelectArgument = "/select,";
     private const string RevealFailedMessage = "File reveal failed.";
 
     private readonly ITrustedImageFileService _trustedImageFileService;
@@ -28,7 +27,7 @@ public sealed class FileRevealService : IFileRevealService
         {
             try
             {
-                RevealOnWindows(fullPath);
+                WindowsFileReveal.Reveal(fullPath);
             }
             catch (Win32Exception ex)
             {
@@ -37,18 +36,5 @@ public sealed class FileRevealService : IFileRevealService
         }
 
         return Task.CompletedTask;
-    }
-
-    private static void RevealOnWindows(string fullPath)
-    {
-        ProcessStartInfo startInfo = new()
-        {
-            FileName = ExplorerFileName,
-            UseShellExecute = false
-        };
-
-        startInfo.ArgumentList.Add(ExplorerSelectArgument);
-        startInfo.ArgumentList.Add(fullPath);
-        Process.Start(startInfo)?.Dispose();
     }
 }
