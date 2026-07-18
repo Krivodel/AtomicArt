@@ -30,26 +30,21 @@ public sealed class GalleryGenerationCompletedHandlerTests
     [Fact]
     public async Task HandleAsync_WithImageContent_SavesApiBytesToResults()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(HandleAsync_WithImageContent_SavesApiBytesToResults));
-        GenerationResultStorage storage = CreateStorage(rootDirectory);
-        GalleryGenerationCompletedHandler handler = CreateHandler(
-            storage,
-            out List<IReadOnlyList<GalleryCompletedItemUpdate>> capturedUpdateBatches);
+        HandlerTestContext context = CreateContext(
+            nameof(HandleAsync_WithImageContent_SavesApiBytesToResults));
         byte[] validPngBytes = GenerationImageTestData.ValidPngBytes;
         GenerationImageContentDto content = new(
             GenerationImageContentTypes.Png,
             Convert.ToBase64String(validPngBytes));
         GenerationLifecycleEvent lifecycleEvent = CreateCompletedEvent(CreateItem(imageContent: content));
 
-        await handler.HandleAsync(lifecycleEvent, CancellationToken.None);
+        await context.Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
 
-        string resultPath = GetResultPath(storage, content.ContentType);
+        string resultPath = GetResultPath(context.Storage, content.ContentType);
         byte[] savedBytes = await File.ReadAllBytesAsync(resultPath);
         savedBytes.Should().Equal(validPngBytes);
-        capturedUpdateBatches.Should().ContainSingle();
-        IReadOnlyList<GalleryCompletedItemUpdate> updates = capturedUpdateBatches[0];
-        updates.Should().ContainSingle();
-        updates[0].TrustedImagePath.Should().Be(resultPath);
+        GalleryCompletedItemUpdate update = context.GetSingleUpdate();
+        update.TrustedImagePath.Should().Be(resultPath);
     }
 
     [Fact]
@@ -101,11 +96,8 @@ public sealed class GalleryGenerationCompletedHandlerTests
     [Fact]
     public async Task HandleAsync_WithImageContentAndInvalidSignature_DoesNotUseLegacyPath()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(HandleAsync_WithImageContentAndInvalidSignature_DoesNotUseLegacyPath));
-        GenerationResultStorage storage = CreateStorage(rootDirectory);
-        GalleryGenerationCompletedHandler handler = CreateHandler(
-            storage,
-            out List<IReadOnlyList<GalleryCompletedItemUpdate>> capturedUpdateBatches);
+        HandlerTestContext context = CreateContext(
+            nameof(HandleAsync_WithImageContentAndInvalidSignature_DoesNotUseLegacyPath));
         GenerationImageContentDto content = new(
             GenerationImageContentTypes.Png,
             Convert.ToBase64String(new byte[] { 0x01, 0x02, 0x03 }));
@@ -113,99 +105,109 @@ public sealed class GalleryGenerationCompletedHandlerTests
             imagePath: "legacy.png",
             imageContent: content));
 
-        await handler.HandleAsync(lifecycleEvent, CancellationToken.None);
+        await context.Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
 
-        capturedUpdateBatches.Should().ContainSingle();
-        IReadOnlyList<GalleryCompletedItemUpdate> updates = capturedUpdateBatches[0];
-        updates.Should().ContainSingle();
-        updates[0].TrustedImagePath.Should().BeNull();
-        GetArtFiles(rootDirectory).Should().BeEmpty();
+        GalleryCompletedItemUpdate update = context.GetSingleUpdate();
+        update.TrustedImagePath.Should().BeNull();
+        GetArtFiles(context.RootDirectory).Should().BeEmpty();
     }
 
     [Fact]
     public async Task HandleAsync_WithUnsupportedImageContent_DoesNotWriteFile()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(HandleAsync_WithUnsupportedImageContent_DoesNotWriteFile));
-        GenerationResultStorage storage = CreateStorage(rootDirectory);
-        GalleryGenerationCompletedHandler handler = CreateHandler(
-            storage,
-            out List<IReadOnlyList<GalleryCompletedItemUpdate>> capturedUpdateBatches);
+        HandlerTestContext context = CreateContext(
+            nameof(HandleAsync_WithUnsupportedImageContent_DoesNotWriteFile));
         GenerationImageContentDto content = new(
             GenerationImageContentTypes.Gif,
             Convert.ToBase64String(GenerationImageTestData.ValidPngBytes));
         GenerationLifecycleEvent lifecycleEvent = CreateCompletedEvent(CreateItem(imageContent: content));
 
-        await handler.HandleAsync(lifecycleEvent, CancellationToken.None);
+        await context.Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
 
-        capturedUpdateBatches.Should().ContainSingle();
-        IReadOnlyList<GalleryCompletedItemUpdate> updates = capturedUpdateBatches[0];
-        updates.Should().ContainSingle();
-        updates[0].TrustedImagePath.Should().BeNull();
-        GetArtFiles(rootDirectory).Should().BeEmpty();
+        GalleryCompletedItemUpdate update = context.GetSingleUpdate();
+        update.TrustedImagePath.Should().BeNull();
+        GetArtFiles(context.RootDirectory).Should().BeEmpty();
     }
 
     [Fact]
     public async Task HandleAsync_WithLegacyPath_UsesCompatibilityPath()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(HandleAsync_WithLegacyPath_UsesCompatibilityPath));
-        GenerationResultStorage storage = CreateStorage(rootDirectory);
-        GalleryGenerationCompletedHandler handler = CreateHandler(
-            storage,
-            out List<IReadOnlyList<GalleryCompletedItemUpdate>> capturedUpdateBatches);
+        HandlerTestContext context = CreateContext(
+            nameof(HandleAsync_WithLegacyPath_UsesCompatibilityPath));
         GenerationLifecycleEvent lifecycleEvent = CreateCompletedEvent(CreateItem(imagePath: "legacy.png"));
 
-        await handler.HandleAsync(lifecycleEvent, CancellationToken.None);
+        await context.Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
 
-        capturedUpdateBatches.Should().ContainSingle();
-        IReadOnlyList<GalleryCompletedItemUpdate> updates = capturedUpdateBatches[0];
-        updates.Should().ContainSingle();
-        updates[0].TrustedImagePath.Should().Be("legacy.png");
+        GalleryCompletedItemUpdate update = context.GetSingleUpdate();
+        update.TrustedImagePath.Should().Be("legacy.png");
     }
 
     [Fact]
     public async Task HandleAsync_WithGeneratedItemWithoutContentOrTrustedPath_ReturnsEmptyImageState()
     {
-        string rootDirectory = CreateCleanDirectory(
-            nameof(HandleAsync_WithGeneratedItemWithoutContentOrTrustedPath_ReturnsEmptyImageState));
-        GenerationResultStorage storage = CreateStorage(rootDirectory);
-        GalleryGenerationCompletedHandler handler = CreateHandler(
-            storage,
-            out List<IReadOnlyList<GalleryCompletedItemUpdate>> capturedUpdateBatches,
+        HandlerTestContext context = CreateContext(
+            nameof(HandleAsync_WithGeneratedItemWithoutContentOrTrustedPath_ReturnsEmptyImageState),
             new RejectingTrustedImageFileService());
         GenerationLifecycleEvent lifecycleEvent = CreateCompletedEvent(CreateItem());
 
-        await handler.HandleAsync(lifecycleEvent, CancellationToken.None);
+        await context.Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
 
-        capturedUpdateBatches.Should().ContainSingle();
-        IReadOnlyList<GalleryCompletedItemUpdate> updates = capturedUpdateBatches[0];
-        updates.Should().ContainSingle();
-        updates[0].TrustedImagePath.Should().BeNull();
-        GetArtFiles(rootDirectory).Should().BeEmpty();
+        GalleryCompletedItemUpdate update = context.GetSingleUpdate();
+        update.TrustedImagePath.Should().BeNull();
+        GetArtFiles(context.RootDirectory).Should().BeEmpty();
     }
 
     [Fact]
     public async Task HandleAsync_WhenStorageWriteFails_AppliesEmptyImageState()
     {
-        string expectedResultPath = Path.Combine(
-            CreateCleanDirectory(nameof(HandleAsync_WhenStorageWriteFails_AppliesEmptyImageState)),
-            "existing.png");
+        string rootDirectory = CreateCleanDirectory(
+            nameof(HandleAsync_WhenStorageWriteFails_AppliesEmptyImageState));
+        string expectedResultPath = Path.Combine(rootDirectory, "existing.png");
         await File.WriteAllBytesAsync(expectedResultPath, GenerationImageTestData.ValidPngBytes);
         NotWritingGenerationResultStorage storage = new(expectedResultPath);
-        GalleryGenerationCompletedHandler handler = CreateHandler(
+        HandlerTestContext context = CreateContext(
+            rootDirectory,
             storage,
-            out List<IReadOnlyList<GalleryCompletedItemUpdate>> capturedUpdateBatches,
             new ExistingFileTrustedImageFileService());
         GenerationImageContentDto content = new(
             GenerationImageContentTypes.Png,
             Convert.ToBase64String(GenerationImageTestData.ValidPngBytes));
         GenerationLifecycleEvent lifecycleEvent = CreateCompletedEvent(CreateItem(imageContent: content));
 
-        await handler.HandleAsync(lifecycleEvent, CancellationToken.None);
+        await context.Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
 
-        capturedUpdateBatches.Should().ContainSingle();
-        IReadOnlyList<GalleryCompletedItemUpdate> updates = capturedUpdateBatches[0];
-        updates.Should().ContainSingle();
-        updates[0].TrustedImagePath.Should().BeNull();
+        GalleryCompletedItemUpdate update = context.GetSingleUpdate();
+        update.TrustedImagePath.Should().BeNull();
+    }
+
+    private static HandlerTestContext CreateContext(
+        string testName,
+        ITrustedImageFileService? trustedImageFileService = null)
+    {
+        string rootDirectory = CreateCleanDirectory(testName);
+        GenerationResultStorage storage = CreateStorage(rootDirectory);
+
+        return CreateContext(
+            rootDirectory,
+            storage,
+            trustedImageFileService);
+    }
+
+    private static HandlerTestContext CreateContext(
+        string rootDirectory,
+        IGenerationResultStorage storage,
+        ITrustedImageFileService? trustedImageFileService = null)
+    {
+        GalleryGenerationCompletedHandler handler = CreateHandler(
+            storage,
+            out List<IReadOnlyList<GalleryCompletedItemUpdate>> capturedUpdateBatches,
+            trustedImageFileService);
+
+        return new HandlerTestContext(
+            rootDirectory,
+            storage,
+            handler,
+            capturedUpdateBatches);
     }
 
     private static GalleryGenerationCompletedHandler CreateHandler(
@@ -285,12 +287,46 @@ public sealed class GalleryGenerationCompletedHandlerTests
     }
 
     private static string GetResultPath(
-        GenerationResultStorage storage,
+        IGenerationResultStorage storage,
         string contentType)
     {
         string? resultPath = storage.GetExpectedResultPathOrDefault(BatchId, ItemId, contentType);
 
         return resultPath ?? throw new InvalidOperationException("Generation result path is required.");
+    }
+
+    private sealed class HandlerTestContext
+    {
+        public string RootDirectory { get; }
+        public IGenerationResultStorage Storage { get; }
+        public GalleryGenerationCompletedHandler Handler { get; }
+        public IReadOnlyList<IReadOnlyList<GalleryCompletedItemUpdate>> UpdateBatches { get; }
+
+        public HandlerTestContext(
+            string rootDirectory,
+            IGenerationResultStorage storage,
+            GalleryGenerationCompletedHandler handler,
+            IReadOnlyList<IReadOnlyList<GalleryCompletedItemUpdate>> updateBatches)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
+            ArgumentNullException.ThrowIfNull(storage);
+            ArgumentNullException.ThrowIfNull(handler);
+            ArgumentNullException.ThrowIfNull(updateBatches);
+
+            RootDirectory = rootDirectory;
+            Storage = storage;
+            Handler = handler;
+            UpdateBatches = updateBatches;
+        }
+
+        public GalleryCompletedItemUpdate GetSingleUpdate()
+        {
+            UpdateBatches.Should().ContainSingle();
+            IReadOnlyList<GalleryCompletedItemUpdate> updates = UpdateBatches[0];
+            updates.Should().ContainSingle();
+
+            return updates[0];
+        }
     }
 
     private sealed class NotWritingGenerationResultStorage : IGenerationResultStorage
