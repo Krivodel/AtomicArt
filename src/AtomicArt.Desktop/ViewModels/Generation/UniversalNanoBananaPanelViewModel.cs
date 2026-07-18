@@ -684,20 +684,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             ?? _rememberedThinkingLevelValue;
         int previousGenerationCount = GenerationCount;
 
-        OnPropertyChanged(nameof(ModelId));
-        OnPropertyChanged(nameof(DisplayName));
-        OnPropertyChanged(nameof(AspectRatios));
-        OnPropertyChanged(nameof(Resolutions));
-        OnPropertyChanged(nameof(GenerationCounts));
-        OnPropertyChanged(nameof(MinimumTemperature));
-        OnPropertyChanged(nameof(MaximumTemperature));
-        OnPropertyChanged(nameof(DefaultTemperature));
-        OnPropertyChanged(nameof(TemperatureStep));
-        OnPropertyChanged(nameof(ThinkingLevels));
-        OnPropertyChanged(nameof(SupportsThinkingLevel));
-        OnPropertyChanged(nameof(AttachmentCounterText));
-        OnPropertyChanged(nameof(MaxAttachedImageBytes));
-        OnPropertyChanged(nameof(AttachmentInputByteLimit));
+        NotifySelectedModelMetadataChanged();
 
         bool wasPanelStateSaveSuppressed = _suppressPanelStateSave;
 
@@ -1186,20 +1173,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             _suppressPricePreviewRefresh = false;
         }
 
-        OnPropertyChanged(nameof(ModelId));
-        OnPropertyChanged(nameof(DisplayName));
-        OnPropertyChanged(nameof(AspectRatios));
-        OnPropertyChanged(nameof(Resolutions));
-        OnPropertyChanged(nameof(GenerationCounts));
-        OnPropertyChanged(nameof(MinimumTemperature));
-        OnPropertyChanged(nameof(MaximumTemperature));
-        OnPropertyChanged(nameof(DefaultTemperature));
-        OnPropertyChanged(nameof(TemperatureStep));
-        OnPropertyChanged(nameof(ThinkingLevels));
-        OnPropertyChanged(nameof(SupportsThinkingLevel));
-        OnPropertyChanged(nameof(AttachmentCounterText));
-        OnPropertyChanged(nameof(MaxAttachedImageBytes));
-        OnPropertyChanged(nameof(AttachmentInputByteLimit));
+        NotifySelectedModelMetadataChanged();
         NotifyCatalogStateChanged();
     }
 
@@ -1229,6 +1203,24 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         PickImageCommand.NotifyCanExecuteChanged();
         AttachImagesCommand.NotifyCanExecuteChanged();
         AttachImageInputsCommand.NotifyCanExecuteChanged();
+    }
+
+    private void NotifySelectedModelMetadataChanged()
+    {
+        OnPropertyChanged(nameof(ModelId));
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(AspectRatios));
+        OnPropertyChanged(nameof(Resolutions));
+        OnPropertyChanged(nameof(GenerationCounts));
+        OnPropertyChanged(nameof(MinimumTemperature));
+        OnPropertyChanged(nameof(MaximumTemperature));
+        OnPropertyChanged(nameof(DefaultTemperature));
+        OnPropertyChanged(nameof(TemperatureStep));
+        OnPropertyChanged(nameof(ThinkingLevels));
+        OnPropertyChanged(nameof(SupportsThinkingLevel));
+        OnPropertyChanged(nameof(AttachmentCounterText));
+        OnPropertyChanged(nameof(MaxAttachedImageBytes));
+        OnPropertyChanged(nameof(AttachmentInputByteLimit));
     }
 
     private void DisposeInputs(IEnumerable<ImageAttachmentInput>? inputs)
