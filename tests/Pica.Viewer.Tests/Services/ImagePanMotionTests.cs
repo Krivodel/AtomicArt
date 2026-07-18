@@ -37,13 +37,7 @@ public sealed class ImagePanMotionTests
     [Fact]
     public void Advance_WithSmoothMode_InterpolatesTowardTarget()
     {
-        ImagePanMotion motion = new();
-        motion.Begin(new Point(-50d, -50d), StartedAt);
-        motion.Move(
-            new Vector(20d, 0d),
-            ImagePanMotionMode.Smooth,
-            PanBounds,
-            StartedAt.AddMilliseconds(16d));
+        ImagePanMotion motion = CreateSmoothMotion();
 
         motion.Advance(
             TimeSpan.FromMilliseconds(16d),
@@ -57,13 +51,7 @@ public sealed class ImagePanMotionTests
     [Fact]
     public void Advance_AfterReleaseWithInertia_ContinuesMovement()
     {
-        ImagePanMotion motion = new();
-        motion.Begin(new Point(-80d, -50d), StartedAt);
-        motion.Move(
-            new Vector(20d, 0d),
-            ImagePanMotionMode.SmoothWithInertia,
-            PanBounds,
-            StartedAt.AddMilliseconds(16d));
+        ImagePanMotion motion = CreateInertiaMotion();
         motion.Release(
             ImagePanMotionMode.SmoothWithInertia,
             StartedAt.AddMilliseconds(32d));
@@ -80,13 +68,7 @@ public sealed class ImagePanMotionTests
     [Fact]
     public void Release_AfterPointerStops_DiscardsInertiaWithoutSnapping()
     {
-        ImagePanMotion motion = new();
-        motion.Begin(new Point(-80d, -50d), StartedAt);
-        motion.Move(
-            new Vector(20d, 0d),
-            ImagePanMotionMode.SmoothWithInertia,
-            PanBounds,
-            StartedAt.AddMilliseconds(16d));
+        ImagePanMotion motion = CreateInertiaMotion();
 
         motion.Release(
             ImagePanMotionMode.SmoothWithInertia,
@@ -112,13 +94,7 @@ public sealed class ImagePanMotionTests
     [Fact]
     public void Advance_WithSmoothMode_UsesFastTripleTiming()
     {
-        ImagePanMotion motion = new();
-        motion.Begin(new Point(-50d, -50d), StartedAt);
-        motion.Move(
-            new Vector(20d, 0d),
-            ImagePanMotionMode.Smooth,
-            PanBounds,
-            StartedAt.AddMilliseconds(16d));
+        ImagePanMotion motion = CreateSmoothMotion();
 
         motion.Advance(
             TimeSpan.FromMilliseconds(10d),
@@ -127,5 +103,31 @@ public sealed class ImagePanMotionTests
 
         motion.CurrentOffset.X.Should().BeApproximately(-41.6549d, 0.001d);
         motion.CurrentOffset.Y.Should().Be(-50d);
+    }
+
+    private static ImagePanMotion CreateSmoothMotion()
+    {
+        ImagePanMotion motion = new();
+        motion.Begin(new Point(-50d, -50d), StartedAt);
+        motion.Move(
+            new Vector(20d, 0d),
+            ImagePanMotionMode.Smooth,
+            PanBounds,
+            StartedAt.AddMilliseconds(16d));
+
+        return motion;
+    }
+
+    private static ImagePanMotion CreateInertiaMotion()
+    {
+        ImagePanMotion motion = new();
+        motion.Begin(new Point(-80d, -50d), StartedAt);
+        motion.Move(
+            new Vector(20d, 0d),
+            ImagePanMotionMode.SmoothWithInertia,
+            PanBounds,
+            StartedAt.AddMilliseconds(16d));
+
+        return motion;
     }
 }
