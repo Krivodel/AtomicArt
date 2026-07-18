@@ -32,12 +32,10 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddInfrastructureServices_WithServices_ResolvesGenerationContentProvider()
     {
-        ServiceCollection services = [];
         IConfiguration configuration = CreateConfiguration();
-        services.AddSingleton<GenerationUsagePriceCalculator>();
-
-        services.AddInfrastructureServices(configuration);
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using ServiceProvider serviceProvider = CreateServiceProvider(
+            configuration,
+            services => services.AddSingleton<GenerationUsagePriceCalculator>());
 
         IImageGenerationContentProvider provider = serviceProvider
             .GetRequiredService<IImageGenerationContentProvider>();
@@ -49,15 +47,11 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddInfrastructureServices_WithServices_RegistersGoogleInteractionsOptions()
     {
-        ServiceCollection services = [];
         IConfiguration configuration = CreateConfiguration();
 
-        services.AddInfrastructureServices(configuration);
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using ServiceProvider serviceProvider = CreateServiceProvider(configuration);
 
-        GoogleInteractionsOptions options = serviceProvider
-            .GetRequiredService<IOptions<GoogleInteractionsOptions>>()
-            .Value;
+        GoogleInteractionsOptions options = GetOptions<GoogleInteractionsOptions>(serviceProvider);
 
         options.BaseUrl.Should().Be(GoogleInteractionsOptions.DefaultBaseUrl);
     }
@@ -65,15 +59,11 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddInfrastructureServices_WithServices_RegistersTestGenerationOptions()
     {
-        ServiceCollection services = [];
         IConfiguration configuration = CreateConfiguration();
 
-        services.AddInfrastructureServices(configuration);
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using ServiceProvider serviceProvider = CreateServiceProvider(configuration);
 
-        TestGenerationOptions options = serviceProvider
-            .GetRequiredService<IOptions<TestGenerationOptions>>()
-            .Value;
+        TestGenerationOptions options = GetOptions<TestGenerationOptions>(serviceProvider);
 
         options.Enabled.Should().BeFalse();
         options.MaxImageBytes.Should().Be(TestGenerationOptions.DefaultMaxImageBytes);
@@ -82,19 +72,17 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddInfrastructureServices_WithRelativeTestGenerationImagesDirectory_ResolvesFromBaseDirectory()
     {
-        ServiceCollection services = [];
         IConfiguration configuration = CreateConfiguration(new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             [CreateTestGenerationKey(nameof(TestGenerationOptions.ImagesDirectory))] = "TestGenerationImages"
         });
         string baseDirectory = Path.Combine(Path.GetTempPath(), "AtomicArt.Infrastructure.Tests", Guid.NewGuid().ToString("N"));
 
-        services.AddInfrastructureServices(configuration, baseDirectory);
-        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+        using ServiceProvider serviceProvider = CreateServiceProvider(
+            configuration,
+            baseDirectory);
 
-        TestGenerationOptions options = serviceProvider
-            .GetRequiredService<IOptions<TestGenerationOptions>>()
-            .Value;
+        TestGenerationOptions options = GetOptions<TestGenerationOptions>(serviceProvider);
 
         options.ImagesDirectory.Should().Be(Path.GetFullPath(
             Path.Combine(baseDirectory, "TestGenerationImages")));
@@ -134,8 +122,40 @@ public sealed class DependencyInjectionTests
             .Build();
     }
 
+    private static ServiceProvider CreateServiceProvider(
+        IConfiguration configuration,
+        Action<ServiceCollection>? configureServices = null)
+    {
+        return CreateServiceProvider(
+            configuration,
+            null,
+            configureServices);
+    }
+
+    private static ServiceProvider CreateServiceProvider(
+        IConfiguration configuration,
+        string? testGenerationImagesBaseDirectory,
+        Action<ServiceCollection>? configureServices = null)
+    {
+        ServiceCollection services = [];
+        configureServices?.Invoke(services);
+        services.AddInfrastructureServices(
+            configuration,
+            testGenerationImagesBaseDirectory);
+
+        return services.BuildServiceProvider();
+    }
+
     private static string CreateTestGenerationKey(string key)
     {
         return $"{TestGenerationOptions.SectionName}:{key}";
+    }
+
+    private static TOptions GetOptions<TOptions>(ServiceProvider serviceProvider)
+        where TOptions : class
+    {
+        return serviceProvider
+            .GetRequiredService<IOptions<TOptions>>()
+            .Value;
     }
 }
