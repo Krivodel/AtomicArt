@@ -154,29 +154,17 @@ public sealed class MetadataImageModelDefinitionTests
     [Fact]
     public void Validate_WithInvalidImageSignature_ReturnsError()
     {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         AttachedImageDto attachedImage = new("image.png", PngContentType, [0x00, 0x01, 0x02]);
-        IReadOnlyList<AttachedImageDto> attachedImages = new List<AttachedImageDto> { attachedImage };
-        ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
 
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertAttachmentRejected(attachedImage);
     }
 
     [Fact]
     public void Validate_WithUnsupportedModelAttachmentContentType_ReturnsError()
     {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         AttachedImageDto attachedImage = new("image.gif", GifContentType, GifBytes);
-        IReadOnlyList<AttachedImageDto> attachedImages = new List<AttachedImageDto> { attachedImage };
-        ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
 
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertAttachmentRejected(attachedImage);
     }
 
     private static ImageGenerationRequestDto CreateRequest(
@@ -208,7 +196,6 @@ public sealed class MetadataImageModelDefinitionTests
         IReadOnlyList<AttachedImageDto>? attachedImages = null,
         string? thinkingLevel = null)
     {
-
         return ImageGenerationRequestDtoTestFactory.Create(
             modelId: metadata.Id,
             prompt: prompt,
@@ -222,5 +209,20 @@ public sealed class MetadataImageModelDefinitionTests
     private static AttachedImageDto CreateAttachedImage(string fileName)
     {
         return new AttachedImageDto(fileName, PngContentType, PngBytes);
+    }
+
+    private static void AssertAttachmentRejected(AttachedImageDto attachedImage)
+    {
+        ArgumentNullException.ThrowIfNull(attachedImage);
+
+        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
+        IReadOnlyList<AttachedImageDto> attachedImages =
+            new List<AttachedImageDto> { attachedImage };
+        ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
+
+        Result<ImageGenerationRequestDto> result = definition.Validate(request);
+
+        result.IsValidationError.Should().BeTrue();
+        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
     }
 }
