@@ -16,9 +16,8 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithRealMetadata_HasAutoAspectRatioFirst()
     {
-        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
+        GenerationModelCatalogDto catalog = LoadRealCatalogWithExpectedModelCount();
 
-        catalog.Models.Should().HaveCount(3);
         catalog.Models.Should().OnlyContain(model =>
             model.AspectRatios.First() == GenerationAspectRatios.Auto);
         catalog.Models.Should().OnlyContain(model =>
@@ -28,9 +27,8 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithRealMetadata_HasTemperatureForAllNanoBananaModels()
     {
-        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
+        GenerationModelCatalogDto catalog = LoadRealCatalogWithExpectedModelCount();
 
-        catalog.Models.Should().HaveCount(3);
         catalog.Models.Should().OnlyContain(model => model.Temperature.Minimum == 0.1d);
         catalog.Models.Should().OnlyContain(model => model.Temperature.Maximum == 2d);
         catalog.Models.Should().OnlyContain(model => model.Temperature.Default == 1d);
@@ -192,20 +190,12 @@ public sealed class JsonModelMetadataStartupLoaderTests
     public void Load_WithMissingNamedProperty_ThrowsInvalidOperationExceptionWithModelName(
         string propertyName)
     {
-        string path = CreateTempFile(CreateJsonWithoutModelProperty(propertyName));
+        FluentAssertions.Specialized.ExceptionAssertions<InvalidOperationException> assertions =
+            AssertLoadFails(
+                CreateJsonWithoutModelProperty(propertyName),
+                $"*Test Model*test-model*{propertyName}*");
 
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage($"*Test Model*test-model*{propertyName}*")
-                .And.Message.Should().NotContain("index");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
+        assertions.And.Message.Should().NotContain("index");
     }
 
     private static string CreateJsonWithoutModelProperty(string propertyName)
@@ -288,7 +278,17 @@ public sealed class JsonModelMetadataStartupLoaderTests
             new FixedGenerationModelCatalogJsonSource(json));
     }
 
-    private static void AssertLoadFails(string content, string messageWildcard)
+    private static GenerationModelCatalogDto LoadRealCatalogWithExpectedModelCount()
+    {
+        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
+
+        catalog.Models.Should().HaveCount(3);
+
+        return catalog;
+    }
+
+    private static FluentAssertions.Specialized.ExceptionAssertions<InvalidOperationException>
+        AssertLoadFails(string content, string messageWildcard)
     {
         string path = CreateTempFile(content);
 
@@ -296,7 +296,7 @@ public sealed class JsonModelMetadataStartupLoaderTests
         {
             Action action = () => Load(path);
 
-            action.Should().Throw<InvalidOperationException>()
+            return action.Should().Throw<InvalidOperationException>()
                 .WithMessage(messageWildcard);
         }
         finally
