@@ -9,8 +9,6 @@ namespace AtomicArt.Infrastructure.Tests.Generation;
 
 public sealed class EmbeddedPlaceholderImageProviderTests
 {
-    private const long MaxPlaceholderImageBytes = 128L * 1024L * 1024L;
-
     [Theory]
     [InlineData("placeholder.jpg", GenerationImageContentTypes.Jpeg)]
     [InlineData("placeholder.jpeg", GenerationImageContentTypes.Jpeg)]
@@ -42,13 +40,13 @@ public sealed class EmbeddedPlaceholderImageProviderTests
         stream.SetupGet(currentStream => currentStream.CanSeek)
             .Returns(true);
         stream.SetupGet(currentStream => currentStream.Length)
-            .Returns(MaxPlaceholderImageBytes + 1L);
+            .Returns(EmbeddedPlaceholderImageProvider.MaxPlaceholderImageBytes + 1L);
 
         Func<Task> act = () => EmbeddedPlaceholderImageProvider
             .ReadResourceContentAsync(stream.Object, "large-placeholder.png", CancellationToken.None);
 
         await act.Should()
             .ThrowAsync<InvalidOperationException>()
-            .WithMessage("*128 MB*");
+            .WithMessage($"*{EmbeddedPlaceholderImageProvider.MaxPlaceholderImageMegabytes} MB*");
     }
 }

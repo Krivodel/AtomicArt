@@ -6,7 +6,10 @@ namespace AtomicArt.Infrastructure.Generation;
 
 internal sealed class EmbeddedPlaceholderImageProvider : PlaceholderImageProvider
 {
-    private const long MaxPlaceholderImageBytes = 128L * 1024L * 1024L;
+    internal const int MaxPlaceholderImageMegabytes = 128;
+    internal const long MaxPlaceholderImageBytes =
+        MaxPlaceholderImageMegabytes * 1024L * 1024L;
+
     private const string PlaceholdersResourceSegment = ".Placeholders.";
 
     private static readonly Assembly ResourceAssembly = typeof(EmbeddedPlaceholderImageProvider).Assembly;
@@ -101,6 +104,6 @@ internal sealed class EmbeddedPlaceholderImageProvider : PlaceholderImageProvide
     private static InvalidOperationException CreateResourceTooLargeException(string resourceName)
     {
         return new InvalidOperationException(
-            $"The embedded placeholder image '{resourceName}' exceeds 128 MB.");
+            $"The embedded placeholder image '{resourceName}' exceeds {MaxPlaceholderImageMegabytes} MB.");
     }
 }
