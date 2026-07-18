@@ -221,7 +221,7 @@ public sealed class GalleryViewModelTests
         RecordingAnimatedGalleryOperations operations = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             animatedGalleryOperations: operations);
-        GalleryItemState state = CreateSavedGalleryItem();
+        GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated();
 
         await viewModel.RestoreStateAsync([state], CancellationToken.None);
 
@@ -615,22 +615,6 @@ public sealed class GalleryViewModelTests
             request,
             startSnapshot,
             TestGenerationCredentials.ProviderCredential);
-    }
-
-    private static GalleryItemState CreateSavedGalleryItem()
-    {
-        return new GalleryItemState
-        {
-            Id = Guid.NewGuid(),
-            ModelId = ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            Prompt = "Saved prompt",
-            AspectRatio = GenerationAspectRatios.Auto,
-            Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc = DateTime.UtcNow,
-            Status = GenerationItemStatus.Generated,
-            ImagePath = "image.png"
-        };
     }
 
     private static string GetFileSourcePath(GalleryImageViewerItem item)

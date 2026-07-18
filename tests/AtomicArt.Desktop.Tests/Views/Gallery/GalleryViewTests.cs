@@ -9,11 +9,11 @@ using Avalonia.VisualTree;
 using FluentAssertions;
 using Xunit;
 
-using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views;
@@ -63,7 +63,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             try
             {
                 await viewModel.RestoreStateAsync(
-                    [CreateSavedGalleryItem()],
+                    [GalleryItemStateTestFactory.CreateGenerated()],
                     CancellationToken.None);
                 window.CaptureRenderedFrame();
 
@@ -96,7 +96,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             GalleryView view = CreateGalleryView(serviceProvider, viewModel);
 
             await viewModel.RestoreStateAsync(
-                [CreateSavedGalleryItem()],
+                [GalleryItemStateTestFactory.CreateGenerated()],
                 CancellationToken.None);
 
             Window window = Show(view);
@@ -136,7 +136,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 .Subject;
 
             await viewModel.RestoreGalleryAsync(
-                [CreateSavedGalleryItem()],
+                [GalleryItemStateTestFactory.CreateGenerated()],
                 CancellationToken.None);
 
             window.Show();
@@ -168,7 +168,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            GalleryItemState savedItem = CreateSavedGalleryItem();
+            GalleryItemState savedItem = GalleryItemStateTestFactory.CreateGenerated();
             ServiceCollection services = new();
             services.AddSingleton<IConfiguration>(CreateConfiguration());
             services.AddDesktopServices();
@@ -212,7 +212,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            GalleryItemState savedItem = CreateSavedGalleryItem();
+            GalleryItemState savedItem = GalleryItemStateTestFactory.CreateGenerated();
             ServiceCollection services = new();
             services.AddSingleton<IConfiguration>(CreateConfiguration());
             services.AddDesktopServices();
@@ -332,40 +332,14 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             .Single();
     }
 
-    private static GalleryItemState CreateSavedGalleryItem()
-    {
-        return new GalleryItemState
-        {
-            Id = Guid.NewGuid(),
-            ModelId = ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            Prompt = "Saved prompt",
-            AspectRatio = GenerationAspectRatios.Auto,
-            Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc = DateTime.UtcNow,
-            Status = GenerationItemStatus.Generated,
-            ImagePath = "image.png"
-        };
-    }
-
     private static IReadOnlyList<GalleryItemState> CreateSavedGalleryItems(int count)
     {
         List<GalleryItemState> items = [];
 
         for (int i = 0; i < count; i++)
         {
-            items.Add(new GalleryItemState
-            {
-                Id = Guid.NewGuid(),
-                ModelId = ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-                ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-                Prompt = string.Concat("Saved prompt ", i.ToString(CultureInfo.InvariantCulture)),
-                AspectRatio = GenerationAspectRatios.Auto,
-                Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
-                CreatedAtUtc = DateTime.UtcNow.AddSeconds(-i),
-                Status = GenerationItemStatus.Generated,
-                ImagePath = "image.png"
-            });
+            string prompt = string.Concat("Saved prompt ", i.ToString(CultureInfo.InvariantCulture));
+            items.Add(GalleryItemStateTestFactory.CreateGenerated(prompt, i));
         }
 
         return items;
