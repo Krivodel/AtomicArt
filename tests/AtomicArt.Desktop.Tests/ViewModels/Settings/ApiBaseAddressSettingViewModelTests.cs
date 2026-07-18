@@ -15,68 +15,68 @@ public sealed class ApiBaseAddressSettingViewModelTests
     [Fact]
     public async Task SaveCommand_WithValidAddress_AppliesAndSavesNormalizedValue()
     {
-        IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create();
-        RecordingSettingsStateService settingsStateService = new(endpointService);
-        using ApiBaseAddressSettingViewModel viewModel = CreateViewModel(
-            endpointService,
-            settingsStateService);
-        viewModel.Value = " https://second.atomicart.test/root ";
+        using ApiBaseAddressSettingTestContext context = new();
+        context.ViewModel.Value = " https://second.atomicart.test/root ";
 
-        await viewModel.SaveCommand.ExecuteAsync(null);
+        await context.ViewModel.SaveCommand.ExecuteAsync(null);
 
-        viewModel.Value.Should().Be("https://second.atomicart.test/root/");
-        endpointService.BaseAddress.ToString().Should().Be(viewModel.Value);
-        settingsStateService.AppliedValue.Should().Be(viewModel.Value);
-        settingsStateService.SavedValue.Should().Be(viewModel.Value);
-        viewModel.HasErrorMessage.Should().BeFalse();
+        context.ViewModel.Value.Should().Be("https://second.atomicart.test/root/");
+        context.EndpointService.BaseAddress.ToString().Should().Be(context.ViewModel.Value);
+        context.SettingsStateService.AppliedValue.Should().Be(context.ViewModel.Value);
+        context.SettingsStateService.SavedValue.Should().Be(context.ViewModel.Value);
+        context.ViewModel.HasErrorMessage.Should().BeFalse();
     }
 
     [Fact]
     public async Task SaveCommand_WithInvalidAddress_DoesNotApplyOrSaveValue()
     {
-        IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create();
-        RecordingSettingsStateService settingsStateService = new(endpointService);
-        using ApiBaseAddressSettingViewModel viewModel = CreateViewModel(
-            endpointService,
-            settingsStateService);
-        viewModel.Value = "ftp://atomicart.test/";
+        using ApiBaseAddressSettingTestContext context = new();
+        context.ViewModel.Value = "ftp://atomicart.test/";
 
-        await viewModel.SaveCommand.ExecuteAsync(null);
+        await context.ViewModel.SaveCommand.ExecuteAsync(null);
 
-        endpointService.BaseAddress.ToString().Should().Be("https://atomicart.test/");
-        settingsStateService.AppliedValue.Should().BeNull();
-        settingsStateService.SavedValue.Should().BeNull();
-        viewModel.ErrorMessage.Should().Be(UiStrings.SettingsApiBaseAddressInvalid);
+        context.EndpointService.BaseAddress.ToString().Should().Be("https://atomicart.test/");
+        context.SettingsStateService.AppliedValue.Should().BeNull();
+        context.SettingsStateService.SavedValue.Should().BeNull();
+        context.ViewModel.ErrorMessage.Should().Be(UiStrings.SettingsApiBaseAddressInvalid);
     }
 
     [Fact]
     public void BaseAddressChanged_WithRestoredAddress_SynchronizesDisplayedValue()
     {
-        IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create();
-        RecordingSettingsStateService settingsStateService = new(endpointService);
-        using ApiBaseAddressSettingViewModel viewModel = CreateViewModel(
-            endpointService,
-            settingsStateService);
+        using ApiBaseAddressSettingTestContext context = new();
         ApiBaseAddress.TryCreate(
             "https://restored.atomicart.test/",
             out ApiBaseAddress? restoredAddress).Should().BeTrue();
 
-        endpointService.SetBaseAddress(restoredAddress
+        context.EndpointService.SetBaseAddress(restoredAddress
             ?? throw new InvalidOperationException("Restored address is required."));
 
-        viewModel.Value.Should().Be("https://restored.atomicart.test/");
+        context.ViewModel.Value.Should().Be("https://restored.atomicart.test/");
     }
 
-    private static ApiBaseAddressSettingViewModel CreateViewModel(
-        IApiEndpointService endpointService,
-        ISettingsStateService settingsStateService)
+    private sealed class ApiBaseAddressSettingTestContext : IDisposable
     {
-        return new ApiBaseAddressSettingViewModel(
-            new ApiBaseAddressSettingDefinition(),
-            endpointService,
-            new ImmediateUiThreadDispatcher(),
-            settingsStateService,
-            new TestViewModelErrorHandler());
+        public IApiEndpointService EndpointService { get; }
+        public RecordingSettingsStateService SettingsStateService { get; }
+        public ApiBaseAddressSettingViewModel ViewModel { get; }
+
+        public ApiBaseAddressSettingTestContext()
+        {
+            EndpointService = TestApiEndpointServiceFactory.Create();
+            SettingsStateService = new RecordingSettingsStateService(EndpointService);
+            ViewModel = new ApiBaseAddressSettingViewModel(
+                new ApiBaseAddressSettingDefinition(),
+                EndpointService,
+                new ImmediateUiThreadDispatcher(),
+                SettingsStateService,
+                new TestViewModelErrorHandler());
+        }
+
+        public void Dispose()
+        {
+            ViewModel.Dispose();
+        }
     }
 
     private sealed class RecordingSettingsStateService : ISettingsStateService
