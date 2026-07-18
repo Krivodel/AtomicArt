@@ -81,7 +81,7 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
         {
             return Result<ImageGenerationRequestDto>.NotFound(
                 GenerationErrorCodes.ModelNotFound,
-                "Модель генерации не найдена.");
+                GenerationRequestFailureMessages.ModelNotFound);
         }
 
         Result<ImageGenerationRequestDto> attachmentValidationResult = ValidateAttachedImages(request);
@@ -95,7 +95,7 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
         {
             return Result<ImageGenerationRequestDto>.ValidationError(
                 GenerationErrorCodes.ModelRequestValidation,
-                "Вложения не прошли проверку.");
+                GenerationRequestFailureMessages.AttachmentsValidation);
         }
 
         ImageGenerationRequestDto normalizedRequest = ApplyModelDefaults(attachmentValidationResult.Value);
@@ -105,7 +105,7 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
         {
             return Result<ImageGenerationRequestDto>.ValidationError(
                 rulesResult.ErrorCode ?? GenerationErrorCodes.ModelRequestValidation,
-                rulesResult.ErrorMessage ?? "Запрос генерации не прошёл проверку.");
+                rulesResult.ErrorMessage ?? GenerationRequestFailureMessages.RequestValidation);
         }
 
         return Result<ImageGenerationRequestDto>.Success(normalizedRequest);
@@ -120,14 +120,15 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
         {
             return Result<ImageGenerationRequestDto>.ValidationError(
                 attachmentValidationResult.ErrorCode ?? GenerationErrorCodes.ModelRequestValidation,
-                attachmentValidationResult.ErrorMessage ?? "Вложения не прошли проверку.");
+                attachmentValidationResult.ErrorMessage
+                    ?? GenerationRequestFailureMessages.AttachmentsValidation);
         }
 
         if (attachmentValidationResult.Value is null)
         {
             return Result<ImageGenerationRequestDto>.ValidationError(
                 GenerationErrorCodes.ModelRequestValidation,
-                "Вложения не прошли проверку.");
+                GenerationRequestFailureMessages.AttachmentsValidation);
         }
 
         return Result<ImageGenerationRequestDto>.Success(request with

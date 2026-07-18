@@ -81,7 +81,7 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
 
             return Result<GenerationBatchDto>.NotFound(
                 GenerationErrorCodes.ModelNotFound,
-                "Модель генерации не найдена.");
+                GenerationRequestFailureMessages.ModelNotFound);
         }
 
         Result<ImageGenerationRequestDto> normalizationResult = modelDefinition.Validate(request);
@@ -127,7 +127,7 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
         {
             return Result<GenerationBatchDto>.NotFound(
                 result.ErrorCode ?? GenerationErrorCodes.ModelNotFound,
-                result.ErrorMessage ?? "Модель генерации не найдена.");
+                result.ErrorMessage ?? GenerationRequestFailureMessages.ModelNotFound);
         }
 
         if (result.IsUnavailable)
@@ -139,7 +139,7 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
 
         return Result<GenerationBatchDto>.ValidationError(
             result.ErrorCode ?? GenerationErrorCodes.ModelRequestValidation,
-            result.ErrorMessage ?? "Запрос генерации не прошёл проверку.");
+            result.ErrorMessage ?? GenerationRequestFailureMessages.RequestValidation);
     }
 
     private async Task<Result<GenerationBatchDto>> CreateBatchAsync(
