@@ -1,8 +1,8 @@
 using AtomicArt.Contracts.Generation;
 
-namespace AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
+namespace AtomicArt.Application.Features.Generation.Services;
 
-internal static class AttachedImageSignatureMatcher
+public static class GenerationImageSignatureMatcher
 {
     public static bool Matches(
         GenerationImageFileFormatDescriptor descriptor,

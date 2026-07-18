@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using AtomicArt.Application.Features.Generation.Models;
+using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Infrastructure.Generation;
@@ -244,7 +245,9 @@ internal sealed class FileSystemPlaceholderImageProvider : IPlaceholderImageProv
 
         foreach (GenerationImageFileFormatDescriptor format in GenerationImageFileFormats.All)
         {
-            if (Matches(format, signature, bytesRead))
+            if (GenerationImageSignatureMatcher.Matches(
+                    format,
+                    signature.AsSpan(0, bytesRead)))
             {
                 return format.ContentType;
             }
@@ -275,43 +278,6 @@ internal sealed class FileSystemPlaceholderImageProvider : IPlaceholderImageProv
         }
 
         return totalBytesRead;
-    }
-
-    private static bool Matches(
-        GenerationImageFileFormatDescriptor format,
-        byte[] signature,
-        int bytesRead)
-    {
-        foreach (IReadOnlyList<GenerationImageFileSignaturePart> alternative in format.SignatureAlternatives)
-        {
-            if (alternative.All(part => Matches(part, signature, bytesRead)))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool Matches(
-        GenerationImageFileSignaturePart part,
-        byte[] signature,
-        int bytesRead)
-    {
-        if (bytesRead < part.Offset + part.Bytes.Count)
-        {
-            return false;
-        }
-
-        for (int index = 0; index < part.Bytes.Count; index++)
-        {
-            if (signature[part.Offset + index] != part.Bytes[index])
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private static async Task<byte[]> ReadContentAsync(

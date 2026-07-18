@@ -1,3 +1,4 @@
+using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
@@ -23,6 +24,6 @@ public sealed class AttachedImageFormat : IAttachedImageFormat
 
     public bool MatchesSignature(ReadOnlySpan<byte> content)
     {
-        return AttachedImageSignatureMatcher.Matches(_descriptor, content);
+        return GenerationImageSignatureMatcher.Matches(_descriptor, content);
     }
 }
