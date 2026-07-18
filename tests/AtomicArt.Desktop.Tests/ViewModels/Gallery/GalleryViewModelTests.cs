@@ -573,13 +573,9 @@ public sealed class GalleryViewModelTests
         TestGenerationLifecycleEventHub lifecycleEventHub = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             lifecycleEventHub: lifecycleEventHub);
-        GenerationRunDispatcher dispatcher = new(
-            new GenerationConcurrencyLimiter(),
+        GenerationRunDispatcher dispatcher = GenerationRunDispatcherTestFactory.Create(
             new ThrowingImageGenerationApiClient(),
-            new NanoBanana2GenerationLifecyclePublisher(lifecycleEventHub),
-            new NullGenerationResultStorage(),
-            TestGenerationActivityTrackerFactory.Create(),
-            NullLogger<GenerationRunDispatcher>.Instance);
+            lifecycleEventHub);
 
         await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
 

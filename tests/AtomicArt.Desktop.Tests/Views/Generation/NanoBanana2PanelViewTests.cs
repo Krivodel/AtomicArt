@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
-
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Controls;
@@ -779,13 +777,10 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         IImageGenerationApiClient generationApiClient = new SuccessfulImageGenerationApiClient();
         IGenerationLifecycleEventHub generationLifecycleEventHub = new TestGenerationLifecycleEventHub();
-        IGenerationRunDispatcher generationRunDispatcher = new GenerationRunDispatcher(
-            new GenerationConcurrencyLimiter(),
-            generationApiClient,
-            new NanoBanana2GenerationLifecyclePublisher(generationLifecycleEventHub),
-            new NullGenerationResultStorage(),
-            TestGenerationActivityTrackerFactory.Create(),
-            NullLogger<GenerationRunDispatcher>.Instance);
+        IGenerationRunDispatcher generationRunDispatcher =
+            GenerationRunDispatcherTestFactory.Create(
+                generationApiClient,
+                generationLifecycleEventHub);
         IImageModelOptionCatalog modelOptionCatalog =
             imageModelOptionCatalog ?? CreateLoadedImageModelOptionCatalog();
 

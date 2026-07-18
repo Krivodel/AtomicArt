@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
-
 using FluentAssertions;
 using Xunit;
 
@@ -384,13 +382,10 @@ public sealed class GenerationRunDispatcherTests
         IGenerationLifecycleEventHub lifecycleEventHub,
         IGenerationConcurrencyLimiter? limiter = null)
     {
-        return new GenerationRunDispatcher(
-            limiter ?? new GenerationConcurrencyLimiter(),
+        return GenerationRunDispatcherTestFactory.Create(
             apiClient,
-            new NanoBanana2GenerationLifecyclePublisher(lifecycleEventHub),
-            new NullGenerationResultStorage(),
-            TestGenerationActivityTrackerFactory.Create(),
-            NullLogger<GenerationRunDispatcher>.Instance);
+            lifecycleEventHub,
+            limiter);
     }
 
     private static GenerationRunRequest CreateRunRequest()

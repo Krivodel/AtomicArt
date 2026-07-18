@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -1632,13 +1631,10 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             lifecycleEventHub ?? new TestGenerationLifecycleEventHub();
         INanoBanana2AttachmentValidator attachmentValidator = CreateAttachmentValidator();
         IViewModelErrorHandler viewModelErrorHandler = errorHandler ?? new TestViewModelErrorHandler();
-        IGenerationRunDispatcher generationRunDispatcher = dispatcher ?? new GenerationRunDispatcher(
-            new GenerationConcurrencyLimiter(),
-            generationApiClient,
-            new NanoBanana2GenerationLifecyclePublisher(generationLifecycleEventHub),
-            new NullGenerationResultStorage(),
-            TestGenerationActivityTrackerFactory.Create(),
-            NullLogger<GenerationRunDispatcher>.Instance);
+        IGenerationRunDispatcher generationRunDispatcher = dispatcher
+            ?? GenerationRunDispatcherTestFactory.Create(
+                generationApiClient,
+                generationLifecycleEventHub);
 
         UniversalNanoBananaPanelViewModel viewModel = new(
             new EmptyFilePickerService(),
