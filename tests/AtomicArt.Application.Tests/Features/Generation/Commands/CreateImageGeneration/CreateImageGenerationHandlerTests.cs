@@ -385,34 +385,34 @@ public sealed class CreateImageGenerationHandlerTests
     [Theory]
     [InlineData(
         ImageGenerationProviderFailureKind.RequestRejected,
-        "ERR-GEN-011")]
+        GenerationProviderFailureErrorCodes.RequestRejected)]
     [InlineData(
         ImageGenerationProviderFailureKind.Authentication,
-        "ERR-GEN-005")]
+        GenerationProviderFailureErrorCodes.Authentication)]
     [InlineData(
         ImageGenerationProviderFailureKind.Authorization,
-        "ERR-GEN-006")]
+        GenerationProviderFailureErrorCodes.Authorization)]
     [InlineData(
         ImageGenerationProviderFailureKind.ResourceNotFound,
-        "ERR-GEN-012")]
+        GenerationProviderFailureErrorCodes.ResourceNotFound)]
     [InlineData(
         ImageGenerationProviderFailureKind.RateLimited,
-        "ERR-GEN-007")]
+        GenerationProviderFailureErrorCodes.RateLimited)]
     [InlineData(
         ImageGenerationProviderFailureKind.InternalError,
-        "ERR-GEN-013")]
+        GenerationProviderFailureErrorCodes.InternalError)]
     [InlineData(
         ImageGenerationProviderFailureKind.InvalidResponse,
-        "ERR-GEN-008")]
+        GenerationProviderFailureErrorCodes.InvalidResponse)]
     [InlineData(
         ImageGenerationProviderFailureKind.Timeout,
-        "ERR-GEN-009")]
+        GenerationProviderFailureErrorCodes.Timeout)]
     [InlineData(
         ImageGenerationProviderFailureKind.Unavailable,
-        "ERR-GEN-010")]
+        GenerationProviderFailureErrorCodes.Unavailable)]
     [InlineData(
         ImageGenerationProviderFailureKind.Unknown,
-        "ERR-GEN-014")]
+        GenerationProviderFailureErrorCodes.Unknown)]
     public async Task Handle_WhenContentProviderReturnsProviderFailure_MapsErrorCode(
         ImageGenerationProviderFailureKind failureKind,
         string expectedErrorCode)

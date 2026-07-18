@@ -2,22 +2,43 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Application.Features.Generation.Models;
+using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Application.Tests.Features.Generation.Models;
 
 public sealed class ImageGenerationProviderFailureCatalogTests
 {
     [Theory]
-    [InlineData(ImageGenerationProviderFailureKind.Authentication, "ERR-GEN-005")]
-    [InlineData(ImageGenerationProviderFailureKind.Authorization, "ERR-GEN-006")]
-    [InlineData(ImageGenerationProviderFailureKind.RateLimited, "ERR-GEN-007")]
-    [InlineData(ImageGenerationProviderFailureKind.InvalidResponse, "ERR-GEN-008")]
-    [InlineData(ImageGenerationProviderFailureKind.Timeout, "ERR-GEN-009")]
-    [InlineData(ImageGenerationProviderFailureKind.Unavailable, "ERR-GEN-010")]
-    [InlineData(ImageGenerationProviderFailureKind.RequestRejected, "ERR-GEN-011")]
-    [InlineData(ImageGenerationProviderFailureKind.ResourceNotFound, "ERR-GEN-012")]
-    [InlineData(ImageGenerationProviderFailureKind.InternalError, "ERR-GEN-013")]
-    [InlineData(ImageGenerationProviderFailureKind.Unknown, "ERR-GEN-014")]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Authentication,
+        GenerationProviderFailureErrorCodes.Authentication)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Authorization,
+        GenerationProviderFailureErrorCodes.Authorization)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.RateLimited,
+        GenerationProviderFailureErrorCodes.RateLimited)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.InvalidResponse,
+        GenerationProviderFailureErrorCodes.InvalidResponse)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Timeout,
+        GenerationProviderFailureErrorCodes.Timeout)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Unavailable,
+        GenerationProviderFailureErrorCodes.Unavailable)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.RequestRejected,
+        GenerationProviderFailureErrorCodes.RequestRejected)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.ResourceNotFound,
+        GenerationProviderFailureErrorCodes.ResourceNotFound)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.InternalError,
+        GenerationProviderFailureErrorCodes.InternalError)]
+    [InlineData(
+        ImageGenerationProviderFailureKind.Unknown,
+        GenerationProviderFailureErrorCodes.Unknown)]
     public void GetErrorCode_WithKnownFailureKind_ReturnsMappedCode(
         ImageGenerationProviderFailureKind failureKind,
         string expectedErrorCode)
@@ -28,16 +49,36 @@ public sealed class ImageGenerationProviderFailureCatalogTests
     }
 
     [Theory]
-    [InlineData("ERR-GEN-005", ImageGenerationProviderFailureKind.Authentication)]
-    [InlineData("ERR-GEN-006", ImageGenerationProviderFailureKind.Authorization)]
-    [InlineData("ERR-GEN-007", ImageGenerationProviderFailureKind.RateLimited)]
-    [InlineData("ERR-GEN-008", ImageGenerationProviderFailureKind.InvalidResponse)]
-    [InlineData("ERR-GEN-009", ImageGenerationProviderFailureKind.Timeout)]
-    [InlineData("ERR-GEN-010", ImageGenerationProviderFailureKind.Unavailable)]
-    [InlineData("ERR-GEN-011", ImageGenerationProviderFailureKind.RequestRejected)]
-    [InlineData("ERR-GEN-012", ImageGenerationProviderFailureKind.ResourceNotFound)]
-    [InlineData("ERR-GEN-013", ImageGenerationProviderFailureKind.InternalError)]
-    [InlineData("ERR-GEN-014", ImageGenerationProviderFailureKind.Unknown)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.Authentication,
+        ImageGenerationProviderFailureKind.Authentication)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.Authorization,
+        ImageGenerationProviderFailureKind.Authorization)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.RateLimited,
+        ImageGenerationProviderFailureKind.RateLimited)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.InvalidResponse,
+        ImageGenerationProviderFailureKind.InvalidResponse)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.Timeout,
+        ImageGenerationProviderFailureKind.Timeout)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.Unavailable,
+        ImageGenerationProviderFailureKind.Unavailable)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.RequestRejected,
+        ImageGenerationProviderFailureKind.RequestRejected)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.ResourceNotFound,
+        ImageGenerationProviderFailureKind.ResourceNotFound)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.InternalError,
+        ImageGenerationProviderFailureKind.InternalError)]
+    [InlineData(
+        GenerationProviderFailureErrorCodes.Unknown,
+        ImageGenerationProviderFailureKind.Unknown)]
     public void TryGetFailureKind_WithKnownErrorCode_ReturnsMappedFailureKind(
         string errorCode,
         ImageGenerationProviderFailureKind expectedFailureKind)
@@ -58,7 +99,7 @@ public sealed class ImageGenerationProviderFailureCatalogTests
 
         string errorCode = ImageGenerationProviderFailureCatalog.GetErrorCode(failureKind);
 
-        errorCode.Should().Be("ERR-GEN-014");
+        errorCode.Should().Be(GenerationProviderFailureErrorCodes.Unknown);
     }
 
     [Theory]

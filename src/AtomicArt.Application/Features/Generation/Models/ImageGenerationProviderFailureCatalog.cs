@@ -1,3 +1,5 @@
+using AtomicArt.Contracts.Generation;
+
 namespace AtomicArt.Application.Features.Generation.Models;
 
 public static class ImageGenerationProviderFailureCatalog
@@ -6,16 +8,26 @@ public static class ImageGenerationProviderFailureCatalog
         ErrorCodesByFailureKind =
             new Dictionary<ImageGenerationProviderFailureKind, string>
             {
-                [ImageGenerationProviderFailureKind.Authentication] = "ERR-GEN-005",
-                [ImageGenerationProviderFailureKind.Authorization] = "ERR-GEN-006",
-                [ImageGenerationProviderFailureKind.RateLimited] = "ERR-GEN-007",
-                [ImageGenerationProviderFailureKind.InvalidResponse] = "ERR-GEN-008",
-                [ImageGenerationProviderFailureKind.Timeout] = "ERR-GEN-009",
-                [ImageGenerationProviderFailureKind.Unavailable] = "ERR-GEN-010",
-                [ImageGenerationProviderFailureKind.RequestRejected] = "ERR-GEN-011",
-                [ImageGenerationProviderFailureKind.ResourceNotFound] = "ERR-GEN-012",
-                [ImageGenerationProviderFailureKind.InternalError] = "ERR-GEN-013",
-                [ImageGenerationProviderFailureKind.Unknown] = "ERR-GEN-014"
+                [ImageGenerationProviderFailureKind.Authentication] =
+                    GenerationProviderFailureErrorCodes.Authentication,
+                [ImageGenerationProviderFailureKind.Authorization] =
+                    GenerationProviderFailureErrorCodes.Authorization,
+                [ImageGenerationProviderFailureKind.RateLimited] =
+                    GenerationProviderFailureErrorCodes.RateLimited,
+                [ImageGenerationProviderFailureKind.InvalidResponse] =
+                    GenerationProviderFailureErrorCodes.InvalidResponse,
+                [ImageGenerationProviderFailureKind.Timeout] =
+                    GenerationProviderFailureErrorCodes.Timeout,
+                [ImageGenerationProviderFailureKind.Unavailable] =
+                    GenerationProviderFailureErrorCodes.Unavailable,
+                [ImageGenerationProviderFailureKind.RequestRejected] =
+                    GenerationProviderFailureErrorCodes.RequestRejected,
+                [ImageGenerationProviderFailureKind.ResourceNotFound] =
+                    GenerationProviderFailureErrorCodes.ResourceNotFound,
+                [ImageGenerationProviderFailureKind.InternalError] =
+                    GenerationProviderFailureErrorCodes.InternalError,
+                [ImageGenerationProviderFailureKind.Unknown] =
+                    GenerationProviderFailureErrorCodes.Unknown
             };
 
     public static string GetErrorCode(ImageGenerationProviderFailureKind failureKind)

@@ -134,14 +134,15 @@ public sealed class ImageGenerationApiClientTests
     [Fact]
     public async Task CreateAsync_WithProblemDetails_LogsOnlySafeStatusAndErrorCode()
     {
-        const string confidentialDetail =
+        const string ConfidentialDetail =
             "Prompt and provider-key-confidential must never be logged.";
+        const string ErrorCode = GenerationProviderFailureErrorCodes.Unavailable;
         string problemDetails = $$"""
         {
           "status": 503,
           "title": "Provider unavailable",
-          "detail": "{{confidentialDetail}}",
-          "code": "ERR-GEN-010"
+          "detail": "{{ConfidentialDetail}}",
+          "code": "{{ErrorCode}}"
         }
         """;
         CapturingHttpMessageHandler handler = new(
@@ -162,9 +163,9 @@ public sealed class ImageGenerationApiClientTests
         await act.Should().ThrowAsync<HttpRequestException>();
         logger.Messages.Should().Contain(message =>
             message.Contains("503", StringComparison.Ordinal)
-            && message.Contains("ERR-GEN-010", StringComparison.Ordinal));
+            && message.Contains(ErrorCode, StringComparison.Ordinal));
         logger.Messages.Should().OnlyContain(message =>
-            !message.Contains(confidentialDetail, StringComparison.Ordinal)
+            !message.Contains(ConfidentialDetail, StringComparison.Ordinal)
             && !message.Contains(TestGenerationCredentials.ProviderCredential, StringComparison.Ordinal)
             && !message.Contains("Create a studio product shot", StringComparison.Ordinal));
     }

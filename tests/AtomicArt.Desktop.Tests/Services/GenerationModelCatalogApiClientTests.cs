@@ -57,9 +57,10 @@ public sealed class GenerationModelCatalogApiClientTests
     [Fact]
     public async Task GetCatalogAsync_WithOversizedProblemDetails_DoesNotLogResponseBody()
     {
+        const string ErrorCode = GenerationProviderFailureErrorCodes.Unavailable;
         string confidentialBody = new('S', 20 * 1024);
         CapturingHttpMessageHandler handler = new(
-            $$"""{"code":"ERR-GEN-010","detail":"{{confidentialBody}}"}""",
+            $$"""{"code":"{{ErrorCode}}","detail":"{{confidentialBody}}"}""",
             HttpStatusCode.ServiceUnavailable);
         using HttpClient httpClient = new(handler);
         RecordingLogger<GenerationModelCatalogApiClient> logger = new();
@@ -76,7 +77,7 @@ public sealed class GenerationModelCatalogApiClientTests
             && message.Contains("unavailable", StringComparison.Ordinal));
         logger.Messages.Should().OnlyContain(message =>
             !message.Contains(confidentialBody, StringComparison.Ordinal)
-            && !message.Contains("ERR-GEN-010", StringComparison.Ordinal));
+            && !message.Contains(ErrorCode, StringComparison.Ordinal));
     }
 
     [Fact]
