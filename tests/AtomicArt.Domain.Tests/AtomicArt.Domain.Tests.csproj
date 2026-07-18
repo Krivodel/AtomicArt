@@ -2,11 +2,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AtomicArt.Contracts\AtomicArt.Contracts.csproj" />
     <ProjectReference Include="..\..\src\AtomicArt.Domain\AtomicArt.Domain.csproj" />
-    <ProjectReference Include="..\..\src\AtomicArt.Infrastructure\AtomicArt.Infrastructure.csproj" />
     <ProjectReference Include="..\AtomicArt.Tests.Common\AtomicArt.Tests.Common.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Moq" />
   </ItemGroup>
 </Project>
