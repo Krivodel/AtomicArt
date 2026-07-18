@@ -9,7 +9,20 @@ namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
 internal sealed class GoogleInteractionsResponseParser
 {
+    private const string ContentPropertyName = "content";
+    private const string IncompleteUsageMessage = "The generation provider returned incomplete usage data.";
+    private const string InvalidStatusMessage = "The generation provider returned an invalid status.";
+    private const string ModelOutputCamelCasePropertyName = "modelOutput";
+    private const string ModelOutputSnakeCasePropertyName = "model_output";
     private const string NoImageCategory = "no_image";
+    private const string OutputImageCamelCasePropertyName = "outputImage";
+    private const string OutputImageSnakeCasePropertyName = "output_image";
+    private const string OutputImagesCamelCasePropertyName = "outputImages";
+    private const string OutputImagesSnakeCasePropertyName = "output_images";
+    private const string OutputPropertyName = "output";
+    private const string StatePropertyName = "state";
+    private const string StatusPropertyName = "status";
+    private const string StepsPropertyName = "steps";
     private const string TextOnlyCategory = "text_only";
 
     private static readonly string[] CompletedStatuses =
@@ -56,11 +69,11 @@ internal sealed class GoogleInteractionsResponseParser
     {
         if (!GoogleInteractionsJsonElementReader.TryGetProperty(
             root,
-            "status",
+            StatusPropertyName,
             out JsonElement statusElement)
             && !GoogleInteractionsJsonElementReader.TryGetProperty(
                 root,
-                "state",
+                StatePropertyName,
                 out statusElement))
         {
             return;
@@ -70,7 +83,7 @@ internal sealed class GoogleInteractionsResponseParser
         {
             throw new GoogleInteractionsException(
                 ImageGenerationProviderFailureKind.InvalidResponse,
-                "The generation provider returned an invalid status.");
+                InvalidStatusMessage);
         }
 
         string? status = statusElement.GetString();
@@ -79,7 +92,7 @@ internal sealed class GoogleInteractionsResponseParser
         {
             throw new GoogleInteractionsException(
                 ImageGenerationProviderFailureKind.InvalidResponse,
-                "The generation provider returned an invalid status.");
+                InvalidStatusMessage);
         }
 
         if (CompletedStatuses.Contains(status, StringComparer.OrdinalIgnoreCase))
@@ -103,9 +116,17 @@ internal sealed class GoogleInteractionsResponseParser
     {
         List<GoogleInteractionImageContent> images = [];
 
-        AddImagesFromProperty(root, "output_image", "outputImage", images);
-        AddImagesFromProperty(root, "output_images", "outputImages", images);
-        AddImagesFromProperty(root, "output", images);
+        AddImagesFromProperty(
+            root,
+            OutputImageSnakeCasePropertyName,
+            OutputImageCamelCasePropertyName,
+            images);
+        AddImagesFromProperty(
+            root,
+            OutputImagesSnakeCasePropertyName,
+            OutputImagesCamelCasePropertyName,
+            images);
+        AddImagesFromProperty(root, OutputPropertyName, images);
         AddImagesFromSteps(root, images);
 
         return images;
@@ -117,7 +138,7 @@ internal sealed class GoogleInteractionsResponseParser
     {
         if (!GoogleInteractionsJsonElementReader.TryGetProperty(
             root,
-            "steps",
+            StepsPropertyName,
             out JsonElement stepsElement)
             || stepsElement.ValueKind != JsonValueKind.Array)
         {
@@ -126,8 +147,12 @@ internal sealed class GoogleInteractionsResponseParser
 
         foreach (JsonElement stepElement in stepsElement.EnumerateArray())
         {
-            AddImagesFromProperty(stepElement, "content", images);
-            AddImagesFromProperty(stepElement, "model_output", "modelOutput", images);
+            AddImagesFromProperty(stepElement, ContentPropertyName, images);
+            AddImagesFromProperty(
+                stepElement,
+                ModelOutputSnakeCasePropertyName,
+                ModelOutputCamelCasePropertyName,
+                images);
         }
     }
 
@@ -159,11 +184,23 @@ internal sealed class GoogleInteractionsResponseParser
             return;
         }
 
-        AddImagesFromProperty(element, "content", images);
-        AddImagesFromProperty(element, "model_output", "modelOutput", images);
-        AddImagesFromProperty(element, "output_image", "outputImage", images);
-        AddImagesFromProperty(element, "output_images", "outputImages", images);
-        AddImagesFromProperty(element, "output", images);
+        AddImagesFromProperty(element, ContentPropertyName, images);
+        AddImagesFromProperty(
+            element,
+            ModelOutputSnakeCasePropertyName,
+            ModelOutputCamelCasePropertyName,
+            images);
+        AddImagesFromProperty(
+            element,
+            OutputImageSnakeCasePropertyName,
+            OutputImageCamelCasePropertyName,
+            images);
+        AddImagesFromProperty(
+            element,
+            OutputImagesSnakeCasePropertyName,
+            OutputImagesCamelCasePropertyName,
+            images);
+        AddImagesFromProperty(element, OutputPropertyName, images);
     }
 
     private static void AddImagesFromProperty(
@@ -270,9 +307,17 @@ internal sealed class GoogleInteractionsResponseParser
         return new GoogleInteractionsNoImageDiagnostics(
             category,
             ExtractStatus(root),
-            TryGetProperty(root, "output_image", "outputImage", out _),
-            GoogleInteractionsJsonElementReader.TryGetProperty(root, "output", out _),
-            TryGetProperty(root, "output_images", "outputImages", out _),
+            TryGetProperty(
+                root,
+                OutputImageSnakeCasePropertyName,
+                OutputImageCamelCasePropertyName,
+                out _),
+            GoogleInteractionsJsonElementReader.TryGetProperty(root, OutputPropertyName, out _),
+            TryGetProperty(
+                root,
+                OutputImagesSnakeCasePropertyName,
+                OutputImagesCamelCasePropertyName,
+                out _),
             textContentDiagnostics.HasStepsTextContent,
             textContentDiagnostics.HasModelOutputTextContent,
             textContentDiagnostics.HasContentTextContent,
@@ -322,9 +367,13 @@ internal sealed class GoogleInteractionsResponseParser
             AnalyzeTextContentElement(
                 property.Value,
                 builder,
-                isInsideSteps || IsPropertyName(property, "steps"),
-                isInsideModelOutput || IsPropertyName(property, "model_output", "modelOutput"),
-                isInsideContent || IsPropertyName(property, "content"));
+                isInsideSteps || IsPropertyName(property, StepsPropertyName),
+                isInsideModelOutput
+                    || IsPropertyName(
+                        property,
+                        ModelOutputSnakeCasePropertyName,
+                        ModelOutputCamelCasePropertyName),
+                isInsideContent || IsPropertyName(property, ContentPropertyName));
         }
     }
 
@@ -360,12 +409,12 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static string? ExtractStatus(JsonElement root)
     {
-        if (TryGetStringProperty(root, "status", out string? status))
+        if (TryGetStringProperty(root, StatusPropertyName, out string? status))
         {
             return status;
         }
 
-        if (TryGetStringProperty(root, "state", out status))
+        if (TryGetStringProperty(root, StatePropertyName, out status))
         {
             return status;
         }
@@ -390,7 +439,7 @@ internal sealed class GoogleInteractionsResponseParser
         {
             throw new GoogleInteractionsException(
                 ImageGenerationProviderFailureKind.InvalidResponse,
-                "The generation provider returned incomplete usage data.");
+                IncompleteUsageMessage);
         }
 
         if (!TryGetInt32Property(usageElement, "total_input_tokens", "totalInputTokens", out int inputTokens)
@@ -398,7 +447,7 @@ internal sealed class GoogleInteractionsResponseParser
         {
             throw new GoogleInteractionsException(
                 ImageGenerationProviderFailureKind.InvalidResponse,
-                "The generation provider returned incomplete usage data.");
+                IncompleteUsageMessage);
         }
 
         if (totalTokens < 0 || inputTokens < 0 || outputTokens < 0)
