@@ -20,9 +20,8 @@ public sealed class SettingsViewModelTests
             new RecordingSecretStore(),
             scaleService,
             new TestViewModelErrorHandler());
-        ScaleSettingViewModel scaleSetting = viewModel.Settings.OfType<ScaleSettingViewModel>().Single();
-        UiScaleOption scaleOption = new UiScale125OptionDefinition().Option;
-        scaleSetting.SelectedOption = scaleSetting.Options.Single(option => option == scaleOption);
+        (ScaleSettingViewModel scaleSetting, UiScaleOption scaleOption) =
+            CreateSelectedScaleSetting(viewModel);
 
         await scaleSetting.ApplyCommand.ExecuteAsync(null);
 
@@ -38,9 +37,8 @@ public sealed class SettingsViewModelTests
             new RecordingUiScaleService(),
             new TestViewModelErrorHandler(),
             settingsStateService);
-        ScaleSettingViewModel scaleSetting = viewModel.Settings.OfType<ScaleSettingViewModel>().Single();
-        UiScaleOption scaleOption = new UiScale125OptionDefinition().Option;
-        scaleSetting.SelectedOption = scaleSetting.Options.Single(option => option == scaleOption);
+        (ScaleSettingViewModel scaleSetting, UiScaleOption scaleOption) =
+            CreateSelectedScaleSetting(viewModel);
 
         await scaleSetting.ApplyCommand.ExecuteAsync(null);
 
@@ -89,39 +87,19 @@ public sealed class SettingsViewModelTests
     [Fact]
     public async Task SaveSecretAsync_WhenStoreThrows_DoesNotExposeKey()
     {
-        ThrowingSecretStore secretStore = new();
-        TestViewModelErrorHandler errorHandler = new();
-        SettingsViewModel viewModel = CreateViewModel(
-            secretStore,
-            new RecordingUiScaleService(),
-            errorHandler);
-        SecretSettingViewModel secretSetting = viewModel.Settings.OfType<SecretSettingViewModel>().Single();
-        secretSetting.Value = "value-for-test-only";
-
-        await secretSetting.SaveCommand.ExecuteAsync(null);
-
-        errorHandler.LogCallCount.Should().Be(1);
-        secretSetting.ErrorMessage.Should().Be(UiStrings.GenerationFailed);
-        secretSetting.ErrorMessage.Should().NotContain("value-for-test-only");
-        secretSetting.IsLoading.Should().BeFalse();
+        await AssertSecretStoreFailureAsync(
+            new InvalidOperationException("Failed"),
+            UiStrings.GenerationFailed,
+            "value-for-test-only");
     }
 
     [Fact]
     public async Task SaveSecretAsync_WhenStoreThrowsUnexpectedCancellation_LogsAndSetsErrorMessage()
     {
-        UnexpectedCancellationSecretStore secretStore = new();
-        TestViewModelErrorHandler errorHandler = new();
-        SettingsViewModel viewModel = CreateViewModel(
-            secretStore,
-            new RecordingUiScaleService(),
-            errorHandler);
-        SecretSettingViewModel secretSetting = viewModel.Settings.OfType<SecretSettingViewModel>().Single();
-
-        await secretSetting.SaveCommand.ExecuteAsync(null);
-
-        errorHandler.LogCallCount.Should().Be(1);
-        secretSetting.ErrorMessage.Should().Be(UiStrings.UnhandledExceptionMessage);
-        secretSetting.IsLoading.Should().BeFalse();
+        await AssertSecretStoreFailureAsync(
+            new OperationCanceledException(),
+            UiStrings.UnhandledExceptionMessage,
+            null);
     }
 
     [Fact]
@@ -211,6 +189,13 @@ public sealed class SettingsViewModelTests
 
     private sealed class ThrowingSecretStore : ISecretStore
     {
+        private readonly Exception _exception;
+
+        public ThrowingSecretStore(Exception exception)
+        {
+            _exception = exception ?? throw new ArgumentNullException(nameof(exception));
+        }
+
         public Task<string?> GetSecretAsync(string key, CancellationToken ct)
         {
             return Task.FromResult<string?>(null);
@@ -218,20 +203,51 @@ public sealed class SettingsViewModelTests
 
         public Task SetSecretAsync(string key, string value, CancellationToken ct)
         {
-            throw new InvalidOperationException("Failed");
+            throw _exception;
         }
     }
 
-    private sealed class UnexpectedCancellationSecretStore : ISecretStore
+    private static (ScaleSettingViewModel Setting, UiScaleOption Option)
+        CreateSelectedScaleSetting(SettingsViewModel viewModel)
     {
-        public Task<string?> GetSecretAsync(string key, CancellationToken ct)
+        ScaleSettingViewModel setting = viewModel.Settings
+            .OfType<ScaleSettingViewModel>()
+            .Single();
+        UiScaleOption option = new UiScale125OptionDefinition().Option;
+        setting.SelectedOption = setting.Options.Single(currentOption => currentOption == option);
+
+        return (setting, option);
+    }
+
+    private static async Task AssertSecretStoreFailureAsync(
+        Exception exception,
+        string expectedMessage,
+        string? sensitiveValue)
+    {
+        ThrowingSecretStore secretStore = new(exception);
+        TestViewModelErrorHandler errorHandler = new();
+        SettingsViewModel viewModel = CreateViewModel(
+            secretStore,
+            new RecordingUiScaleService(),
+            errorHandler);
+        SecretSettingViewModel secretSetting = viewModel.Settings
+            .OfType<SecretSettingViewModel>()
+            .Single();
+
+        if (sensitiveValue is not null)
         {
-            return Task.FromResult<string?>(null);
+            secretSetting.Value = sensitiveValue;
         }
 
-        public Task SetSecretAsync(string key, string value, CancellationToken ct)
+        await secretSetting.SaveCommand.ExecuteAsync(null);
+
+        errorHandler.LogCallCount.Should().Be(1);
+        secretSetting.ErrorMessage.Should().Be(expectedMessage);
+        secretSetting.IsLoading.Should().BeFalse();
+
+        if (sensitiveValue is not null)
         {
-            throw new OperationCanceledException();
+            secretSetting.ErrorMessage.Should().NotContain(sensitiveValue);
         }
     }
 
