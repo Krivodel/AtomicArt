@@ -5,7 +5,6 @@ namespace AtomicArt.Desktop.Services.Generation;
 internal static class GenerationPanelOptionCompatibility
 {
     private const int TemperatureNormalizationDigits = 12;
-    private const double TemperatureComparisonTolerance = 0.000000001d;
 
     public static (string Value, bool WasReset) ResolveString(
         string? value,
@@ -45,7 +44,7 @@ internal static class GenerationPanelOptionCompatibility
         ArgumentNullException.ThrowIfNull(temperature);
 
         if (value is { } selectedTemperature
-            && IsSupportedTemperature(selectedTemperature, temperature))
+            && GenerationTemperaturePolicy.IsSupported(selectedTemperature, temperature))
         {
             return (NormalizeTemperature(selectedTemperature, temperature), false);
         }
@@ -100,22 +99,6 @@ internal static class GenerationPanelOptionCompatibility
         return isSupportedByPanel
             ? (value, false)
             : (null, true);
-    }
-
-    private static bool IsSupportedTemperature(
-        double value,
-        GenerationModelTemperatureMetadataDto temperature)
-    {
-        if (!double.IsFinite(value)
-            || value < temperature.Minimum - TemperatureComparisonTolerance
-            || value > temperature.Maximum + TemperatureComparisonTolerance)
-        {
-            return false;
-        }
-
-        double stepCount = (value - temperature.Minimum) / temperature.Step;
-
-        return Math.Abs(stepCount - Math.Round(stepCount)) <= TemperatureComparisonTolerance;
     }
 
     private static double NormalizeTemperature(

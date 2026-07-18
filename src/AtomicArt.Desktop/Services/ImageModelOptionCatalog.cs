@@ -1,4 +1,5 @@
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Services;
 
@@ -14,8 +15,6 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
             }
         }
     }
-
-    private const double TemperatureComparisonTolerance = 0.000000001d;
 
     private readonly object _syncRoot = new();
     private IReadOnlyList<ImageModelOption> _models = [];
@@ -164,8 +163,8 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
             || temperature.Default > temperature.Maximum
             || temperature.Step <= 0d
             || temperature.Step > temperature.Maximum - temperature.Minimum
-            || !IsTemperatureAligned(temperature.Maximum, temperature)
-            || !IsTemperatureAligned(temperature.Default, temperature))
+            || !GenerationTemperaturePolicy.IsSupported(temperature.Maximum, temperature)
+            || !GenerationTemperaturePolicy.IsSupported(temperature.Default, temperature))
         {
             throw new InvalidOperationException(
                 $"Generation model '{modelId}' must contain valid temperature metadata.");
@@ -225,14 +224,5 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
         }
 
         return new GenerationModelThinkingMetadataDto(levels.AsReadOnly(), defaultValue);
-    }
-
-    private static bool IsTemperatureAligned(
-        double value,
-        GenerationModelTemperatureMetadataDto temperature)
-    {
-        double stepCount = (value - temperature.Minimum) / temperature.Step;
-
-        return Math.Abs(stepCount - Math.Round(stepCount)) <= TemperatureComparisonTolerance;
     }
 }
