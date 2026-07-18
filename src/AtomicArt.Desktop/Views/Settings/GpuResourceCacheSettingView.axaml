@@ -1,34 +1,28 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
              xmlns:models="using:AtomicArt.Desktop.Models"
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.GpuResourceCacheSettingView"
              x:DataType="settings:GpuResourceCacheSettingViewModel">
-    <Grid RowDefinitions="Auto,Auto"
-          ColumnDefinitions="*,Auto">
-        <StackPanel>
-            <TextBlock Classes="metadata-label"
-                       Text="{Binding DisplayName}" />
-            <ComboBox ItemsSource="{Binding Options}"
-                      SelectedItem="{Binding SelectedOption, Mode=TwoWay}">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="models:GpuResourceCacheOption">
-                        <TextBlock Text="{Binding DisplayName}" />
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBlock Classes="metadata-value"
-                       Text="{Binding RestartNotice}" />
-        </StackPanel>
-        <Button Grid.Column="1"
-                Margin="{StaticResource SettingsActionButtonMargin}"
-                VerticalAlignment="Bottom"
-                Content="{Binding SaveButtonText}"
-                Command="{Binding SaveCommand}" />
-        <TextBlock Grid.Row="1"
-                   Grid.ColumnSpan="2"
-                   Classes="metadata-value"
-                   IsVisible="{Binding HasErrorMessage}"
-                   Text="{Binding ErrorMessage}" />
-    </Grid>
+    <controls:SettingItemControl ActionText="{Binding SaveButtonText}"
+                                 DisplayName="{Binding DisplayName}"
+                                 ErrorMessage="{Binding ErrorMessage}"
+                                 HasErrorMessage="{Binding HasErrorMessage}"
+                                 ActionCommand="{Binding SaveCommand}">
+        <controls:SettingItemControl.Editor>
+            <StackPanel>
+                <ComboBox ItemsSource="{Binding Options}"
+                          SelectedItem="{Binding SelectedOption, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:GpuResourceCacheOption">
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Classes="metadata-value"
+                           Text="{Binding RestartNotice}" />
+            </StackPanel>
+        </controls:SettingItemControl.Editor>
+    </controls:SettingItemControl>
 </UserControl>

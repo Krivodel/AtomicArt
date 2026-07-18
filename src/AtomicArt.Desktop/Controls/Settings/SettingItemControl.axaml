@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="using:AtomicArt.Desktop.Controls.Settings"
+             x:Class="AtomicArt.Desktop.Controls.Settings.SettingItemControl"
+             x:Name="Root"
+             x:DataType="settings:SettingItemControl">
+    <Grid RowDefinitions="Auto,Auto"
+          ColumnDefinitions="*,Auto">
+        <StackPanel>
+            <TextBlock Classes="metadata-label"
+                       Text="{Binding #Root.DisplayName}" />
+            <ContentControl Content="{Binding #Root.Editor}" />
+        </StackPanel>
+        <Button Grid.Column="1"
+                Margin="{StaticResource SettingsActionButtonMargin}"
+                VerticalAlignment="Bottom"
+                Content="{Binding #Root.ActionText}"
+                Command="{Binding #Root.ActionCommand}" />
+        <TextBlock Grid.Row="1"
+                   Grid.ColumnSpan="2"
+                   Classes="metadata-value"
+                   IsVisible="{Binding #Root.HasErrorMessage}"
+                   Text="{Binding #Root.ErrorMessage}" />
+    </Grid>
+</UserControl>

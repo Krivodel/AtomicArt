@@ -1,25 +1,17 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.ApiBaseAddressSettingView"
              x:DataType="settings:ApiBaseAddressSettingViewModel">
-    <Grid RowDefinitions="Auto,Auto"
-          ColumnDefinitions="*,Auto">
-        <StackPanel>
-            <TextBlock Classes="metadata-label"
-                       Text="{Binding DisplayName}" />
+    <controls:SettingItemControl ActionText="{Binding SaveButtonText}"
+                                 DisplayName="{Binding DisplayName}"
+                                 ErrorMessage="{Binding ErrorMessage}"
+                                 HasErrorMessage="{Binding HasErrorMessage}"
+                                 ActionCommand="{Binding SaveCommand}">
+        <controls:SettingItemControl.Editor>
             <TextBox PlaceholderText="{Binding Placeholder}"
                      Text="{Binding Value, Mode=TwoWay}" />
-        </StackPanel>
-        <Button Grid.Column="1"
-                Margin="{StaticResource SettingsActionButtonMargin}"
-                VerticalAlignment="Bottom"
-                Content="{Binding SaveButtonText}"
-                Command="{Binding SaveCommand}" />
-        <TextBlock Grid.Row="1"
-                   Grid.ColumnSpan="2"
-                   Classes="metadata-value"
-                   IsVisible="{Binding HasErrorMessage}"
-                   Text="{Binding ErrorMessage}" />
-    </Grid>
+        </controls:SettingItemControl.Editor>
+    </controls:SettingItemControl>
 </UserControl>
