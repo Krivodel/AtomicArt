@@ -1,7 +1,7 @@
-using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Tests.Services.Concurrency;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
@@ -12,21 +12,8 @@ public sealed class GenerationConcurrencyLimiterTests
     {
         GenerationConcurrencyLimiter limiter = new();
 
-        for (int i = 0; i < GenerationConcurrencyLimiter.MaxConcurrentGenerations; i++)
-        {
-            await limiter.WaitAsync(CancellationToken.None);
-        }
-
-        Task pendingWait = limiter.WaitAsync(CancellationToken.None);
-
-        pendingWait.IsCompleted.Should().BeFalse();
-
-        limiter.Release();
-        await pendingWait.WaitAsync(TimeSpan.FromSeconds(1));
-
-        for (int i = 0; i < GenerationConcurrencyLimiter.MaxConcurrentGenerations; i++)
-        {
-            limiter.Release();
-        }
+        await ConcurrencyLimiterAssertions.AssertBlocksNextWaitUntilReleaseAsync(
+            limiter,
+            GenerationConcurrencyLimiter.MaxConcurrentGenerations);
     }
 }
