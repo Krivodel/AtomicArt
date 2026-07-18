@@ -5,8 +5,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using SkiaSharp;
 using Xunit;
 
-using Pica.Viewer.Services;
+using AtomicArt.Tests.Avalonia;
 using Pica.Protocol;
+using Pica.Viewer.Services;
 
 namespace Pica.Viewer.Tests.Services;
 
@@ -66,25 +67,10 @@ public sealed class ImagePreviewLoaderTests
 
     private static async Task DispatchAsync(Func<Task> action)
     {
-        await SessionLock.WaitAsync();
-
-        try
-        {
-            await using HeadlessUnitTestSession session = HeadlessUnitTestSession.StartNew(
-                typeof(ImagePreviewLoaderTests));
-            await session.Dispatch(
-                async () =>
-                {
-                    await action();
-
-                    return true;
-                },
-                CancellationToken.None);
-        }
-        finally
-        {
-            SessionLock.Release();
-        }
+        await HeadlessTestSessionDispatcher.DispatchAsync(
+            typeof(ImagePreviewLoaderTests),
+            SessionLock,
+            action);
     }
 
     private static string CreateCleanTestDirectory(string testName)

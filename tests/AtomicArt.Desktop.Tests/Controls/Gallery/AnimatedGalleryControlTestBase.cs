@@ -1,7 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media;
-using Avalonia;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Gallery;
@@ -10,6 +10,7 @@ using AtomicArt.Desktop.Tests.Services.Gallery;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views.Gallery;
+using AtomicArt.Tests.Avalonia;
 
 namespace AtomicArt.Desktop.Tests.Controls.Gallery;
 
@@ -28,43 +29,18 @@ public abstract class AnimatedGalleryControlTestBase
 
     private protected static void Dispatch(Action action)
     {
-        SessionLock.Wait();
-
-        try
-        {
-            using HeadlessUnitTestSession session = HeadlessUnitTestSession.StartNew(
-                typeof(AnimatedGalleryControlTestBase));
-
-            session.Dispatch(action, CancellationToken.None);
-        }
-        finally
-        {
-            SessionLock.Release();
-        }
+        HeadlessTestSessionDispatcher.Dispatch(
+            typeof(AnimatedGalleryControlTestBase),
+            SessionLock,
+            action);
     }
 
     private protected static async Task DispatchAsync(Func<Task> action)
     {
-        await SessionLock.WaitAsync();
-
-        try
-        {
-            await using HeadlessUnitTestSession session = HeadlessUnitTestSession.StartNew(
-                typeof(AnimatedGalleryControlTestBase));
-
-            await session.Dispatch(
-                async () =>
-                {
-                    await action();
-
-                    return true;
-                },
-                CancellationToken.None);
-        }
-        finally
-        {
-            SessionLock.Release();
-        }
+        await HeadlessTestSessionDispatcher.DispatchAsync(
+            typeof(AnimatedGalleryControlTestBase),
+            SessionLock,
+            action);
     }
 
     private protected static IAnimatedGallerySceneFactory CreateSceneFactory()

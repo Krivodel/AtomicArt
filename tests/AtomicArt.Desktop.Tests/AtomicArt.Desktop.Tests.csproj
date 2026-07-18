@@ -5,6 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AtomicArt.Desktop\AtomicArt.Desktop.csproj" />
     <ProjectReference Include="..\..\src\AtomicArt.Infrastructure\AtomicArt.Infrastructure.csproj" />
+    <ProjectReference Include="..\AtomicArt.Avalonia.Tests.Common\AtomicArt.Avalonia.Tests.Common.csproj" />
     <ProjectReference Include="..\AtomicArt.Tests.Common\AtomicArt.Tests.Common.csproj" />
   </ItemGroup>
 

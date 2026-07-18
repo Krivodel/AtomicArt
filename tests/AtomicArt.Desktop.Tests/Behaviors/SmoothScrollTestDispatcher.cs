@@ -1,4 +1,4 @@
-using Avalonia.Headless;
+using AtomicArt.Tests.Avalonia;
 
 namespace AtomicArt.Desktop.Tests.Behaviors;
 
@@ -8,40 +8,17 @@ internal static class SmoothScrollTestDispatcher
 
     internal static void Dispatch(Action action)
     {
-        SessionLock.Wait();
-
-        try
-        {
-            using HeadlessUnitTestSession session = HeadlessUnitTestSession.StartNew(typeof(SmoothScrollBehaviorTests));
-
-            session.Dispatch(action, CancellationToken.None);
-        }
-        finally
-        {
-            SessionLock.Release();
-        }
+        HeadlessTestSessionDispatcher.Dispatch(
+            typeof(SmoothScrollBehaviorTests),
+            SessionLock,
+            action);
     }
 
     internal static async Task DispatchAsync(Func<Task> action)
     {
-        await SessionLock.WaitAsync();
-
-        try
-        {
-            await using HeadlessUnitTestSession session = HeadlessUnitTestSession.StartNew(typeof(SmoothScrollBehaviorTests));
-
-            await session.Dispatch(
-                async () =>
-                {
-                    await action();
-
-                    return true;
-                },
-                CancellationToken.None);
-        }
-        finally
-        {
-            SessionLock.Release();
-        }
+        await HeadlessTestSessionDispatcher.DispatchAsync(
+            typeof(SmoothScrollBehaviorTests),
+            SessionLock,
+            action);
     }
 }

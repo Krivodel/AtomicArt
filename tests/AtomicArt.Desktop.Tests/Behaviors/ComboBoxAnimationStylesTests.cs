@@ -8,6 +8,7 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Desktop.Tests.Common;
+using AtomicArt.Tests.Avalonia;
 
 namespace AtomicArt.Desktop.Tests.Behaviors;
 
@@ -113,23 +114,16 @@ public sealed class ComboBoxAnimationStylesTests
 
     private static void Dispatch(Action action)
     {
-        using HeadlessUnitTestSession session = HeadlessUnitTestSession.StartNew(
-            typeof(ComboBoxAnimationStylesTests));
-        session.Dispatch(action, CancellationToken.None);
+        HeadlessTestSessionDispatcher.Dispatch(
+            typeof(ComboBoxAnimationStylesTests),
+            action);
     }
 
     private static async Task DispatchAsync(Func<Task> action)
     {
-        await using HeadlessUnitTestSession session = HeadlessUnitTestSession.StartNew(
-            typeof(ComboBoxAnimationStylesTests));
-        await session.Dispatch(
-            async () =>
-            {
-                await action();
-
-                return true;
-            },
-            CancellationToken.None);
+        await HeadlessTestSessionDispatcher.DispatchAsync(
+            typeof(ComboBoxAnimationStylesTests),
+            action);
     }
 
     private static ComboBox CreateComboBox()
