@@ -15,7 +15,7 @@ public sealed class StateWriteSchedulerTests
     [Fact]
     public async Task ScheduleWrite_WithImmediateWriteAfterDeferredWrite_SavesOnlyImmediateState()
     {
-        RecordingAppStateStore stateStore = new();
+        RecordingAppStateStore stateStore = new(typeof(TestState), typeof(OtherTestState));
         NonDeserializingTestStateSection section = new();
         IStateWriteScheduler scheduler = new StateWriteScheduler(
             stateStore,
@@ -27,14 +27,14 @@ public sealed class StateWriteSchedulerTests
         await Task.Delay(75);
         await scheduler.FlushAsync(CancellationToken.None);
 
-        stateStore.SavedStates.Should().ContainSingle()
+        stateStore.GetSavedStates<TestState>().Should().ContainSingle()
             .Which.Value.Should().Be("new");
     }
 
     [Fact]
     public async Task FlushAsync_WithPendingWrites_WritesAllSections()
     {
-        RecordingAppStateStore stateStore = new();
+        RecordingAppStateStore stateStore = new(typeof(TestState), typeof(OtherTestState));
         NonDeserializingTestStateSection firstSection = new();
         OtherTestStateSection secondSection = new();
         IStateWriteScheduler scheduler = new StateWriteScheduler(
@@ -46,70 +46,10 @@ public sealed class StateWriteSchedulerTests
         scheduler.ScheduleWrite(secondSection, new OtherTestState("second"));
         await scheduler.FlushAsync(CancellationToken.None);
 
-        stateStore.SavedStates.Should().ContainSingle()
+        stateStore.GetSavedStates<TestState>().Should().ContainSingle()
             .Which.Value.Should().Be("first");
-        stateStore.OtherSavedStates.Should().ContainSingle()
+        stateStore.GetSavedStates<OtherTestState>().Should().ContainSingle()
             .Which.Value.Should().Be("second");
-    }
-
-    private sealed class RecordingAppStateStore : IAppStateStore
-    {
-        private readonly object _syncRoot = new();
-        private readonly List<TestState> _savedStates = [];
-        private readonly List<OtherTestState> _otherSavedStates = [];
-
-        public IReadOnlyList<TestState> SavedStates
-        {
-            get
-            {
-                lock (_syncRoot)
-                {
-                    return _savedStates.ToList();
-                }
-            }
-        }
-
-        public IReadOnlyList<OtherTestState> OtherSavedStates
-        {
-            get
-            {
-                lock (_syncRoot)
-                {
-                    return _otherSavedStates.ToList();
-                }
-            }
-        }
-
-        public Task<TState> LoadAsync<TState>(IStateSection section, CancellationToken ct)
-        {
-            throw new NotSupportedException("State loading is not used by this test.");
-        }
-
-        public Task SaveAsync<TState>(IStateSection section, TState state, CancellationToken ct)
-            where TState : notnull
-        {
-            return SaveAsync(section, (object)state, ct);
-        }
-
-        public Task SaveAsync(IStateSection section, object state, CancellationToken ct)
-        {
-            lock (_syncRoot)
-            {
-                if (state is TestState testState)
-                {
-                    _savedStates.Add(testState);
-                    return Task.CompletedTask;
-                }
-
-                if (state is OtherTestState otherTestState)
-                {
-                    _otherSavedStates.Add(otherTestState);
-                    return Task.CompletedTask;
-                }
-            }
-
-            throw new InvalidOperationException("Unexpected test state type.");
-        }
     }
 
     private sealed class OtherTestStateSection : IStateSection

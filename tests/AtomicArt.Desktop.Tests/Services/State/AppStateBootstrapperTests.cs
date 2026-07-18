@@ -75,7 +75,7 @@ public sealed class AppStateBootstrapperTests
     [Fact]
     public async Task FlushAsync_WithPendingWrite_SavesDeferredState()
     {
-        RecordingAppStateStore stateStore = new();
+        RecordingAppStateStore stateStore = new(typeof(TestState));
         IStateWriteScheduler scheduler = new StateWriteScheduler(
             stateStore,
             NullLogger<StateWriteScheduler>.Instance,
@@ -90,14 +90,14 @@ public sealed class AppStateBootstrapperTests
         scheduler.ScheduleWrite(section, new TestState("prompt"));
         await bootstrapper.FlushAsync(new NoOpFlushTarget(), CancellationToken.None);
 
-        stateStore.SavedStates.Should().ContainSingle()
+        stateStore.GetSavedStates<TestState>().Should().ContainSingle()
             .Which.Value.Should().Be("prompt");
     }
 
     [Fact]
     public async Task FlushAsync_WithPendingPrompt_CommitsBeforeFlushingScheduler()
     {
-        RecordingAppStateStore stateStore = new();
+        RecordingAppStateStore stateStore = new(typeof(TestState));
         IStateWriteScheduler scheduler = new StateWriteScheduler(
             stateStore,
             NullLogger<StateWriteScheduler>.Instance,
@@ -114,7 +114,7 @@ public sealed class AppStateBootstrapperTests
         await bootstrapper.FlushAsync(target, CancellationToken.None);
 
         target.CommitCallCount.Should().Be(1);
-        stateStore.SavedStates.Should().ContainSingle()
+        stateStore.GetSavedStates<TestState>().Should().ContainSingle()
             .Which.Value.Should().Be("prompt");
     }
 
@@ -265,36 +265,6 @@ public sealed class AppStateBootstrapperTests
         {
             CommitCallCount++;
             _commit();
-
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class RecordingAppStateStore : IAppStateStore
-    {
-        private readonly List<TestState> _savedStates = [];
-
-        public IReadOnlyList<TestState> SavedStates => _savedStates.ToList();
-
-        public Task<TState> LoadAsync<TState>(IStateSection section, CancellationToken ct)
-        {
-            throw new NotSupportedException("State loading is not used by this test.");
-        }
-
-        public Task SaveAsync<TState>(IStateSection section, TState state, CancellationToken ct)
-            where TState : notnull
-        {
-            return SaveAsync(section, (object)state, ct);
-        }
-
-        public Task SaveAsync(IStateSection section, object state, CancellationToken ct)
-        {
-            if (state is not TestState testState)
-            {
-                throw new InvalidOperationException("Unexpected test state type.");
-            }
-
-            _savedStates.Add(testState);
 
             return Task.CompletedTask;
         }
