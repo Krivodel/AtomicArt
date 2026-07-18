@@ -11,6 +11,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.State;
 
@@ -320,45 +321,5 @@ public sealed class AppStateBootstrapperTests
             throw new NotSupportedException("State deserialization is not used by this test.");
         }
     }
-
-    private sealed class RecordingLogger<T> : ILogger<T>
-    {
-        private readonly List<LogEntry> _entries = [];
-
-        public IReadOnlyList<LogEntry> Entries => _entries.ToList();
-
-        public IDisposable BeginScope<TState>(TState state)
-            where TState : notnull
-        {
-            return NullScope.Instance;
-        }
-
-        public bool IsEnabled(LogLevel logLevel)
-        {
-            return true;
-        }
-
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            _entries.Add(new LogEntry(logLevel, formatter(state, exception), exception));
-        }
-    }
-
-    private sealed class NullScope : IDisposable
-    {
-        public static NullScope Instance { get; } = new();
-
-        public void Dispose()
-        {
-        }
-    }
-
     private sealed record TestState(string Value);
-
-    private sealed record LogEntry(LogLevel Level, string Message, Exception? Exception);
 }

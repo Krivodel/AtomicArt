@@ -1,11 +1,10 @@
-using Microsoft.Extensions.Logging;
-
 using FluentAssertions;
 using MediatR;
 using Xunit;
 
 using AtomicArt.Application.Common.Behaviors;
 using AtomicArt.Application.Common.Models;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Application.Tests.Common.Behaviors;
 
@@ -91,43 +90,4 @@ public sealed class LoggingBehaviorTests
     private sealed record ResultRequest : IRequest<Result<TestPayload>>;
 
     private sealed record TestPayload;
-
-    private sealed class RecordingLogger<TCategory> : ILogger<TCategory>
-    {
-        private readonly List<string> _messages = [];
-
-        public IReadOnlyList<string> Messages => _messages;
-
-        public IDisposable BeginScope<TState>(TState state)
-            where TState : notnull
-        {
-            return NullDisposable.Instance;
-        }
-
-        public bool IsEnabled(LogLevel logLevel)
-        {
-            return true;
-        }
-
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            ArgumentNullException.ThrowIfNull(formatter);
-
-            _messages.Add(formatter(state, exception));
-        }
-
-        private sealed class NullDisposable : IDisposable
-        {
-            public static NullDisposable Instance { get; } = new();
-
-            public void Dispose()
-            {
-            }
-        }
-    }
 }

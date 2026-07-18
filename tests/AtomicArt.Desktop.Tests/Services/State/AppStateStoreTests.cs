@@ -1,11 +1,13 @@
 using System.Text.Json;
 
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
+
+using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.State;
 
@@ -238,35 +240,5 @@ public sealed class AppStateStoreTests
             return state ?? new TestState(DefaultValue);
         }
     }
-
-    private sealed class RecordingLogger<TCategory> : ILogger<TCategory>
-    {
-        public int WarningCount { get; private set; }
-
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull
-        {
-            return null;
-        }
-
-        public bool IsEnabled(LogLevel logLevel)
-        {
-            return true;
-        }
-
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            if (logLevel == LogLevel.Warning)
-            {
-                WarningCount++;
-            }
-        }
-    }
-
     private sealed record TestState(string Value);
 }

@@ -1,6 +1,7 @@
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -8,6 +9,7 @@ using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation.State;
 
@@ -226,10 +228,10 @@ public sealed class PanelAttachmentStoreTests
 
             image.Should().BeNull();
             logger.WarningCount.Should().Be(1);
-            logger.Messages.Should().Contain(message => message.Contains(
+            logger.WarningMessages.Should().Contain(message => message.Contains(
                 state.Id,
                 StringComparison.Ordinal));
-            logger.Messages.Should().NotContain(message => message.Contains(
+            logger.WarningMessages.Should().NotContain(message => message.Contains(
                 "missing.png",
                 StringComparison.Ordinal));
         }
@@ -262,13 +264,13 @@ public sealed class PanelAttachmentStoreTests
 
             image.Should().BeNull();
             logger.WarningCount.Should().Be(1);
-            logger.Messages.Should().Contain(message => message.Contains(
+            logger.WarningMessages.Should().Contain(message => message.Contains(
                 state.Id,
                 StringComparison.Ordinal));
-            logger.Messages.Should().NotContain(message => message.Contains(
+            logger.WarningMessages.Should().NotContain(message => message.Contains(
                 "..",
                 StringComparison.Ordinal));
-            logger.Messages.Should().NotContain(message => message.Contains(
+            logger.WarningMessages.Should().NotContain(message => message.Contains(
                 "x.png",
                 StringComparison.Ordinal));
         }
@@ -387,37 +389,6 @@ public sealed class PanelAttachmentStoreTests
         public bool MatchesSignature(ReadOnlySpan<byte> bytes)
         {
             return true;
-        }
-    }
-
-    private sealed class RecordingLogger<TCategory> : ILogger<TCategory>
-    {
-        public int WarningCount { get; private set; }
-        public List<string> Messages { get; } = [];
-
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull
-        {
-            return null;
-        }
-
-        public bool IsEnabled(LogLevel logLevel)
-        {
-            return true;
-        }
-
-        public void Log<TState>(
-            LogLevel logLevel,
-            EventId eventId,
-            TState state,
-            Exception? exception,
-            Func<TState, Exception?, string> formatter)
-        {
-            if (logLevel == LogLevel.Warning)
-            {
-                WarningCount++;
-                Messages.Add(formatter(state, exception));
-            }
         }
     }
 }

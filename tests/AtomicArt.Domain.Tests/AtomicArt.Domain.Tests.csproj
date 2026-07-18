@@ -8,7 +8,7 @@
     <ProjectReference Include="..\..\src\AtomicArt.Contracts\AtomicArt.Contracts.csproj" />
     <ProjectReference Include="..\..\src\AtomicArt.Domain\AtomicArt.Domain.csproj" />
     <ProjectReference Include="..\..\src\AtomicArt.Infrastructure\AtomicArt.Infrastructure.csproj" />
-    <Compile Include="..\AtomicArt.Tests.Common\Generation\ApiModelMetadataTestCatalog.cs" Link="Generation\ApiModelMetadataTestCatalog.Common.cs" />
+    <ProjectReference Include="..\AtomicArt.Tests.Common\AtomicArt.Tests.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

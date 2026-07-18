@@ -7,9 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AtomicArt.Api\AtomicArt.Api.csproj" />
     <ProjectReference Include="..\..\src\AtomicArt.Infrastructure\AtomicArt.Infrastructure.csproj" />
-    <Compile Include="..\AtomicArt.Tests.Common\Generation\ApiModelMetadataTestCatalog.cs" Link="ModelMetadata\ApiModelMetadataTestCatalog.Common.cs" />
-    <Compile Include="..\AtomicArt.Tests.Common\LocalApiEndpointTestDefaults.cs" Link="Common\LocalApiEndpointTestDefaults.cs" />
-    <Compile Include="..\AtomicArt.Tests.Common\TestRepositoryFiles.cs" Link="Common\TestRepositoryFiles.cs" />
+    <ProjectReference Include="..\AtomicArt.Tests.Common\AtomicArt.Tests.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
