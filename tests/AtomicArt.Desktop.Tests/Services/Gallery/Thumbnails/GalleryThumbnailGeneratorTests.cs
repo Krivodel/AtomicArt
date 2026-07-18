@@ -17,16 +17,11 @@ public sealed class GalleryThumbnailGeneratorTests
     [Fact]
     public async Task CreateThumbnailAsync_WithWideImage_SetsShortSideTo256()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(CreateThumbnailAsync_WithWideImage_SetsShortSideTo256));
-        string imagePath = Path.Combine(rootDirectory, "wide.png");
-        await File.WriteAllBytesAsync(
-            imagePath,
-            GalleryThumbnailTestImages.CreatePngBytes(
-                GalleryThumbnailSpecification.ShortSidePixels * LargeScale,
-                GalleryThumbnailSpecification.ShortSidePixels * MediumScale));
-        GalleryThumbnailGenerator generator = CreateGenerator();
-
-        byte[] thumbnailBytes = await generator.CreateThumbnailAsync(imagePath, CancellationToken.None);
+        byte[] thumbnailBytes = await CreateThumbnailAsync(
+            nameof(CreateThumbnailAsync_WithWideImage_SetsShortSideTo256),
+            "wide.png",
+            GalleryThumbnailSpecification.ShortSidePixels * LargeScale,
+            GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
 
         SKSizeI size = GalleryThumbnailTestImages.ReadSize(thumbnailBytes);
         size.Width.Should().Be(GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
@@ -36,16 +31,11 @@ public sealed class GalleryThumbnailGeneratorTests
     [Fact]
     public async Task CreateThumbnailAsync_WithTallImage_SetsShortSideTo256()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(CreateThumbnailAsync_WithTallImage_SetsShortSideTo256));
-        string imagePath = Path.Combine(rootDirectory, "tall.png");
-        await File.WriteAllBytesAsync(
-            imagePath,
-            GalleryThumbnailTestImages.CreatePngBytes(
-                GalleryThumbnailSpecification.ShortSidePixels * MediumScale,
-                GalleryThumbnailSpecification.ShortSidePixels * LargeScale));
-        GalleryThumbnailGenerator generator = CreateGenerator();
-
-        byte[] thumbnailBytes = await generator.CreateThumbnailAsync(imagePath, CancellationToken.None);
+        byte[] thumbnailBytes = await CreateThumbnailAsync(
+            nameof(CreateThumbnailAsync_WithTallImage_SetsShortSideTo256),
+            "tall.png",
+            GalleryThumbnailSpecification.ShortSidePixels * MediumScale,
+            GalleryThumbnailSpecification.ShortSidePixels * LargeScale);
 
         SKSizeI size = GalleryThumbnailTestImages.ReadSize(thumbnailBytes);
         size.Width.Should().Be(GalleryThumbnailSpecification.ShortSidePixels);
@@ -55,16 +45,11 @@ public sealed class GalleryThumbnailGeneratorTests
     [Fact]
     public async Task CreateThumbnailAsync_WithSquareImage_SetsBothSidesTo256()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(CreateThumbnailAsync_WithSquareImage_SetsBothSidesTo256));
-        string imagePath = Path.Combine(rootDirectory, "square.png");
-        await File.WriteAllBytesAsync(
-            imagePath,
-            GalleryThumbnailTestImages.CreatePngBytes(
-                GalleryThumbnailSpecification.ShortSidePixels * MediumScale,
-                GalleryThumbnailSpecification.ShortSidePixels * MediumScale));
-        GalleryThumbnailGenerator generator = CreateGenerator();
-
-        byte[] thumbnailBytes = await generator.CreateThumbnailAsync(imagePath, CancellationToken.None);
+        byte[] thumbnailBytes = await CreateThumbnailAsync(
+            nameof(CreateThumbnailAsync_WithSquareImage_SetsBothSidesTo256),
+            "square.png",
+            GalleryThumbnailSpecification.ShortSidePixels * MediumScale,
+            GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
 
         SKSizeI size = GalleryThumbnailTestImages.ReadSize(thumbnailBytes);
         size.Width.Should().Be(GalleryThumbnailSpecification.ShortSidePixels);
@@ -74,15 +59,13 @@ public sealed class GalleryThumbnailGeneratorTests
     [Fact]
     public async Task CreateThumbnailAsync_WithSmallImage_DoesNotUpscale()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(CreateThumbnailAsync_WithSmallImage_DoesNotUpscale));
-        string imagePath = Path.Combine(rootDirectory, "small.png");
         int smallSide = GalleryThumbnailSpecification.ShortSidePixels / SmallScale;
-        await File.WriteAllBytesAsync(
-            imagePath,
-            GalleryThumbnailTestImages.CreatePngBytes(smallSide, smallSide));
-        GalleryThumbnailGenerator generator = CreateGenerator();
 
-        byte[] thumbnailBytes = await generator.CreateThumbnailAsync(imagePath, CancellationToken.None);
+        byte[] thumbnailBytes = await CreateThumbnailAsync(
+            nameof(CreateThumbnailAsync_WithSmallImage_DoesNotUpscale),
+            "small.png",
+            smallSide,
+            smallSide);
 
         SKSizeI size = GalleryThumbnailTestImages.ReadSize(thumbnailBytes);
         size.Width.Should().Be(smallSide);
@@ -92,16 +75,11 @@ public sealed class GalleryThumbnailGeneratorTests
     [Fact]
     public async Task CreateThumbnailAsync_UsesThumbnailSpecificationShortSide()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(CreateThumbnailAsync_UsesThumbnailSpecificationShortSide));
-        string imagePath = Path.Combine(rootDirectory, "spec.png");
-        await File.WriteAllBytesAsync(
-            imagePath,
-            GalleryThumbnailTestImages.CreatePngBytes(
-                GalleryThumbnailSpecification.ShortSidePixels * LargeScale,
-                GalleryThumbnailSpecification.ShortSidePixels * MediumScale));
-        GalleryThumbnailGenerator generator = CreateGenerator();
-
-        byte[] thumbnailBytes = await generator.CreateThumbnailAsync(imagePath, CancellationToken.None);
+        byte[] thumbnailBytes = await CreateThumbnailAsync(
+            nameof(CreateThumbnailAsync_UsesThumbnailSpecificationShortSide),
+            "spec.png",
+            GalleryThumbnailSpecification.ShortSidePixels * LargeScale,
+            GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
 
         SKSizeI size = GalleryThumbnailTestImages.ReadSize(thumbnailBytes);
         Math.Min(size.Width, size.Height).Should().Be(GalleryThumbnailSpecification.ShortSidePixels);
@@ -144,6 +122,27 @@ public sealed class GalleryThumbnailGeneratorTests
     private static GalleryThumbnailGenerator CreateGenerator()
     {
         return new GalleryThumbnailGenerator(new GalleryThumbnailImageFormat());
+    }
+
+    private static async Task<byte[]> CreateThumbnailAsync(
+        string testName,
+        string fileName,
+        int width,
+        int height)
+    {
+        string rootDirectory = CreateCleanDirectory(testName);
+        string imagePath = Path.Combine(rootDirectory, fileName);
+        await File.WriteAllBytesAsync(
+            imagePath,
+            GalleryThumbnailTestImages.CreatePngBytes(width, height))
+            .ConfigureAwait(false);
+
+        GalleryThumbnailGenerator generator = CreateGenerator();
+
+        return await generator.CreateThumbnailAsync(
+            imagePath,
+            CancellationToken.None)
+            .ConfigureAwait(false);
     }
 
 }
