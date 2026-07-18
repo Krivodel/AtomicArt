@@ -6,29 +6,20 @@ using AtomicArt.Api.ErrorHandling;
 
 namespace AtomicArt.Api.Middleware;
 
-public sealed class ValidationExceptionMiddleware
+public sealed class ValidationExceptionMiddleware : ApiMiddleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ValidationExceptionMiddleware> _logger;
-
     public ValidationExceptionMiddleware(
         RequestDelegate next,
         ILogger<ValidationExceptionMiddleware> logger)
+        : base(next, logger)
     {
-        ArgumentNullException.ThrowIfNull(next);
-        ArgumentNullException.ThrowIfNull(logger);
-
-        _next = next;
-        _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context)
+    protected override async Task InvokeCoreAsync(HttpContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         try
         {
-            await _next(context).ConfigureAwait(false);
+            await Next(context).ConfigureAwait(false);
         }
         catch (ValidationException exception)
         {
@@ -42,7 +33,7 @@ public sealed class ValidationExceptionMiddleware
     {
         ProblemDetails problemDetails = ValidationProblemDetailsFactory.Create(exception);
 
-        _logger.LogWarning(
+        Logger.LogWarning(
             exception,
             "HTTP request {TraceIdentifier} with method {Method} failed validation with {FailureCount} violations.",
             context.TraceIdentifier,
