@@ -88,14 +88,15 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         await _viewState
             .ApplyCompletedAsync(lifecycleEvent.CorrelationId, itemUpdates, ct)
             .ConfigureAwait(false);
-        IReadOnlyList<GalleryItemState> snapshot = await _viewState
-            .CreateStateSnapshotAsync(ct)
+        await GalleryStateSnapshotSaver.SaveAsync(
+                _viewState,
+                _galleryStateService,
+                snapshot => _logger.LogInformation(
+                    "Gallery applied completed batch {BatchId}; snapshot contains {ItemCount} items",
+                    lifecycleEvent.Batch.BatchId,
+                    snapshot.Count),
+                ct)
             .ConfigureAwait(false);
-        await _galleryStateService.SaveAsync(snapshot, ct).ConfigureAwait(false);
-        _logger.LogInformation(
-            "Gallery applied completed batch {BatchId}; snapshot contains {ItemCount} items",
-            lifecycleEvent.Batch.BatchId,
-            snapshot.Count);
     }
 
     private async Task<GalleryCompletedItemUpdate> CreateItemUpdateAsync(

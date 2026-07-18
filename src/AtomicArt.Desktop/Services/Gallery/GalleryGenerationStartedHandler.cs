@@ -23,9 +23,11 @@ public sealed class GalleryGenerationStartedHandler : IGalleryLifecycleEventHand
     public async Task HandleAsync(GenerationLifecycleEvent lifecycleEvent, CancellationToken ct)
     {
         await _viewState.ApplyStartedAsync(lifecycleEvent, ct).ConfigureAwait(false);
-        IReadOnlyList<GalleryItemState> snapshot = await _viewState
-            .CreateStateSnapshotAsync(ct)
+        await GalleryStateSnapshotSaver.SaveAsync(
+                _viewState,
+                _galleryStateService,
+                stateSaved: null,
+                ct)
             .ConfigureAwait(false);
-        await _galleryStateService.SaveAsync(snapshot, ct).ConfigureAwait(false);
     }
 }
