@@ -123,24 +123,25 @@ public sealed partial class ImageViewerWindow : SukiWindow
         PicaActionDefinition action,
         CancellationToken ct)
     {
-        bool isFullResolutionReady = await WaitForFullResolutionImageAsync(ct);
+        await RunWithFullResolutionSelectionAsync(
+            async (bitmap, operationCt) =>
+            {
+                if (_currentItem is null)
+                {
+                    return;
+                }
 
-        if (!isFullResolutionReady || _currentItem is null)
-        {
-            return;
-        }
-
-        using Bitmap? bitmap = CreateSelectedBitmapOrDefault();
-        if (bitmap is null)
-        {
-            return;
-        }
-
-        await _imageOperations.DispatchSelectionAsync(action, _currentItem, bitmap, ct);
-        _logger.LogInformation(
-            "Dispatched Pica selection action {ActionId} for image {ItemId}",
-            action.Id,
-            _currentItem.Id);
+                await _imageOperations.DispatchSelectionAsync(
+                    action,
+                    _currentItem,
+                    bitmap,
+                    operationCt);
+                _logger.LogInformation(
+                    "Dispatched Pica selection action {ActionId} for image {ItemId}",
+                    action.Id,
+                    _currentItem.Id);
+            },
+            ct);
     }
 
     private async Task DispatchSelectionActionAndCloseAsync(
@@ -174,6 +175,26 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private async Task SaveSelectionAsCoreAsync(CancellationToken ct)
     {
+        await RunWithFullResolutionSelectionAsync(
+            async (bitmap, operationCt) =>
+            {
+                await _imageOperations.SaveSelectionAsync(
+                    StorageProvider,
+                    bitmap,
+                    CancelSelection,
+                    operationCt);
+                _logger.LogInformation(
+                    "Completed save-as for a Pica selection sized {Width}x{Height}",
+                    bitmap.PixelSize.Width,
+                    bitmap.PixelSize.Height);
+            },
+            ct);
+    }
+
+    private async Task RunWithFullResolutionSelectionAsync(
+        Func<Bitmap, CancellationToken, Task> operation,
+        CancellationToken ct)
+    {
         bool isFullResolutionReady = await WaitForFullResolutionImageAsync(ct);
 
         if (!isFullResolutionReady)
@@ -182,20 +203,13 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         using Bitmap? bitmap = CreateSelectedBitmapOrDefault();
+
         if (bitmap is null)
         {
             return;
         }
 
-        await _imageOperations.SaveSelectionAsync(
-            StorageProvider,
-            bitmap,
-            CancelSelection,
-            ct);
-        _logger.LogInformation(
-            "Completed save-as for a Pica selection sized {Width}x{Height}",
-            bitmap.PixelSize.Width,
-            bitmap.PixelSize.Height);
+        await operation(bitmap, ct);
     }
 
     private async Task<string?> GetOpenWithFilePathAsync(
