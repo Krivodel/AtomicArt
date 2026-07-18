@@ -14,7 +14,7 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithRealMetadata_HasAutoAspectRatioFirst()
     {
-        GenerationModelCatalogDto catalog = ApiModelMetadataTestCatalog.LoadCatalog();
+        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
 
         catalog.Models.Should().HaveCount(3);
         catalog.Models.Should().OnlyContain(model =>
@@ -26,7 +26,7 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithRealMetadata_HasTemperatureForAllNanoBananaModels()
     {
-        GenerationModelCatalogDto catalog = ApiModelMetadataTestCatalog.LoadCatalog();
+        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
 
         catalog.Models.Should().HaveCount(3);
         catalog.Models.Should().OnlyContain(model => model.Temperature.Minimum == 0.1d);
@@ -38,7 +38,7 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithRealMetadata_HasThinkingOnlyForSupportedNanoBananaModels()
     {
-        GenerationModelCatalogDto catalog = ApiModelMetadataTestCatalog.LoadCatalog();
+        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
 
         GenerationModelMetadataDto nanoBanana2 = catalog.Models.Single(model => model.Id == "nano-banana-2");
         GenerationModelMetadataDto nanoBanana2Lite = catalog.Models.Single(model => model.Id == "nano-banana-2-lite");

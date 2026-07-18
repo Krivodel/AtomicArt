@@ -16,6 +16,7 @@ using AtomicArt.Api.Tests.ModelMetadata;
 using AtomicArt.Application.Features.Generation.Queries.GetGenerationModels;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Api.Tests.Controllers;
 
@@ -45,7 +46,7 @@ public sealed class GenerationModelsControllerTests
             }
 
             catalog.Models.Should().HaveCount(
-                ApiModelMetadataTestCatalog.LoadCatalog().Models.Count);
+                ApiModelMetadataStartupTestCatalog.LoadCatalog().Models.Count);
             catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId);
             catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBananaProModelId);
             catalog.Models.Should().NotContain(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
@@ -123,7 +124,7 @@ public sealed class GenerationModelsControllerTests
 
     private static WebApplicationFactory<Program> CreateFactory()
     {
-        string contentRoot = ApiModelMetadataTestCatalog.GetContentRoot();
+        string contentRoot = ApiModelMetadataTestCatalog.GetApiContentRoot();
 
         return CreateFactory(contentRoot);
     }

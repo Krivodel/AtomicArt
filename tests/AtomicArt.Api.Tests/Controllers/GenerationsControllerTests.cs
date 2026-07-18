@@ -34,6 +34,7 @@ using AtomicArt.Infrastructure;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Infrastructure.Generation.GoogleInteractions;
 using AtomicArt.Tests.Common;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Api.Tests.Controllers;
 
@@ -269,7 +270,7 @@ public sealed class GenerationsControllerTests
             IConfiguration configuration = CreateConfiguration();
             services.AddLogging();
             services.AddDomainServices();
-            services.AddSingleton(ApiModelMetadataTestCatalog.LoadCatalog());
+            services.AddSingleton(ApiModelMetadataStartupTestCatalog.LoadCatalog());
             services.AddApplicationServices();
             services.AddInfrastructureServices(configuration);
             services.AddScoped<Application.Features.Generation.Interfaces.IImageGenerationContentProvider>(
@@ -426,7 +427,7 @@ public sealed class GenerationsControllerTests
 
         GenerationsController controller = new(
             mediator,
-            modelCatalog ?? ApiModelMetadataTestCatalog.LoadCatalog(),
+            modelCatalog ?? ApiModelMetadataStartupTestCatalog.LoadCatalog(),
             NullLogger<GenerationsController>.Instance)
         {
             ControllerContext = new ControllerContext
@@ -469,13 +470,13 @@ public sealed class GenerationsControllerTests
 
     private static ImageGenerationRequestDto CreateRequest()
     {
-        return CreateRequest(ModelId, ApiModelMetadataTestCatalog.LoadCatalog());
+        return CreateRequest(ModelId, ApiModelMetadataStartupTestCatalog.LoadCatalog());
     }
 
     private static ImageGenerationRequestDto CreateTestRequest()
     {
         GenerationModelCatalogDto catalog = TestGenerationModelCatalogAugmenter.AddTestModelIfEnabled(
-            ApiModelMetadataTestCatalog.LoadCatalog(),
+            ApiModelMetadataStartupTestCatalog.LoadCatalog(),
             new TestGenerationOptions
             {
                 Enabled = true
