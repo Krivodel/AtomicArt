@@ -508,29 +508,39 @@ public partial class AnimatedGalleryControl : UserControl
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
         _ = sender;
-
-        KeyModifiers modifier = GenerationPreviewExpansionController.GetExpansionModifier(e.Key);
-        if (modifier == KeyModifiers.None)
-        {
-            return;
-        }
-
-        _previewPointerModifiers = e.KeyModifiers | modifier;
-        NotifyPreviewPointerStateChanged();
+        UpdatePreviewPointerModifiers(e, PreviewKeyTransition.Down);
     }
 
     private void OnPreviewKeyUp(object? sender, KeyEventArgs e)
     {
         _ = sender;
+        UpdatePreviewPointerModifiers(e, PreviewKeyTransition.Up);
+    }
 
+    private void UpdatePreviewPointerModifiers(
+        KeyEventArgs e,
+        PreviewKeyTransition transition)
+    {
         KeyModifiers modifier = GenerationPreviewExpansionController.GetExpansionModifier(e.Key);
+
         if (modifier == KeyModifiers.None)
         {
             return;
         }
 
-        _previewPointerModifiers = e.KeyModifiers & ~modifier;
+        _previewPointerModifiers = transition switch
+        {
+            PreviewKeyTransition.Down => e.KeyModifiers | modifier,
+            PreviewKeyTransition.Up => e.KeyModifiers & ~modifier,
+            _ => throw new ArgumentOutOfRangeException(nameof(transition), transition, null)
+        };
         NotifyPreviewPointerStateChanged();
+    }
+
+    private enum PreviewKeyTransition
+    {
+        Down,
+        Up
     }
 
     private sealed class PreviewClipState
