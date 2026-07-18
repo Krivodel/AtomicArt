@@ -248,10 +248,7 @@ public sealed class GoogleInteractionsResponseParserTests
 
         Action act = () => parser.Parse(responseJson);
 
-        FluentAssertions.Specialized.ExceptionAssertions<GoogleInteractionsException> assertions = act.Should()
-            .Throw<GoogleInteractionsException>();
-        assertions.Which.FailureKind.Should().Be(ImageGenerationProviderFailureKind.InvalidResponse);
-        assertions.Which.Message.Should().NotContain("/9j/4AAQSkZJRg==");
+        AssertInvalidResponseDoesNotExpose(act, "/9j/4AAQSkZJRg==");
     }
 
     [Fact]
@@ -281,10 +278,7 @@ public sealed class GoogleInteractionsResponseParserTests
 
         Action act = () => parser.Parse(responseJson);
 
-        FluentAssertions.Specialized.ExceptionAssertions<GoogleInteractionsException> assertions = act.Should()
-            .Throw<GoogleInteractionsException>();
-        assertions.Which.FailureKind.Should().Be(ImageGenerationProviderFailureKind.InvalidResponse);
-        assertions.Which.Message.Should().NotContain("2320");
+        AssertInvalidResponseDoesNotExpose(act, "2320");
     }
 
     [Fact]
@@ -328,11 +322,9 @@ public sealed class GoogleInteractionsResponseParserTests
 
         Action act = () => parser.Parse(responseJson);
 
-        FluentAssertions.Specialized.ExceptionAssertions<GoogleInteractionsException> assertions = act.Should()
-            .Throw<GoogleInteractionsException>();
-        assertions.Which.Message.Should().NotContain("done");
-        assertions.Which.FailureKind.Should().Be(ImageGenerationProviderFailureKind.InvalidResponse);
-        assertions.Which.NoImageDiagnostics.Should().BeEquivalentTo(new
+        GoogleInteractionsException exception = AssertInvalidResponseDoesNotExpose(act, "done");
+
+        exception.NoImageDiagnostics.Should().BeEquivalentTo(new
         {
             Category = "text_only",
             Status = "completed",
@@ -428,11 +420,22 @@ public sealed class GoogleInteractionsResponseParserTests
 
     private static void AssertInvalidUsage(Action act)
     {
+        GoogleInteractionsException exception = AssertInvalidResponseDoesNotExpose(
+            act,
+            "/9j/4AAQSkZJRg==");
+        exception.Message.Should().NotContain("Prompt");
+        exception.Message.Should().NotContain(TestGenerationCredentials.ProviderCredential);
+    }
+
+    private static GoogleInteractionsException AssertInvalidResponseDoesNotExpose(
+        Action act,
+        string sensitiveValue)
+    {
         FluentAssertions.Specialized.ExceptionAssertions<GoogleInteractionsException> assertions = act.Should()
             .Throw<GoogleInteractionsException>();
         assertions.Which.FailureKind.Should().Be(ImageGenerationProviderFailureKind.InvalidResponse);
-        assertions.Which.Message.Should().NotContain("/9j/4AAQSkZJRg==");
-        assertions.Which.Message.Should().NotContain("Prompt");
-        assertions.Which.Message.Should().NotContain(TestGenerationCredentials.ProviderCredential);
+        assertions.Which.Message.Should().NotContain(sensitiveValue);
+
+        return assertions.Which;
     }
 }
