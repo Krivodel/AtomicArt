@@ -1,4 +1,5 @@
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Services;
 
@@ -59,49 +60,8 @@ public sealed class AttachedImageSignatureValidator : IAttachedImageSignatureVal
         GenerationImageFileFormatDescriptor format,
         ReadOnlySpan<byte> content)
     {
-        foreach (IReadOnlyList<GenerationImageFileSignaturePart> alternative in format.SignatureAlternatives)
-        {
-            if (MatchesClientPreviewSignatureAlternative(content, alternative))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool MatchesClientPreviewSignatureAlternative(
-        ReadOnlySpan<byte> content,
-        IReadOnlyList<GenerationImageFileSignaturePart> signatureParts)
-    {
-        foreach (GenerationImageFileSignaturePart signaturePart in signatureParts)
-        {
-            if (content.Length < signaturePart.Offset + signaturePart.Bytes.Count)
-            {
-                return false;
-            }
-
-            if (!MatchesClientPreviewSignaturePart(content, signaturePart))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool MatchesClientPreviewSignaturePart(
-        ReadOnlySpan<byte> content,
-        GenerationImageFileSignaturePart signaturePart)
-    {
-        for (int index = 0; index < signaturePart.Bytes.Count; index++)
-        {
-            if (content[signaturePart.Offset + index] != signaturePart.Bytes[index])
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return GenerationImageSignatureMatcher.Matches(
+            format.SignatureAlternatives,
+            content);
     }
 }
