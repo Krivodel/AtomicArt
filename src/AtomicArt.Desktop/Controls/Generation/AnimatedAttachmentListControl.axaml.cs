@@ -209,11 +209,37 @@ public partial class AnimatedAttachmentListControl : UserControl
     private static IReadOnlyList<Control> GetEntryAnimationControls(
         AttachmentVisualEntry entry)
     {
-        return
+        Control[] controls =
         [
             entry.Control,
             entry.Image
         ];
+
+        return controls;
+    }
+
+    private static void SetEntryPosition(Control control, double x)
+    {
+        Canvas.SetLeft(control, x);
+        Canvas.SetTop(control, 0d);
+    }
+
+    private static void StartEntryAnimation(
+        GalleryAnimationScheduler animationScheduler,
+        Control control,
+        IReadOnlyList<MotionFrame> frames,
+        int durationMilliseconds,
+        int delayMilliseconds,
+        Func<double, double> ease)
+    {
+        Control[] controls = [control];
+        animationScheduler.Cancel(controls);
+        _ = animationScheduler.AnimateAsync(
+            control,
+            frames,
+            durationMilliseconds,
+            delayMilliseconds,
+            ease);
     }
 
     private void HandleItemsChanged()
@@ -300,8 +326,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         AttachmentVisualEntry entry = CreateEntry(item);
         _entries[item.Id] = entry;
         AttachmentPanel.Children.Add(entry.Control);
-        Canvas.SetLeft(entry.Control, targetX);
-        Canvas.SetTop(entry.Control, 0d);
+        SetEntryPosition(entry.Control, targetX);
 
         if (mode == AttachmentMutationMode.Instant || _animationScheduler is null)
         {
@@ -309,8 +334,8 @@ public partial class AnimatedAttachmentListControl : UserControl
             return;
         }
 
-        _animationScheduler.Cancel([entry.Control]);
-        _ = _animationScheduler.AnimateAsync(
+        StartEntryAnimation(
+            _animationScheduler,
             entry.Control,
             CreateSpawnFrames(item.Id),
             SpawnDurationMilliseconds,
@@ -325,8 +350,7 @@ public partial class AnimatedAttachmentListControl : UserControl
     {
         double currentX = GetCurrentX(entry.Control);
         double offsetX = currentX - targetX;
-        Canvas.SetLeft(entry.Control, targetX);
-        Canvas.SetTop(entry.Control, 0d);
+        SetEntryPosition(entry.Control, targetX);
 
         if (mode == AttachmentMutationMode.Instant
             || _animationScheduler is null
@@ -336,8 +360,8 @@ public partial class AnimatedAttachmentListControl : UserControl
             return;
         }
 
-        _animationScheduler.Cancel([entry.Control]);
-        _ = _animationScheduler.AnimateAsync(
+        StartEntryAnimation(
+            _animationScheduler,
             entry.Control,
             new List<MotionFrame>
             {
@@ -367,8 +391,7 @@ public partial class AnimatedAttachmentListControl : UserControl
 
         AttachmentOverlayCanvas.Children.Add(entry.Control);
         _removingEntries.Add(entry);
-        Canvas.SetLeft(entry.Control, overlayX);
-        Canvas.SetTop(entry.Control, 0d);
+        SetEntryPosition(entry.Control, overlayX);
         MotionFrameApplier.Apply(entry.Control, MotionFrame.Identity);
 
         _animationScheduler.Cancel(GetEntryAnimationControls(entry));
