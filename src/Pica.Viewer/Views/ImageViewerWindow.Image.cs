@@ -63,13 +63,12 @@ public sealed partial class ImageViewerWindow : SukiWindow
                 bitmap.PixelSize.Width,
                 bitmap.PixelSize.Height);
 
-            if (_isWindowedMode && (_resizeBehavior == WindowResizeBehavior.AlwaysFitImage))
+            ApplyLoadedImageLayout(out bool fittedWindow);
+
+            if (fittedWindow)
             {
-                FitWindowToCurrentImage();
                 return;
             }
-
-            ResetScaleAndCenter();
         }
         catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
         {
@@ -136,7 +135,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
                     fullPath,
                     preview.Bitmap,
                     preview.SourcePixelSize);
-                ApplyProgressiveImageLayout();
+                ApplyLoadedImageLayout(out _);
                 await WaitForNextRenderFrameAsync(ct);
             }
 
@@ -398,7 +397,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         if (!isPreviewDisplayed || (previewSize.Width <= 0) || (previewSize.Height <= 0))
         {
             CancelSelection();
-            ApplyProgressiveImageLayout();
+            ApplyLoadedImageLayout(out _);
             return;
         }
 
@@ -438,15 +437,17 @@ public sealed partial class ImageViewerWindow : SukiWindow
         bitmap?.Dispose();
     }
 
-    private void ApplyProgressiveImageLayout()
+    private void ApplyLoadedImageLayout(out bool fittedWindow)
     {
         if (_isWindowedMode && (_resizeBehavior == WindowResizeBehavior.AlwaysFitImage))
         {
             FitWindowToCurrentImage();
+            fittedWindow = true;
             return;
         }
 
         ResetScaleAndCenter();
+        fittedWindow = false;
     }
 
     private static PixelRect ScalePixelRect(
