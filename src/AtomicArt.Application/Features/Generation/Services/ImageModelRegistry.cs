@@ -1,6 +1,7 @@
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Domain.Common;
 using AtomicArt.Domain.Generation;
 
 namespace AtomicArt.Application.Features.Generation.Services;
@@ -135,24 +136,14 @@ public sealed class ImageModelRegistry : IImageModelRegistry
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentException.ThrowIfNullOrWhiteSpace(metadata.Id);
 
-        List<IImageModelDefinitionFactory> matchingFactories = factories
-            .Where(factory => factory.CanCreate(metadata))
-            .OrderByDescending(factory => factory.Priority)
-            .ToList();
-
-        if (matchingFactories.Count == 0)
-        {
-            throw new InvalidOperationException(
-                $"No generation model factory is registered for model '{metadata.Id}'.");
-        }
-
-        IImageModelDefinitionFactory selectedFactory = matchingFactories[0];
-
-        if (matchingFactories.Count > 1 && matchingFactories[1].Priority == selectedFactory.Priority)
-        {
-            throw new InvalidOperationException(
-                $"Multiple generation model factories with priority {selectedFactory.Priority} are registered for model '{metadata.Id}'.");
-        }
+        IImageModelDefinitionFactory selectedFactory = UniqueHighestPrioritySelector.Select(
+            factories,
+            factory => factory.CanCreate(metadata),
+            factory => factory.Priority,
+            () => new InvalidOperationException(
+                $"No generation model factory is registered for model '{metadata.Id}'."),
+            priority => new InvalidOperationException(
+                $"Multiple generation model factories with priority {priority} are registered for model '{metadata.Id}'."));
 
         return selectedFactory.Create(metadata);
     }

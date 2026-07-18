@@ -1,3 +1,5 @@
+using AtomicArt.Domain.Common;
+
 namespace AtomicArt.Domain.Generation;
 
 public sealed class GenerationModelRules
@@ -61,25 +63,13 @@ public sealed class GenerationModelRules
 
     private IGenerationModelRules GetRules(GenerationModelConstraints constraints)
     {
-        List<IGenerationModelRules> matchingRules = _modelRules
-            .Where(rule => rule.CanValidate(constraints))
-            .OrderByDescending(rule => rule.Priority)
-            .ToList();
-
-        if (matchingRules.Count == 0)
-        {
-            throw new InvalidOperationException(
-                $"No rules are registered for generation model '{constraints.ModelId}'.");
-        }
-
-        IGenerationModelRules selectedRules = matchingRules[0];
-
-        if (matchingRules.Count > 1 && matchingRules[1].Priority == selectedRules.Priority)
-        {
-            throw new InvalidOperationException(
-                $"Multiple rules with priority {selectedRules.Priority} are registered for generation model '{constraints.ModelId}'.");
-        }
-
-        return selectedRules;
+        return UniqueHighestPrioritySelector.Select(
+            _modelRules,
+            rule => rule.CanValidate(constraints),
+            rule => rule.Priority,
+            () => new InvalidOperationException(
+                $"No rules are registered for generation model '{constraints.ModelId}'."),
+            priority => new InvalidOperationException(
+                $"Multiple rules with priority {priority} are registered for generation model '{constraints.ModelId}'."));
     }
 }
