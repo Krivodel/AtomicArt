@@ -1,11 +1,73 @@
 {
+  "profiles": {
+    "nano-banana-family": {
+      "provider": "google",
+      "panelId": "nano-banana",
+      "generationCounts": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "temperature": {
+        "minimum": 0.1,
+        "maximum": 2.0,
+        "default": 1.0,
+        "step": 0.1
+      },
+      "attachments": {
+        "maxCount": 14,
+        "maxSingleFileBytes": 7340032,
+        "maxTotalBytes": 524288000,
+        "supportedContentTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/heic",
+          "image/heif"
+        ]
+      }
+    },
+    "standard-aspect-ratios": {
+      "aspectRatios": [
+        "Авто",
+        "1:1",
+        "2:3",
+        "3:2",
+        "3:4",
+        "4:3",
+        "4:5",
+        "5:4",
+        "9:16",
+        "16:9",
+        "21:9"
+      ]
+    },
+    "standard-thinking": {
+      "thinking": {
+        "levels": [
+          {
+            "value": "low",
+            "displayName": "Минимальный"
+          },
+          {
+            "value": "high",
+            "displayName": "Максимальный"
+          }
+        ],
+        "default": "low"
+      }
+    }
+  },
   "models": [
     {
+      "profiles": [
+        "nano-banana-family",
+        "standard-thinking"
+      ],
       "id": "nano-banana-2",
       "displayName": "Nano Banana 2",
-      "provider": "google",
       "providerModelId": "gemini-3.1-flash-image",
-      "panelId": "nano-banana",
       "contextWindowTokens": 131072,
       "maxOutputTokens": 32768,
       "maxPromptLength": 131072,
@@ -32,43 +94,6 @@
         "2K",
         "4K"
       ],
-      "generationCounts": [
-        1,
-        2,
-        3,
-        4
-      ],
-      "temperature": {
-        "minimum": 0.1,
-        "maximum": 2.0,
-        "default": 1.0,
-        "step": 0.1
-      },
-      "thinking": {
-        "levels": [
-          {
-            "value": "low",
-            "displayName": "Минимальный"
-          },
-          {
-            "value": "high",
-            "displayName": "Максимальный"
-          }
-        ],
-        "default": "low"
-      },
-      "attachments": {
-        "maxCount": 14,
-        "maxSingleFileBytes": 7340032,
-        "maxTotalBytes": 524288000,
-        "supportedContentTypes": [
-          "image/png",
-          "image/jpeg",
-          "image/webp",
-          "image/heic",
-          "image/heif"
-        ]
-      },
       "pricing": {
         "currencyCode": "USD",
         "inputTokenUsdPerMillion": 0.50,
@@ -84,67 +109,20 @@
       }
     },
     {
+      "profiles": [
+        "nano-banana-family",
+        "standard-aspect-ratios",
+        "standard-thinking"
+      ],
       "id": "nano-banana-2-lite",
       "displayName": "Nano Banana 2 Lite",
-      "provider": "google",
       "providerModelId": "gemini-3.1-flash-lite-image",
-      "panelId": "nano-banana",
       "contextWindowTokens": 65536,
       "maxOutputTokens": 4096,
       "maxPromptLength": 65536,
-      "aspectRatios": [
-        "Авто",
-        "1:1",
-        "2:3",
-        "3:2",
-        "3:4",
-        "4:3",
-        "4:5",
-        "5:4",
-        "9:16",
-        "16:9",
-        "21:9"
-      ],
       "resolutions": [
         "1K"
       ],
-      "generationCounts": [
-        1,
-        2,
-        3,
-        4
-      ],
-      "temperature": {
-        "minimum": 0.1,
-        "maximum": 2.0,
-        "default": 1.0,
-        "step": 0.1
-      },
-      "thinking": {
-        "levels": [
-          {
-            "value": "low",
-            "displayName": "Минимальный"
-          },
-          {
-            "value": "high",
-            "displayName": "Максимальный"
-          }
-        ],
-        "default": "low"
-      },
-      "attachments": {
-        "maxCount": 14,
-        "maxSingleFileBytes": 7340032,
-        "maxTotalBytes": 524288000,
-        "supportedContentTypes": [
-          "image/png",
-          "image/jpeg",
-          "image/webp",
-          "image/heic",
-          "image/heif"
-        ]
-      },
       "pricing": {
         "currencyCode": "USD",
         "inputTokenUsdPerMillion": 0.25,
@@ -157,56 +135,21 @@
       }
     },
     {
+      "profiles": [
+        "nano-banana-family",
+        "standard-aspect-ratios"
+      ],
       "id": "nano-banana-pro",
       "displayName": "Nano Banana Pro",
-      "provider": "google",
       "providerModelId": "gemini-3-pro-image",
-      "panelId": "nano-banana",
       "contextWindowTokens": 65536,
       "maxOutputTokens": 32768,
       "maxPromptLength": 65536,
-      "aspectRatios": [
-        "Авто",
-        "1:1",
-        "2:3",
-        "3:2",
-        "3:4",
-        "4:3",
-        "4:5",
-        "5:4",
-        "9:16",
-        "16:9",
-        "21:9"
-      ],
       "resolutions": [
         "1K",
         "2K",
         "4K"
       ],
-      "generationCounts": [
-        1,
-        2,
-        3,
-        4
-      ],
-      "temperature": {
-        "minimum": 0.1,
-        "maximum": 2.0,
-        "default": 1.0,
-        "step": 0.1
-      },
-      "attachments": {
-        "maxCount": 14,
-        "maxSingleFileBytes": 7340032,
-        "maxTotalBytes": 524288000,
-        "supportedContentTypes": [
-          "image/png",
-          "image/jpeg",
-          "image/webp",
-          "image/heic",
-          "image/heif"
-        ]
-      },
       "pricing": {
         "currencyCode": "USD",
         "inputTokenUsdPerMillion": 2.00,

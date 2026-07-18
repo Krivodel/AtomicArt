@@ -84,6 +84,57 @@ public sealed class JsonModelMetadataStartupLoaderTests
     }
 
     [Fact]
+    public void Load_WithProfile_AppliesProfileAndModelOverride()
+    {
+        (JsonObject catalogJson, JsonObject modelJson) = CreateValidModelJson();
+        JsonObject profileJson = new();
+        profileJson["temperature"] = modelJson["temperature"]?.DeepClone();
+        modelJson.Remove("temperature");
+        modelJson["provider"] = "model-provider";
+        modelJson["profiles"] = new JsonArray("shared");
+        catalogJson["profiles"] = new JsonObject
+        {
+            ["shared"] = profileJson
+        };
+        string path = CreateTempFile(catalogJson.ToJsonString());
+
+        try
+        {
+            GenerationModelCatalogDto catalog = Load(path);
+
+            GenerationModelMetadataDto metadata = catalog.Models.Should().ContainSingle().Subject;
+            metadata.Provider.Should().Be("model-provider");
+            metadata.Temperature.Should().Be(
+                new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d));
+        }
+        finally
+        {
+            DeleteFileDirectory(path);
+        }
+    }
+
+    [Fact]
+    public void Load_WithUnknownProfile_ThrowsInvalidOperationException()
+    {
+        (JsonObject catalogJson, JsonObject modelJson) = CreateValidModelJson();
+        modelJson["profiles"] = new JsonArray("missing");
+        catalogJson["profiles"] = new JsonObject();
+        string path = CreateTempFile(catalogJson.ToJsonString());
+
+        try
+        {
+            Action action = () => Load(path);
+
+            action.Should().Throw<InvalidOperationException>()
+                .WithMessage("*unknown profile*");
+        }
+        finally
+        {
+            DeleteFileDirectory(path);
+        }
+    }
+
+    [Fact]
     public void Load_WithMissingFile_ThrowsInvalidOperationException()
     {
         string path = Path.Combine(

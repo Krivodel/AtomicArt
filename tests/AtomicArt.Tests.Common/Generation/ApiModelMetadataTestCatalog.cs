@@ -1,5 +1,4 @@
-using System.Text.Json;
-
+using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
 
@@ -10,8 +9,6 @@ public static class ApiModelMetadataTestCatalog
     private const string NanoBanana2ModelIdValue = "nano-banana-2";
     private const string NanoBananaProModelIdValue = "nano-banana-pro";
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public static string NanoBanana2ModelId => LoadNanoBanana2Metadata().Id;
     public static string NanoBananaProModelId => LoadNanoBananaProMetadata().Id;
     public static string NanoBanana2DisplayName => LoadNanoBanana2Metadata().DisplayName;
@@ -19,9 +16,10 @@ public static class ApiModelMetadataTestCatalog
     public static GenerationModelCatalogDto LoadCatalog()
     {
         string json = File.ReadAllText(GetMetadataPath());
-        GenerationModelCatalogDto? catalog = JsonSerializer.Deserialize<GenerationModelCatalogDto>(json, JsonOptions);
 
-        return catalog ?? throw new InvalidOperationException("Generation model catalog test JSON is missing.");
+        return GenerationModelCatalogMetadataLoader.LoadJson(
+            json,
+            "generation model metadata test file");
     }
 
     public static GenerationModelMetadataDto LoadNanoBanana2Metadata()

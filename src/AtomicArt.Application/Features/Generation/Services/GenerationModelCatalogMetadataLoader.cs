@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain.Exceptions;
@@ -8,6 +9,7 @@ namespace AtomicArt.Application.Features.Generation.Services;
 
 public static class GenerationModelCatalogMetadataLoader
 {
+    private const string ProfilesPropertyName = "profiles";
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     public static GenerationModelCatalogDto LoadJson(string json, string sourceName)
@@ -36,13 +38,108 @@ public static class GenerationModelCatalogMetadataLoader
     {
         try
         {
-            return JsonSerializer.Deserialize<GenerationModelCatalogDto>(json, SerializerOptions);
+            JsonNode? parsedJson = JsonNode.Parse(json);
+
+            if (parsedJson is null)
+            {
+                return null;
+            }
+
+            if (parsedJson is not JsonObject catalogObject)
+            {
+                return parsedJson.Deserialize<GenerationModelCatalogDto>(SerializerOptions);
+            }
+
+            JsonObject expandedCatalog = ExpandProfiles(catalogObject, sourceName);
+
+            return expandedCatalog.Deserialize<GenerationModelCatalogDto>(SerializerOptions);
         }
         catch (JsonException exception)
         {
             throw new InvalidOperationException(
                 $"Model metadata source '{sourceName}' contains malformed JSON.",
                 exception);
+        }
+    }
+
+    private static JsonObject ExpandProfiles(JsonObject catalog, string sourceName)
+    {
+        JsonObject expandedCatalog = catalog.DeepClone().AsObject();
+
+        if (!expandedCatalog.TryGetPropertyValue(
+                ProfilesPropertyName,
+                out JsonNode? profilesNode))
+        {
+            return expandedCatalog;
+        }
+
+        if (profilesNode is not JsonObject profiles)
+        {
+            throw new InvalidOperationException(
+                $"Model metadata source '{sourceName}' contains invalid profiles.");
+        }
+
+        expandedCatalog.Remove(ProfilesPropertyName);
+
+        if (expandedCatalog["models"] is not JsonArray models)
+        {
+            return expandedCatalog;
+        }
+
+        for (int index = 0; index < models.Count; index++)
+        {
+            if (models[index] is not JsonObject model
+                || !model.TryGetPropertyValue(
+                    ProfilesPropertyName,
+                    out JsonNode? modelProfilesNode))
+            {
+                continue;
+            }
+
+            if (modelProfilesNode is not JsonArray modelProfiles)
+            {
+                throw new InvalidOperationException(
+                    $"Model metadata source '{sourceName}' contains invalid profiles for model at index {index}.");
+            }
+
+            JsonObject expandedModel = new();
+
+            foreach (JsonNode? profileNameNode in modelProfiles)
+            {
+                if (profileNameNode is not JsonValue profileNameValue
+                    || !profileNameValue.TryGetValue(out string? profileName)
+                    || string.IsNullOrWhiteSpace(profileName)
+                    || profiles[profileName] is not JsonObject profile)
+                {
+                    throw new InvalidOperationException(
+                        $"Model metadata source '{sourceName}' contains an unknown profile for model at index {index}.");
+                }
+
+                MergeObject(expandedModel, profile);
+            }
+
+            JsonObject modelOverrides = model.DeepClone().AsObject();
+            modelOverrides.Remove(ProfilesPropertyName);
+            MergeObject(expandedModel, modelOverrides);
+            models[index] = expandedModel;
+        }
+
+        return expandedCatalog;
+    }
+
+    private static void MergeObject(JsonObject target, JsonObject source)
+    {
+        foreach (KeyValuePair<string, JsonNode?> property in source)
+        {
+            if (property.Value is JsonObject sourceObject
+                && target[property.Key] is JsonObject targetObject)
+            {
+                MergeObject(targetObject, sourceObject);
+
+                continue;
+            }
+
+            target[property.Key] = property.Value?.DeepClone();
         }
     }
 
