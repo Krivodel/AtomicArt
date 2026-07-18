@@ -195,9 +195,9 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
         ReadOnlyMemory<byte> thumbnailBytes,
         CancellationToken ct)
     {
-        string tempPath = Path.Combine(
+        string tempPath = AtomicFileWriteTempPath.CreateSibling(
             _thumbnailsDirectory,
-            string.Concat(Path.GetFileName(thumbnailPath), ".", Guid.NewGuid().ToString("N"), ".tmp"));
+            Path.GetFileName(thumbnailPath));
 
         try
         {

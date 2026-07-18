@@ -120,7 +120,7 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
             byte[] bytes = Encoding.UTF8.GetBytes(value);
             byte[] protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
             string path = GetSecretPath(key);
-            string tempPath = CreateTempPath();
+            string tempPath = AtomicFileWriteTempPath.CreateHidden(_secretsDirectory, "secret");
             bool secretFileReplaced = false;
 
             try
@@ -162,16 +162,6 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
         string fileName = string.Concat(SafeFileNameKeyEncoder.EncodeSha256Hex(key), ".bin");
 
         return Path.Combine(_secretsDirectory, fileName);
-    }
-
-    private string CreateTempPath()
-    {
-        string tempFileName = string.Concat(
-            ".secret.",
-            Guid.NewGuid().ToString("N"),
-            ".tmp");
-
-        return Path.Combine(_secretsDirectory, tempFileName);
     }
 
     private void EnsureSecretsDirectory()

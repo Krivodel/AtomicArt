@@ -196,7 +196,9 @@ public sealed class AppStateStore : IAppStateStore
         string path,
         CancellationToken ct)
     {
-        string tempPath = CreateTempPath(section);
+        string tempPath = AtomicFileWriteTempPath.CreateHidden(
+            _pathProvider.StateDirectory,
+            Path.GetFileName(section.FileName));
         bool stateFileReplaced = false;
 
         try
@@ -252,18 +254,6 @@ public sealed class AppStateStore : IAppStateStore
             $"State section '{section.Key}' file name must stay inside the state directory.");
 
         return statePath;
-    }
-
-    private string CreateTempPath(IStateSection section)
-    {
-        string tempFileName = string.Concat(
-            ".",
-            Path.GetFileName(section.FileName),
-            ".",
-            Guid.NewGuid().ToString("N"),
-            ".tmp");
-
-        return Path.Combine(_pathProvider.StateDirectory, tempFileName);
     }
 
     private static SemaphoreSlim CreateWriteLock(string path)
