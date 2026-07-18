@@ -55,19 +55,19 @@ internal sealed class GoogleInteractionsResponseParser
 
         ValidateStatus(root);
 
-        IReadOnlyList<GoogleInteractionImageContent> images = ExtractImages(root);
+        ImageExtractionResult imageExtraction = ExtractImages(root);
 
-        if (images.Count == 0)
+        if (imageExtraction.Images.Count == 0)
         {
             throw new GoogleInteractionsException(
                 ImageGenerationProviderFailureKind.InvalidResponse,
                 "The generation provider did not return a JPEG image.",
-                CreateNoImageDiagnostics(root));
+                CreateNoImageDiagnostics(root, imageExtraction));
         }
 
         GenerationUsageDto usage = ExtractUsage(root);
 
-        return new GoogleInteractionsResult(images, usage);
+        return new GoogleInteractionsResult(imageExtraction.Images, usage);
     }
 
     private static void ValidateStatus(JsonElement root)
@@ -110,24 +110,28 @@ internal sealed class GoogleInteractionsResponseParser
             "The generation provider returned an unknown status.");
     }
 
-    private static IReadOnlyList<GoogleInteractionImageContent> ExtractImages(JsonElement root)
+    private static ImageExtractionResult ExtractImages(JsonElement root)
     {
         List<GoogleInteractionImageContent> images = [];
 
-        AddImagesFromProperty(
+        bool hasOutputImage = AddImagesFromProperty(
             root,
             OutputImageSnakeCasePropertyName,
             OutputImageCamelCasePropertyName,
             images);
-        AddImagesFromProperty(
+        bool hasOutputImages = AddImagesFromProperty(
             root,
             OutputImagesSnakeCasePropertyName,
             OutputImagesCamelCasePropertyName,
             images);
-        AddImagesFromProperty(root, OutputPropertyName, images);
+        bool hasOutput = AddImagesFromProperty(root, OutputPropertyName, images);
         AddImagesFromSteps(root, images);
 
-        return images;
+        return new ImageExtractionResult(
+            images,
+            hasOutputImage,
+            hasOutput,
+            hasOutputImages);
     }
 
     private static void AddImagesFromSteps(
@@ -201,7 +205,7 @@ internal sealed class GoogleInteractionsResponseParser
         AddImagesFromProperty(element, OutputPropertyName, images);
     }
 
-    private static void AddImagesFromProperty(
+    private static bool AddImagesFromProperty(
         JsonElement element,
         string propertyName,
         List<GoogleInteractionImageContent> images)
@@ -211,13 +215,15 @@ internal sealed class GoogleInteractionsResponseParser
             propertyName,
             out JsonElement propertyElement))
         {
-            return;
+            return false;
         }
 
         AddImagesFromElement(propertyElement, images);
+
+        return true;
     }
 
-    private static void AddImagesFromProperty(
+    private static bool AddImagesFromProperty(
         JsonElement element,
         string firstName,
         string secondName,
@@ -225,10 +231,12 @@ internal sealed class GoogleInteractionsResponseParser
     {
         if (!TryGetProperty(element, firstName, secondName, out JsonElement propertyElement))
         {
-            return;
+            return false;
         }
 
         AddImagesFromElement(propertyElement, images);
+
+        return true;
     }
 
     private static GoogleInteractionImageContent? TryCreateImageContent(JsonElement contentItemElement)
@@ -295,7 +303,9 @@ internal sealed class GoogleInteractionsResponseParser
         }
     }
 
-    private static GoogleInteractionsNoImageDiagnostics CreateNoImageDiagnostics(JsonElement root)
+    private static GoogleInteractionsNoImageDiagnostics CreateNoImageDiagnostics(
+        JsonElement root,
+        ImageExtractionResult imageExtraction)
     {
         TextContentDiagnostics textContentDiagnostics = AnalyzeTextContent(root);
         string category = textContentDiagnostics.TextContentItemCount > 0
@@ -305,17 +315,9 @@ internal sealed class GoogleInteractionsResponseParser
         return new GoogleInteractionsNoImageDiagnostics(
             category,
             ExtractStatus(root),
-            TryGetProperty(
-                root,
-                OutputImageSnakeCasePropertyName,
-                OutputImageCamelCasePropertyName,
-                out _),
-            GoogleInteractionsJsonElementReader.TryGetProperty(root, OutputPropertyName, out _),
-            TryGetProperty(
-                root,
-                OutputImagesSnakeCasePropertyName,
-                OutputImagesCamelCasePropertyName,
-                out _),
+            imageExtraction.HasOutputImage,
+            imageExtraction.HasOutput,
+            imageExtraction.HasOutputImages,
             textContentDiagnostics.HasStepsTextContent,
             textContentDiagnostics.HasModelOutputTextContent,
             textContentDiagnostics.HasContentTextContent,
@@ -603,6 +605,12 @@ internal sealed class GoogleInteractionsResponseParser
         return IsPropertyName(property, firstName)
             || IsPropertyName(property, secondName);
     }
+
+    private sealed record ImageExtractionResult(
+        IReadOnlyList<GoogleInteractionImageContent> Images,
+        bool HasOutputImage,
+        bool HasOutput,
+        bool HasOutputImages);
 
     private sealed record TextContentDiagnostics(
         bool HasStepsTextContent,
