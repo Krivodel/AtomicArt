@@ -7,9 +7,16 @@ namespace Pica.Viewer.Views;
 
 public sealed partial class ImageViewerWindow : SukiWindow
 {
-    private bool IsControlModifierPressed(KeyModifiers modifiers)
+    private static bool IsAnyModifierPressed(
+        KeyModifiers modifiers,
+        KeyModifiers requestedModifiers)
     {
-        return (modifiers & KeyModifiers.Control) == KeyModifiers.Control;
+        return (modifiers & requestedModifiers) != KeyModifiers.None;
+    }
+
+    private static bool IsControlModifierPressed(KeyModifiers modifiers)
+    {
+        return IsAnyModifierPressed(modifiers, KeyModifiers.Control);
     }
 
     private static bool IsControlKey(Key key)
@@ -19,15 +26,16 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private static bool IsBaseZoomSpeedRequested(KeyModifiers modifiers)
     {
-        return ((modifiers & KeyModifiers.Shift) == KeyModifiers.Shift)
-            || ((modifiers & KeyModifiers.Alt) == KeyModifiers.Alt)
-            || ((modifiers & KeyModifiers.Control) == KeyModifiers.Control);
+        return IsAnyModifierPressed(
+            modifiers,
+            KeyModifiers.Shift | KeyModifiers.Alt | KeyModifiers.Control);
     }
 
     private static bool IsBaseMovementSpeedRequested(KeyModifiers modifiers)
     {
-        return ((modifiers & KeyModifiers.Shift) == KeyModifiers.Shift)
-            || ((modifiers & KeyModifiers.Alt) == KeyModifiers.Alt);
+        return IsAnyModifierPressed(
+            modifiers,
+            KeyModifiers.Shift | KeyModifiers.Alt);
     }
 
     private int GetEffectiveMovementSpeed(KeyModifiers modifiers)
@@ -208,10 +216,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             {
                 _isPanning = true;
                 BeginPanMotion(position);
-                _view.SelectionToolbar.IsVisible = false;
-                UpdateSelectionCursor(position);
-                e.Pointer.Capture(_view.ViewerArea);
-                e.Handled = true;
+                CaptureSelectionPointer(position, e);
                 return;
             }
 
@@ -227,10 +232,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             _selectionResizeMode = GetSelectionResizeMode(position);
             _isSelectionMoving = (_selectionResizeMode == SelectionResizeMode.None)
                 && _selectionStartRect.Contains(position);
-            _view.SelectionToolbar.IsVisible = false;
-            UpdateSelectionCursor(position);
-            e.Pointer.Capture(_view.ViewerArea);
-            e.Handled = true;
+            CaptureSelectionPointer(position, e);
             return;
         }
 
@@ -468,6 +470,14 @@ public sealed partial class ImageViewerWindow : SukiWindow
     private void StartPointerSelection(Point position, PointerPressedEventArgs e)
     {
         StartSelection(position);
+        e.Pointer.Capture(_view.ViewerArea);
+        e.Handled = true;
+    }
+
+    private void CaptureSelectionPointer(Point position, PointerPressedEventArgs e)
+    {
+        _view.SelectionToolbar.IsVisible = false;
+        UpdateSelectionCursor(position);
         e.Pointer.Capture(_view.ViewerArea);
         e.Handled = true;
     }
