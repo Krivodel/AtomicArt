@@ -4,18 +4,14 @@ public static class TestDirectories
 {
     public static string GetAssemblyTestDirectoryPath(Type testType, string testName)
     {
-        ArgumentNullException.ThrowIfNull(testType);
-        ArgumentException.ThrowIfNullOrWhiteSpace(testName);
+        ValidateAssemblyTestPathArguments(testType, testName);
 
-        return Path.Combine(
-            Path.GetTempPath(),
-            GetAssemblyName(testType),
-            testName);
+        return Path.Combine(GetAssemblyDirectoryPath(testType), testName);
     }
 
     public static string GetUniqueDirectoryPath(Type testType)
     {
-        ArgumentNullException.ThrowIfNull(testType);
+        ValidateTestType(testType);
 
         return Path.Combine(
             Path.GetTempPath(),
@@ -25,12 +21,10 @@ public static class TestDirectories
 
     public static string GetUniqueDirectoryPath(Type testType, string testName)
     {
-        ArgumentNullException.ThrowIfNull(testType);
-        ArgumentException.ThrowIfNullOrWhiteSpace(testName);
+        ValidateAssemblyTestPathArguments(testType, testName);
 
         return Path.Combine(
-            Path.GetTempPath(),
-            GetAssemblyName(testType),
+            GetAssemblyDirectoryPath(testType),
             testType.Name,
             testName,
             Guid.NewGuid().ToString("N"));
@@ -38,11 +32,10 @@ public static class TestDirectories
 
     public static string GetUniqueAssemblyDirectoryPath(Type testType)
     {
-        ArgumentNullException.ThrowIfNull(testType);
+        ValidateTestType(testType);
 
         return Path.Combine(
-            Path.GetTempPath(),
-            GetAssemblyName(testType),
+            GetAssemblyDirectoryPath(testType),
             testType.Name,
             Guid.NewGuid().ToString("N"));
     }
@@ -57,9 +50,27 @@ public static class TestDirectories
         }
     }
 
+    private static string GetAssemblyDirectoryPath(Type testType)
+    {
+        return Path.Combine(
+            Path.GetTempPath(),
+            GetAssemblyName(testType));
+    }
+
     private static string GetAssemblyName(Type testType)
     {
         return testType.Assembly.GetName().Name
             ?? throw new InvalidOperationException("Test assembly name is missing.");
+    }
+
+    private static void ValidateAssemblyTestPathArguments(Type testType, string testName)
+    {
+        ValidateTestType(testType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(testName);
+    }
+
+    private static void ValidateTestType(Type testType)
+    {
+        ArgumentNullException.ThrowIfNull(testType);
     }
 }
