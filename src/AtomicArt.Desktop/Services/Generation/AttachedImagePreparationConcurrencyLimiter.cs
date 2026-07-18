@@ -2,19 +2,12 @@ using AtomicArt.Desktop.Services.Concurrency;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
-public sealed class AttachedImagePreparationConcurrencyLimiter
+public sealed class AttachedImagePreparationConcurrencyLimiter : SemaphoreConcurrencyLimiter
 {
     public static int MaximumConcurrency => Environment.ProcessorCount;
 
-    private readonly SemaphoreConcurrencyGate _gate = new(MaximumConcurrency);
-
-    public Task WaitAsync(CancellationToken ct)
+    public AttachedImagePreparationConcurrencyLimiter()
+        : base(MaximumConcurrency)
     {
-        return _gate.WaitAsync(ct);
-    }
-
-    public void Release()
-    {
-        _gate.Release();
     }
 }

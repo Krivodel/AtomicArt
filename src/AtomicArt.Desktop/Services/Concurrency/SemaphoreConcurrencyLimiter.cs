@@ -1,10 +1,10 @@
 namespace AtomicArt.Desktop.Services.Concurrency;
 
-internal sealed class SemaphoreConcurrencyGate
+public abstract class SemaphoreConcurrencyLimiter
 {
     private readonly SemaphoreSlim _semaphore;
 
-    public SemaphoreConcurrencyGate(int maximumConcurrency)
+    protected SemaphoreConcurrencyLimiter(int maximumConcurrency)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumConcurrency, 1);
 
