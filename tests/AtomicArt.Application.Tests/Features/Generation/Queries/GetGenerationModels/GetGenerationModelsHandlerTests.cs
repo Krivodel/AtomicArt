@@ -5,6 +5,7 @@ using Xunit;
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Queries.GetGenerationModels;
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Application.Tests.Features.Generation.Queries.GetGenerationModels;
 
@@ -14,36 +15,7 @@ public sealed class GetGenerationModelsHandlerTests
     public async Task Handle_WithRegistryModels_ReturnsCatalog()
     {
         IReadOnlyList<GenerationModelMetadataDto> models =
-        [
-            new(
-                "test-model",
-                "Test Model",
-                "google",
-                "provider-test-model",
-                GenerationPanelIds.NanoBanana,
-                1000,
-                500,
-                100,
-                ["Auto"],
-                ["1k"],
-                [1],
-                new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),
-                new GenerationModelAttachmentMetadataDto(
-                    1,
-                    1024,
-                    2048,
-                    ["image/png"]),
-                new GenerationModelPricingMetadataDto(
-                    "USD",
-                    0.25m,
-                    1.50m,
-                    30.00m,
-                    1120,
-                    new Dictionary<string, int>
-                    {
-                        ["1k"] = 1120
-                    }))
-        ];
+            GenerationModelCatalogJsonTestFactory.CreateCatalog().Models;
         Mock<IImageModelRegistry> registry = new();
         registry
             .Setup(currentRegistry => currentRegistry.GetModels())
