@@ -130,17 +130,7 @@ public sealed class GoogleInteractionsResponseParserTests
     [InlineData("{}")]
     public void Parse_WithPresentNonArrayModalityBreakdown_ThrowsProviderException(string breakdownJson)
     {
-        GoogleInteractionsResponseParser parser = new();
-        string responseJson =
-            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
-            $"""
-            ,
-                "input_tokens_by_modality": {breakdownJson}
-            """);
-
-        Action act = () => parser.Parse(responseJson);
-
-        AssertInvalidUsage(act);
+        AssertInvalidUsageProperty("input_tokens_by_modality", breakdownJson);
     }
 
     [Theory]
@@ -151,17 +141,7 @@ public sealed class GoogleInteractionsResponseParserTests
     [InlineData("""[{ "modality": "text", "tokens": -1 }]""")]
     public void Parse_WithMalformedInputModalityBreakdownItem_ThrowsProviderException(string breakdownJson)
     {
-        GoogleInteractionsResponseParser parser = new();
-        string responseJson =
-            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
-            $"""
-            ,
-                "input_tokens_by_modality": {breakdownJson}
-            """);
-
-        Action act = () => parser.Parse(responseJson);
-
-        AssertInvalidUsage(act);
+        AssertInvalidUsageProperty("input_tokens_by_modality", breakdownJson);
     }
 
     [Theory]
@@ -172,17 +152,7 @@ public sealed class GoogleInteractionsResponseParserTests
     [InlineData("""[{ "modality": "text", "tokens": -1 }]""")]
     public void Parse_WithMalformedOutputModalityBreakdownItem_ThrowsProviderException(string breakdownJson)
     {
-        GoogleInteractionsResponseParser parser = new();
-        string responseJson =
-            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
-            $"""
-            ,
-                "output_tokens_by_modality": {breakdownJson}
-            """);
-
-        Action act = () => parser.Parse(responseJson);
-
-        AssertInvalidUsage(act);
+        AssertInvalidUsageProperty("output_tokens_by_modality", breakdownJson);
     }
 
     [Theory]
@@ -196,17 +166,7 @@ public sealed class GoogleInteractionsResponseParserTests
         string propertyName,
         string valueJson)
     {
-        GoogleInteractionsResponseParser parser = new();
-        string responseJson =
-            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
-            $"""
-            ,
-                "{propertyName}": {valueJson}
-            """);
-
-        Action act = () => parser.Parse(responseJson);
-
-        AssertInvalidUsage(act);
+        AssertInvalidUsageProperty(propertyName, valueJson);
     }
 
     [Fact]
@@ -361,6 +321,23 @@ public sealed class GoogleInteractionsResponseParserTests
 
         act.Should().Throw<InvalidOperationException>()
             .Which.Message.Should().NotContain("iVBORw0KGgo=");
+    }
+
+    private static void AssertInvalidUsageProperty(
+        string propertyName,
+        string valueJson)
+    {
+        GoogleInteractionsResponseParser parser = new();
+        string responseJson =
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
+            $"""
+            ,
+                "{propertyName}": {valueJson}
+            """);
+
+        Action act = () => parser.Parse(responseJson);
+
+        AssertInvalidUsage(act);
     }
 
     private static void AssertInvalidUsage(Action act)
