@@ -21,21 +21,10 @@ public sealed class DependencyInjectionTests
         services.AddDomainServices();
         services.AddApplicationServices();
 
-        services.Should().Contain(descriptor =>
-            descriptor.ServiceType == typeof(IImageModelRegistry)
-            && descriptor.ImplementationType == typeof(ImageModelRegistry)
-            && descriptor.Lifetime == ServiceLifetime.Singleton);
-        services.Should().Contain(descriptor =>
-            descriptor.ServiceType == typeof(IAttachedImageFormatRegistry)
-            && descriptor.ImplementationType == typeof(AttachedImageFormatRegistry)
-            && descriptor.Lifetime == ServiceLifetime.Singleton);
+        AssertGenerationApplicationServicesRegistered(services);
         services.Should().Contain(descriptor =>
             descriptor.ServiceType == typeof(IAttachedImageFormat)
             && descriptor.ImplementationInstance is AttachedImageFormat
-            && descriptor.Lifetime == ServiceLifetime.Singleton);
-        services.Should().Contain(descriptor =>
-            descriptor.ServiceType == typeof(IImageModelDefinitionFactory)
-            && descriptor.ImplementationType == typeof(MetadataImageModelDefinitionFactory)
             && descriptor.Lifetime == ServiceLifetime.Singleton);
         services.Should().Contain(descriptor =>
             descriptor.ServiceType.Namespace == "AtomicArt.Domain.Generation");
@@ -48,18 +37,7 @@ public sealed class DependencyInjectionTests
 
         services.AddApplicationServices();
 
-        services.Should().Contain(descriptor =>
-            descriptor.ServiceType == typeof(IImageModelRegistry)
-            && descriptor.ImplementationType == typeof(ImageModelRegistry)
-            && descriptor.Lifetime == ServiceLifetime.Singleton);
-        services.Should().Contain(descriptor =>
-            descriptor.ServiceType == typeof(IAttachedImageFormatRegistry)
-            && descriptor.ImplementationType == typeof(AttachedImageFormatRegistry)
-            && descriptor.Lifetime == ServiceLifetime.Singleton);
-        services.Should().Contain(descriptor =>
-            descriptor.ServiceType == typeof(IImageModelDefinitionFactory)
-            && descriptor.ImplementationType == typeof(MetadataImageModelDefinitionFactory)
-            && descriptor.Lifetime == ServiceLifetime.Singleton);
+        AssertGenerationApplicationServicesRegistered(services);
         services.Should().NotContain(descriptor =>
             descriptor.ServiceType.Namespace == "AtomicArt.Domain.Generation");
     }
@@ -76,5 +54,24 @@ public sealed class DependencyInjectionTests
         typeNames.Should().NotContain("GetGenerationQuoteQuery");
         typeNames.Should().NotContain("GetGenerationQuoteHandler");
         typeNames.Should().NotContain("GetGenerationQuoteValidator");
+    }
+
+    private static void AssertGenerationApplicationServicesRegistered(
+        IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(IImageModelRegistry)
+            && descriptor.ImplementationType == typeof(ImageModelRegistry)
+            && descriptor.Lifetime == ServiceLifetime.Singleton);
+        services.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(IAttachedImageFormatRegistry)
+            && descriptor.ImplementationType == typeof(AttachedImageFormatRegistry)
+            && descriptor.Lifetime == ServiceLifetime.Singleton);
+        services.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(IImageModelDefinitionFactory)
+            && descriptor.ImplementationType == typeof(MetadataImageModelDefinitionFactory)
+            && descriptor.Lifetime == ServiceLifetime.Singleton);
     }
 }
