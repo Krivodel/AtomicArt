@@ -33,9 +33,7 @@ internal sealed class WindowsFileActions : PlatformFileActions
 
         try
         {
-            while (handlers.Next(1, out IWindowsAssocHandler? handler, out int fetched) == 0
-                && (fetched == 1)
-                && (handler is not null))
+            while (GetNextHandlerOrDefault(handlers) is IWindowsAssocHandler handler)
             {
                 try
                 {
@@ -141,6 +139,21 @@ internal sealed class WindowsFileActions : PlatformFileActions
         return handlers;
     }
 
+    private static IWindowsAssocHandler? GetNextHandlerOrDefault(IWindowsEnumAssocHandlers handlers)
+    {
+        int result = handlers.Next(
+            1,
+            out IWindowsAssocHandler? handler,
+            out int fetched);
+
+        if ((result != 0) || (fetched != 1))
+        {
+            return null;
+        }
+
+        return handler;
+    }
+
     private static IWindowsAssocHandler? FindHandler(string extension, string identifier)
     {
         if (string.IsNullOrWhiteSpace(extension))
@@ -154,9 +167,7 @@ internal sealed class WindowsFileActions : PlatformFileActions
 
         try
         {
-            while (handlers.Next(1, out IWindowsAssocHandler? handler, out int fetched) == 0
-                && (fetched == 1)
-                && (handler is not null))
+            while (GetNextHandlerOrDefault(handlers) is IWindowsAssocHandler handler)
             {
                 string handlerIdentifier = GetHandlerName(handler);
 
