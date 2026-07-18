@@ -15,7 +15,6 @@ public static class ApiModelMetadataTestCatalog
     public static string NanoBanana2ModelId => LoadNanoBanana2Metadata().Id;
     public static string NanoBananaProModelId => LoadNanoBananaProMetadata().Id;
     public static string NanoBanana2DisplayName => LoadNanoBanana2Metadata().DisplayName;
-    public static string NanoBanana2Resolution => LoadNanoBanana2Metadata().Resolutions.First();
 
     public static GenerationModelCatalogDto LoadCatalog()
     {

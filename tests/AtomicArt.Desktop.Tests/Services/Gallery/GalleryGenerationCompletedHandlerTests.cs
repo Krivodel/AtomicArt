@@ -260,7 +260,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
             ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             "Prompt",
             GenerationAspectRatios.Auto,
-            ApiModelMetadataTestCatalog.NanoBanana2Resolution,
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             1,
             0,
             CreatedAtUtc);
@@ -283,7 +283,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
             ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             "Prompt",
             GenerationAspectRatios.Auto,
-            ApiModelMetadataTestCatalog.NanoBanana2Resolution,
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             CreatedAtUtc,
             GenerationItemStatus.Generated,
             imagePath,

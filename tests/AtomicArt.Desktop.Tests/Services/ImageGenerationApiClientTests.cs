@@ -16,7 +16,6 @@ namespace AtomicArt.Desktop.Tests.Services;
 
 public sealed class ImageGenerationApiClientTests
 {
-    private const string ModelId = "nano-banana-2";
     private const string ImageBase64Data = "AQIDBA==";
     private static readonly Guid BatchId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid ItemId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -174,10 +173,10 @@ public sealed class ImageGenerationApiClientTests
     private static ImageGenerationRequestDto CreateRequest()
     {
         return new ImageGenerationRequestDto(
-            ModelId,
+            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
             "Create a studio product shot",
             "16:9",
-            "1024x1024",
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             1d,
             1,
             [
@@ -193,11 +192,11 @@ public sealed class ImageGenerationApiClientTests
           "items": [
             {
               "id": "{{ItemId}}",
-              "modelId": "{{ModelId}}",
-              "modelDisplayName": "Nano Banana 2",
+              "modelId": "{{ApiModelMetadataTestCatalog.NanoBanana2ModelId}}",
+              "modelDisplayName": "{{ApiModelMetadataTestCatalog.NanoBanana2DisplayName}}",
               "prompt": "Create a studio product shot",
               "aspectRatio": "16:9",
-              "resolution": "1024x1024",
+              "resolution": "{{TestGenerationOutputMetadata.GeneratedImageResolution}}",
               "createdAtUtc": "{{CreatedAtUtc:O}}",
               "status": "Generated",
               "imagePath": null,

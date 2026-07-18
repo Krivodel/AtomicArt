@@ -341,7 +341,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             Prompt = "Saved prompt",
             AspectRatio = GenerationAspectRatios.Auto,
-            Resolution = "1024x1024",
+            Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
             CreatedAtUtc = DateTime.UtcNow,
             Status = GenerationItemStatus.Generated,
             ImagePath = "image.png"
@@ -361,7 +361,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
                 Prompt = string.Concat("Saved prompt ", i.ToString(CultureInfo.InvariantCulture)),
                 AspectRatio = GenerationAspectRatios.Auto,
-                Resolution = "1024x1024",
+                Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
                 CreatedAtUtc = DateTime.UtcNow.AddSeconds(-i),
                 Status = GenerationItemStatus.Generated,
                 ImagePath = "image.png"

@@ -12,9 +12,6 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
 public sealed class GenerationMetadataViewModelTests
 {
-    private const string NanoBanana2ModelId = "nano-banana-2";
-    private const string NanoBanana2DisplayName = "Nano Banana 2";
-
     private static readonly Guid ItemId = Guid.Parse("77777777-7777-7777-7777-777777777777");
     private static readonly DateTime CreatedAtUtc = new(2026, 6, 30, 10, 0, 0, DateTimeKind.Utc);
 
@@ -67,11 +64,11 @@ public sealed class GenerationMetadataViewModelTests
     {
         return new GenerationItemDto(
             ItemId,
-            NanoBanana2ModelId,
-            NanoBanana2DisplayName,
+            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
+            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             "Prompt",
             "1:1",
-            "1K",
+            ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().Resolutions[1],
             CreatedAtUtc,
             GenerationItemStatus.Generated,
             null,

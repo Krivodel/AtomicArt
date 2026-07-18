@@ -112,7 +112,7 @@ internal static class GalleryViewModelTestFactory
             ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             "Prompt",
             GenerationAspectRatios.Auto,
-            ApiModelMetadataTestCatalog.NanoBanana2Resolution,
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             generationCount,
             0,
             DateTime.UtcNow);
@@ -175,7 +175,7 @@ internal static class GalleryViewModelTestFactory
             ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             prompt,
             GenerationAspectRatios.Auto,
-            ApiModelMetadataTestCatalog.NanoBanana2Resolution,
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             DateTime.UtcNow,
             status,
             imagePath,

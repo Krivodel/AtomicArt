@@ -32,7 +32,7 @@ public sealed class FakeImageGenerationContentProviderTests
         Convert.FromBase64String(firstContent.Base64Data).Should().Equal(CreatePlaceholderContent());
         Convert.FromBase64String(secondContent.Base64Data).Should().Equal(CreatePlaceholderContent());
         placeholderImageProvider.ItemIndexes.Should().Equal([0, 1]);
-        request.ModelId.Should().Be("nano-banana-2");
+        request.ModelId.Should().Be(ApiModelMetadataTestCatalog.NanoBanana2ModelId);
         request.AttachedImages.Should().ContainSingle();
         request.AttachedImages.Single().Content.Should().Equal(attachedContent);
     }
@@ -90,7 +90,7 @@ public sealed class FakeImageGenerationContentProviderTests
             attachedContent);
 
         return new ImageGenerationRequestDto(
-            "nano-banana-2",
+            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
             "Prompt",
             "Авто",
             "1k",

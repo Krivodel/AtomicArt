@@ -4,6 +4,7 @@ using Xunit;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Infrastructure.Tests.Generation;
 
@@ -17,7 +18,10 @@ public sealed class FakeImageGenerationOutputPlannerTests
         FakeImageGenerationOutputPlanner planner = new();
         ImageGenerationRequestDto request = CreateRequest(generationCount: 3);
 
-        ImageGenerationOutputPlan plan = planner.CreatePlan(request, BatchId, "Nano Banana 2");
+        ImageGenerationOutputPlan plan = planner.CreatePlan(
+            request,
+            BatchId,
+            ApiModelMetadataTestCatalog.NanoBanana2DisplayName);
 
         plan.Items.Should().HaveCount(3);
     }
@@ -28,7 +32,10 @@ public sealed class FakeImageGenerationOutputPlannerTests
         FakeImageGenerationOutputPlanner planner = new();
         ImageGenerationRequestDto request = CreateRequest();
 
-        ImageGenerationOutputPlan plan = planner.CreatePlan(request, BatchId, "Nano Banana 2");
+        ImageGenerationOutputPlan plan = planner.CreatePlan(
+            request,
+            BatchId,
+            ApiModelMetadataTestCatalog.NanoBanana2DisplayName);
 
         ImageGenerationOutputItemPlan item = plan.Items.Single();
         item.Id.Should().NotBe(Guid.Empty);
@@ -38,7 +45,7 @@ public sealed class FakeImageGenerationOutputPlannerTests
     private static ImageGenerationRequestDto CreateRequest(int generationCount = 1)
     {
         return new ImageGenerationRequestDto(
-            "nano-banana-2",
+            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
             "Prompt",
             "Авто",
             "1k",

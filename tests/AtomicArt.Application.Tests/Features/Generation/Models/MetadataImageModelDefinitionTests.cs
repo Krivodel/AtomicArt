@@ -24,7 +24,7 @@ public sealed class MetadataImageModelDefinitionTests
 
         string displayName = definition.DisplayName;
 
-        displayName.Should().Be("Nano Banana 2");
+        displayName.Should().Be(ApiModelMetadataTestCatalog.NanoBanana2DisplayName);
     }
 
     [Fact]

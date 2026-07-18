@@ -119,7 +119,7 @@ public sealed class GalleryViewModelTests
                 ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
                 "Deleted",
                 GenerationAspectRatios.Auto,
-                ApiModelMetadataTestCatalog.NanoBanana2Resolution,
+                TestGenerationOutputMetadata.GeneratedImageResolution,
                 DateTime.UtcNow,
                 GenerationItemStatus.Generated,
                 imagePath,
@@ -597,7 +597,7 @@ public sealed class GalleryViewModelTests
             ApiModelMetadataTestCatalog.NanoBanana2ModelId,
             "Prompt",
             "Авто",
-            ApiModelMetadataTestCatalog.NanoBanana2Resolution,
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().Temperature.Default,
             1,
             []);
@@ -626,7 +626,7 @@ public sealed class GalleryViewModelTests
             ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             Prompt = "Saved prompt",
             AspectRatio = GenerationAspectRatios.Auto,
-            Resolution = ApiModelMetadataTestCatalog.NanoBanana2Resolution,
+            Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
             CreatedAtUtc = DateTime.UtcNow,
             Status = GenerationItemStatus.Generated,
             ImagePath = "image.png"

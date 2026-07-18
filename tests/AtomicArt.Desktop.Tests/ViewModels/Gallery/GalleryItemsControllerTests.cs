@@ -93,7 +93,7 @@ public sealed class GalleryItemsControllerTests
             ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             Prompt = "Prompt",
             AspectRatio = GenerationAspectRatios.Auto,
-            Resolution = ApiModelMetadataTestCatalog.NanoBanana2Resolution,
+            Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
             CreatedAtUtc = CreatedAtUtc,
             Status = GenerationItemStatus.Generated,
             ImagePath = imagePath,

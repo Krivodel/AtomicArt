@@ -150,7 +150,7 @@ public abstract class AnimatedGalleryControlTestBase
             "Test Model",
             "Prompt",
             "1:1",
-            "1024x1024",
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             CreatedAtUtc,
             GenerationItemStatus.Generated,
             null);

@@ -181,7 +181,7 @@ public sealed class AppStateBootstrapperTests
                         ModelDisplayName = "Model",
                         Prompt = "prompt",
                         AspectRatio = "1:1",
-                        Resolution = "1024x1024",
+                        Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
                         CreatedAtUtc = new DateTime(2026, 7, 6, 8, 0, 0, DateTimeKind.Utc),
                         Status = GenerationItemStatus.Generated
                     }

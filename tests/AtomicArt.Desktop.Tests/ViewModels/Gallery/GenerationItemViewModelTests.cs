@@ -10,9 +10,6 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
 public sealed class GenerationItemViewModelTests
 {
-    private const string NanoBanana2ModelId = "nano-banana-2";
-    private const string NanoBanana2DisplayName = "Nano Banana 2";
-
     private static readonly Guid ItemId = Guid.Parse("77777777-7777-7777-7777-777777777777");
     private static readonly DateTime CreatedAtUtc = new(2026, 6, 30, 10, 0, 0, DateTimeKind.Utc);
 
@@ -78,11 +75,11 @@ public sealed class GenerationItemViewModelTests
         DateTime completedAtUtc = CreatedAtUtc.AddSeconds(30);
         GenerationItemDto item = new(
             ItemId,
-            NanoBanana2ModelId,
-            NanoBanana2DisplayName,
+            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
+            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             "Prompt",
             "Авто",
-            "1024x1024",
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             CreatedAtUtc,
             GenerationItemStatus.Generated,
             null,
@@ -145,11 +142,11 @@ public sealed class GenerationItemViewModelTests
     {
         GenerationItemDto item = new(
             ItemId,
-            NanoBanana2ModelId,
-            NanoBanana2DisplayName,
+            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
+            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             "Prompt",
             "Авто",
-            "1024x1024",
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             createdAtUtc,
             status,
             imagePath);

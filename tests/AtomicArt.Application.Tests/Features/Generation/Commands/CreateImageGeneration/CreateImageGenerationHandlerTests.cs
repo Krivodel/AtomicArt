@@ -55,7 +55,7 @@ public sealed class CreateImageGenerationHandlerTests
             planner => planner.CreatePlan(
                 It.IsAny<ImageGenerationRequestDto>(),
                 plannedBatchId,
-                "Nano Banana 2"),
+                ApiModelMetadataTestCatalog.NanoBanana2DisplayName),
             Times.Once);
         contentProvider.Verify(
             provider => provider.GetContentAsync(

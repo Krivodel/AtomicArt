@@ -19,7 +19,7 @@ internal sealed class SuccessfulImageGenerationApiClient : IImageGenerationApiCl
             .Select(index => new GenerationItemDto(
                 Guid.NewGuid(),
                 request.ModelId,
-                "Nano Banana 2",
+                ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
                 request.Prompt,
                 request.AspectRatio,
                 request.Resolution,

@@ -12,11 +12,8 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 
 public sealed class GenerationCardControlTests
 {
-    private const string NanoBanana2ModelId = "nano-banana-2";
-    private const string NanoBanana2DisplayName = "Nano Banana 2";
     private const string Prompt = "Prompt";
     private const string AspectRatio = "Авто";
-    private const string Resolution = "1024x1024";
 
     private static readonly Guid ItemId = Guid.Parse("99999999-9999-9999-9999-999999999999");
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 8, 12, 0, 0, DateTimeKind.Utc);
@@ -202,11 +199,11 @@ public sealed class GenerationCardControlTests
     {
         GenerationItemDto item = new(
             ItemId,
-            NanoBanana2ModelId,
-            NanoBanana2DisplayName,
+            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
+            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             Prompt,
             AspectRatio,
-            Resolution,
+            TestGenerationOutputMetadata.GeneratedImageResolution,
             CreatedAtUtc,
             GenerationItemStatus.Generated,
             imagePath);

@@ -84,7 +84,7 @@ internal sealed class DelayedImageGenerationApiClient : IImageGenerationApiClien
             new(
                 Guid.NewGuid(),
                 request.ModelId,
-                "Nano Banana 2",
+                ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
                 request.Prompt,
                 request.AspectRatio,
                 request.Resolution,
