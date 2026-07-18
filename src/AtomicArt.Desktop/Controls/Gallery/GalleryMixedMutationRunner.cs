@@ -79,10 +79,7 @@ internal sealed class GalleryMixedMutationRunner : GalleryAnimatedOperationRunne
         [
             MotionAnimator.AnimateLayoutShiftAsync(context, first, newIds)
         ];
-        foreach ((object item, Rect rect) in removedItems)
-        {
-            animations.Add(MotionAnimator.AnimateRemovedItemAsync(context, item, rect, deleteOverlays));
-        }
+        StartRemovedItemAnimations(context, removedItems, deleteOverlays, animations.Add);
 
         return animations;
     }

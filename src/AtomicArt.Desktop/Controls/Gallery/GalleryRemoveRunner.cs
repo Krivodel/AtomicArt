@@ -148,7 +148,8 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
             context,
             first,
             runningMoveControls);
-        List<Task> removeAnimations = StartRemoveAnimations(context, removedItems, deleteOverlays);
+        List<Task> removeAnimations = [];
+        StartRemovedItemAnimations(context, removedItems, deleteOverlays, removeAnimations.Add);
         ObserveAnimations(removeAnimations.Prepend(moveAnimation));
     }
 
@@ -182,20 +183,6 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
         Logger.LogError(exception, "Failed to remove gallery items.");
         CancelAnimations(context, runningMoveControls, deleteOverlays);
         GalleryOperationCompletion.Fail(operations, exception);
-    }
-
-    private List<Task> StartRemoveAnimations(
-        GalleryOperationCoordinator context,
-        List<(object Item, Rect Rect)> removedItems,
-        GalleryAnimationTracker deleteOverlays)
-    {
-        List<Task> animations = [];
-        foreach ((object item, Rect rect) in removedItems)
-        {
-            animations.Add(MotionAnimator.AnimateRemovedItemAsync(context, item, rect, deleteOverlays));
-        }
-
-        return animations;
     }
 
     private void ObserveAnimations(IEnumerable<Task> animations)
