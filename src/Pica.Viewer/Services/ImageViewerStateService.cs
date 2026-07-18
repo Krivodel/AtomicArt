@@ -7,6 +7,7 @@ namespace Pica.Viewer.Services;
 
 public sealed class ImageViewerStateService : IImageViewerStateService
 {
+    private const int StateFileBufferSize = 4096;
     private const string StateDirectoryName = "State";
     private const string StateFileName = "image-viewer.json";
 
@@ -60,7 +61,7 @@ public sealed class ImageViewerStateService : IImageViewerStateService
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read,
-                4096,
+                StateFileBufferSize,
                 FileOptions.Asynchronous);
             ImageViewerState? state = await JsonSerializer
                 .DeserializeAsync<ImageViewerState>(stream, SerializerOptions, ct)
@@ -103,7 +104,7 @@ public sealed class ImageViewerStateService : IImageViewerStateService
                 FileMode.Create,
                 FileAccess.Write,
                 FileShare.None,
-                4096,
+                StateFileBufferSize,
                 FileOptions.Asynchronous);
             await JsonSerializer
                 .SerializeAsync(stream, normalizedState, SerializerOptions, ct)
@@ -121,40 +122,34 @@ public sealed class ImageViewerStateService : IImageViewerStateService
 
     private static ImageViewerState Normalize(ImageViewerState? state)
     {
-        bool rememberWindowPlacement = state?.RememberWindowPlacement
-            ?? ViewerSettingsDefaults.RememberWindowPlacement;
-        bool smoothPanningEnabled = state?.IsSmoothPanningEnabled
-            ?? ViewerSettingsDefaults.SmoothPanningEnabled;
+        ImageViewerState sourceState = state ?? new ImageViewerState();
+        bool rememberWindowPlacement = sourceState.RememberWindowPlacement;
+        bool smoothPanningEnabled = sourceState.IsSmoothPanningEnabled;
 
         return new ImageViewerState
         {
-            IsFilteringEnabled = state?.IsFilteringEnabled
-                ?? ViewerSettingsDefaults.FilteringEnabled,
+            IsFilteringEnabled = sourceState.IsFilteringEnabled,
             MovementSpeed = ViewerSettingsDefaults.NormalizeSpeed(
-                state?.MovementSpeed ?? ViewerSettingsDefaults.MovementSpeed,
+                sourceState.MovementSpeed,
                 ViewerSettingsDefaults.MovementSpeed),
             ZoomSpeed = ViewerSettingsDefaults.NormalizeSpeed(
-                state?.ZoomSpeed ?? ViewerSettingsDefaults.ZoomSpeed,
+                sourceState.ZoomSpeed,
                 ViewerSettingsDefaults.ZoomSpeed),
-            ExpandOnDoubleClick = state?.ExpandOnDoubleClick
-                ?? ViewerSettingsDefaults.ExpandOnDoubleClick,
-            IsFastLoadingEnabled = state?.IsFastLoadingEnabled
-                ?? ViewerSettingsDefaults.FastLoadingEnabled,
-            AllowFreeZoomOut = state?.AllowFreeZoomOut
-                ?? ViewerSettingsDefaults.AllowFreeZoomOut,
+            ExpandOnDoubleClick = sourceState.ExpandOnDoubleClick,
+            IsFastLoadingEnabled = sourceState.IsFastLoadingEnabled,
+            AllowFreeZoomOut = sourceState.AllowFreeZoomOut,
             IsSmoothPanningEnabled = smoothPanningEnabled,
             IsPanningInertiaEnabled = smoothPanningEnabled
-                && (state?.IsPanningInertiaEnabled
-                    ?? ViewerSettingsDefaults.PanningInertiaEnabled),
+                && sourceState.IsPanningInertiaEnabled,
             ResizeBehavior = ViewerSettingsDefaults.NormalizeResizeBehavior(
-                state?.ResizeBehavior ?? ViewerSettingsDefaults.ResizeBehavior),
+                sourceState.ResizeBehavior),
             RememberWindowPlacement = rememberWindowPlacement,
             IsWindowed = rememberWindowPlacement
-                && (state?.IsWindowed ?? HasCompleteWindowPlacement(state)),
-            WindowX = rememberWindowPlacement ? state?.WindowX : null,
-            WindowY = rememberWindowPlacement ? state?.WindowY : null,
-            WindowWidth = rememberWindowPlacement ? NormalizeDimension(state?.WindowWidth) : null,
-            WindowHeight = rememberWindowPlacement ? NormalizeDimension(state?.WindowHeight) : null
+                && (sourceState.IsWindowed ?? HasCompleteWindowPlacement(sourceState)),
+            WindowX = rememberWindowPlacement ? sourceState.WindowX : null,
+            WindowY = rememberWindowPlacement ? sourceState.WindowY : null,
+            WindowWidth = rememberWindowPlacement ? NormalizeDimension(sourceState.WindowWidth) : null,
+            WindowHeight = rememberWindowPlacement ? NormalizeDimension(sourceState.WindowHeight) : null
         };
     }
 
@@ -165,9 +160,9 @@ public sealed class ImageViewerStateService : IImageViewerStateService
             : null;
     }
 
-    private static bool HasCompleteWindowPlacement(ImageViewerState? state)
+    private static bool HasCompleteWindowPlacement(ImageViewerState state)
     {
-        return state?.WindowX is not null
+        return state.WindowX is not null
             && state.WindowY is not null
             && state.WindowWidth is not null
             && state.WindowHeight is not null;
