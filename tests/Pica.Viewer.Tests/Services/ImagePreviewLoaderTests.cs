@@ -7,6 +7,7 @@ using Xunit;
 
 using AtomicArt.Tests.Avalonia;
 using Pica.Protocol;
+using Pica.Tests.Common;
 using Pica.Viewer.Services;
 
 namespace Pica.Viewer.Tests.Services;
@@ -28,10 +29,9 @@ public sealed class ImagePreviewLoaderTests
     {
         await DispatchAsync(async () =>
         {
-            string testDirectory = CreateCleanTestDirectory(nameof(
-                LoadAsync_WithProvidedPreview_UsesPreviewAndPreservesSourceDimensions));
-            string sourcePath = Path.Combine(testDirectory, "source.png");
-            string previewPath = Path.Combine(testDirectory, "provided.png");
+            using PicaTemporaryDirectory temporaryDirectory = new();
+            string sourcePath = Path.Combine(temporaryDirectory.DirectoryPath, "source.png");
+            string previewPath = Path.Combine(temporaryDirectory.DirectoryPath, "provided.png");
             CreatePng(sourcePath, 400, 200);
             CreatePng(previewPath, 32, 16);
             ImagePreviewLoader loader = new(NullLogger<ImagePreviewLoader>.Instance);
@@ -49,9 +49,8 @@ public sealed class ImagePreviewLoaderTests
     {
         await DispatchAsync(async () =>
         {
-            string testDirectory = CreateCleanTestDirectory(nameof(
-                LoadAsync_WithoutProvidedPreview_DecodesSmallPreviewWithoutCreatingFiles));
-            string sourcePath = Path.Combine(testDirectory, "source.png");
+            using PicaTemporaryDirectory temporaryDirectory = new();
+            string sourcePath = Path.Combine(temporaryDirectory.DirectoryPath, "source.png");
             CreatePng(sourcePath, 400, 200);
             ImagePreviewLoader loader = new(NullLogger<ImagePreviewLoader>.Instance);
             PicaImageItem item = new(ItemId, sourcePath, "source.png");
@@ -60,7 +59,12 @@ public sealed class ImagePreviewLoaderTests
 
             preview.SourcePixelSize.Should().Be(new PixelSize(400, 200));
             ImagePreviewLoader.PreviewDecodeWidth.Should().Be(128);
-            Directory.GetFiles(testDirectory).Should().ContainSingle().Which.Should().Be(sourcePath);
+            Directory.GetFiles(temporaryDirectory.DirectoryPath)
+                .Should()
+                .ContainSingle()
+                .Which
+                .Should()
+                .Be(sourcePath);
             preview.Bitmap.Dispose();
         });
     }
@@ -71,24 +75,6 @@ public sealed class ImagePreviewLoaderTests
             typeof(ImagePreviewLoaderTests),
             SessionLock,
             action);
-    }
-
-    private static string CreateCleanTestDirectory(string testName)
-    {
-        string testRoot = Path.Combine(
-            Path.GetTempPath(),
-            nameof(Pica),
-            nameof(ImagePreviewLoaderTests));
-        string testDirectory = Path.GetFullPath(Path.Combine(testRoot, testName));
-
-        if (Directory.Exists(testDirectory))
-        {
-            Directory.Delete(testDirectory, true);
-        }
-
-        Directory.CreateDirectory(testDirectory);
-
-        return testDirectory;
     }
 
     private static void CreatePng(string path, int width, int height)

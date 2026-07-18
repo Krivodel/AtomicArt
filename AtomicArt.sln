@@ -51,6 +51,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtomicArt.Tests.Common", "t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtomicArt.Avalonia.Tests.Common", "tests\AtomicArt.Avalonia.Tests.Common\AtomicArt.Avalonia.Tests.Common.csproj", "{165C299E-E3C7-4D34-9F75-949D11870ADE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pica.Tests.Common", "tests\Pica.Tests.Common\Pica.Tests.Common.csproj", "{EB730758-C587-45A3-8F34-54BE23DC053E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -325,6 +327,18 @@ Global
 		{165C299E-E3C7-4D34-9F75-949D11870ADE}.Release|x64.Build.0 = Release|Any CPU
 		{165C299E-E3C7-4D34-9F75-949D11870ADE}.Release|x86.ActiveCfg = Release|Any CPU
 		{165C299E-E3C7-4D34-9F75-949D11870ADE}.Release|x86.Build.0 = Release|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Debug|x64.Build.0 = Debug|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Debug|x86.Build.0 = Debug|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Release|x64.ActiveCfg = Release|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Release|x64.Build.0 = Release|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Release|x86.ActiveCfg = Release|Any CPU
+		{EB730758-C587-45A3-8F34-54BE23DC053E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -352,5 +366,6 @@ Global
 		{1834E1DA-D490-4BF1-AE46-D7BF9EE8F6CF} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{4D33FF4C-0B95-408A-B1EF-624A14287736} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{165C299E-E3C7-4D34-9F75-949D11870ADE} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{EB730758-C587-45A3-8F34-54BE23DC053E} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

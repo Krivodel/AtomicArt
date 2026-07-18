@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Xunit;
 
+using Pica.Tests.Common;
 using Pica.Viewer.Services;
 
 namespace Pica.Viewer.Tests.Services;
@@ -15,20 +16,14 @@ public sealed class WindowsShellDataObjectTests
             return;
         }
 
+        using PicaTemporaryDirectory temporaryDirectory = new();
         string filePath = Path.Combine(
-            Path.GetTempPath(),
-            $"Pica-shell-data-object-{Guid.NewGuid():N}.png");
+            temporaryDirectory.DirectoryPath,
+            "image.png");
         File.WriteAllBytes(filePath, new byte[] { 1, 2, 3, 4 });
 
-        try
-        {
-            using WindowsShellDataObject dataObject = WindowsShellDataObject.Create(filePath);
+        using WindowsShellDataObject dataObject = WindowsShellDataObject.Create(filePath);
 
-            dataObject.Pointer.Should().NotBe(nint.Zero);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        dataObject.Pointer.Should().NotBe(nint.Zero);
     }
 }

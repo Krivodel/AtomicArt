@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using FluentAssertions;
 using Xunit;
 
+using Pica.Tests.Common;
 using Pica.Viewer.Services;
 
 namespace Pica.Viewer.Tests.Services;
@@ -12,7 +13,7 @@ public sealed class ImageViewerStateServiceTests
     [Fact]
     public async Task SaveAsync_WithWindowPlacement_RoundTripsState()
     {
-        using PicaTemporaryDirectory temporaryDirectory = PicaTemporaryDirectory.Create();
+        using PicaTemporaryDirectory temporaryDirectory = new();
         string stateFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "image-viewer.json");
         ImageViewerState state = ImageViewerStateTestFactory.CreateRememberedPlacementState();
         ImageViewerStateService writer = CreateService(stateFilePath);
@@ -42,7 +43,7 @@ public sealed class ImageViewerStateServiceTests
     [Fact]
     public async Task SaveAsync_WhenWindowPlacementIsNotRemembered_ClearsPlacement()
     {
-        using PicaTemporaryDirectory temporaryDirectory = PicaTemporaryDirectory.Create();
+        using PicaTemporaryDirectory temporaryDirectory = new();
         string stateFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "image-viewer.json");
         ImageViewerState state = new()
         {
@@ -70,7 +71,7 @@ public sealed class ImageViewerStateServiceTests
     [Fact]
     public async Task LoadAsync_WithLegacyWindowPlacement_RestoresWindowedMode()
     {
-        using PicaTemporaryDirectory temporaryDirectory = PicaTemporaryDirectory.Create();
+        using PicaTemporaryDirectory temporaryDirectory = new();
         string stateFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "image-viewer.json");
         const string legacyStateJson = """
             {
@@ -97,7 +98,7 @@ public sealed class ImageViewerStateServiceTests
     [Fact]
     public async Task SaveAsync_WithInertiaWithoutSmoothPanning_DisablesInertia()
     {
-        using PicaTemporaryDirectory temporaryDirectory = PicaTemporaryDirectory.Create();
+        using PicaTemporaryDirectory temporaryDirectory = new();
         string stateFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "image-viewer.json");
         ImageViewerState state = new()
         {

@@ -5,6 +5,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Pica.Viewer\Pica.Viewer.csproj" />
     <ProjectReference Include="..\AtomicArt.Avalonia.Tests.Common\AtomicArt.Avalonia.Tests.Common.csproj" />
+    <ProjectReference Include="..\Pica.Tests.Common\Pica.Tests.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

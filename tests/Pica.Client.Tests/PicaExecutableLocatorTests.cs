@@ -2,7 +2,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using FluentAssertions;
 using Xunit;
+
 using Pica.Protocol;
+using Pica.Tests.Common;
 
 namespace Pica.Client.Tests;
 
@@ -11,9 +13,10 @@ public sealed class PicaExecutableLocatorTests
     [Fact]
     public void FindExecutablePath_WhenCandidateExists_ReturnsFullPath()
     {
-        string directoryPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        string executablePath = Path.Combine(directoryPath, PicaProtocolConstants.ExecutableName);
-        Directory.CreateDirectory(directoryPath);
+        using PicaTemporaryDirectory temporaryDirectory = new();
+        string executablePath = Path.Combine(
+            temporaryDirectory.DirectoryPath,
+            PicaProtocolConstants.ExecutableName);
         File.WriteAllBytes(executablePath, Array.Empty<byte>());
         MakeExecutableOnUnix(executablePath);
         FixedPicaExecutableSource source = new(executablePath);
@@ -21,16 +24,9 @@ public sealed class PicaExecutableLocatorTests
             new List<IPicaExecutableSource> { source },
             NullLogger<PicaExecutableLocator>.Instance);
 
-        try
-        {
-            string? result = locator.FindExecutablePath();
+        string? result = locator.FindExecutablePath();
 
-            result.Should().Be(Path.GetFullPath(executablePath));
-        }
-        finally
-        {
-            Directory.Delete(directoryPath, true);
-        }
+        result.Should().Be(Path.GetFullPath(executablePath));
     }
 
     [Fact]
