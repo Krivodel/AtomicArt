@@ -93,11 +93,7 @@ public sealed class SkiaAttachedImageCodec : IAttachedImageCodec
     {
         ct.ThrowIfCancellationRequested();
 
-        using SKPixmap pixmap = bitmap.PeekPixels();
-        using SKData? data = pixmap.Encode(options);
-        ct.ThrowIfCancellationRequested();
-
-        return data?.ToArray();
+        return EncodePixels(bitmap, pixmap => pixmap.Encode(options), ct);
     }
 
     private static byte[]? EncodeWebp(
@@ -109,19 +105,26 @@ public sealed class SkiaAttachedImageCodec : IAttachedImageCodec
         ct.ThrowIfCancellationRequested();
         SKWebpEncoderOptions options = new(compression, quality);
 
-        using SKPixmap pixmap = bitmap.PeekPixels();
-        using SKData? data = pixmap.Encode(options);
-        ct.ThrowIfCancellationRequested();
-
-        return data?.ToArray();
+        return EncodePixels(bitmap, pixmap => pixmap.Encode(options), ct);
     }
 
     private static byte[]? EncodeJpeg(SKBitmap bitmap, int quality, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
+        return EncodePixels(
+            bitmap,
+            pixmap => pixmap.Encode(new SKJpegEncoderOptions(quality)),
+            ct);
+    }
+
+    private static byte[]? EncodePixels(
+        SKBitmap bitmap,
+        Func<SKPixmap, SKData?> encoder,
+        CancellationToken ct)
+    {
         using SKPixmap pixmap = bitmap.PeekPixels();
-        using SKData? data = pixmap.Encode(new SKJpegEncoderOptions(quality));
+        using SKData? data = encoder(pixmap);
         ct.ThrowIfCancellationRequested();
 
         return data?.ToArray();
