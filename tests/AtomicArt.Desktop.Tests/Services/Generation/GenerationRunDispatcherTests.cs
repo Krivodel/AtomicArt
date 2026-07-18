@@ -9,13 +9,13 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
+using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
 public sealed class GenerationRunDispatcherTests
 {
     private const string ModelId = "test-model";
-    private const string ProviderCredential = "test-provider-key";
     private const int ConcurrentDisposeAttemptCount = 50;
     private static readonly DateTime RequestedAtUtc = new(2026, 7, 4, 12, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 4, 12, 0, 1, DateTimeKind.Utc);
@@ -65,7 +65,7 @@ public sealed class GenerationRunDispatcherTests
         apiClient.CapturedRequests.Should().ContainSingle(request =>
             ReferenceEquals(request, runRequest.Request));
         apiClient.CapturedProviderCredentials.Should().ContainSingle()
-            .Which.Should().Be(ProviderCredential);
+            .Which.Should().Be(TestGenerationCredentials.ProviderCredential);
 
         apiClient.Complete();
         await AsyncTestWaiter.WaitForConditionAsync(
@@ -413,7 +413,10 @@ public sealed class GenerationRunDispatcherTests
             request.AttachedImages.Count,
             RequestedAtUtc);
 
-        return new GenerationRunRequest(request, startSnapshot, ProviderCredential);
+        return new GenerationRunRequest(
+            request,
+            startSnapshot,
+            TestGenerationCredentials.ProviderCredential);
     }
 
     private static GenerationBatchDto CreateBatch(ImageGenerationRequestDto request)

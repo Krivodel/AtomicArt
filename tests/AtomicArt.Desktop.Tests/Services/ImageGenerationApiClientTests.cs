@@ -10,6 +10,7 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
+using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Desktop.Tests.Services;
 
@@ -17,7 +18,6 @@ public sealed class ImageGenerationApiClientTests
 {
     private const string ModelId = "nano-banana-2";
     private const string ImageBase64Data = "AQIDBA==";
-    private const string ProviderCredential = "test-provider-key";
     private static readonly Guid BatchId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid ItemId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 2, 10, 30, 0, DateTimeKind.Utc);
@@ -36,7 +36,7 @@ public sealed class ImageGenerationApiClientTests
 
         GenerationBatchDto batch = await apiClient.CreateGenerationAsync(
             request,
-            ProviderCredential,
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         handler.RequestMethod.Should().Be(HttpMethod.Post);
@@ -47,7 +47,7 @@ public sealed class ImageGenerationApiClientTests
             handler.RequestBody,
             JsonOptions);
         deserializedRequest.Should().BeEquivalentTo(request);
-        handler.ProviderCredential.Should().Be(ProviderCredential);
+        handler.ProviderCredential.Should().Be(TestGenerationCredentials.ProviderCredential);
         batch.BatchId.Should().Be(BatchId);
         GenerationItemDto item = batch.Items.Should().ContainSingle().Which;
         item.Id.Should().Be(ItemId);
@@ -75,10 +75,10 @@ public sealed class ImageGenerationApiClientTests
 
         await apiClient.CreateGenerationAsync(
             CreateRequest(),
-            ProviderCredential,
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
-        handler.ProviderCredential.Should().Be(ProviderCredential);
+        handler.ProviderCredential.Should().Be(TestGenerationCredentials.ProviderCredential);
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class ImageGenerationApiClientTests
 
         await apiClient.CreateGenerationAsync(
             CreateRequest(),
-            ProviderCredential,
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
         ApiBaseAddress.TryCreate(
             "https://second.atomicart.test/root/",
@@ -124,7 +124,7 @@ public sealed class ImageGenerationApiClientTests
 
         await apiClient.CreateGenerationAsync(
             CreateRequest(),
-            ProviderCredential,
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         handler.RequestUris.Should().Equal(
@@ -157,7 +157,7 @@ public sealed class ImageGenerationApiClientTests
 
         Func<Task> act = () => apiClient.CreateGenerationAsync(
             CreateRequest(),
-            ProviderCredential,
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         await act.Should().ThrowAsync<HttpRequestException>();
@@ -166,7 +166,7 @@ public sealed class ImageGenerationApiClientTests
             && message.Contains("ERR-GEN-010", StringComparison.Ordinal));
         logger.Messages.Should().OnlyContain(message =>
             !message.Contains(confidentialDetail, StringComparison.Ordinal)
-            && !message.Contains(ProviderCredential, StringComparison.Ordinal)
+            && !message.Contains(TestGenerationCredentials.ProviderCredential, StringComparison.Ordinal)
             && !message.Contains("Create a studio product shot", StringComparison.Ordinal));
     }
 

@@ -4,6 +4,7 @@ using Xunit;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Infrastructure.Tests.Generation;
 
@@ -108,7 +109,7 @@ public sealed class FakeImageGenerationContentProviderTests
             "test-provider-model",
             CreatePricing(),
             itemIndex,
-            "test-provider-key");
+            TestGenerationCredentials.ProviderCredential);
     }
 
     private static GenerationModelPricingMetadataDto CreatePricing()

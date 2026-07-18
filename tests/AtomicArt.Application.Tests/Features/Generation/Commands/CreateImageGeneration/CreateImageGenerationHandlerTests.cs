@@ -11,6 +11,7 @@ using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Application.Tests.Generation;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain.Generation;
+using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Application.Tests.Features.Generation.Commands.CreateImageGeneration;
 
@@ -142,14 +143,15 @@ public sealed class CreateImageGenerationHandlerTests
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
-        CreateImageGenerationCommand command = CreateCommand(providerCredential: "test-provider-key");
+        CreateImageGenerationCommand command = CreateCommand(
+            providerCredential: TestGenerationCredentials.ProviderCredential);
 
         Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         ImageGenerationContentProviderContext context = capturedContext
             ?? throw new InvalidOperationException("Provider context is missing.");
-        context.ProviderCredential.Should().Be("test-provider-key");
+        context.ProviderCredential.Should().Be(TestGenerationCredentials.ProviderCredential);
         context.Provider.Should().Be(GenerationProviderIds.Google);
         context.ProviderModelId.Should().Be(ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().ProviderModelId);
         context.ItemIndex.Should().Be(0);

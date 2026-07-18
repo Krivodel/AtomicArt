@@ -48,7 +48,9 @@ public sealed class GenerationsControllerTests
     {
         GenerationBatchDto batch = CreateBatchWithContent();
         Mock<IMediator> mediator = CreateMediator(Result<GenerationBatchDto>.Success(batch));
-        GenerationsController controller = CreateController(mediator.Object, "test-provider-key");
+        GenerationsController controller = CreateController(
+            mediator.Object,
+            TestGenerationCredentials.ProviderCredential);
         ImageGenerationRequestDto request = CreateRequest();
 
         IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
@@ -68,7 +70,7 @@ public sealed class GenerationsControllerTests
                     && command.Request.Resolution == request.Resolution
                     && command.Request.GenerationCount == request.GenerationCount
                     && ReferenceEquals(command.Request.AttachedImages, request.AttachedImages)
-                    && command.ProviderCredential == "test-provider-key"),
+                    && command.ProviderCredential == TestGenerationCredentials.ProviderCredential),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -80,7 +82,7 @@ public sealed class GenerationsControllerTests
         Mock<IMediator> mediator = CreateMediator(Result<GenerationBatchDto>.Success(batch));
         GenerationsController controller = CreateController(
             mediator.Object,
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             isHttps: true,
             remoteIpAddress: IPAddress.Parse("203.0.113.10"));
         ImageGenerationRequestDto request = CreateRequest();
@@ -99,12 +101,11 @@ public sealed class GenerationsControllerTests
     [Fact]
     public async Task CreateAsync_WithNonLoopbackHttpBoundary_ReturnsOkResponse()
     {
-        const string providerCredential = "test-provider-key";
         GenerationBatchDto batch = CreateBatchWithContent();
         Mock<IMediator> mediator = CreateMediator(Result<GenerationBatchDto>.Success(batch));
         GenerationsController controller = CreateController(
             mediator.Object,
-            providerCredential,
+            TestGenerationCredentials.ProviderCredential,
             isHttps: false,
             remoteIpAddress: IPAddress.Parse("203.0.113.10"));
         ImageGenerationRequestDto request = CreateRequest();
@@ -283,7 +284,9 @@ public sealed class GenerationsControllerTests
                 });
             using IServiceScope scope = serviceProvider.CreateScope();
             IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            GenerationsController controller = CreateController(mediator, "test-provider-key");
+            GenerationsController controller = CreateController(
+                mediator,
+                TestGenerationCredentials.ProviderCredential);
             ImageGenerationRequestDto request = CreateRequest();
 
             IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
@@ -408,7 +411,7 @@ public sealed class GenerationsControllerTests
 
     private static GenerationsController CreateController(
         IMediator mediator,
-        string? providerCredential = "test-provider-key",
+        string? providerCredential = TestGenerationCredentials.ProviderCredential,
         bool isHttps = false,
         IPAddress? remoteIpAddress = null,
         GenerationModelCatalogDto? modelCatalog = null)

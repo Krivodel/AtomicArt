@@ -20,12 +20,12 @@ using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Tests.Common;
+using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Generation;
 
 public sealed class UniversalNanoBananaPanelViewModelTests
 {
-    private const string ProviderCredential = "test-provider-key";
     private const int PromptDelayedSaveSettleMilliseconds = 500;
     private static readonly byte[] PngBytes = [.. GenerationImageFileSignatures.Png, 0x00];
 
@@ -1643,7 +1643,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
 
         UniversalNanoBananaPanelViewModel viewModel = new(
             new EmptyFilePickerService(),
-            secretStore ?? new RecordingSecretStore(ProviderCredential),
+            secretStore ?? new RecordingSecretStore(TestGenerationCredentials.ProviderCredential),
             catalogApiClient ?? new SuccessfulGenerationModelCatalogApiClient(),
             imageModelOptionCatalog ?? CreateImageModelOptionCatalog(initializeCatalog),
             apiEndpointService ?? TestApiEndpointServiceFactory.Create(),

@@ -16,6 +16,7 @@ using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Tests.Common;
+using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
 
@@ -611,7 +612,10 @@ public sealed class GalleryViewModelTests
             request.AttachedImages.Count,
             new DateTime(2026, 7, 4, 12, 0, 0, DateTimeKind.Utc));
 
-        return new GenerationRunRequest(request, startSnapshot, "test-provider-key");
+        return new GenerationRunRequest(
+            request,
+            startSnapshot,
+            TestGenerationCredentials.ProviderCredential);
     }
 
     private static GalleryItemState CreateSavedGalleryItem()

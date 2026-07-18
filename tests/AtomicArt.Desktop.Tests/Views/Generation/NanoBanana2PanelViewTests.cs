@@ -29,6 +29,7 @@ using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.Tests.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Generation;
+using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Desktop.Tests.Views.Generation;
 
@@ -37,7 +38,6 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     private const double ExpandedPanelWidth = 640d;
     private const double ExpandedPanelHeight = 560d;
     private const string PromptHeightResourceKey = "PromptHeight";
-    private const string ProviderCredential = "test-provider-key";
 
     [Theory]
     [InlineData(null, false)]
@@ -792,7 +792,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
         return new UniversalNanoBananaPanelViewModel(
             new EmptyFilePickerService(),
-            new FixedSecretStore(ProviderCredential),
+            new FixedSecretStore(TestGenerationCredentials.ProviderCredential),
             catalogApiClient
                 ?? new FixedGenerationModelCatalogApiClient(
                     ApiModelMetadataTestCatalog.LoadCatalog()),

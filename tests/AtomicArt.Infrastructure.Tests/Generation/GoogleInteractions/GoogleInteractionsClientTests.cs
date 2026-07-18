@@ -32,7 +32,7 @@ public sealed class GoogleInteractionsClientTests
 
         string responseJson = await client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         responseJson.Should().Be("""{"status":"completed"}""");
@@ -42,9 +42,9 @@ public sealed class GoogleInteractionsClientTests
         Uri requestUri = request.RequestUri ?? throw new InvalidOperationException("Request URI is missing.");
         requestUri.AbsolutePath.Should().Be("/v1beta/interactions");
         requestUri.Query.Should().BeEmpty();
-        requestUri.ToString().Should().NotContain("test-provider-key");
+        requestUri.ToString().Should().NotContain(TestGenerationCredentials.ProviderCredential);
         request.Headers.TryGetValues("X-Goog-Api-Key", out IEnumerable<string>? values).Should().BeTrue();
-        values.Should().BeEquivalentTo(new[] { "test-provider-key" });
+        values.Should().BeEquivalentTo(new[] { TestGenerationCredentials.ProviderCredential });
     }
 
     [Theory]
@@ -72,7 +72,7 @@ public sealed class GoogleInteractionsClientTests
 
         Func<Task> act = () => client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
@@ -98,7 +98,7 @@ public sealed class GoogleInteractionsClientTests
 
         Func<Task> act = () => client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
@@ -124,7 +124,7 @@ public sealed class GoogleInteractionsClientTests
 
         Func<Task> act = () => client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
@@ -154,7 +154,7 @@ public sealed class GoogleInteractionsClientTests
 
         Func<Task> act = () => client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
@@ -220,7 +220,7 @@ public sealed class GoogleInteractionsClientTests
 
         Func<Task> act = () => client.CreateInteractionAsync(
             "{malformed request",
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
@@ -252,7 +252,7 @@ public sealed class GoogleInteractionsClientTests
 
         Func<Task> act = () => client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
@@ -286,7 +286,7 @@ public sealed class GoogleInteractionsClientTests
 
         Func<Task> act = () => client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
@@ -315,7 +315,7 @@ public sealed class GoogleInteractionsClientTests
 
         Func<Task> act = () => client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>()
@@ -341,7 +341,7 @@ public sealed class GoogleInteractionsClientTests
 
         string responseJson = await client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         responseJson.Should().Be("""{"status":"completed"}""");
@@ -367,7 +367,7 @@ public sealed class GoogleInteractionsClientTests
 
         Func<Task> act = () => client.CreateInteractionAsync(
             CreateRequestJson(),
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =

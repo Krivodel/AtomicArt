@@ -130,7 +130,7 @@ public sealed class GoogleInteractionsRequestBuilderTests
             metadata.ProviderModelId,
             CreatePricing(),
             0,
-            "test-provider-key");
+            TestGenerationCredentials.ProviderCredential);
     }
 
     private static GenerationModelPricingMetadataDto CreatePricing()

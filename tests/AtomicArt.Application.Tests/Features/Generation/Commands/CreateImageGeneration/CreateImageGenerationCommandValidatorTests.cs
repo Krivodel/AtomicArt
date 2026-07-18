@@ -9,6 +9,7 @@ using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Tests.Generation;
 using AtomicArt.Contracts.Generation;
+using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Application.Tests.Features.Generation.Commands.CreateImageGeneration;
 
@@ -17,7 +18,6 @@ public sealed class CreateImageGenerationCommandValidatorTests
     private const string GifContentType = "image/gif";
     private const string LocalModelId = "local-model";
     private const string PngContentType = "image/png";
-    private const string ProviderCredential = "test-provider-key";
     private const string WebpContentType = "image/webp";
 
     private static string ModelId => ApiModelMetadataTestCatalog.NanoBanana2ModelId;
@@ -298,7 +298,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
                 1d,
                 1,
                 new List<AttachedImageDto>()),
-            ProviderCredential);
+            TestGenerationCredentials.ProviderCredential);
 
         ValidationResult result = _validator.Validate(command);
 
@@ -334,7 +334,7 @@ public sealed class CreateImageGenerationCommandValidatorTests
         double temperature = 1d,
         int generationCount = 1,
         IReadOnlyList<AttachedImageDto>? attachedImages = null,
-        string? providerCredential = ProviderCredential)
+        string? providerCredential = TestGenerationCredentials.ProviderCredential)
     {
         ImageGenerationRequestDto request = new(
             modelId ?? ModelId,
@@ -390,6 +390,8 @@ public sealed class CreateImageGenerationCommandValidatorTests
             throw new InvalidOperationException("Failed to deserialize test command.");
         }
 
-        return new CreateImageGenerationCommand(request, ProviderCredential);
+        return new CreateImageGenerationCommand(
+            request,
+            TestGenerationCredentials.ProviderCredential);
     }
 }

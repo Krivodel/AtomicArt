@@ -4,6 +4,7 @@ using Xunit;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation.GoogleInteractions;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Infrastructure.Tests.Generation.GoogleInteractions;
 
@@ -432,6 +433,6 @@ public sealed class GoogleInteractionsResponseParserTests
         assertions.Which.FailureKind.Should().Be(ImageGenerationProviderFailureKind.InvalidResponse);
         assertions.Which.Message.Should().NotContain("/9j/4AAQSkZJRg==");
         assertions.Which.Message.Should().NotContain("Prompt");
-        assertions.Which.Message.Should().NotContain("test-provider-key");
+        assertions.Which.Message.Should().NotContain(TestGenerationCredentials.ProviderCredential);
     }
 }

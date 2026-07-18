@@ -30,7 +30,8 @@ public sealed class GoogleImageGenerationContentProviderTests
             new GenerationUsagePriceCalculator(),
             dateTimeProvider,
             NullLogger<GoogleImageGenerationContentProvider>.Instance);
-        ImageGenerationContentProviderContext context = CreateContext("test-provider-key");
+        ImageGenerationContentProviderContext context = CreateContext(
+            TestGenerationCredentials.ProviderCredential);
 
         ImageGenerationContentResult result = await provider.GetContentAsync(context, CancellationToken.None);
 
@@ -45,8 +46,8 @@ public sealed class GoogleImageGenerationContentProviderTests
             TotalOutputTokens = 1120,
             TotalTokens = 2320
         });
-        client.ProviderCredential.Should().Be("test-provider-key");
-        client.RequestJson.Should().NotContain("test-provider-key");
+        client.ProviderCredential.Should().Be(TestGenerationCredentials.ProviderCredential);
+        client.RequestJson.Should().NotContain(TestGenerationCredentials.ProviderCredential);
         client.RequestJson.Should().Contain(ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().ProviderModelId);
     }
 
@@ -65,7 +66,7 @@ public sealed class GoogleImageGenerationContentProviderTests
             dateTimeProvider,
             NullLogger<GoogleImageGenerationContentProvider>.Instance);
         ImageGenerationContentProviderContext context = CreateContext(
-            "test-provider-key",
+            TestGenerationCredentials.ProviderCredential,
             "4K");
 
         ImageGenerationContentResult result = await provider.GetContentAsync(context, CancellationToken.None);
@@ -113,7 +114,8 @@ public sealed class GoogleImageGenerationContentProviderTests
             new GenerationUsagePriceCalculator(),
             new TestDateTimeProvider(new DateTime(2026, 7, 4, 10, 0, 0, DateTimeKind.Utc)),
             logger);
-        ImageGenerationContentProviderContext context = CreateContext("test-provider-key");
+        ImageGenerationContentProviderContext context = CreateContext(
+            TestGenerationCredentials.ProviderCredential);
 
         Func<Task> act = () => provider.GetContentAsync(context, CancellationToken.None);
 
@@ -128,7 +130,7 @@ public sealed class GoogleImageGenerationContentProviderTests
         entry.Message.Should().Contain("HasStepsTextContent True");
         entry.Message.Should().Contain("TextContentLength 4");
         entry.Message.Should().NotContain("done");
-        entry.Message.Should().NotContain("test-provider-key");
+        entry.Message.Should().NotContain(TestGenerationCredentials.ProviderCredential);
     }
 
     private static ImageGenerationContentProviderContext CreateContext(
