@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Nodes;
 
 using FluentAssertions;
 using Xunit;
@@ -158,69 +159,7 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithDuplicateModelIds_ThrowsInvalidOperationException()
     {
-        string path = CreateTempFile(
-            """
-            {
-              "models": [
-                {
-                  "id": "duplicate",
-                  "displayName": "Duplicate",
-                  "provider": "google",
-                  "providerModelId": "provider-duplicate",
-                  "panelId": "nano-banana",
-                  "contextWindowTokens": 1000,
-                  "maxOutputTokens": 500,
-                  "maxPromptLength": 100,
-                  "aspectRatios": [ "авто" ],
-                  "resolutions": [ "1k" ],
-                  "generationCounts": [ 1 ],
-                  "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
-                  "attachments": {
-                    "maxCount": 1,
-                    "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 1024,
-                    "supportedContentTypes": [ "image/png" ]
-                  },
-                  "pricing": {
-                    "currencyCode": "USD",
-                    "inputTokenUsdPerMillion": 0.25,
-                    "textOutputTokenUsdPerMillion": 1.50,
-                    "imageOutputTokenUsdPerMillion": 30.00,
-                    "inputImageTokens": 1120,
-                    "outputImageTokensByResolution": { "1k": 1120 }
-                  }
-                },
-                {
-                  "id": "duplicate",
-                  "displayName": "Duplicate 2",
-                  "provider": "google",
-                  "providerModelId": "provider-duplicate-2",
-                  "panelId": "nano-banana",
-                  "contextWindowTokens": 1000,
-                  "maxOutputTokens": 500,
-                  "maxPromptLength": 100,
-                  "aspectRatios": [ "авто" ],
-                  "resolutions": [ "1k" ],
-                  "generationCounts": [ 1 ],
-                  "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
-                  "attachments": {
-                    "maxCount": 1,
-                    "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 1024,
-                    "supportedContentTypes": [ "image/png" ]
-                  },
-                  "pricing": {
-                    "currencyCode": "USD",
-                    "inputTokenUsdPerMillion": 0.25,
-                    "textOutputTokenUsdPerMillion": 1.50,
-                    "imageOutputTokenUsdPerMillion": 30.00,
-                    "inputImageTokens": 1120,
-                    "outputImageTokensByResolution": { "1k": 1120 }
-                  }
-                }
-              ]
-            }
-            """);
+        string path = CreateTempFile(CreateJsonWithDuplicateModelId());
 
         try
         {
@@ -238,47 +177,15 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithMissingRequiredList_ThrowsInvalidOperationException()
     {
-        string path = CreateTempFile(
-            """
-            {
-              "models": [
-                {
-                  "id": "test-model",
-                  "displayName": "Test Model",
-                  "provider": "google",
-                  "providerModelId": "provider-test-model",
-                  "panelId": "nano-banana",
-                  "contextWindowTokens": 1000,
-                  "maxOutputTokens": 500,
-                  "maxPromptLength": 100,
-                  "resolutions": [ "1k" ],
-                  "generationCounts": [ 1 ],
-                  "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
-                  "attachments": {
-                    "maxCount": 1,
-                    "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 1024,
-                    "supportedContentTypes": [ "image/png" ]
-                  },
-                  "pricing": {
-                    "currencyCode": "USD",
-                    "inputTokenUsdPerMillion": 0.25,
-                    "textOutputTokenUsdPerMillion": 1.50,
-                    "imageOutputTokenUsdPerMillion": 30.00,
-                    "inputImageTokens": 1120,
-                    "outputImageTokensByResolution": { "1k": 1120 }
-                  }
-                }
-              ]
-            }
-            """);
+        const string PropertyName = "aspectRatios";
+        string path = CreateTempFile(CreateJsonWithoutModelProperty(PropertyName));
 
         try
         {
             Action action = () => Load(path);
 
             action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*aspectRatios*");
+                .WithMessage($"*{PropertyName}*");
         }
         finally
         {
@@ -289,48 +196,15 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithEmptyResolutions_ThrowsInvalidOperationException()
     {
-        string path = CreateTempFile(
-            """
-            {
-              "models": [
-                {
-                  "id": "test-model",
-                  "displayName": "Test Model",
-                  "provider": "google",
-                  "providerModelId": "provider-test-model",
-                  "panelId": "nano-banana",
-                  "contextWindowTokens": 1000,
-                  "maxOutputTokens": 500,
-                  "maxPromptLength": 100,
-                  "aspectRatios": [ "авто" ],
-                  "resolutions": [],
-                  "generationCounts": [ 1 ],
-                  "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
-                  "attachments": {
-                    "maxCount": 1,
-                    "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 1024,
-                    "supportedContentTypes": [ "image/png" ]
-                  },
-                  "pricing": {
-                    "currencyCode": "USD",
-                    "inputTokenUsdPerMillion": 0.25,
-                    "textOutputTokenUsdPerMillion": 1.50,
-                    "imageOutputTokenUsdPerMillion": 30.00,
-                    "inputImageTokens": 1120,
-                    "outputImageTokensByResolution": { "1k": 1120 }
-                  }
-                }
-              ]
-            }
-            """);
+        const string PropertyName = "resolutions";
+        string path = CreateTempFile(CreateJsonWithEmptyModelArray(PropertyName));
 
         try
         {
             Action action = () => Load(path);
 
             action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*resolutions*");
+                .WithMessage($"*{PropertyName}*");
         }
         finally
         {
@@ -341,40 +215,15 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithMissingPricing_ThrowsInvalidOperationException()
     {
-        string path = CreateTempFile(
-            """
-            {
-              "models": [
-                {
-                  "id": "test-model",
-                  "displayName": "Test Model",
-                  "provider": "google",
-                  "providerModelId": "provider-test-model",
-                  "panelId": "nano-banana",
-                  "contextWindowTokens": 1000,
-                  "maxOutputTokens": 500,
-                  "maxPromptLength": 100,
-                  "aspectRatios": [ "авто" ],
-                  "resolutions": [ "1k" ],
-                  "generationCounts": [ 1 ],
-                  "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
-                  "attachments": {
-                    "maxCount": 1,
-                    "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 2048,
-                    "supportedContentTypes": [ "image/png" ]
-                  }
-                }
-              ]
-            }
-            """);
+        const string PropertyName = "pricing";
+        string path = CreateTempFile(CreateJsonWithoutModelProperty(PropertyName));
 
         try
         {
             Action action = () => Load(path);
 
             action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*pricing*");
+                .WithMessage($"*{PropertyName}*");
         }
         finally
         {
@@ -385,47 +234,15 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithMissingProvider_ThrowsInvalidOperationExceptionWithModelName()
     {
-        string path = CreateTempFile(
-            """
-            {
-              "models": [
-                {
-                  "id": "test-model",
-                  "displayName": "Test Model",
-                  "providerModelId": "provider-test-model",
-                  "panelId": "nano-banana",
-                  "contextWindowTokens": 1000,
-                  "maxOutputTokens": 500,
-                  "maxPromptLength": 100,
-                  "aspectRatios": [ "авто" ],
-                  "resolutions": [ "1k" ],
-                  "generationCounts": [ 1 ],
-                  "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
-                  "attachments": {
-                    "maxCount": 1,
-                    "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 2048,
-                    "supportedContentTypes": [ "image/png" ]
-                  },
-                  "pricing": {
-                    "currencyCode": "USD",
-                    "inputTokenUsdPerMillion": 0.25,
-                    "textOutputTokenUsdPerMillion": 1.50,
-                    "imageOutputTokenUsdPerMillion": 30.00,
-                    "inputImageTokens": 1120,
-                    "outputImageTokensByResolution": { "1k": 1120 }
-                  }
-                }
-              ]
-            }
-            """);
+        const string PropertyName = "provider";
+        string path = CreateTempFile(CreateJsonWithoutModelProperty(PropertyName));
 
         try
         {
             Action action = () => Load(path);
 
             action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*Test Model*test-model*provider*")
+                .WithMessage($"*Test Model*test-model*{PropertyName}*")
                 .And.Message.Should().NotContain("index");
         }
         finally
@@ -437,47 +254,15 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithMissingPanelId_ThrowsInvalidOperationExceptionWithModelName()
     {
-        string path = CreateTempFile(
-            """
-            {
-              "models": [
-                {
-                  "id": "test-model",
-                  "displayName": "Test Model",
-                  "provider": "google",
-                  "providerModelId": "provider-test-model",
-                  "contextWindowTokens": 1000,
-                  "maxOutputTokens": 500,
-                  "maxPromptLength": 100,
-                  "aspectRatios": [ "авто" ],
-                  "resolutions": [ "1k" ],
-                  "generationCounts": [ 1 ],
-                  "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
-                  "attachments": {
-                    "maxCount": 1,
-                    "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 2048,
-                    "supportedContentTypes": [ "image/png" ]
-                  },
-                  "pricing": {
-                    "currencyCode": "USD",
-                    "inputTokenUsdPerMillion": 0.25,
-                    "textOutputTokenUsdPerMillion": 1.50,
-                    "imageOutputTokenUsdPerMillion": 30.00,
-                    "inputImageTokens": 1120,
-                    "outputImageTokensByResolution": { "1k": 1120 }
-                  }
-                }
-              ]
-            }
-            """);
+        const string PropertyName = "panelId";
+        string path = CreateTempFile(CreateJsonWithoutModelProperty(PropertyName));
 
         try
         {
             Action action = () => Load(path);
 
             action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*Test Model*test-model*panelId*")
+                .WithMessage($"*Test Model*test-model*{PropertyName}*")
                 .And.Message.Should().NotContain("index");
         }
         finally
@@ -525,6 +310,62 @@ public sealed class JsonModelMetadataStartupLoaderTests
               ]
             }
             """;
+    }
+
+    private static string CreateJsonWithoutModelProperty(string propertyName)
+    {
+        (JsonObject catalog, JsonObject model) = CreateValidModelJson();
+        model.Remove(propertyName);
+
+        return catalog.ToJsonString();
+    }
+
+    private static string CreateJsonWithEmptyModelArray(string propertyName)
+    {
+        (JsonObject catalog, JsonObject model) = CreateValidModelJson();
+        model[propertyName] = new JsonArray();
+
+        return catalog.ToJsonString();
+    }
+
+    private static string CreateJsonWithDuplicateModelId()
+    {
+        const string DuplicateModelId = "duplicate";
+        (JsonObject catalog, JsonObject firstModel) = CreateValidModelJson();
+        JsonObject secondModel = firstModel.DeepClone().AsObject();
+        JsonArray models = GetModels(catalog);
+
+        firstModel["id"] = DuplicateModelId;
+        firstModel["displayName"] = "Duplicate";
+        firstModel["providerModelId"] = "provider-duplicate";
+
+        secondModel["id"] = DuplicateModelId;
+        secondModel["displayName"] = "Duplicate 2";
+        secondModel["providerModelId"] = "provider-duplicate-2";
+
+        models.Add(secondModel);
+
+        return catalog.ToJsonString();
+    }
+
+    private static (JsonObject Catalog, JsonObject Model) CreateValidModelJson()
+    {
+        if (JsonNode.Parse(CreateValidJson()) is not JsonObject parsedCatalog)
+        {
+            throw new InvalidOperationException("Valid model catalog test JSON is not an object.");
+        }
+
+        JsonArray models = GetModels(parsedCatalog);
+        JsonObject model = models[0] as JsonObject
+            ?? throw new InvalidOperationException("Valid model catalog test JSON has no model object.");
+
+        return (parsedCatalog, model);
+    }
+
+    private static JsonArray GetModels(JsonObject catalog)
+    {
+        return catalog["models"] as JsonArray
+            ?? throw new InvalidOperationException("Valid model catalog test JSON has no models array.");
     }
 
     private static string CreateTempFile(string content)
