@@ -61,8 +61,15 @@ public abstract class AnimatedGalleryControlTestBase
         return Show(control, 640d, 640d);
     }
 
+    private protected static void Show(Control control, Action<Window> action)
+    {
+        Show(control, 640d, 640d, action);
+    }
+
     private protected static Window Show(Control control, double width, double height)
     {
+        ArgumentNullException.ThrowIfNull(control);
+
         Window window = new()
         {
             Width = width,
@@ -74,6 +81,26 @@ public abstract class AnimatedGalleryControlTestBase
         window.CaptureRenderedFrame();
 
         return window;
+    }
+
+    private protected static void Show(
+        Control control,
+        double width,
+        double height,
+        Action<Window> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        Window window = Show(control, width, height);
+
+        try
+        {
+            action(window);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     private protected static Canvas GetGalleryPanel(AnimatedGalleryControl control)

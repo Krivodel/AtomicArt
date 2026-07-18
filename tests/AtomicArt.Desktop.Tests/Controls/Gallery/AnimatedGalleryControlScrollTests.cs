@@ -28,20 +28,15 @@ public sealed class AnimatedGalleryControlScrollTests : AnimatedGalleryControlTe
         Dispatch(() =>
         {
             AnimatedGalleryControl control = new(CreateSceneFactory());
-            Window window = Show(control, 560d, 640d);
 
-            try
+            Show(control, 560d, 640d, _ =>
             {
                 ScrollViewer scrollViewer = GetGalleryScrollViewer(control);
 
                 SmoothScrollBehavior.GetWheelMultiplier(scrollViewer)
                     .Should()
                     .Be(ExpectedGalleryWheelMultiplier);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -51,13 +46,9 @@ public sealed class AnimatedGalleryControlScrollTests : AnimatedGalleryControlTe
         Dispatch(() =>
         {
             List<GenerationItemViewModel> items = CreateItems();
-            AnimatedGalleryControl control = new(CreateSceneFactory())
-            {
-                Items = items
-            };
-            Window window = Show(control, 560d, 640d);
+            AnimatedGalleryControl control = CreatePopulatedControl(items);
 
-            try
+            Show(control, 560d, 640d, window =>
             {
                 ScrollViewer scrollViewer = GetGalleryScrollViewer(control);
 
@@ -66,11 +57,7 @@ public sealed class AnimatedGalleryControlScrollTests : AnimatedGalleryControlTe
 
                 GetVisibleItems(control).Should().Contain(items[ExpectedScrolledItemIndex]);
                 GetVisibleItems(control).Should().NotContain(items[FirstItemIndex]);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -79,13 +66,9 @@ public sealed class AnimatedGalleryControlScrollTests : AnimatedGalleryControlTe
     {
         Dispatch(() =>
         {
-            AnimatedGalleryControl control = new(CreateSceneFactory())
-            {
-                Items = CreateItems()
-            };
-            Window window = Show(control, 560d, 640d);
+            AnimatedGalleryControl control = CreatePopulatedControl(CreateItems());
 
-            try
+            Show(control, 560d, 640d, _ =>
             {
                 ScrollViewer scrollViewer = GetGalleryScrollViewer(control);
 
@@ -99,11 +82,7 @@ public sealed class AnimatedGalleryControlScrollTests : AnimatedGalleryControlTe
                 opacityMask.GradientStops[1].Color.A.Should().Be(byte.MaxValue);
                 opacityMask.GradientStops[2].Offset.Should().Be(TransparentBottomFadeOffset);
                 opacityMask.GradientStops[2].Color.A.Should().Be(0);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -114,13 +93,9 @@ public sealed class AnimatedGalleryControlScrollTests : AnimatedGalleryControlTe
     {
         Dispatch(() =>
         {
-            AnimatedGalleryControl control = new(CreateSceneFactory())
-            {
-                Items = CreateItems()
-            };
-            Window window = Show(control, 560d, windowHeight);
+            AnimatedGalleryControl control = CreatePopulatedControl(CreateItems());
 
-            try
+            Show(control, 560d, windowHeight, _ =>
             {
                 ScrollViewer scrollViewer = GetGalleryScrollViewer(control);
                 LinearGradientBrush opacityMask = GetOpacityMask(scrollViewer);
@@ -130,12 +105,17 @@ public sealed class AnimatedGalleryControlScrollTests : AnimatedGalleryControlTe
                 actualFadeHeight.Should().BeApproximately(
                     AnimatedGalleryControl.BottomOpacityFadeHeight,
                     OffsetTolerance);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
+    }
+
+    private static AnimatedGalleryControl CreatePopulatedControl(
+        IReadOnlyList<GenerationItemViewModel> items)
+    {
+        return new AnimatedGalleryControl(CreateSceneFactory())
+        {
+            Items = items
+        };
     }
 
     private static List<GenerationItemViewModel> CreateItems()

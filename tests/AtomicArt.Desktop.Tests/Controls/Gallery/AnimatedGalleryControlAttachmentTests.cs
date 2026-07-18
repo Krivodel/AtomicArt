@@ -21,16 +21,11 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
         Dispatch(() =>
         {
             AnimatedGalleryControl control = CreateControlWithItem(CreateItem());
-            Window window = Show(control);
 
-            try
+            Show(control, _ =>
             {
                 AssertAttachedScene(control);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -39,20 +34,10 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
     {
         Dispatch(() =>
         {
-            GenerationItemViewModel item = CreateItem();
-            AnimatedGalleryControl control = CreateControlWithItem(item);
-            Window window = Show(control);
-
-            try
+            ShowSingleCard((card, item) =>
             {
-                GenerationCardControl card = GetSingleCard(control);
-
                 card.DataContext.Should().BeSameAs(item);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -61,20 +46,10 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
     {
         Dispatch(() =>
         {
-            GenerationItemViewModel item = CreateItem();
-            AnimatedGalleryControl control = CreateControlWithItem(item);
-            Window window = Show(control);
-
-            try
+            ShowSingleCard((card, item) =>
             {
-                GenerationCardControl card = GetSingleCard(control);
-
                 AssertCardContent(card, item);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -90,20 +65,15 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
                 revealCommand,
                 metadataCommand,
                 deleteCommand);
-            Window window = Show(control);
 
-            try
+            Show(control, _ =>
             {
                 GenerationCardControl card = GetSingleCard(control);
 
                 card.RevealInFolderCommand.Should().BeSameAs(revealCommand);
                 card.OpenMetadataCommand.Should().BeSameAs(metadataCommand);
                 card.DeleteOrCancelCommand.Should().BeSameAs(deleteCommand);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -114,9 +84,8 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
         {
             RecordingGalleryOperations operations = new();
             AnimatedGalleryControl control = CreateControlWithOperations(operations);
-            Window window = Show(control);
 
-            try
+            Show(control, window =>
             {
                 operations.AttachedOperations.Should().NotBeNull();
 
@@ -124,12 +93,41 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
                 window.CaptureRenderedFrame();
 
                 operations.DetachedOperations.Should().BeSameAs(operations.AttachedOperations);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
+    }
+
+    private static AnimatedGalleryControl CreateControlWithItem(GenerationItemViewModel item)
+    {
+        return new AnimatedGalleryControl(CreateSceneFactory())
+        {
+            Items = new List<GenerationItemViewModel>
+            {
+                item
+            }
+        };
+    }
+
+    private static AnimatedGalleryControl CreateControlWithCommands(
+        RelayCommand revealCommand,
+        RelayCommand metadataCommand,
+        RelayCommand deleteCommand)
+    {
+        AnimatedGalleryControl control = CreateControlWithItem(CreateItem());
+        control.RevealInFolderCommand = revealCommand;
+        control.OpenMetadataCommand = metadataCommand;
+        control.DeleteOrCancelCommand = deleteCommand;
+
+        return control;
+    }
+
+    private static AnimatedGalleryControl CreateControlWithOperations(
+        RecordingGalleryOperations operations)
+    {
+        AnimatedGalleryControl control = CreateControlWithItem(CreateItem());
+        control.Operations = operations;
+
+        return control;
     }
 
     private static void AssertAttachedScene(AnimatedGalleryControl control)
@@ -170,43 +168,17 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
         textValues.Should().Contain(item.ElapsedText);
     }
 
-    private AnimatedGalleryControl CreateControlWithItem(GenerationItemViewModel item)
+    private static void ShowSingleCard(
+        Action<GenerationCardControl, GenerationItemViewModel> action)
     {
-        return new AnimatedGalleryControl(CreateSceneFactory())
-        {
-            Items = new List<GenerationItemViewModel>
-            {
-                item
-            }
-        };
-    }
+        GenerationItemViewModel item = CreateItem();
+        AnimatedGalleryControl control = CreateControlWithItem(item);
 
-    private AnimatedGalleryControl CreateControlWithCommands(
-        RelayCommand revealCommand,
-        RelayCommand metadataCommand,
-        RelayCommand deleteCommand)
-    {
-        return new AnimatedGalleryControl(CreateSceneFactory())
+        Show(control, _ =>
         {
-            Items = new List<GenerationItemViewModel>
-            {
-                CreateItem()
-            },
-            RevealInFolderCommand = revealCommand,
-            OpenMetadataCommand = metadataCommand,
-            DeleteOrCancelCommand = deleteCommand
-        };
-    }
+            GenerationCardControl card = GetSingleCard(control);
 
-    private AnimatedGalleryControl CreateControlWithOperations(RecordingGalleryOperations operations)
-    {
-        return new AnimatedGalleryControl(CreateSceneFactory())
-        {
-            Items = new List<GenerationItemViewModel>
-            {
-                CreateItem()
-            },
-            Operations = operations
-        };
+            action(card, item);
+        });
     }
 }

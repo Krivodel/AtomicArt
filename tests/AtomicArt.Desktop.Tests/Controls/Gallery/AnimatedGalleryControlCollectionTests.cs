@@ -18,14 +18,7 @@ public sealed class AnimatedGalleryControlCollectionTests : AnimatedGalleryContr
     {
         Dispatch(() =>
         {
-            ObservableCollection<GenerationItemViewModel> items = [CreateItem()];
-            AnimatedGalleryControl control = new(CreateSceneFactory())
-            {
-                Items = items
-            };
-            Window window = Show(control);
-
-            try
+            ShowCollection((items, control, window) =>
             {
                 items.Add(CreateItem());
                 window.CaptureRenderedFrame();
@@ -35,11 +28,7 @@ public sealed class AnimatedGalleryControlCollectionTests : AnimatedGalleryContr
                     .OfType<GenerationCardControl>()
                     .Should()
                     .HaveCount(2);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -48,16 +37,9 @@ public sealed class AnimatedGalleryControlCollectionTests : AnimatedGalleryContr
     {
         Dispatch(() =>
         {
-            ObservableCollection<GenerationItemViewModel> items = [CreateItem()];
             RecordingGalleryOperations operations = new();
-            AnimatedGalleryControl control = new(CreateSceneFactory())
-            {
-                Items = items,
-                Operations = operations
-            };
-            Window window = Show(control);
 
-            try
+            ShowCollection(operations, (items, control, window) =>
             {
                 items.Add(CreateItem());
                 window.CaptureRenderedFrame();
@@ -67,11 +49,7 @@ public sealed class AnimatedGalleryControlCollectionTests : AnimatedGalleryContr
                     .OfType<GenerationCardControl>()
                     .Should()
                     .ContainSingle();
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
     }
 
@@ -80,14 +58,7 @@ public sealed class AnimatedGalleryControlCollectionTests : AnimatedGalleryContr
     {
         Dispatch(() =>
         {
-            ObservableCollection<GenerationItemViewModel> items = [CreateItem()];
-            AnimatedGalleryControl control = new(CreateSceneFactory())
-            {
-                Items = items
-            };
-            Window window = Show(control);
-
-            try
+            ShowCollection((items, control, window) =>
             {
                 Canvas galleryPanel = GetGalleryPanel(control);
                 Canvas overlayCanvas = GetOverlayCanvas(control);
@@ -109,11 +80,46 @@ public sealed class AnimatedGalleryControlCollectionTests : AnimatedGalleryContr
                     .OfType<GenerationCardControl>()
                     .Should()
                     .HaveCount(3);
-            }
-            finally
-            {
-                window.Close();
-            }
+            });
         });
+    }
+
+    private static ObservableCollection<GenerationItemViewModel> CreateItems()
+    {
+        ObservableCollection<GenerationItemViewModel> items = [CreateItem()];
+
+        return items;
+    }
+
+    private static AnimatedGalleryControl CreateControl(
+        ObservableCollection<GenerationItemViewModel> items)
+    {
+        return new AnimatedGalleryControl(CreateSceneFactory())
+        {
+            Items = items
+        };
+    }
+
+    private static void ShowCollection(
+        Action<
+            ObservableCollection<GenerationItemViewModel>,
+            AnimatedGalleryControl,
+            Window> action)
+    {
+        ShowCollection(null, action);
+    }
+
+    private static void ShowCollection(
+        RecordingGalleryOperations? operations,
+        Action<
+            ObservableCollection<GenerationItemViewModel>,
+            AnimatedGalleryControl,
+            Window> action)
+    {
+        ObservableCollection<GenerationItemViewModel> items = CreateItems();
+        AnimatedGalleryControl control = CreateControl(items);
+        control.Operations = operations;
+
+        Show(control, window => action(items, control, window));
     }
 }
