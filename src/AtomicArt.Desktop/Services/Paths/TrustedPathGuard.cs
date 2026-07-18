@@ -721,8 +721,7 @@ internal static class TrustedPathGuard
 
         if (length == 0)
         {
-            throw new IOException(
-                $"Failed to resolve file path. Win32 error: {Marshal.GetLastWin32Error()}.");
+            throw CreateWindowsFinalPathResolutionException();
         }
 
         if (length >= buffer.Capacity)
@@ -732,12 +731,17 @@ internal static class TrustedPathGuard
 
             if (length == 0)
             {
-                throw new IOException(
-                    $"Failed to resolve file path. Win32 error: {Marshal.GetLastWin32Error()}.");
+                throw CreateWindowsFinalPathResolutionException();
             }
         }
 
         return NormalizeFinalPath(buffer.ToString(0, (int)length));
+    }
+
+    private static IOException CreateWindowsFinalPathResolutionException()
+    {
+        return new IOException(
+            $"Failed to resolve file path. Win32 error: {Marshal.GetLastWin32Error()}.");
     }
 
     private static string NormalizeFinalPath(string finalPath)
