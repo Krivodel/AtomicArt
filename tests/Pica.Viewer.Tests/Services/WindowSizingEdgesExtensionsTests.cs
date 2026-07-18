@@ -7,42 +7,75 @@ namespace Pica.Viewer.Tests.Services;
 
 public sealed class WindowSizingEdgesExtensionsTests
 {
+    public static TheoryData<int, bool> HorizontalEdgeExpectations =>
+        CreateTheoryData(expectation => expectation.Horizontal);
+    public static TheoryData<int, bool> VerticalEdgeExpectations =>
+        CreateTheoryData(expectation => expectation.Vertical);
+
+    private static readonly IReadOnlyList<(
+        WindowSizingEdges Edges,
+        bool Horizontal,
+        bool Vertical)> EdgeExpectations =
+        new List<(WindowSizingEdges Edges, bool Horizontal, bool Vertical)>
+        {
+            (WindowSizingEdges.Left, true, false),
+            (WindowSizingEdges.Right, true, false),
+            (WindowSizingEdges.Top, false, true),
+            (WindowSizingEdges.Bottom, false, true),
+            (WindowSizingEdges.TopLeft, true, true),
+            (WindowSizingEdges.TopRight, true, true),
+            (WindowSizingEdges.BottomLeft, true, true),
+            (WindowSizingEdges.BottomRight, true, true)
+        };
+
     [Theory]
-    [InlineData((int)WindowSizingEdges.Left, true)]
-    [InlineData((int)WindowSizingEdges.Right, true)]
-    [InlineData((int)WindowSizingEdges.Top, false)]
-    [InlineData((int)WindowSizingEdges.Bottom, false)]
-    [InlineData((int)WindowSizingEdges.TopLeft, true)]
-    [InlineData((int)WindowSizingEdges.TopRight, true)]
-    [InlineData((int)WindowSizingEdges.BottomLeft, true)]
-    [InlineData((int)WindowSizingEdges.BottomRight, true)]
+    [MemberData(nameof(HorizontalEdgeExpectations))]
     public void IncludesHorizontalEdge_WithSizingEdges_ReturnsExpectedResult(
         int sizingEdgesValue,
         bool expectedResult)
     {
-        WindowSizingEdges sizingEdges = (WindowSizingEdges)sizingEdgesValue;
-
-        bool result = sizingEdges.IncludesHorizontalEdge();
-
-        result.Should().Be(expectedResult);
+        AssertIncludesEdge(
+            sizingEdgesValue,
+            expectedResult,
+            sizingEdges => sizingEdges.IncludesHorizontalEdge());
     }
 
     [Theory]
-    [InlineData((int)WindowSizingEdges.Left, false)]
-    [InlineData((int)WindowSizingEdges.Right, false)]
-    [InlineData((int)WindowSizingEdges.Top, true)]
-    [InlineData((int)WindowSizingEdges.Bottom, true)]
-    [InlineData((int)WindowSizingEdges.TopLeft, true)]
-    [InlineData((int)WindowSizingEdges.TopRight, true)]
-    [InlineData((int)WindowSizingEdges.BottomLeft, true)]
-    [InlineData((int)WindowSizingEdges.BottomRight, true)]
+    [MemberData(nameof(VerticalEdgeExpectations))]
     public void IncludesVerticalEdge_WithSizingEdges_ReturnsExpectedResult(
         int sizingEdgesValue,
         bool expectedResult)
     {
+        AssertIncludesEdge(
+            sizingEdgesValue,
+            expectedResult,
+            sizingEdges => sizingEdges.IncludesVerticalEdge());
+    }
+
+    private static TheoryData<int, bool> CreateTheoryData(
+        Func<(WindowSizingEdges Edges, bool Horizontal, bool Vertical), bool> selectExpected)
+    {
+        TheoryData<int, bool> theoryData = new();
+
+        foreach ((
+            WindowSizingEdges Edges,
+            bool Horizontal,
+            bool Vertical) expectation in EdgeExpectations)
+        {
+            theoryData.Add((int)expectation.Edges, selectExpected(expectation));
+        }
+
+        return theoryData;
+    }
+
+    private static void AssertIncludesEdge(
+        int sizingEdgesValue,
+        bool expectedResult,
+        Func<WindowSizingEdges, bool> includesEdge)
+    {
         WindowSizingEdges sizingEdges = (WindowSizingEdges)sizingEdgesValue;
 
-        bool result = sizingEdges.IncludesVerticalEdge();
+        bool result = includesEdge(sizingEdges);
 
         result.Should().Be(expectedResult);
     }
