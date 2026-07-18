@@ -54,7 +54,7 @@ public sealed class ValidationExceptionMiddleware
             .WriteAsJsonAsync(
                 problemDetails,
                 options: null,
-                contentType: "application/problem+json",
+                contentType: ProblemDetailsContentTypes.Json,
                 cancellationToken: context.RequestAborted)
             .ConfigureAwait(false);
     }

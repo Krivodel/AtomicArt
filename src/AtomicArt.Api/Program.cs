@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using AtomicArt.Application;
 using AtomicArt.Api.Authentication;
+using AtomicArt.Api.ErrorHandling;
 using AtomicArt.Api.Filters;
 using AtomicArt.Api.Middleware;
 using AtomicArt.Api.ModelMetadata;
@@ -76,7 +77,7 @@ app.UseExceptionHandler(exceptionApp =>
         LogUnhandledException(context, exception);
 
         context.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
-        context.Response.ContentType = "application/problem+json";
+        context.Response.ContentType = ProblemDetailsContentTypes.Json;
 
         await context.Response
             .WriteAsJsonAsync(problemDetails, context.RequestAborted)
