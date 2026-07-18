@@ -30,7 +30,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         _isFilteringEnabled = _view.FilteringToggle.IsFilteringEnabled;
         _view.ApplyImageFiltering(_isFilteringEnabled);
-        await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
+        await SaveCurrentStateAsync();
     }
 
     private async void OnMovementSpeedSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -45,7 +45,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         _movementSpeed = selectedOption.Value;
-        await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
+        await SaveCurrentStateAsync();
     }
 
     private async void OnZoomSpeedSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -60,7 +60,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         _zoomSpeed = selectedOption.Value;
-        await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
+        await SaveCurrentStateAsync();
     }
 
     private async void OnExpandOnDoubleClickChanged(object? sender, RoutedEventArgs e)
@@ -70,7 +70,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         _expandOnDoubleClick = _view.SettingsPanel.ExpandOnDoubleClickCheckBox.IsChecked == true;
         _imageDoubleClickTracker.Reset();
-        await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
+        await SaveCurrentStateAsync();
     }
 
     private async void OnFastLoadingChanged(object? sender, RoutedEventArgs e)
@@ -94,7 +94,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             _previewCache.Clear();
         }
 
-        await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
+        await SaveCurrentStateAsync();
     }
 
     private async void OnAllowFreeZoomOutChanged(object? sender, RoutedEventArgs e)
@@ -114,7 +114,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
                 new Point(viewport.Width / 2d, viewport.Height / 2d));
         }
 
-        await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
+        await SaveCurrentStateAsync();
     }
 
     private async void OnSmoothPanningChanged(object? sender, RoutedEventArgs e)
@@ -132,7 +132,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         ResetPanMotion();
-        await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
+        await SaveCurrentStateAsync();
     }
 
     private async void OnPanningInertiaChanged(object? sender, RoutedEventArgs e)
@@ -149,7 +149,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         ResetPanMotion();
-        await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
+        await SaveCurrentStateAsync();
     }
 
     private async void OnResizeBehaviorSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -170,7 +170,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             FitWindowToCurrentImage();
         }
 
-        await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
+        await SaveCurrentStateAsync();
     }
 
     private async void OnRememberWindowPlacementChanged(object? sender, RoutedEventArgs e)
@@ -189,6 +189,11 @@ public sealed partial class ImageViewerWindow : SukiWindow
             ResetRememberedWindowPlacement();
         }
 
+        await SaveCurrentStateAsync();
+    }
+
+    private async Task SaveCurrentStateAsync()
+    {
         await _imageViewerStateService.SaveAsync(CreateState(), CancellationToken.None);
     }
 
