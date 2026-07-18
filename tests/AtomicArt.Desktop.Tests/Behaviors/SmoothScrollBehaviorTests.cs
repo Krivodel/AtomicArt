@@ -35,9 +35,11 @@ public sealed class SmoothScrollBehaviorTests
         {
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
 
-            Vector targetOffset = SmoothScrollTestActions.CalculateTargetOffset(host.Viewer, new Vector(0d, -20d));
-
-            targetOffset.Y.Should().Be(SmoothScrollTestConstants.ContentLength - SmoothScrollTestConstants.ViewportLength);
+            SmoothScrollTestActions.AssertTargetOffsetY(
+                host.Viewer,
+                new Vector(0d, -20d),
+                SmoothScrollTestConstants.ContentLength
+                - SmoothScrollTestConstants.ViewportLength);
         });
     }
 
@@ -49,9 +51,10 @@ public sealed class SmoothScrollBehaviorTests
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
             host.Viewer.Offset = new Vector(0d, 20d);
 
-            Vector targetOffset = SmoothScrollTestActions.CalculateTargetOffset(host.Viewer, new Vector(0d, 20d));
-
-            targetOffset.Y.Should().Be(0d);
+            SmoothScrollTestActions.AssertTargetOffsetY(
+                host.Viewer,
+                new Vector(0d, 20d),
+                0d);
         });
     }
 
@@ -62,10 +65,10 @@ public sealed class SmoothScrollBehaviorTests
         {
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
 
-            Vector targetOffset = SmoothScrollTestActions.CalculateTargetOffset(host.Viewer, new Vector(0d, -1d));
-
-            targetOffset.X.Should().Be(0d);
-            targetOffset.Y.Should().Be(SmoothScrollTestConstants.WheelMultiplier);
+            SmoothScrollTestActions.AssertTargetOffset(
+                host.Viewer,
+                new Vector(0d, -1d),
+                new Vector(0d, SmoothScrollTestConstants.WheelMultiplier));
         });
     }
 
@@ -117,10 +120,10 @@ public sealed class SmoothScrollBehaviorTests
         {
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateHorizontal();
 
-            Vector targetOffset = SmoothScrollTestActions.CalculateTargetOffset(host.Viewer, new Vector(0d, -1d));
-
-            targetOffset.X.Should().Be(SmoothScrollTestConstants.WheelMultiplier);
-            targetOffset.Y.Should().Be(0d);
+            SmoothScrollTestActions.AssertTargetOffset(
+                host.Viewer,
+                new Vector(0d, -1d),
+                new Vector(SmoothScrollTestConstants.WheelMultiplier, 0d));
         });
     }
 
@@ -134,10 +137,13 @@ public sealed class SmoothScrollBehaviorTests
                 0d,
                 SmoothScrollTestConstants.ContentLength - SmoothScrollTestConstants.ViewportLength);
 
-            Vector targetOffset = SmoothScrollTestActions.CalculateTargetOffset(host.Viewer, new Vector(0d, -1d));
-
-            targetOffset.X.Should().Be(SmoothScrollTestConstants.WheelMultiplier);
-            targetOffset.Y.Should().Be(SmoothScrollTestConstants.ContentLength - SmoothScrollTestConstants.ViewportLength);
+            SmoothScrollTestActions.AssertTargetOffset(
+                host.Viewer,
+                new Vector(0d, -1d),
+                new Vector(
+                    SmoothScrollTestConstants.WheelMultiplier,
+                    SmoothScrollTestConstants.ContentLength
+                    - SmoothScrollTestConstants.ViewportLength));
         });
     }
 
@@ -165,9 +171,8 @@ public sealed class SmoothScrollBehaviorTests
         SmoothScrollTestDispatcher.Dispatch(() =>
         {
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
-            SmoothScrollBehavior.SetDuration(host.Viewer, TimeSpan.Zero);
+            SmoothScrollTestActions.EnableImmediate(host.Viewer);
 
-            SmoothScrollBehavior.SetIsEnabled(host.Viewer, true);
             SmoothScrollBehavior.SetIsEnabled(host.Viewer, true);
             SmoothScrollTestInput.Scroll(host.Window);
 
@@ -197,14 +202,10 @@ public sealed class SmoothScrollBehaviorTests
         await SmoothScrollTestDispatcher.DispatchAsync(async () =>
         {
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
-            SmoothScrollTestActions.StartActiveSmoothScroll(host);
 
-            SmoothScrollBehavior.SetIsEnabled(host.Viewer, false);
-            double stoppedOffset = host.Viewer.Offset.Y;
-
-            await SmoothScrollTestActions.FinishAnimationAsync();
-
-            host.Viewer.Offset.Y.Should().Be(stoppedOffset);
+            await SmoothScrollTestActions.AssertActiveScrollStopsAsync(
+                host,
+                currentHost => SmoothScrollBehavior.SetIsEnabled(currentHost.Viewer, false));
         });
     }
 
@@ -230,15 +231,10 @@ public sealed class SmoothScrollBehaviorTests
         await SmoothScrollTestDispatcher.DispatchAsync(async () =>
         {
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
-            SmoothScrollTestActions.StartActiveSmoothScroll(host);
 
-            host.Window.Content = null;
-            host.Window.CaptureRenderedFrame();
-            double stoppedOffset = host.Viewer.Offset.Y;
-
-            await SmoothScrollTestActions.FinishAnimationAsync();
-
-            host.Viewer.Offset.Y.Should().Be(stoppedOffset);
+            await SmoothScrollTestActions.AssertActiveScrollStopsAsync(
+                host,
+                SmoothScrollTestActions.Detach);
         });
     }
 
@@ -250,8 +246,7 @@ public sealed class SmoothScrollBehaviorTests
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
             SmoothScrollTestActions.StartActiveSmoothScroll(host);
 
-            host.Window.Content = null;
-            host.Window.CaptureRenderedFrame();
+            SmoothScrollTestActions.Detach(host);
 
             SmoothScrollBehavior.HasState(host.Viewer).Should().BeFalse();
         });
@@ -263,10 +258,8 @@ public sealed class SmoothScrollBehaviorTests
         SmoothScrollTestDispatcher.Dispatch(() =>
         {
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
-            SmoothScrollBehavior.SetDuration(host.Viewer, TimeSpan.Zero);
-            SmoothScrollBehavior.SetIsEnabled(host.Viewer, true);
-            host.Window.Content = null;
-            host.Window.CaptureRenderedFrame();
+            SmoothScrollTestActions.EnableImmediate(host.Viewer);
+            SmoothScrollTestActions.Detach(host);
             host.Window.Content = host.Parent;
             host.Window.CaptureRenderedFrame();
 
@@ -282,8 +275,7 @@ public sealed class SmoothScrollBehaviorTests
         SmoothScrollTestDispatcher.Dispatch(() =>
         {
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
-            SmoothScrollState state = new(host.Viewer);
-            state.Start(new Vector(0d, SmoothScrollTestConstants.WheelMultiplier), SmoothScrollTestConstants.ActiveDuration);
+            SmoothScrollState state = SmoothScrollTestActions.CreateActiveState(host.Viewer);
 
             bool calculated = SmoothScrollTargetCalculator.TryCalculateTargetOffset(
                 host.Viewer,
@@ -305,8 +297,7 @@ public sealed class SmoothScrollBehaviorTests
         SmoothScrollTestDispatcher.Dispatch(() =>
         {
             using SmoothScrollViewerHost host = SmoothScrollTestHostFactory.CreateVertical();
-            SmoothScrollState state = new(host.Viewer);
-            state.Start(new Vector(0d, SmoothScrollTestConstants.WheelMultiplier), SmoothScrollTestConstants.ActiveDuration);
+            SmoothScrollState state = SmoothScrollTestActions.CreateActiveState(host.Viewer);
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(1);
             double offsetBeforeRepeat = host.Viewer.Offset.Y;
 

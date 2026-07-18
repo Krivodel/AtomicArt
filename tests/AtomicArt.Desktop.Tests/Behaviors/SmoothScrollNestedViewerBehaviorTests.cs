@@ -14,10 +14,8 @@ public sealed class SmoothScrollNestedViewerBehaviorTests
         SmoothScrollTestDispatcher.Dispatch(() =>
         {
             using SmoothScrollNestedViewerHost host = SmoothScrollTestHostFactory.CreateNestedVertical();
-            SmoothScrollBehavior.SetDuration(host.OuterViewer, TimeSpan.Zero);
-            SmoothScrollBehavior.SetDuration(host.InnerViewer, TimeSpan.Zero);
-            SmoothScrollBehavior.SetIsEnabled(host.OuterViewer, true);
-            SmoothScrollBehavior.SetIsEnabled(host.InnerViewer, true);
+            SmoothScrollTestActions.EnableImmediate(host.OuterViewer);
+            SmoothScrollTestActions.EnableImmediate(host.InnerViewer);
 
             SmoothScrollTestInput.Scroll(host.Window);
 
@@ -32,8 +30,7 @@ public sealed class SmoothScrollNestedViewerBehaviorTests
         SmoothScrollTestDispatcher.Dispatch(() =>
         {
             using SmoothScrollNestedViewerHost host = SmoothScrollTestHostFactory.CreateNestedVertical();
-            SmoothScrollBehavior.SetDuration(host.OuterViewer, TimeSpan.Zero);
-            SmoothScrollBehavior.SetIsEnabled(host.OuterViewer, true);
+            SmoothScrollTestActions.EnableImmediate(host.OuterViewer);
             double innerOffsetBeforeWheel = host.InnerViewer.Offset.Y;
 
             SmoothScrollTestInput.Scroll(host.Window);
@@ -49,8 +46,7 @@ public sealed class SmoothScrollNestedViewerBehaviorTests
         SmoothScrollTestDispatcher.Dispatch(() =>
         {
             using SmoothScrollNestedViewerHost host = SmoothScrollTestHostFactory.CreateNestedVertical();
-            SmoothScrollBehavior.SetDuration(host.OuterViewer, TimeSpan.Zero);
-            SmoothScrollBehavior.SetIsEnabled(host.OuterViewer, true);
+            SmoothScrollTestActions.EnableImmediate(host.OuterViewer);
             host.InnerViewer.Offset = new Vector(
                 0d,
                 SmoothScrollTestConstants.ContentLength - SmoothScrollTestConstants.ViewportLength);
