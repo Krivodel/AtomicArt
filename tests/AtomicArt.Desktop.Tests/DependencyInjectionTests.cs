@@ -1,6 +1,5 @@
 using System.Text.Json;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using FluentAssertions;
@@ -10,6 +9,7 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Settings;
@@ -194,7 +194,7 @@ public sealed class DependencyInjectionTests
         IApiEndpointService secondService = serviceProvider.GetRequiredService<IApiEndpointService>();
 
         firstService.Should().BeSameAs(secondService);
-        firstService.BaseAddress.ToString().Should().Be("https://atomicart.test/");
+        firstService.BaseAddress.ToString().Should().Be(TestApiConfiguration.BaseAddress);
     }
 
     [Fact]
@@ -259,15 +259,7 @@ public sealed class DependencyInjectionTests
     private static ServiceCollection CreateServices()
     {
         ServiceCollection services = new();
-        Dictionary<string, string?> configurationValues = new(StringComparer.Ordinal)
-        {
-            ["Api:BaseAddress"] = "https://atomicart.test/"
-        };
-        IConfiguration configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configurationValues)
-            .Build();
-
-        services.AddSingleton(configuration);
+        services.AddSingleton(TestApiConfiguration.Create());
         services.AddDesktopServices();
 
         return services;

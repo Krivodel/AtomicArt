@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using Avalonia.Controls;
@@ -12,6 +11,7 @@ using Xunit;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
+using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
@@ -44,7 +44,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 .ReturnsAsync(new ApplicationUpdate("1.2.3"));
 
             ServiceCollection services = new();
-            services.AddSingleton<IConfiguration>(CreateConfiguration());
+            services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             services.AddSingleton(updateServiceMock.Object);
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -89,7 +89,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         Dispatch(() =>
         {
             ServiceCollection services = new();
-            services.AddSingleton<IConfiguration>(CreateConfiguration());
+            services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
             RegisterViewTemplates(serviceProvider);
@@ -125,18 +125,6 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 window.Close();
             }
         });
-    }
-
-    private static IConfiguration CreateConfiguration()
-    {
-        Dictionary<string, string?> values = new()
-        {
-            ["Api:BaseAddress"] = "https://atomicart.test/"
-        };
-
-        return new ConfigurationBuilder()
-            .AddInMemoryCollection(values)
-            .Build();
     }
 
     private static void RegisterViewTemplates(IServiceProvider serviceProvider)

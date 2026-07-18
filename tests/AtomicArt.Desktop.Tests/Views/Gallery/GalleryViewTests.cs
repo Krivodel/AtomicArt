@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 
 using System.Globalization;
 
@@ -13,6 +12,7 @@ using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
+using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -53,7 +53,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             ServiceCollection services = new();
-            services.AddSingleton<IConfiguration>(CreateConfiguration());
+            services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
             GalleryViewModel viewModel = serviceProvider.GetRequiredService<GalleryViewModel>();
@@ -89,7 +89,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             ServiceCollection services = new();
-            services.AddSingleton<IConfiguration>(CreateConfiguration());
+            services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
             GalleryViewModel viewModel = serviceProvider.GetRequiredService<GalleryViewModel>();
@@ -125,7 +125,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             ServiceCollection services = new();
-            services.AddSingleton<IConfiguration>(CreateConfiguration());
+            services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
             RegisterGalleryViewTemplate(serviceProvider);
@@ -170,7 +170,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         {
             GalleryItemState savedItem = GalleryItemStateTestFactory.CreateGenerated();
             ServiceCollection services = new();
-            services.AddSingleton<IConfiguration>(CreateConfiguration());
+            services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             services.AddSingleton<IAppStateBootstrapper>(new FixedGalleryAppStateBootstrapper(savedItem));
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -214,7 +214,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         {
             GalleryItemState savedItem = GalleryItemStateTestFactory.CreateGenerated();
             ServiceCollection services = new();
-            services.AddSingleton<IConfiguration>(CreateConfiguration());
+            services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             services.AddSingleton<IAppStateBootstrapper>(new FixedGalleryAppStateBootstrapper(savedItem));
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
@@ -263,7 +263,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             ServiceCollection services = new();
-            services.AddSingleton<IConfiguration>(CreateConfiguration());
+            services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
             RegisterGalleryViewTemplate(serviceProvider);
@@ -343,18 +343,6 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         }
 
         return items;
-    }
-
-    private static IConfiguration CreateConfiguration()
-    {
-        Dictionary<string, string?> values = new()
-        {
-            ["Api:BaseAddress"] = "https://atomicart.test/"
-        };
-
-        return new ConfigurationBuilder()
-            .AddInMemoryCollection(values)
-            .Build();
     }
 
     private static void RegisterGalleryViewTemplate(IServiceProvider serviceProvider)
