@@ -13,84 +13,62 @@ public sealed class GenerationModelRulesTests
     [Fact]
     public void Validate_WithSupportedNanoBanana2Parameters_ReturnsValid()
     {
-        GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
         IReadOnlyList<GenerationAttachedImage> attachedImages = CreateAttachedImages(1_024L);
         GenerationValidationRequest request = CreateRequest(
             constraints,
             attachedImages: attachedImages);
 
-        GenerationValidationResult result = rules.Validate(request);
-
-        result.IsValid.Should().BeTrue();
-        result.ErrorCode.Should().BeNull();
-        result.ErrorMessage.Should().BeNull();
+        AssertValid(request);
     }
 
     [Fact]
     public void Validate_WithUnsupportedResolution_ReturnsResolutionError()
     {
-        GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
         GenerationValidationRequest request = CreateRequest(
             constraints,
             resolution: "1x1");
 
-        GenerationValidationResult result = rules.Validate(request);
-
-        result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.UnsupportedResolution);
+        AssertValidationError(request, GenerationErrorCodes.UnsupportedResolution);
     }
 
     [Fact]
     public void Validate_WithUnsupportedAspectRatio_ReturnsAspectRatioError()
     {
-        GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
         GenerationValidationRequest request = CreateRequest(
             constraints,
             aspectRatio: "2:1");
 
-        GenerationValidationResult result = rules.Validate(request);
-
-        result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.UnsupportedAspectRatio);
+        AssertValidationError(request, GenerationErrorCodes.UnsupportedAspectRatio);
     }
 
     [Fact]
     public void Validate_WithUnsupportedGenerationCount_ReturnsModelRequestError()
     {
-        GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
         GenerationValidationRequest request = CreateRequest(
             constraints,
             generationCount: 5);
 
-        GenerationValidationResult result = rules.Validate(request);
-
-        result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(request, GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
     public void Validate_WithUnsupportedTemperature_ReturnsModelRequestError()
     {
-        GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
         GenerationValidationRequest request = CreateRequest(
             constraints,
             temperature: 0.15d);
 
-        GenerationValidationResult result = rules.Validate(request);
-
-        result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(request, GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
     public void Validate_WithTooManyAttachments_ReturnsModelRequestError()
     {
-        GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
         IReadOnlyList<GenerationAttachedImage> attachedImages = Enumerable
             .Range(0, constraints.MaxAttachedImages + 1)
@@ -100,16 +78,12 @@ public sealed class GenerationModelRulesTests
             constraints,
             attachedImages: attachedImages);
 
-        GenerationValidationResult result = rules.Validate(request);
-
-        result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(request, GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
     public void Validate_WithTotalAttachmentSizeLimitExceeded_ReturnsModelRequestError()
     {
-        GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
         IReadOnlyList<GenerationAttachedImage> attachedImages =
         [
@@ -120,16 +94,12 @@ public sealed class GenerationModelRulesTests
             constraints,
             attachedImages: attachedImages);
 
-        GenerationValidationResult result = rules.Validate(request);
-
-        result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(request, GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
     public void Validate_WithUnsupportedAttachmentContentType_ReturnsModelRequestError()
     {
-        GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
         IReadOnlyList<GenerationAttachedImage> attachedImages =
         [
@@ -139,10 +109,7 @@ public sealed class GenerationModelRulesTests
             constraints,
             attachedImages: attachedImages);
 
-        GenerationValidationResult result = rules.Validate(request);
-
-        result.IsValid.Should().BeFalse();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(request, GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -171,13 +138,10 @@ public sealed class GenerationModelRulesTests
         [
             new TestGenerationModelRules(0, _ => false, GenerationValidationResult.Valid())
         ];
-        GenerationModelRules rules = new(modelRules);
-        GenerationModelConstraints constraints = CreateConstraints();
 
-        Action action = () => Validate(rules, constraints);
-
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage($"No rules are registered for generation model '{constraints.ModelId}'.");
+        AssertRuleSelectionFailure(
+            modelRules,
+            modelId => $"No rules are registered for generation model '{modelId}'.");
     }
 
     [Fact]
@@ -188,14 +152,11 @@ public sealed class GenerationModelRulesTests
             new TestGenerationModelRules(10, _ => true, GenerationValidationResult.Valid()),
             new TestGenerationModelRules(10, _ => true, GenerationValidationResult.Valid())
         ];
-        GenerationModelRules rules = new(modelRules);
-        GenerationModelConstraints constraints = CreateConstraints();
 
-        Action action = () => Validate(rules, constraints);
-
-        action.Should().Throw<InvalidOperationException>()
-            .WithMessage(
-                $"Multiple rules with priority 10 are registered for generation model '{constraints.ModelId}'.");
+        AssertRuleSelectionFailure(
+            modelRules,
+            modelId =>
+                $"Multiple rules with priority 10 are registered for generation model '{modelId}'.");
     }
 
     [Fact]
@@ -207,6 +168,46 @@ public sealed class GenerationModelRulesTests
 
         resolutions.Should().NotBeAssignableTo<string[]>();
         resolutions.Should().NotBeEmpty();
+    }
+
+    private static void AssertValid(GenerationValidationRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        GenerationValidationResult result = CreateRules().Validate(request);
+
+        result.IsValid.Should().BeTrue();
+        result.ErrorCode.Should().BeNull();
+        result.ErrorMessage.Should().BeNull();
+    }
+
+    private static void AssertValidationError(
+        GenerationValidationRequest request,
+        string expectedErrorCode)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedErrorCode);
+
+        GenerationValidationResult result = CreateRules().Validate(request);
+
+        result.IsValid.Should().BeFalse();
+        result.ErrorCode.Should().Be(expectedErrorCode);
+    }
+
+    private static void AssertRuleSelectionFailure(
+        IGenerationModelRules[] modelRules,
+        Func<string, string> expectedMessageFactory)
+    {
+        ArgumentNullException.ThrowIfNull(modelRules);
+        ArgumentNullException.ThrowIfNull(expectedMessageFactory);
+
+        GenerationModelRules rules = new(modelRules);
+        GenerationModelConstraints constraints = CreateConstraints();
+
+        Action action = () => Validate(rules, constraints);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage(expectedMessageFactory(constraints.ModelId));
     }
 
     private static GenerationModelRules CreateRules()
