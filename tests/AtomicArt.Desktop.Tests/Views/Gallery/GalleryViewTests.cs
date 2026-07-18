@@ -67,14 +67,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     CancellationToken.None);
                 window.CaptureRenderedFrame();
 
-                AnimatedGalleryControl control = GetGalleryControl(view);
-                Canvas galleryPanel = GetGalleryPanel(control);
-                Control card = galleryPanel.Children.OfType<Control>().Single();
-
-                card.IsVisible.Should().BeTrue();
-                card.Opacity.Should().Be(1d);
-                card.Width.Should().BeGreaterThan(0d);
-                card.Height.Should().BeGreaterThan(0d);
+                AssertSingleVisibleCard(GetGalleryControl(view));
             }
             finally
             {
@@ -103,14 +96,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 
             try
             {
-                AnimatedGalleryControl control = GetGalleryControl(view);
-                Canvas galleryPanel = GetGalleryPanel(control);
-                Control card = galleryPanel.Children.OfType<Control>().Single();
-
-                card.IsVisible.Should().BeTrue();
-                card.Opacity.Should().Be(1d);
-                card.Width.Should().BeGreaterThan(0d);
-                card.Height.Should().BeGreaterThan(0d);
+                AssertSingleVisibleCard(GetGalleryControl(view));
             }
             finally
             {
@@ -144,17 +130,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 
             try
             {
-                AnimatedGalleryControl control = window
-                    .GetVisualDescendants()
-                    .OfType<AnimatedGalleryControl>()
-                    .Single();
-                Canvas galleryPanel = GetGalleryPanel(control);
-                Control card = galleryPanel.Children.OfType<Control>().Single();
-
-                card.IsVisible.Should().BeTrue();
-                card.Opacity.Should().Be(1d);
-                card.Width.Should().BeGreaterThan(0d);
-                card.Height.Should().BeGreaterThan(0d);
+                AssertSingleVisibleCard(GetGalleryControl(window));
             }
             finally
             {
@@ -188,17 +164,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 
             try
             {
-                AnimatedGalleryControl control = window
-                    .GetVisualDescendants()
-                    .OfType<AnimatedGalleryControl>()
-                    .Single();
-                Canvas galleryPanel = GetGalleryPanel(control);
-                Control card = galleryPanel.Children.OfType<Control>().Single();
-
-                card.IsVisible.Should().BeTrue();
-                card.Opacity.Should().Be(1d);
-                card.Width.Should().BeGreaterThan(0d);
-                card.Height.Should().BeGreaterThan(0d);
+                AssertSingleVisibleCard(GetGalleryControl(window));
             }
             finally
             {
@@ -234,17 +200,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 await restoreTask;
                 window.CaptureRenderedFrame();
 
-                AnimatedGalleryControl control = window
-                    .GetVisualDescendants()
-                    .OfType<AnimatedGalleryControl>()
-                    .Single();
-                Canvas galleryPanel = GetGalleryPanel(control);
-                Control card = galleryPanel.Children.OfType<Control>().Single();
-
-                card.IsVisible.Should().BeTrue();
-                card.Opacity.Should().Be(1d);
-                card.Width.Should().BeGreaterThan(0d);
-                card.Height.Should().BeGreaterThan(0d);
+                AssertSingleVisibleCard(GetGalleryControl(window));
             }
             finally
             {
@@ -324,9 +280,28 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         operations.ActiveOperations.Should().BeOfType<GalleryOperationCoordinator>();
     }
 
+    private static void AssertSingleVisibleCard(AnimatedGalleryControl control)
+    {
+        Canvas galleryPanel = GetGalleryPanel(control);
+        Control card = galleryPanel.Children.OfType<Control>().Single();
+
+        card.IsVisible.Should().BeTrue();
+        card.Opacity.Should().Be(1d);
+        card.Width.Should().BeGreaterThan(0d);
+        card.Height.Should().BeGreaterThan(0d);
+    }
+
     private static AnimatedGalleryControl GetGalleryControl(GalleryView view)
     {
         return view
+            .GetVisualDescendants()
+            .OfType<AnimatedGalleryControl>()
+            .Single();
+    }
+
+    private static AnimatedGalleryControl GetGalleryControl(Window window)
+    {
+        return window
             .GetVisualDescendants()
             .OfType<AnimatedGalleryControl>()
             .Single();
