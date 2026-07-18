@@ -160,12 +160,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
                 fullResolutionBitmap.PixelSize.Width,
                 fullResolutionBitmap.PixelSize.Height);
 
-            List<PicaImageItem> adjacentItems = PrepareAdjacentPreviewCache(selectedIndex);
-
-            foreach (PicaImageItem adjacentItem in adjacentItems)
-            {
-                await PrefetchPreviewBitmapAsync(adjacentItem, loadId, ct);
-            }
+            await PrefetchAdjacentPreviewBitmapsCoreAsync(selectedIndex, loadId, ct);
         }
         catch (OperationCanceledException ex) when (ct.IsCancellationRequested)
         {
@@ -224,6 +219,14 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
+        await PrefetchAdjacentPreviewBitmapsCoreAsync(selectedIndex, loadId, ct);
+    }
+
+    private async Task PrefetchAdjacentPreviewBitmapsCoreAsync(
+        int selectedIndex,
+        long loadId,
+        CancellationToken ct)
+    {
         List<PicaImageItem> adjacentItems = PrepareAdjacentPreviewCache(selectedIndex);
 
         foreach (PicaImageItem adjacentItem in adjacentItems)
