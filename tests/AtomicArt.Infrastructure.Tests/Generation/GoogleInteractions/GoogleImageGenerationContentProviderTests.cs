@@ -16,20 +16,21 @@ namespace AtomicArt.Infrastructure.Tests.Generation.GoogleInteractions;
 
 public sealed class GoogleImageGenerationContentProviderTests
 {
+    private static readonly DateTime StartedAtUtc =
+        new(2026, 7, 4, 10, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime CompletedAtUtc =
+        new(2026, 7, 4, 10, 0, 30, DateTimeKind.Utc);
+
     [Fact]
     public async Task GetContentAsync_WithCompletedResponse_ReturnsImageUsageAndDuration()
     {
         TestGoogleInteractionsClient client = new(CreateCompletedResponse());
         TestDateTimeProvider dateTimeProvider = new(
-            new DateTime(2026, 7, 4, 10, 0, 0, DateTimeKind.Utc),
-            new DateTime(2026, 7, 4, 10, 0, 30, DateTimeKind.Utc));
-        GoogleImageGenerationContentProvider provider = new(
-            new GoogleInteractionsRequestBuilder(),
+            StartedAtUtc,
+            CompletedAtUtc);
+        GoogleImageGenerationContentProvider provider = CreateProvider(
             client,
-            new GoogleInteractionsResponseParser(),
-            new GenerationUsagePriceCalculator(),
-            dateTimeProvider,
-            NullLogger<GoogleImageGenerationContentProvider>.Instance);
+            dateTimeProvider);
         ImageGenerationContentProviderContext context = CreateContext(
             TestGenerationCredentials.ProviderCredential);
 
@@ -37,7 +38,7 @@ public sealed class GoogleImageGenerationContentProviderTests
 
         result.ContentType.Should().Be("image/jpeg");
         result.Base64Data.Should().Be("/9j/4AAQSkZJRg==");
-        result.CompletedAtUtc.Should().Be(new DateTime(2026, 7, 4, 10, 0, 30, DateTimeKind.Utc));
+        result.CompletedAtUtc.Should().Be(CompletedAtUtc);
         result.GenerationDuration.Should().Be(TimeSpan.FromSeconds(30));
         result.Price.Should().BeEquivalentTo(new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"));
         result.Usage.Should().BeEquivalentTo(new
@@ -56,15 +57,11 @@ public sealed class GoogleImageGenerationContentProviderTests
     {
         TestGoogleInteractionsClient client = new(CreateCompletedFourKResponse());
         TestDateTimeProvider dateTimeProvider = new(
-            new DateTime(2026, 7, 4, 10, 0, 0, DateTimeKind.Utc),
-            new DateTime(2026, 7, 4, 10, 0, 30, DateTimeKind.Utc));
-        GoogleImageGenerationContentProvider provider = new(
-            new GoogleInteractionsRequestBuilder(),
+            StartedAtUtc,
+            CompletedAtUtc);
+        GoogleImageGenerationContentProvider provider = CreateProvider(
             client,
-            new GoogleInteractionsResponseParser(),
-            new GenerationUsagePriceCalculator(),
-            dateTimeProvider,
-            NullLogger<GoogleImageGenerationContentProvider>.Instance);
+            dateTimeProvider);
         ImageGenerationContentProviderContext context = CreateContext(
             TestGenerationCredentials.ProviderCredential,
             "4K");
@@ -86,13 +83,9 @@ public sealed class GoogleImageGenerationContentProviderTests
     public async Task GetContentAsync_WithoutProviderCredential_DoesNotCallClient()
     {
         TestGoogleInteractionsClient client = new(CreateCompletedResponse());
-        GoogleImageGenerationContentProvider provider = new(
-            new GoogleInteractionsRequestBuilder(),
+        GoogleImageGenerationContentProvider provider = CreateProvider(
             client,
-            new GoogleInteractionsResponseParser(),
-            new GenerationUsagePriceCalculator(),
-            new TestDateTimeProvider(new DateTime(2026, 7, 4, 10, 0, 0, DateTimeKind.Utc)),
-            NullLogger<GoogleImageGenerationContentProvider>.Instance);
+            new TestDateTimeProvider(StartedAtUtc));
         ImageGenerationContentProviderContext context = CreateContext(null);
 
         Func<Task> act = () => provider.GetContentAsync(context, CancellationToken.None);
@@ -107,12 +100,9 @@ public sealed class GoogleImageGenerationContentProviderTests
     {
         TestGoogleInteractionsClient client = new(CreateTextOnlyResponse());
         RecordingLogger<GoogleImageGenerationContentProvider> logger = new();
-        GoogleImageGenerationContentProvider provider = new(
-            new GoogleInteractionsRequestBuilder(),
+        GoogleImageGenerationContentProvider provider = CreateProvider(
             client,
-            new GoogleInteractionsResponseParser(),
-            new GenerationUsagePriceCalculator(),
-            new TestDateTimeProvider(new DateTime(2026, 7, 4, 10, 0, 0, DateTimeKind.Utc)),
+            new TestDateTimeProvider(StartedAtUtc),
             logger);
         ImageGenerationContentProviderContext context = CreateContext(
             TestGenerationCredentials.ProviderCredential);
@@ -131,6 +121,22 @@ public sealed class GoogleImageGenerationContentProviderTests
         entry.Message.Should().Contain("TextContentLength 4");
         entry.Message.Should().NotContain("done");
         entry.Message.Should().NotContain(TestGenerationCredentials.ProviderCredential);
+    }
+
+    private static GoogleImageGenerationContentProvider CreateProvider(
+        TestGoogleInteractionsClient client,
+        IDateTimeProvider dateTimeProvider,
+        ILogger<GoogleImageGenerationContentProvider>? logger = null)
+    {
+        logger ??= NullLogger<GoogleImageGenerationContentProvider>.Instance;
+
+        return new GoogleImageGenerationContentProvider(
+            new GoogleInteractionsRequestBuilder(),
+            client,
+            new GoogleInteractionsResponseParser(),
+            new GenerationUsagePriceCalculator(),
+            dateTimeProvider,
+            logger);
     }
 
     private static ImageGenerationContentProviderContext CreateContext(
