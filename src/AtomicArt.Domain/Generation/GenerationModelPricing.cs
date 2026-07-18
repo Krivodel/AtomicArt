@@ -81,9 +81,7 @@ public sealed record GenerationModelPricing
     {
         if (value <= 0m)
         {
-            throw new DomainException(
-                GenerationErrorCodes.ModelRequestValidation,
-                $"Pricing parameter '{parameterName}' must be positive.");
+            throw CreateInvalidPositiveParameterException(parameterName);
         }
 
         return value;
@@ -98,12 +96,17 @@ public sealed record GenerationModelPricing
     {
         if (value <= 0)
         {
-            throw new DomainException(
-                GenerationErrorCodes.ModelRequestValidation,
-                $"Pricing parameter '{parameterName}' must be positive.");
+            throw CreateInvalidPositiveParameterException(parameterName);
         }
 
         return value;
+    }
+
+    private static DomainException CreateInvalidPositiveParameterException(string parameterName)
+    {
+        return new DomainException(
+            GenerationErrorCodes.ModelRequestValidation,
+            $"Pricing parameter '{parameterName}' must be positive.");
     }
 
     private static IReadOnlyDictionary<string, int> CreateOutputImageTokensSnapshot(

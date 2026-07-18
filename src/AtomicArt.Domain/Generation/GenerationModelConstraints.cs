@@ -102,9 +102,7 @@ public sealed record GenerationModelConstraints
     {
         if (value <= 0)
         {
-            throw new DomainException(
-                InvalidPositiveLimitErrorCode,
-                $"Generation model constraint '{parameterName}' must be positive.");
+            throw CreateInvalidPositiveLimitException(parameterName);
         }
 
         return value;
@@ -114,12 +112,17 @@ public sealed record GenerationModelConstraints
     {
         if (value <= 0)
         {
-            throw new DomainException(
-                InvalidPositiveLimitErrorCode,
-                $"Generation model constraint '{parameterName}' must be positive.");
+            throw CreateInvalidPositiveLimitException(parameterName);
         }
 
         return value;
+    }
+
+    private static DomainException CreateInvalidPositiveLimitException(string parameterName)
+    {
+        return new DomainException(
+            InvalidPositiveLimitErrorCode,
+            $"Generation model constraint '{parameterName}' must be positive.");
     }
 
     private static IReadOnlyList<string> CreateRequiredSnapshot(
