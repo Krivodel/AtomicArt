@@ -30,12 +30,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private void StartFullResolutionImageLoad(PicaImageItem item)
     {
-        string fullPath = Path.GetFullPath(item.FilePath);
-
-        if (!File.Exists(fullPath))
-        {
-            throw new FileNotFoundException("The image selected for Pica does not exist.", fullPath);
-        }
+        string fullPath = GetExistingImagePath(item);
 
         StartImageLoad((loadId, ct) => LoadFullResolutionImageAsync(
             item,
@@ -86,21 +81,13 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Failed to load image {ItemId} at full resolution.",
-                item.Id);
+            LogFullResolutionImageLoadFailure(ex, item);
         }
     }
 
     private void StartProgressiveImageLoad(PicaImageItem item)
     {
-        string fullPath = Path.GetFullPath(item.FilePath);
-
-        if (!File.Exists(fullPath))
-        {
-            throw new FileNotFoundException("The image selected for Pica does not exist.", fullPath);
-        }
+        string fullPath = GetExistingImagePath(item);
 
         StartImageLoad((loadId, ct) => LoadFileImageProgressivelyAsync(
             item,
@@ -191,11 +178,32 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Failed to load image {ItemId} at full resolution.",
-                item.Id);
+            LogFullResolutionImageLoadFailure(ex, item);
         }
+    }
+
+    private string GetExistingImagePath(PicaImageItem item)
+    {
+        string fullPath = Path.GetFullPath(item.FilePath);
+
+        if (!File.Exists(fullPath))
+        {
+            throw new FileNotFoundException(
+                "The image selected for Pica does not exist.",
+                fullPath);
+        }
+
+        return fullPath;
+    }
+
+    private void LogFullResolutionImageLoadFailure(
+        Exception exception,
+        PicaImageItem item)
+    {
+        _logger.LogError(
+            exception,
+            "Failed to load image {ItemId} at full resolution.",
+            item.Id);
     }
 
     private async Task WaitForNextRenderFrameAsync(CancellationToken ct)
