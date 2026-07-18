@@ -15,6 +15,7 @@ public sealed class GenerationRunDispatcherTests
 {
     private const string ModelId = "test-model";
     private const int ConcurrentDisposeAttemptCount = 50;
+    private const int OverLimitRunCount = GenerationConcurrencyLimiter.MaxConcurrentGenerations + 6;
     private static readonly DateTime RequestedAtUtc = new(2026, 7, 4, 12, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 4, 12, 0, 1, DateTimeKind.Utc);
 
@@ -138,22 +139,12 @@ public sealed class GenerationRunDispatcherTests
         TestGenerationLifecycleEventHub lifecycleEventHub = new();
         GenerationRunDispatcher dispatcher = CreateDispatcher(apiClient, lifecycleEventHub);
 
-        for (int i = 0; i < GenerationConcurrencyLimiter.MaxConcurrentGenerations + 6; i++)
+        for (int i = 0; i < OverLimitRunCount; i++)
         {
             await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
         }
 
-        await apiClient.WaitForCallCountAsync(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
-        apiClient.ActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
-        apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
-
-        apiClient.Complete();
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Count(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed)
-                == GenerationConcurrencyLimiter.MaxConcurrentGenerations + 6,
-            CancellationToken.None);
-        apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
+        await CompleteRunsAndAssertConcurrencyLimitAsync(apiClient, lifecycleEventHub);
     }
 
     [Fact]
@@ -165,7 +156,7 @@ public sealed class GenerationRunDispatcherTests
         GenerationRunDispatcher firstDispatcher = CreateDispatcher(apiClient, lifecycleEventHub, limiter);
         GenerationRunDispatcher secondDispatcher = CreateDispatcher(apiClient, lifecycleEventHub, limiter);
 
-        for (int i = 0; i < GenerationConcurrencyLimiter.MaxConcurrentGenerations + 6; i++)
+        for (int i = 0; i < OverLimitRunCount; i++)
         {
             GenerationRunDispatcher dispatcher = (i % 2) == 0
                 ? firstDispatcher
@@ -173,17 +164,7 @@ public sealed class GenerationRunDispatcherTests
             await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
         }
 
-        await apiClient.WaitForCallCountAsync(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
-        apiClient.ActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
-        apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
-
-        apiClient.Complete();
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => lifecycleEventHub.PublishedEvents.Count(
-                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed)
-                == GenerationConcurrencyLimiter.MaxConcurrentGenerations + 6,
-            CancellationToken.None);
-        apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
+        await CompleteRunsAndAssertConcurrencyLimitAsync(apiClient, lifecycleEventHub);
     }
 
     [Fact]
@@ -419,10 +400,29 @@ public sealed class GenerationRunDispatcherTests
             aspectRatio: request.AspectRatio,
             resolution: request.Resolution,
             createdAtUtc: CreatedAtUtc);
+        GenerationItemDto[] items = [item];
 
         return new GenerationBatchDto(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            [item]);
+            items);
+    }
+
+    private static async Task CompleteRunsAndAssertConcurrencyLimitAsync(
+        BlockingImageGenerationApiClient apiClient,
+        TestGenerationLifecycleEventHub lifecycleEventHub)
+    {
+        await apiClient.WaitForCallCountAsync(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
+        apiClient.ActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
+        apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
+
+        apiClient.Complete();
+        await AsyncTestWaiter.WaitForConditionAsync(
+            () => lifecycleEventHub.PublishedEvents.Count(
+                lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Completed)
+                == OverLimitRunCount,
+            CancellationToken.None);
+
+        apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
     }
 
     private sealed class BlockingImageGenerationApiClient : IImageGenerationApiClient
