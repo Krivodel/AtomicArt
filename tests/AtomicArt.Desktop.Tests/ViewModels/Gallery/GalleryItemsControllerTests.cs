@@ -20,10 +20,8 @@ public sealed class GalleryItemsControllerTests
         GalleryItemsController controller = CreateController(new PassthroughTrustedImageFileService());
         GalleryItemState state = CreateState("generation.png", null);
 
-        controller.RestoreItems([state]);
+        GenerationItemViewModel item = RestoreSingleItem(controller, state);
 
-        controller.Items.Should().ContainSingle();
-        GenerationItemViewModel item = controller.Items[0];
         item.Id.Should().Be(ItemId);
         item.IsGenerated.Should().BeTrue();
         item.ImagePath.Should().Be("generation.png");
@@ -37,10 +35,8 @@ public sealed class GalleryItemsControllerTests
         GalleryItemsController controller = CreateController(new RejectingTrustedImageFileService());
         GalleryItemState state = CreateState("missing.png", null);
 
-        controller.RestoreItems([state]);
+        GenerationItemViewModel item = RestoreSingleItem(controller, state);
 
-        controller.Items.Should().ContainSingle();
-        GenerationItemViewModel item = controller.Items[0];
         item.IsGenerated.Should().BeTrue();
         item.ImagePath.Should().BeNull();
         item.HasDisplayImagePath.Should().BeFalse();
@@ -52,10 +48,8 @@ public sealed class GalleryItemsControllerTests
         GalleryItemsController controller = CreateController(new PassthroughTrustedImageFileService());
         GalleryItemState state = CreateState("generation.png", "thumbnail.png");
 
-        controller.RestoreItems([state]);
+        GenerationItemViewModel item = RestoreSingleItem(controller, state);
 
-        controller.Items.Should().ContainSingle();
-        GenerationItemViewModel item = controller.Items[0];
         item.ImagePath.Should().Be("generation.png");
         item.ThumbnailPath.Should().Be("thumbnail.png");
         item.DisplayThumbnailPath.Should().Be("thumbnail.png");
@@ -67,10 +61,8 @@ public sealed class GalleryItemsControllerTests
         GalleryItemsController controller = CreateController(new RejectingThumbnailTrustedImageFileService());
         GalleryItemState state = CreateState("generation.png", "thumbnail.png");
 
-        controller.RestoreItems([state]);
+        GenerationItemViewModel item = RestoreSingleItem(controller, state);
 
-        controller.Items.Should().ContainSingle();
-        GenerationItemViewModel item = controller.Items[0];
         item.ImagePath.Should().Be("generation.png");
         item.ThumbnailPath.Should().BeNull();
         item.DisplayThumbnailPath.Should().Be("generation.png");
@@ -91,6 +83,17 @@ public sealed class GalleryItemsControllerTests
             createdAtUtc: CreatedAtUtc,
             imagePath: imagePath,
             thumbnailPath: thumbnailPath);
+    }
+
+    private static GenerationItemViewModel RestoreSingleItem(
+        GalleryItemsController controller,
+        GalleryItemState state)
+    {
+        controller.RestoreItems([state]);
+
+        controller.Items.Should().ContainSingle();
+
+        return controller.Items[0];
     }
 
     private sealed class RejectingThumbnailTrustedImageFileService : TrustedImageFileServiceTestDouble
