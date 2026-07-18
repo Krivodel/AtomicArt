@@ -233,9 +233,7 @@ internal sealed class GalleryFrontGenerationRunner :
         GalleryOperationCoordinator context,
         GalleryFrontGenerationRunState state)
     {
-        GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, state.OverlayControls);
-        state.SpawnClones.Clear();
-        state.OverlayControls.Clear();
+        ClearOverlays(context, state);
 
         foreach (GalleryOperation operation in state.UnmaterializedOperations)
         {
