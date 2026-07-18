@@ -68,14 +68,12 @@ public sealed class GoogleInteractionsClientTests
     {
         const string responseJson =
             """{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Requested model is unavailable in this region."}}""";
-        using ClientTestContext context = CreateRecordingClient(
+
+        (IReadOnlyList<string> logMessages, _) = await GetProviderFailureAsync(
             HttpStatusCode.Forbidden,
             responseJson);
 
-        Func<Task> act = () => context.CreateInteractionAsync();
-
-        await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = string.Join(Environment.NewLine, context.LogMessages);
+        string logText = string.Join(Environment.NewLine, logMessages);
         logText.Should().Contain("provider code 403");
         logText.Should().Contain("provider status PERMISSION_DENIED");
         logText.Should().Contain("Requested model is unavailable in this region.");
@@ -87,15 +85,14 @@ public sealed class GoogleInteractionsClientTests
     {
         const string responseJson =
             """{"error":{"code":"INVALID_ARGUMENT","status":"INVALID_ARGUMENT","message":"Request format is invalid."}}""";
-        using ClientTestContext context = CreateRecordingClient(
+        (
+            IReadOnlyList<string> logMessages,
+            ImageGenerationProviderException exception) = await GetProviderFailureAsync(
             HttpStatusCode.BadRequest,
             responseJson);
 
-        await AssertProviderFailureAsync(
-            context,
-            ImageGenerationProviderFailureKind.RequestRejected);
-
-        string logText = context.LogMessages.Last();
+        exception.FailureKind.Should().Be(ImageGenerationProviderFailureKind.RequestRejected);
+        string logText = logMessages.Last();
         logText.Should().Contain("provider status INVALID_ARGUMENT");
         logText.Should().Contain("provider message Request format is invalid.");
     }
@@ -107,14 +104,12 @@ public sealed class GoogleInteractionsClientTests
         string responseJson =
             """{"error":{"code":400,"status":"INVALID_ARGUMENT","message":"Encoded value __BASE64__ was rejected."}}"""
                 .Replace("__BASE64__", base64Fragment, StringComparison.Ordinal);
-        using ClientTestContext context = CreateRecordingClient(
+
+        (IReadOnlyList<string> logMessages, _) = await GetProviderFailureAsync(
             HttpStatusCode.BadRequest,
             responseJson);
 
-        Func<Task> act = () => context.CreateInteractionAsync();
-
-        await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = string.Join(Environment.NewLine, context.LogMessages);
+        string logText = string.Join(Environment.NewLine, logMessages);
         logText.Should().Contain(base64Fragment);
         logText.Should().NotContain("[REDACTED");
     }
@@ -135,16 +130,13 @@ public sealed class GoogleInteractionsClientTests
               }
             }
             """;
-        using ClientTestContext context = CreateRecordingClient(
+        (IReadOnlyList<string> logMessages, _) = await GetProviderFailureAsync(
             HttpStatusCode.BadRequest,
-            responseJson);
-
-        Func<Task> act = () => context.CreateInteractionAsync(
+            responseJson,
             requestJson,
             providerCredential);
 
-        await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = string.Join(Environment.NewLine, context.LogMessages);
+        string logText = string.Join(Environment.NewLine, logMessages);
         logText.Should().Contain("PRIVATE-PROMPT");
         logText.Should().Contain("KEY-SECRET");
         logText.Should().Contain("iVBORw0KGgo");
@@ -161,14 +153,13 @@ public sealed class GoogleInteractionsClientTests
     {
         const string responseJson =
             """{"error":{"code":400,"status":"INVALID_ARGUMENT","message":"Potentially echoed private input."}}""";
-        using ClientTestContext context = CreateRecordingClient(
+
+        (IReadOnlyList<string> logMessages, _) = await GetProviderFailureAsync(
             HttpStatusCode.BadRequest,
-            responseJson);
+            responseJson,
+            "{malformed request");
 
-        Func<Task> act = () => context.CreateInteractionAsync("{malformed request");
-
-        await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = string.Join(Environment.NewLine, context.LogMessages);
+        string logText = string.Join(Environment.NewLine, logMessages);
         logText.Should().Contain("Potentially echoed private input.");
         logText.Should().NotContain("[REDACTED");
     }
@@ -186,14 +177,11 @@ public sealed class GoogleInteractionsClientTests
                 message = providerMessage
             }
         });
-        using ClientTestContext context = CreateRecordingClient(
+        (IReadOnlyList<string> logMessages, _) = await GetProviderFailureAsync(
             HttpStatusCode.TooManyRequests,
             responseJson);
 
-        Func<Task> act = () => context.CreateInteractionAsync();
-
-        await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = context.LogMessages.Last();
+        string logText = logMessages.Last();
         logText.Should().Contain("provider code 429");
         logText.Should().Contain("provider status RESOURCE_EXHAUSTED");
         logText.Should().Contain(new string('x', 512));
@@ -213,14 +201,11 @@ public sealed class GoogleInteractionsClientTests
                 message = providerMessage
             }
         });
-        using ClientTestContext context = CreateRecordingClient(
+        (IReadOnlyList<string> logMessages, _) = await GetProviderFailureAsync(
             HttpStatusCode.BadRequest,
             responseJson);
 
-        Func<Task> act = () => context.CreateInteractionAsync();
-
-        await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = context.LogMessages.Last();
+        string logText = logMessages.Last();
         logText.Should().Contain("provider message First line Second segment done.");
         logText.Should().NotContain("\r");
         logText.Should().NotContain("\n");
@@ -235,15 +220,14 @@ public sealed class GoogleInteractionsClientTests
         string responseJson,
         string expectedBodyKind)
     {
-        using ClientTestContext context = CreateRecordingClient(
+        (
+            IReadOnlyList<string> logMessages,
+            ImageGenerationProviderException exception) = await GetProviderFailureAsync(
             HttpStatusCode.BadRequest,
             responseJson);
 
-        Func<Task> act = () => context.CreateInteractionAsync();
-
-        await act.Should().ThrowAsync<ImageGenerationProviderException>()
-            .WithMessage("The generation provider returned an error.");
-        string logText = context.LogMessages.Last();
+        exception.Message.Should().Be("The generation provider returned an error.");
+        string logText = logMessages.Last();
         logText.Should().Contain($"Error body {expectedBodyKind}");
     }
 
@@ -300,6 +284,24 @@ public sealed class GoogleInteractionsClientTests
             responseJson,
             logger,
             logger);
+    }
+
+    private static async Task<(
+        IReadOnlyList<string> LogMessages,
+        ImageGenerationProviderException Exception)> GetProviderFailureAsync(
+            HttpStatusCode statusCode,
+            string responseJson,
+            string? requestJson = null,
+            string providerCredential = TestGenerationCredentials.ProviderCredential)
+    {
+        using ClientTestContext context = CreateRecordingClient(statusCode, responseJson);
+        Func<Task> act = () => context.CreateInteractionAsync(requestJson, providerCredential);
+
+        FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
+            await act.Should().ThrowAsync<ImageGenerationProviderException>();
+        IReadOnlyList<string> logMessages = context.LogMessages.ToList();
+
+        return (logMessages, assertions.Which);
     }
 
     private static ClientTestContext CreateClient(
