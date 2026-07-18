@@ -34,14 +34,14 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         return IsBaseMovementSpeedRequested(modifiers)
             ? ViewerSettingsDefaults.MinimumSpeed
-            : _movementSpeed;
+            : _settings.MovementSpeed;
     }
 
     private int GetEffectiveZoomSpeed(KeyModifiers modifiers)
     {
         return IsBaseZoomSpeedRequested(modifiers)
             ? ViewerSettingsDefaults.MinimumSpeed
-            : _zoomSpeed;
+            : _settings.ZoomSpeed;
     }
 
     private double GetZoomButtonFactor()
@@ -51,12 +51,12 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private ImagePanMotionMode GetPanMotionMode()
     {
-        if (!_isSmoothPanningEnabled)
+        if (!_settings.IsSmoothPanningEnabled)
         {
             return ImagePanMotionMode.Immediate;
         }
 
-        return _isPanningInertiaEnabled
+        return _settings.IsPanningInertiaEnabled
             ? ImagePanMotionMode.SmoothWithInertia
             : ImagePanMotionMode.Smooth;
     }
@@ -488,7 +488,8 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         DateTimeOffset clickedAt = DateTimeOffset.UtcNow;
 
-        if (_expandOnDoubleClick && _imageDoubleClickTracker.RegisterClick(position, clickedAt))
+        if (_settings.ExpandOnDoubleClick
+            && _imageDoubleClickTracker.RegisterClick(position, clickedAt))
         {
             ToggleWindowMode();
         }

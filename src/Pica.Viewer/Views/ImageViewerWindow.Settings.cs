@@ -28,8 +28,8 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
-        _isFilteringEnabled = _view.FilteringToggle.IsFilteringEnabled;
-        _view.ApplyImageFiltering(_isFilteringEnabled);
+        _settings.IsFilteringEnabled = _view.FilteringToggle.IsFilteringEnabled;
+        _view.ApplyImageFiltering(_settings.IsFilteringEnabled);
         await SaveCurrentStateAsync();
     }
 
@@ -44,7 +44,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
-        _movementSpeed = selectedOption.Value;
+        _settings.MovementSpeed = selectedOption.Value;
         await SaveCurrentStateAsync();
     }
 
@@ -59,7 +59,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
-        _zoomSpeed = selectedOption.Value;
+        _settings.ZoomSpeed = selectedOption.Value;
         await SaveCurrentStateAsync();
     }
 
@@ -68,7 +68,8 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _ = sender;
         _ = e;
 
-        _expandOnDoubleClick = _view.SettingsPanel.ExpandOnDoubleClickCheckBox.IsChecked == true;
+        _settings.ExpandOnDoubleClick =
+            _view.SettingsPanel.ExpandOnDoubleClickCheckBox.IsChecked == true;
         _imageDoubleClickTracker.Reset();
         await SaveCurrentStateAsync();
     }
@@ -78,9 +79,9 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _ = sender;
         _ = e;
 
-        _isFastLoadingEnabled = _view.SettingsPanel.FastLoadingCheckBox.IsChecked == true;
+        _settings.IsFastLoadingEnabled = _view.SettingsPanel.FastLoadingCheckBox.IsChecked == true;
 
-        if (_isFastLoadingEnabled)
+        if (_settings.IsFastLoadingEnabled)
         {
             StartPreviewCachePriming();
         }
@@ -102,9 +103,10 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _ = sender;
         _ = e;
 
-        _allowFreeZoomOut = _view.SettingsPanel.AllowFreeZoomOutCheckBox.IsChecked == true;
+        _settings.AllowFreeZoomOut =
+            _view.SettingsPanel.AllowFreeZoomOutCheckBox.IsChecked == true;
 
-        if (!_allowFreeZoomOut
+        if (!_settings.AllowFreeZoomOut
             && TryGetResetImagePlacement(out double fittedScale, out _, out _)
             && (_scale < fittedScale))
         {
@@ -122,12 +124,13 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _ = sender;
         _ = e;
 
-        _isSmoothPanningEnabled = _view.SettingsPanel.SmoothPanningCheckBox.IsChecked == true;
-        _view.SettingsPanel.PanningInertiaCheckBox.IsEnabled = _isSmoothPanningEnabled;
+        _settings.IsSmoothPanningEnabled =
+            _view.SettingsPanel.SmoothPanningCheckBox.IsChecked == true;
+        _view.SettingsPanel.PanningInertiaCheckBox.IsEnabled = _settings.IsSmoothPanningEnabled;
 
-        if (!_isSmoothPanningEnabled)
+        if (!_settings.IsSmoothPanningEnabled)
         {
-            _isPanningInertiaEnabled = false;
+            _settings.IsPanningInertiaEnabled = false;
             SetPanningInertiaCheckBox(false);
         }
 
@@ -140,10 +143,10 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _ = sender;
         _ = e;
 
-        _isPanningInertiaEnabled = _isSmoothPanningEnabled
+        _settings.IsPanningInertiaEnabled = _settings.IsSmoothPanningEnabled
             && (_view.SettingsPanel.PanningInertiaCheckBox.IsChecked == true);
 
-        if (!_isPanningInertiaEnabled)
+        if (!_settings.IsPanningInertiaEnabled)
         {
             SetPanningInertiaCheckBox(false);
         }
@@ -163,9 +166,9 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
-        _resizeBehavior = selectedOption.Value;
+        _settings.ResizeBehavior = selectedOption.Value;
 
-        if (_isWindowedMode && (_resizeBehavior != WindowResizeBehavior.Free))
+        if (_isWindowedMode && (_settings.ResizeBehavior != WindowResizeBehavior.Free))
         {
             FitWindowToCurrentImage();
         }
@@ -178,9 +181,10 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _ = sender;
         _ = e;
 
-        _rememberWindowPlacement = _view.SettingsPanel.RememberWindowPlacementCheckBox.IsChecked == true;
+        _settings.RememberWindowPlacement =
+            _view.SettingsPanel.RememberWindowPlacementCheckBox.IsChecked == true;
 
-        if (_rememberWindowPlacement)
+        if (_settings.RememberWindowPlacement)
         {
             CaptureWindowedPlacement();
         }

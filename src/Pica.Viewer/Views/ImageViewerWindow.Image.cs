@@ -19,7 +19,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         ResetPanMotion();
 
-        if (_isFastLoadingEnabled)
+        if (_settings.IsFastLoadingEnabled)
         {
             StartProgressiveImageLoad(item);
             return;
@@ -213,7 +213,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         long loadId,
         CancellationToken ct)
     {
-        if (!_isFastLoadingEnabled)
+        if (!_settings.IsFastLoadingEnabled)
         {
             _previewCache.Clear();
             return;
@@ -265,7 +265,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
-        if (!_isFastLoadingEnabled || !CanApplyImageLoad(loadId, ct))
+        if (!_settings.IsFastLoadingEnabled || !CanApplyImageLoad(loadId, ct))
         {
             preview.Bitmap.Dispose();
             _previewCache.Clear();
@@ -442,7 +442,8 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private void ApplyLoadedImageLayout(out bool fittedWindow)
     {
-        if (_isWindowedMode && (_resizeBehavior == WindowResizeBehavior.AlwaysFitImage))
+        if (_isWindowedMode
+            && (_settings.ResizeBehavior == WindowResizeBehavior.AlwaysFitImage))
         {
             FitWindowToCurrentImage();
             fittedWindow = true;
@@ -726,7 +727,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         {
             maximumScale = Math.Max(maximumScale, fittedScale);
 
-            if (!_allowFreeZoomOut)
+            if (!_settings.AllowFreeZoomOut)
             {
                 minimumScale = fittedScale;
             }

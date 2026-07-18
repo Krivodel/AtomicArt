@@ -90,7 +90,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         if (_isWindowedMode)
         {
-            if (_resizeBehavior == WindowResizeBehavior.Free)
+            if (_settings.ResizeBehavior == WindowResizeBehavior.Free)
             {
                 RestoreWindowedGeometry();
             }
@@ -116,7 +116,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         {
             WindowState = WindowState.Normal;
             ApplyWindowChrome(ViewerWindowMode.Windowed);
-            if (_resizeBehavior == WindowResizeBehavior.Free)
+            if (_settings.ResizeBehavior == WindowResizeBehavior.Free)
             {
                 RestoreWindowedGeometry();
             }
@@ -305,24 +305,10 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private ImageViewerState CreateState()
     {
-        return new ImageViewerState
-        {
-            IsFilteringEnabled = _isFilteringEnabled,
-            MovementSpeed = _movementSpeed,
-            ZoomSpeed = _zoomSpeed,
-            ExpandOnDoubleClick = _expandOnDoubleClick,
-            IsFastLoadingEnabled = _isFastLoadingEnabled,
-            AllowFreeZoomOut = _allowFreeZoomOut,
-            IsSmoothPanningEnabled = _isSmoothPanningEnabled,
-            IsPanningInertiaEnabled = _isPanningInertiaEnabled,
-            ResizeBehavior = _resizeBehavior,
-            RememberWindowPlacement = _rememberWindowPlacement,
-            IsWindowed = _rememberWindowPlacement && _isWindowedMode,
-            WindowX = _rememberWindowPlacement ? _windowedPosition?.X : null,
-            WindowY = _rememberWindowPlacement ? _windowedPosition?.Y : null,
-            WindowWidth = _rememberWindowPlacement ? _windowedClientSize?.Width : null,
-            WindowHeight = _rememberWindowPlacement ? _windowedClientSize?.Height : null
-        };
+        return _settings.CreateImageViewerState(
+            _isWindowedMode,
+            _windowedPosition,
+            _windowedClientSize);
     }
 
     private static PixelPoint? CreateWindowedPosition(ImageViewerState state)
@@ -372,7 +358,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _windowModeLayoutTimer.Stop();
         _isWindowModeLayoutSettling = false;
 
-        if (_isWindowedMode && (_resizeBehavior != WindowResizeBehavior.Free))
+        if (_isWindowedMode && (_settings.ResizeBehavior != WindowResizeBehavior.Free))
         {
             FitWindowToCurrentImage();
             return;

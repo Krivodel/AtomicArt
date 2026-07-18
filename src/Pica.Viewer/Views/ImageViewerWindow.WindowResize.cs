@@ -47,7 +47,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         PixelPoint pointerPosition = VisualExtensions.PointToScreen(_view.Root, e.GetPosition(_view.Root));
         int titleBarHeight = (int)Math.Round(GetWindowedTitleBarHeight() * scaling);
         double aspectRatio = (double)_bitmap.PixelSize.Width / _bitmap.PixelSize.Height;
-        _windowResizeSession = _resizeBehavior == WindowResizeBehavior.AlwaysFitImage
+        _windowResizeSession = _settings.ResizeBehavior == WindowResizeBehavior.AlwaysFitImage
             ? new AspectRatioWindowResizeSession(
                 initialRectangle,
                 pointerPosition,

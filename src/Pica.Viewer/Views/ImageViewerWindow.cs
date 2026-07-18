@@ -78,12 +78,11 @@ public sealed partial class ImageViewerWindow : SukiWindow
     private readonly DispatcherTimer _windowModeLayoutTimer;
     private readonly DispatcherTimer _openWithMenuHideTimer;
     private readonly ImagePreviewCache _previewCache;
+    private readonly ViewerSettingsState _settings;
     private Bitmap? _bitmap;
     private PicaImageItem? _currentItem;
     private PixelSize _sourcePixelSize;
     private int _selectedIndex;
-    private int _movementSpeed;
-    private int _zoomSpeed;
     private int _preferredNavigationDirection = 1;
     private double _scale = 1d;
     private double _offsetX;
@@ -95,16 +94,8 @@ public sealed partial class ImageViewerWindow : SukiWindow
     private bool _isSelectionMoving;
     private bool _isSelectionArmed;
     private bool _isControlModifierActive;
-    private bool _isFilteringEnabled;
-    private bool _expandOnDoubleClick;
-    private bool _isFastLoadingEnabled;
-    private bool _allowFreeZoomOut;
-    private bool _isSmoothPanningEnabled;
-    private bool _isPanningInertiaEnabled;
     private bool _isFullResolutionImageReady;
     private bool _isImageOperationRunning;
-    private bool _rememberWindowPlacement;
-    private WindowResizeBehavior _resizeBehavior;
     private KeyModifiers _activeKeyModifiers;
     private SelectionResizeMode _selectionResizeMode;
     private Point _pointerPressPosition;
@@ -180,22 +171,13 @@ public sealed partial class ImageViewerWindow : SukiWindow
             pngImageEncoder,
             actionDispatcher);
         ArgumentNullException.ThrowIfNull(initialState);
+        _settings = ViewerSettingsState.Create(initialState);
         _selectedIndex = GetItemIndexOrDefault(request.Items, request.SelectedItemId);
-        _isFilteringEnabled = initialState.IsFilteringEnabled;
-        _movementSpeed = initialState.MovementSpeed;
-        _zoomSpeed = initialState.ZoomSpeed;
-        _expandOnDoubleClick = initialState.ExpandOnDoubleClick;
-        _isFastLoadingEnabled = initialState.IsFastLoadingEnabled;
-        _allowFreeZoomOut = initialState.AllowFreeZoomOut;
-        _isSmoothPanningEnabled = initialState.IsSmoothPanningEnabled;
-        _isPanningInertiaEnabled = initialState.IsPanningInertiaEnabled;
-        _resizeBehavior = initialState.ResizeBehavior;
-        _rememberWindowPlacement = initialState.RememberWindowPlacement;
-        _isWindowedMode = _rememberWindowPlacement && (initialState.IsWindowed == true);
-        _windowedPosition = _rememberWindowPlacement
+        _isWindowedMode = _settings.RememberWindowPlacement && (initialState.IsWindowed == true);
+        _windowedPosition = _settings.RememberWindowPlacement
             ? CreateWindowedPosition(initialState)
             : null;
-        _windowedClientSize = _rememberWindowPlacement
+        _windowedClientSize = _settings.RememberWindowPlacement
             ? CreateWindowedClientSize(initialState)
             : null;
         Size initialWindowedClientSize = _windowedClientSize
@@ -237,7 +219,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             viewEvents);
         _view.ContextOpenWithButton.IsVisible = _platformFileActions.SupportsOpenWith;
         _view.SelectionOpenWithButton.IsVisible = _platformFileActions.SupportsOpenWith;
-        _view.ApplyImageFiltering(_isFilteringEnabled);
+        _view.ApplyImageFiltering(_settings.IsFilteringEnabled);
         _cursorTimer = CreateCursorTimer();
         _windowModeLayoutTimer = CreateWindowModeLayoutTimer();
         _openWithMenuHideTimer = CreateOpenWithMenuHideTimer();
