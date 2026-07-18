@@ -110,23 +110,13 @@ public sealed class GenerationCardControlTests
     [Fact]
     public void GetImageDragPathOrDefault_WithExistingFullImageAndThumbnail_ReturnsFullImagePath()
     {
-        string imagePath = Path.GetTempFileName();
-        string thumbnailPath = Path.GetTempFileName();
+        using ExistingImagePaths paths = new();
+        GenerationItemViewModel item = CreateItem(paths.ImagePath);
+        item.ThumbnailPath = paths.ThumbnailPath;
 
-        try
-        {
-            GenerationItemViewModel item = CreateItem(imagePath);
-            item.ThumbnailPath = thumbnailPath;
+        string? dragPath = GenerationCardControl.GetImageDragPathOrDefault(item);
 
-            string? dragPath = GenerationCardControl.GetImageDragPathOrDefault(item);
-
-            dragPath.Should().Be(imagePath);
-        }
-        finally
-        {
-            File.Delete(imagePath);
-            File.Delete(thumbnailPath);
-        }
+        dragPath.Should().Be(paths.ImagePath);
     }
 
     [Fact]
@@ -154,23 +144,13 @@ public sealed class GenerationCardControlTests
     [Fact]
     public void GetImageDragPreviewPathOrDefault_WithExistingThumbnail_ReturnsThumbnailPath()
     {
-        string imagePath = Path.GetTempFileName();
-        string thumbnailPath = Path.GetTempFileName();
+        using ExistingImagePaths paths = new();
+        GenerationItemViewModel item = CreateItem(paths.ImagePath);
+        item.ThumbnailPath = paths.ThumbnailPath;
 
-        try
-        {
-            GenerationItemViewModel item = CreateItem(imagePath);
-            item.ThumbnailPath = thumbnailPath;
+        string? previewPath = GenerationCardControl.GetImageDragPreviewPathOrDefault(item);
 
-            string? previewPath = GenerationCardControl.GetImageDragPreviewPathOrDefault(item);
-
-            previewPath.Should().Be(thumbnailPath);
-        }
-        finally
-        {
-            File.Delete(imagePath);
-            File.Delete(thumbnailPath);
-        }
+        previewPath.Should().Be(paths.ThumbnailPath);
     }
 
     [Fact]
@@ -209,5 +189,23 @@ public sealed class GenerationCardControlTests
             0,
             imagePath,
             GenerationItemStatusDescriptorRegistryTestFactory.Create());
+    }
+
+    private sealed class ExistingImagePaths : IDisposable
+    {
+        public string ImagePath { get; }
+        public string ThumbnailPath { get; }
+
+        public ExistingImagePaths()
+        {
+            ImagePath = Path.GetTempFileName();
+            ThumbnailPath = Path.GetTempFileName();
+        }
+
+        public void Dispose()
+        {
+            File.Delete(ImagePath);
+            File.Delete(ThumbnailPath);
+        }
     }
 }
