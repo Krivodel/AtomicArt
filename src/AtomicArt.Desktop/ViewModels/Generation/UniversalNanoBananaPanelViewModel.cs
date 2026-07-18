@@ -811,19 +811,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private async Task DispatchCatalogReloadAsync()
     {
-        try
-        {
-            await _uiThreadDispatcher.InvokeAsync(
-                ReloadCatalogAsync,
-                _disposeCancellationSource.Token);
-        }
-        catch (OperationCanceledException) when (_disposeCancellationSource.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(DispatchCatalogReloadAsync));
-        }
+        await ViewModelUiDispatch.RunAsync(
+            _uiThreadDispatcher,
+            ReloadCatalogAsync,
+            _disposeCancellationSource.Token,
+            _errorHandler,
+            nameof(DispatchCatalogReloadAsync));
     }
 
     private async Task ReloadCatalogAsync()

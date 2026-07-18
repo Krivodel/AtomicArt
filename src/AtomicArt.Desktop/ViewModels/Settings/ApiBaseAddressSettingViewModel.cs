@@ -137,19 +137,12 @@ public sealed partial class ApiBaseAddressSettingViewModel :
 
     private async Task SynchronizeValueAsync()
     {
-        try
-        {
-            await _uiThreadDispatcher.InvokeAsync(
-                () => Value = _apiEndpointService.BaseAddress.ToString(),
-                _disposeCancellationSource.Token);
-        }
-        catch (OperationCanceledException) when (_disposeCancellationSource.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(SynchronizeValueAsync));
-        }
+        await ViewModelUiDispatch.RunAsync(
+            _uiThreadDispatcher,
+            () => Value = _apiEndpointService.BaseAddress.ToString(),
+            _disposeCancellationSource.Token,
+            _errorHandler,
+            nameof(SynchronizeValueAsync));
     }
 
     partial void OnValueChanged(string value)

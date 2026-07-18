@@ -264,19 +264,12 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
 
     private async Task RefreshGenerationActivityAsync()
     {
-        try
-        {
-            await _uiThreadDispatcher.InvokeAsync(
-                () => IsGenerationActive = _generationActivityTracker.IsActive,
-                _disposeCancellationSource.Token);
-        }
-        catch (OperationCanceledException) when (_disposeCancellationSource.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(RefreshGenerationActivityAsync));
-        }
+        await ViewModelUiDispatch.RunAsync(
+            _uiThreadDispatcher,
+            () => IsGenerationActive = _generationActivityTracker.IsActive,
+            _disposeCancellationSource.Token,
+            _errorHandler,
+            nameof(RefreshGenerationActivityAsync));
     }
 
     private void OnGenerationActivityChanged(object? sender, EventArgs e)
