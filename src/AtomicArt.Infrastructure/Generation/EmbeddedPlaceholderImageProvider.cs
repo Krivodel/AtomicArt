@@ -4,7 +4,7 @@ using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Infrastructure.Generation;
 
-internal sealed class EmbeddedPlaceholderImageProvider : IPlaceholderImageProvider
+internal sealed class EmbeddedPlaceholderImageProvider : PlaceholderImageProvider
 {
     private const long MaxPlaceholderImageBytes = 128L * 1024L * 1024L;
     private const string PlaceholdersResourceSegment = ".Placeholders.";
@@ -36,15 +36,11 @@ internal sealed class EmbeddedPlaceholderImageProvider : IPlaceholderImageProvid
         .OrderBy(resourceName => resourceName, StringComparer.Ordinal)
         .ToArray();
 
-    public async Task<PlaceholderImage> GetNextAsync(
+    protected override async Task<PlaceholderImage> GetNextCoreAsync(
         string modelId,
         int itemIndex,
         CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(modelId);
-        ArgumentOutOfRangeException.ThrowIfNegative(itemIndex);
-        ct.ThrowIfCancellationRequested();
-
         if (ResourceNames.Length == 0)
         {
             throw new InvalidOperationException("No embedded placeholder images were found.");

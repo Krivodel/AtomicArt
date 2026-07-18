@@ -10,7 +10,7 @@ using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Infrastructure.Generation;
 
-internal sealed class FileSystemPlaceholderImageProvider : IPlaceholderImageProvider
+internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvider
 {
     private static readonly int MaxSignatureBytes = GenerationImageFileFormats.All
         .SelectMany(format => format.SignatureAlternatives)
@@ -35,15 +35,11 @@ internal sealed class FileSystemPlaceholderImageProvider : IPlaceholderImageProv
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public async Task<PlaceholderImage> GetNextAsync(
+    protected override async Task<PlaceholderImage> GetNextCoreAsync(
         string modelId,
         int itemIndex,
         CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(modelId);
-        ArgumentOutOfRangeException.ThrowIfNegative(itemIndex);
-        ct.ThrowIfCancellationRequested();
-
         TestGenerationOptions options = _options.Value;
         List<string> candidatePaths = await CreateCandidatePathsAsync(options, ct)
             .ConfigureAwait(false);
