@@ -1,10 +1,9 @@
-using AtomicArt.Application.Features.Generation.Models;
-using AtomicArt.Application.Features.Generation.Services;
-
 namespace AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 
 public sealed class AttachedImageFormatRegistry : IAttachedImageFormatRegistry
 {
+    public int Count => _formats.Count;
+
     private readonly IReadOnlyList<IAttachedImageFormat> _formats;
 
     public AttachedImageFormatRegistry(IEnumerable<IAttachedImageFormat> formats)
@@ -14,11 +13,6 @@ public sealed class AttachedImageFormatRegistry : IAttachedImageFormatRegistry
         _formats = formats
             .OrderBy(format => format.ContentType, StringComparer.Ordinal)
             .ToList();
-    }
-
-    public IReadOnlyList<AttachedImageSignatureRule> GetSignatureRules()
-    {
-        return AttachedImageValidationPolicy.CreateSignatureRules(_formats);
     }
 
     public bool TryGetByContentType(string? contentType, out IAttachedImageFormat? format)

@@ -10,17 +10,17 @@ public sealed class MetadataImageModelDefinitionFactory : IImageModelDefinitionF
     public int Priority => 0;
 
     private readonly GenerationModelRules _rules;
-    private readonly IReadOnlyList<IAttachedImageFormat> _formats;
+    private readonly IAttachedImageFormatRegistry _formatRegistry;
 
     public MetadataImageModelDefinitionFactory(
         GenerationModelRules rules,
-        IEnumerable<IAttachedImageFormat> formats)
+        IAttachedImageFormatRegistry formatRegistry)
     {
         ArgumentNullException.ThrowIfNull(rules);
-        ArgumentNullException.ThrowIfNull(formats);
+        ArgumentNullException.ThrowIfNull(formatRegistry);
 
         _rules = rules;
-        _formats = formats.ToList();
+        _formatRegistry = formatRegistry;
     }
 
     public bool CanCreate(GenerationModelMetadataDto metadata)
@@ -34,6 +34,6 @@ public sealed class MetadataImageModelDefinitionFactory : IImageModelDefinitionF
     {
         ArgumentNullException.ThrowIfNull(metadata);
 
-        return new MetadataImageModelDefinition(metadata, _rules, _formats);
+        return new MetadataImageModelDefinition(metadata, _rules, _formatRegistry);
     }
 }

@@ -1,4 +1,5 @@
 using AtomicArt.Application.Common.Models;
+using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain.Generation;
@@ -76,7 +77,7 @@ internal static class AttachedImageValidationService
     private static Result<AttachedImageDto>? ValidateContent(
         AttachedImageDto attachedImage)
     {
-        if (!AttachedImageValidationPolicy.HasContent(attachedImage.Content))
+        if (attachedImage.Content is not { Length: > 0 })
         {
             return Result<AttachedImageDto>.ValidationError(
                 GenerationErrorCodes.ModelRequestValidation,
@@ -90,22 +91,19 @@ internal static class AttachedImageValidationService
         AttachedImageDto attachedImage,
         AttachedImageValidationOptions options)
     {
-        string? fileName = AttachedImageValidationPolicy.NormalizeFileName(attachedImage.FileName);
-        AttachedImageSignatureRule? signatureRule = AttachedImageValidationPolicy.GetSignatureRule(
+        string? fileName = AttachedImageFileNamePolicy.Normalize(attachedImage.FileName);
+        bool hasFormat = options.FormatRegistry.TryGetByContentType(
             attachedImage.ContentType,
-            options.SignatureRules);
+            out IAttachedImageFormat? format);
 
-        if (fileName is null || signatureRule is null)
+        if (fileName is null || !hasFormat || format is null)
         {
             return Result<AttachedImageDto>.ValidationError(
                 GenerationErrorCodes.ModelRequestValidation,
                 "Метаданные вложения не прошли проверку.");
         }
 
-        if (!AttachedImageValidationPolicy.HasValidSignature(
-                attachedImage.ContentType,
-                attachedImage.Content,
-                options.SignatureRules))
+        if (!format.MatchesSignature(attachedImage.Content))
         {
             return Result<AttachedImageDto>.ValidationError(
                 GenerationErrorCodes.ModelRequestValidation,
@@ -115,8 +113,7 @@ internal static class AttachedImageValidationService
         return Result<AttachedImageDto>.Success(attachedImage with
         {
             FileName = fileName,
-            ContentType = signatureRule.ContentType
+            ContentType = format.ContentType
         });
     }
-
 }

@@ -11,7 +11,7 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
 {
     private readonly GenerationModelRules _rules;
     private readonly GenerationModelConstraints _constraints;
-    private readonly IReadOnlyList<AttachedImageSignatureRule> _signatureRules;
+    private readonly IAttachedImageFormatRegistry _formatRegistry;
 
     public string DisplayName { get; }
     public string Provider { get; }
@@ -27,16 +27,22 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
     public MetadataImageModelDefinition(
         GenerationModelMetadataDto metadata,
         GenerationModelRules rules,
-        IEnumerable<IAttachedImageFormat> formats)
+        IAttachedImageFormatRegistry formatRegistry)
     {
         ArgumentNullException.ThrowIfNull(metadata);
         ArgumentNullException.ThrowIfNull(rules);
-        ArgumentNullException.ThrowIfNull(formats);
+        ArgumentNullException.ThrowIfNull(formatRegistry);
         ArgumentNullException.ThrowIfNull(metadata.Attachments);
+
+        if (formatRegistry.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "No attachment formats are registered.");
+        }
 
         _rules = rules;
         _constraints = GenerationModelMetadataDomainMapper.ToConstraints(metadata);
-        _signatureRules = AttachedImageValidationPolicy.CreateSignatureRules(formats);
+        _formatRegistry = formatRegistry;
         DisplayName = metadata.DisplayName;
         Provider = metadata.Provider;
         ProviderModelId = metadata.ProviderModelId;
@@ -145,7 +151,7 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
     private AttachedImageValidationOptions CreateAttachedImageValidationOptions()
     {
         return new AttachedImageValidationOptions(
-            _signatureRules);
+            _formatRegistry);
     }
 
     private static GenerationAttachedImage CreateGenerationAttachedImage(AttachedImageDto? attachedImage)

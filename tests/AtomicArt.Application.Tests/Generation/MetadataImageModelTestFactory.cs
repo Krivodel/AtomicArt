@@ -58,7 +58,8 @@ internal static class MetadataImageModelTestFactory
             .Select<GenerationImageFileFormatDescriptor, IAttachedImageFormat>(
                 format => new AttachedImageFormat(format))
             .ToList();
+        IAttachedImageFormatRegistry formatRegistry = new AttachedImageFormatRegistry(formats);
 
-        return new MetadataImageModelDefinitionFactory(rules, formats);
+        return new MetadataImageModelDefinitionFactory(rules, formatRegistry);
     }
 }
