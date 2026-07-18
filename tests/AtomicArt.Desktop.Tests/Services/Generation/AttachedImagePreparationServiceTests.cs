@@ -125,16 +125,11 @@ public sealed class AttachedImagePreparationServiceTests
                 ? new byte[90]
                 : throw new InvalidOperationException("Unexpected lossy quality.")
         };
-        AttachedImageDto image = new(
-            "source.png",
-            GenerationImageContentTypes.Png,
-            new byte[101]);
-        ImageModelOption selectedModel = CreateModel(100);
-        AttachedImagePreparationService service = CreateService(codec);
+        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
+        AttachedImageDto? result = await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
             CancellationToken.None);
 
         result.Should().NotBeNull();
@@ -154,16 +149,11 @@ public sealed class AttachedImagePreparationServiceTests
                 : new byte[100],
             LossyEncoder = _ => throw new InvalidOperationException("Lossy encoding was not expected.")
         };
-        AttachedImageDto image = new(
-            "source.png",
-            GenerationImageContentTypes.Png,
-            new byte[101]);
-        ImageModelOption selectedModel = CreateModel(100);
-        AttachedImagePreparationService service = CreateService(codec);
+        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
+        AttachedImageDto? result = await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
             CancellationToken.None);
 
         result.Should().NotBeNull();
@@ -199,16 +189,11 @@ public sealed class AttachedImagePreparationServiceTests
                 throw new InvalidOperationException("Unexpected lossy quality.");
             }
         };
-        AttachedImageDto image = new(
-            "source.png",
-            GenerationImageContentTypes.Png,
-            new byte[101]);
-        ImageModelOption selectedModel = CreateModel(100);
-        AttachedImagePreparationService service = CreateService(codec);
+        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
+        AttachedImageDto? result = await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
             CancellationToken.None);
 
         result.Should().NotBeNull();
@@ -228,16 +213,11 @@ public sealed class AttachedImagePreparationServiceTests
                 ? new byte[90]
                 : new byte[110]
         };
-        AttachedImageDto image = new(
-            "source.png",
-            GenerationImageContentTypes.Png,
-            new byte[101]);
-        ImageModelOption selectedModel = CreateModel(100);
-        AttachedImagePreparationService service = CreateService(codec);
+        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
+        AttachedImageDto? result = await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
             CancellationToken.None);
 
         result.Should().NotBeNull();
@@ -262,16 +242,11 @@ public sealed class AttachedImagePreparationServiceTests
                 ? new byte[90]
                 : throw new InvalidOperationException("Unexpected lossy quality.")
         };
-        AttachedImageDto image = new(
-            "source.png",
-            GenerationImageContentTypes.Png,
-            new byte[101]);
-        ImageModelOption selectedModel = CreateModel(100);
-        AttachedImagePreparationService service = CreateService(codec);
+        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
+        AttachedImageDto? result = await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
             CancellationToken.None);
 
         result.Should().NotBeNull();
@@ -301,16 +276,14 @@ public sealed class AttachedImagePreparationServiceTests
             LossyEncoder = _ => throw new InvalidOperationException(
                 "Lossy encoding was not expected.")
         };
-        AttachedImageDto image = new(
-            "source.png",
-            GenerationImageContentTypes.Png,
-            new byte[10001]);
-        ImageModelOption selectedModel = CreateModel(10000);
-        AttachedImagePreparationService service = CreateService(codec);
+        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(
+            codec,
+            contentLength: 10001,
+            maxAttachedImageBytes: 10000);
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
+        AttachedImageDto? result = await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
             CancellationToken.None);
 
         result.Should().NotBeNull();
@@ -341,16 +314,11 @@ public sealed class AttachedImagePreparationServiceTests
                 ? new byte[90]
                 : throw new InvalidOperationException("Unexpected lossy quality.")
         };
-        AttachedImageDto image = new(
-            "source.png",
-            GenerationImageContentTypes.Png,
-            new byte[101]);
-        ImageModelOption selectedModel = CreateModel(100);
-        AttachedImagePreparationService service = CreateService(codec);
+        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
+        AttachedImageDto? result = await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
             CancellationToken.None);
 
         result.Should().NotBeNull();
@@ -375,18 +343,14 @@ public sealed class AttachedImagePreparationServiceTests
             LossyEncoder = _ => throw new InvalidOperationException(
                 "Lossy encoding was not expected.")
         };
-        AttachedImageDto image = new(
-            "source.png",
-            GenerationImageContentTypes.Png,
-            new byte[101]);
-        ImageModelOption selectedModel = CreateModel(
-            100,
-            [GenerationImageContentTypes.Png]);
-        AttachedImagePreparationService service = CreateService(codec);
+        string[] supportedContentTypes = [GenerationImageContentTypes.Png];
+        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(
+            codec,
+            supportedContentTypes: supportedContentTypes);
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
+        AttachedImageDto? result = await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
             CancellationToken.None);
 
         result.Should().NotBeNull();
@@ -420,6 +384,24 @@ public sealed class AttachedImagePreparationServiceTests
             codec ?? new SkiaAttachedImageCodec(),
             new AttachedImagePreparationConcurrencyLimiter(),
             NullLogger<AttachedImagePreparationService>.Instance);
+    }
+
+    private static SyntheticPreparationScenario CreateSyntheticPreparationScenario(
+        IAttachedImageCodec codec,
+        int contentLength = 101,
+        int maxAttachedImageBytes = 100,
+        IReadOnlyList<string>? supportedContentTypes = null)
+    {
+        AttachedImageDto image = new(
+            "source.png",
+            GenerationImageContentTypes.Png,
+            new byte[contentLength]);
+        ImageModelOption selectedModel = CreateModel(
+            maxAttachedImageBytes,
+            supportedContentTypes);
+        AttachedImagePreparationService service = CreateService(codec);
+
+        return new SyntheticPreparationScenario(image, selectedModel, service);
     }
 
     private static ImageModelOption CreateModel(
@@ -500,4 +482,9 @@ public sealed class AttachedImagePreparationServiceTests
 
         return pixels;
     }
+
+    private sealed record SyntheticPreparationScenario(
+        AttachedImageDto Image,
+        ImageModelOption SelectedModel,
+        AttachedImagePreparationService Service);
 }
