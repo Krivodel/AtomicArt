@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using FluentAssertions;
@@ -21,22 +22,17 @@ public sealed class GoogleInteractionsClientTests
     [Fact]
     public async Task CreateInteractionAsync_WithProviderCredential_SendsApiKeyHeaderWithoutQueryString()
     {
-        TestHttpMessageHandler handler = new(HttpStatusCode.OK, """{"status":"completed"}""");
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
-        GoogleInteractionsClient client = new(
-            httpClient,
-            NullLogger<GoogleInteractionsClient>.Instance);
+        using ClientTestContext context = CreateClient(
+            HttpStatusCode.OK,
+            """{"status":"completed"}""");
 
-        string responseJson = await client.CreateInteractionAsync(
+        string responseJson = await context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         responseJson.Should().Be("""{"status":"completed"}""");
-        HttpRequestMessage request = handler.Requests.Single();
+        HttpRequestMessage request = context.Handler.Requests.Single();
         request.Method.Should().Be(HttpMethod.Post);
         request.RequestUri.Should().NotBeNull();
         Uri requestUri = request.RequestUri ?? throw new InvalidOperationException("Request URI is missing.");
@@ -61,16 +57,11 @@ public sealed class GoogleInteractionsClientTests
         HttpStatusCode statusCode,
         ImageGenerationProviderFailureKind expectedFailureKind)
     {
-        TestHttpMessageHandler handler = new(statusCode, """{"error":"secret detail"}""");
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
-        GoogleInteractionsClient client = new(
-            httpClient,
-            NullLogger<GoogleInteractionsClient>.Instance);
+        using ClientTestContext context = CreateClient(
+            statusCode,
+            """{"error":"secret detail"}""");
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
@@ -80,7 +71,7 @@ public sealed class GoogleInteractionsClientTests
                 .ThrowAsync<ImageGenerationProviderException>()
                 .WithMessage("The generation provider returned an error.");
         assertions.Which.FailureKind.Should().Be(expectedFailureKind);
-        handler.Requests.Should().ContainSingle();
+        context.Handler.Requests.Should().ContainSingle();
     }
 
     [Fact]
@@ -88,15 +79,13 @@ public sealed class GoogleInteractionsClientTests
     {
         const string responseJson =
             """{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Requested model is unavailable in this region."}}""";
-        TestHttpMessageHandler handler = new(HttpStatusCode.Forbidden, responseJson);
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
         RecordingClientLogger logger = new();
-        GoogleInteractionsClient client = new(httpClient, logger);
+        using ClientTestContext context = CreateClient(
+            HttpStatusCode.Forbidden,
+            responseJson,
+            logger);
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
@@ -114,15 +103,13 @@ public sealed class GoogleInteractionsClientTests
     {
         const string responseJson =
             """{"error":{"code":"INVALID_ARGUMENT","status":"INVALID_ARGUMENT","message":"Request format is invalid."}}""";
-        TestHttpMessageHandler handler = new(HttpStatusCode.BadRequest, responseJson);
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
         RecordingClientLogger logger = new();
-        GoogleInteractionsClient client = new(httpClient, logger);
+        using ClientTestContext context = CreateClient(
+            HttpStatusCode.BadRequest,
+            responseJson,
+            logger);
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
@@ -144,15 +131,13 @@ public sealed class GoogleInteractionsClientTests
         string responseJson =
             """{"error":{"code":400,"status":"INVALID_ARGUMENT","message":"Encoded value __BASE64__ was rejected."}}"""
                 .Replace("__BASE64__", base64Fragment, StringComparison.Ordinal);
-        TestHttpMessageHandler handler = new(HttpStatusCode.BadRequest, responseJson);
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
         RecordingClientLogger logger = new();
-        GoogleInteractionsClient client = new(httpClient, logger);
+        using ClientTestContext context = CreateClient(
+            HttpStatusCode.BadRequest,
+            responseJson,
+            logger);
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
@@ -179,15 +164,13 @@ public sealed class GoogleInteractionsClientTests
               }
             }
             """;
-        TestHttpMessageHandler handler = new(HttpStatusCode.BadRequest, responseJson);
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
         RecordingClientLogger logger = new();
-        GoogleInteractionsClient client = new(httpClient, logger);
+        using ClientTestContext context = CreateClient(
+            HttpStatusCode.BadRequest,
+            responseJson,
+            logger);
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             requestJson,
             providerCredential,
             CancellationToken.None);
@@ -210,15 +193,13 @@ public sealed class GoogleInteractionsClientTests
     {
         const string responseJson =
             """{"error":{"code":400,"status":"INVALID_ARGUMENT","message":"Potentially echoed private input."}}""";
-        TestHttpMessageHandler handler = new(HttpStatusCode.BadRequest, responseJson);
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
         RecordingClientLogger logger = new();
-        GoogleInteractionsClient client = new(httpClient, logger);
+        using ClientTestContext context = CreateClient(
+            HttpStatusCode.BadRequest,
+            responseJson,
+            logger);
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             "{malformed request",
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
@@ -242,15 +223,13 @@ public sealed class GoogleInteractionsClientTests
                 message = providerMessage
             }
         });
-        TestHttpMessageHandler handler = new(HttpStatusCode.TooManyRequests, responseJson);
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
         RecordingClientLogger logger = new();
-        GoogleInteractionsClient client = new(httpClient, logger);
+        using ClientTestContext context = CreateClient(
+            HttpStatusCode.TooManyRequests,
+            responseJson,
+            logger);
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
@@ -276,15 +255,13 @@ public sealed class GoogleInteractionsClientTests
                 message = providerMessage
             }
         });
-        TestHttpMessageHandler handler = new(HttpStatusCode.BadRequest, responseJson);
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
         RecordingClientLogger logger = new();
-        GoogleInteractionsClient client = new(httpClient, logger);
+        using ClientTestContext context = CreateClient(
+            HttpStatusCode.BadRequest,
+            responseJson,
+            logger);
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
@@ -305,15 +282,13 @@ public sealed class GoogleInteractionsClientTests
         string responseJson,
         string expectedBodyKind)
     {
-        TestHttpMessageHandler handler = new(HttpStatusCode.BadRequest, responseJson);
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
         RecordingClientLogger logger = new();
-        GoogleInteractionsClient client = new(httpClient, logger);
+        using ClientTestContext context = CreateClient(
+            HttpStatusCode.BadRequest,
+            responseJson,
+            logger);
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
@@ -327,45 +302,31 @@ public sealed class GoogleInteractionsClientTests
     [Fact]
     public async Task CreateInteractionAsync_WithInternalServerErrorThenSuccess_RetriesAndReturnsResponse()
     {
-        TestHttpMessageHandler handler = new(
+        using ClientTestContext context = CreateClient(
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
             (HttpStatusCode.OK, """{"status":"completed"}"""));
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
-        GoogleInteractionsClient client = new(
-            httpClient,
-            NullLogger<GoogleInteractionsClient>.Instance);
 
-        string responseJson = await client.CreateInteractionAsync(
+        string responseJson = await context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
 
         responseJson.Should().Be("""{"status":"completed"}""");
-        handler.Requests.Should().HaveCount(3);
+        context.Handler.Requests.Should().HaveCount(3);
     }
 
     [Fact]
     public async Task CreateInteractionAsync_WithPersistentInternalServerError_ThrowsAfterRetryAttempts()
     {
-        TestHttpMessageHandler handler = new(
+        using ClientTestContext context = CreateClient(
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""));
-        using HttpClient httpClient = new(handler)
-        {
-            BaseAddress = new Uri("https://example.invalid")
-        };
-        GoogleInteractionsClient client = new(
-            httpClient,
-            NullLogger<GoogleInteractionsClient>.Instance);
 
-        Func<Task> act = () => client.CreateInteractionAsync(
+        Func<Task> act = () => context.Client.CreateInteractionAsync(
             CreateRequestJson(),
             TestGenerationCredentials.ProviderCredential,
             CancellationToken.None);
@@ -375,12 +336,74 @@ public sealed class GoogleInteractionsClientTests
                 .ThrowAsync<ImageGenerationProviderException>()
                 .WithMessage("The generation provider returned an error.");
         assertions.Which.FailureKind.Should().Be(ImageGenerationProviderFailureKind.InternalError);
-        handler.Requests.Should().HaveCount(5);
+        context.Handler.Requests.Should().HaveCount(5);
+    }
+
+    private static ClientTestContext CreateClient(
+        HttpStatusCode statusCode,
+        string responseJson)
+    {
+        return CreateClient(
+            statusCode,
+            responseJson,
+            NullLogger<GoogleInteractionsClient>.Instance);
+    }
+
+    private static ClientTestContext CreateClient(
+        HttpStatusCode statusCode,
+        string responseJson,
+        ILogger<GoogleInteractionsClient> logger)
+    {
+        TestHttpMessageHandler handler = new(statusCode, responseJson);
+
+        return CreateClient(handler, logger);
+    }
+
+    private static ClientTestContext CreateClient(
+        params (HttpStatusCode StatusCode, string ResponseJson)[] responses)
+    {
+        TestHttpMessageHandler handler = new(responses);
+
+        return CreateClient(
+            handler,
+            NullLogger<GoogleInteractionsClient>.Instance);
+    }
+
+    private static ClientTestContext CreateClient(
+        TestHttpMessageHandler handler,
+        ILogger<GoogleInteractionsClient> logger)
+    {
+        return new ClientTestContext(handler, logger);
     }
 
     private static string CreateRequestJson()
     {
         return $$"""{"model":"{{ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().ProviderModelId}}"}""";
+    }
+
+    private sealed class ClientTestContext : IDisposable
+    {
+        public GoogleInteractionsClient Client { get; }
+        public TestHttpMessageHandler Handler { get; }
+
+        private readonly HttpClient _httpClient;
+
+        public ClientTestContext(
+            TestHttpMessageHandler handler,
+            ILogger<GoogleInteractionsClient> logger)
+        {
+            Handler = handler;
+            _httpClient = new HttpClient(handler)
+            {
+                BaseAddress = new Uri("https://example.invalid")
+            };
+            Client = new GoogleInteractionsClient(_httpClient, logger);
+        }
+
+        public void Dispose()
+        {
+            _httpClient.Dispose();
+        }
     }
 
     private sealed class TestHttpMessageHandler : HttpMessageHandler
