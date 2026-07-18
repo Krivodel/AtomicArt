@@ -49,8 +49,10 @@ internal sealed class ImageViewerView : IDisposable
     private const string SaveIconGeometry = "M5,3 L16,3 L21,8 L21,19 L19,21 L5,21 L3,19 L3,5 Z M7,6 L7,10 L11,10 L11,8 L13,8 L13,10 L16,10 L16,6 Z M7,19 L17,19 L17,14 L7,14 Z";
     private const string FolderIconGeometry = "M3,6 L10,6 L12,8 L21,8 L21,19 L3,19 Z";
     private const string OpenWithIconGeometry = "M13,3 L20,3 L20,10 L18,10 L18,6.4 L9.4,15 L8,13.6 L16.6,5 L13,5 Z M4,5 L10,5 L10,7 L6,7 L6,17 L16,17 L16,13 L18,13 L18,19 L4,19 Z";
+    private const string CloseOrCancelIconGeometry = "M6,7.4 L7.4,6 L12,10.6 L16.6,6 L18,7.4 L13.4,12 L18,16.6 L16.6,18 L12,13.4 L7.4,18 L6,16.6 L10.6,12 Z";
     private const string SubmenuIconGeometry = "M9,6 L15,12 L9,18 Z";
     private const string WindowModeIconGeometry = "M6,6 L18,6 L18,18 L6,18 Z M8,8 L8,16 L16,16 L16,8 Z";
+    private const string SettingsIconClassName = "settings-icon";
     private const double SettingsPanelTopGap = 8d;
     private const double SettingsPanelRightMargin = 12d;
     private const double NavigationIconSize = 44d;
@@ -298,7 +300,7 @@ internal sealed class ImageViewerView : IDisposable
         EventHandler<RoutedEventArgs> clickHandler)
     {
         PathIcon icon = new();
-        icon.Classes.Add("settings-icon");
+        icon.Classes.Add(SettingsIconClassName);
         Button button = new()
         {
             Content = CreateFloatingControlShadowHost(icon, ToolIconSize, ToolShadowPadding),
@@ -454,7 +456,7 @@ internal sealed class ImageViewerView : IDisposable
     private static Button CreateCloseButton(EventHandler<RoutedEventArgs> clickHandler)
     {
         Button button = CreateIconButton(
-            "M6,7.4 L7.4,6 L12,10.6 L16.6,6 L18,7.4 L13.4,12 L18,16.6 L16.6,18 L12,13.4 L7.4,18 L6,16.6 L10.6,12 Z",
+            CloseOrCancelIconGeometry,
             clickHandler,
             0d,
             DestructiveIconBrush);
@@ -512,7 +514,7 @@ internal sealed class ImageViewerView : IDisposable
             Height = ToolIconSize,
             Foreground = Brushes.White
         };
-        icon.Classes.Add("settings-icon");
+        icon.Classes.Add(SettingsIconClassName);
         Button button = new()
         {
             Width = ImageViewerVisualMetrics.CloseRevealSize,
@@ -702,7 +704,7 @@ internal sealed class ImageViewerView : IDisposable
             Brushes.White);
         toolbar.Children.Add(openWithButton);
         toolbar.Children.Add(CreateSelectionButton(
-            "M6,7.4 L7.4,6 L12,10.6 L16.6,6 L18,7.4 L13.4,12 L18,16.6 L16.6,18 L12,13.4 L7.4,18 L6,16.6 L10.6,12 Z",
+            CloseOrCancelIconGeometry,
             events.SelectionCancelClicked,
             0d,
             DestructiveIconBrush));
