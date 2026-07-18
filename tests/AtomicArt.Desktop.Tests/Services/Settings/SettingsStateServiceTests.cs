@@ -96,31 +96,13 @@ public sealed class SettingsStateServiceTests
     [Fact]
     public async Task SaveValueAsync_WithSecretDefinition_ThrowsAndDoesNotScheduleState()
     {
-        RecordingStateWriteScheduler scheduler = new();
-        SettingsStateService service = CreateService(
-            new SettingsState(),
-            scheduler);
-        GoogleApiKeySettingDefinition definition = new();
-
-        Func<Task> act = () => service.SaveValueAsync(definition, "secret", CancellationToken.None);
-
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        scheduler.SavedState.Should().BeNull();
+        await AssertSecretRejectedAsync(new GoogleApiKeySettingDefinition());
     }
 
     [Fact]
     public async Task SaveValueAsync_WithNonSecretObjectUsingSecretRegisteredKey_ThrowsAndDoesNotScheduleState()
     {
-        RecordingStateWriteScheduler scheduler = new();
-        SettingsStateService service = CreateService(
-            new SettingsState(),
-            scheduler);
-        SpoofedNonSecretSettingDefinition definition = new();
-
-        Func<Task> act = () => service.SaveValueAsync(definition, "secret", CancellationToken.None);
-
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        scheduler.SavedState.Should().BeNull();
+        await AssertSecretRejectedAsync(new SpoofedNonSecretSettingDefinition());
     }
 
     [Fact]
@@ -320,6 +302,25 @@ public sealed class SettingsStateServiceTests
             catalog,
             new SettingsStateSection(),
             applicators);
+    }
+
+    private static async Task AssertSecretRejectedAsync(
+        ISettingsDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+
+        RecordingStateWriteScheduler scheduler = new();
+        SettingsStateService service = CreateService(
+            new SettingsState(),
+            scheduler);
+
+        Func<Task> act = () => service.SaveValueAsync(
+            definition,
+            "secret",
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        scheduler.SavedState.Should().BeNull();
     }
 
     private sealed class SpoofedNonSecretSettingDefinition : ISettingsDefinition
