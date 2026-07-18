@@ -1,32 +1,19 @@
-using System.Text.Json;
-
 using AtomicArt.Desktop.Services.State;
 
 namespace AtomicArt.Desktop.Services.Generation.State;
 
-public sealed class GenerationPanelStateSection : IStateSection
+public sealed class GenerationPanelStateSection : StateSection<GenerationPanelsState>
 {
     private const string SectionKey = "generationPanels";
     private const string SectionFileName = "generation-panels.json";
     private const int CurrentSchemaVersion = 1;
 
-    public string Key => SectionKey;
-    public string FileName => SectionFileName;
-    public int SchemaVersion => CurrentSchemaVersion;
-    public Type PayloadType => typeof(GenerationPanelsState);
+    public override string Key => SectionKey;
+    public override string FileName => SectionFileName;
+    public override int SchemaVersion => CurrentSchemaVersion;
 
-    public object CreateDefaultPayload()
+    protected override GenerationPanelsState NormalizePayload(GenerationPanelsState? state)
     {
-        return new GenerationPanelsState();
-    }
-
-    public object DeserializePayload(
-        int schemaVersion,
-        JsonElement payload,
-        JsonSerializerOptions options)
-    {
-        GenerationPanelsState? state = payload.Deserialize<GenerationPanelsState>(options);
-
         if (state?.Panels is null)
         {
             return new GenerationPanelsState();

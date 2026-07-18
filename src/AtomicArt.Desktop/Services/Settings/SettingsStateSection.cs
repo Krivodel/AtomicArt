@@ -1,33 +1,20 @@
-using System.Text.Json;
-
 using AtomicArt.Desktop.Services.State;
 
 namespace AtomicArt.Desktop.Services.Settings;
 
-public sealed class SettingsStateSection : IStateSection
+public sealed class SettingsStateSection : StateSection<SettingsState>
 {
     public const string KeyValue = "settings";
     public const string SectionFileName = "settings.json";
 
     private const int CurrentSchemaVersion = 1;
 
-    public string Key => KeyValue;
-    public string FileName => SectionFileName;
-    public int SchemaVersion => CurrentSchemaVersion;
-    public Type PayloadType => typeof(SettingsState);
+    public override string Key => KeyValue;
+    public override string FileName => SectionFileName;
+    public override int SchemaVersion => CurrentSchemaVersion;
 
-    public object CreateDefaultPayload()
+    protected override SettingsState NormalizePayload(SettingsState? state)
     {
-        return new SettingsState();
-    }
-
-    public object DeserializePayload(
-        int schemaVersion,
-        JsonElement payload,
-        JsonSerializerOptions options)
-    {
-        SettingsState? state = payload.Deserialize<SettingsState>(options);
-
         if (state?.Values is null)
         {
             return new SettingsState();

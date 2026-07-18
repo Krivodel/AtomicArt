@@ -1,33 +1,20 @@
-using System.Text.Json;
-
 using AtomicArt.Desktop.Services.State;
 
 namespace AtomicArt.Desktop.Services.Gallery.State;
 
-public sealed class GalleryStateSection : IStateSection
+public sealed class GalleryStateSection : StateSection<GalleryState>
 {
     public const string KeyValue = "gallery";
 
     private const string SectionFileName = "gallery.json";
     private const int CurrentSchemaVersion = 1;
 
-    public string Key => KeyValue;
-    public string FileName => SectionFileName;
-    public int SchemaVersion => CurrentSchemaVersion;
-    public Type PayloadType => typeof(GalleryState);
+    public override string Key => KeyValue;
+    public override string FileName => SectionFileName;
+    public override int SchemaVersion => CurrentSchemaVersion;
 
-    public object CreateDefaultPayload()
+    protected override GalleryState NormalizePayload(GalleryState? state)
     {
-        return new GalleryState();
-    }
-
-    public object DeserializePayload(
-        int schemaVersion,
-        JsonElement payload,
-        JsonSerializerOptions options)
-    {
-        GalleryState? state = payload.Deserialize<GalleryState>(options);
-
         if (state?.Items is null)
         {
             return new GalleryState();
