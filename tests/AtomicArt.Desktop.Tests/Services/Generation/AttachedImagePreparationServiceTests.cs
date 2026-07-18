@@ -118,13 +118,8 @@ public sealed class AttachedImagePreparationServiceTests
     [Fact]
     public async Task PrepareAsync_WhenFastLosslessIsFarOverLimitAndQualityHundredFits_EncodesTwice()
     {
-        RecordingAttachedImageCodec codec = new()
-        {
-            LosslessEncoder = _ => new byte[200],
-            LossyEncoder = quality => quality == 100
-                ? new byte[90]
-                : throw new InvalidOperationException("Unexpected lossy quality.")
-        };
+        RecordingAttachedImageCodec codec = CreateOversizedLosslessCodec(
+            EncodeAtMaximumQuality);
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
         AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
@@ -161,10 +156,8 @@ public sealed class AttachedImagePreparationServiceTests
     public async Task PrepareAsync_WhenMinimumQualityDoesNotFit_ReusesItForResize()
     {
         int maximumQualityAttempts = 0;
-        RecordingAttachedImageCodec codec = new()
-        {
-            LosslessEncoder = _ => new byte[200],
-            LossyEncoder = quality =>
+        RecordingAttachedImageCodec codec = CreateOversizedLosslessCodec(
+            quality =>
             {
                 if (quality == 35)
                 {
@@ -181,8 +174,7 @@ public sealed class AttachedImagePreparationServiceTests
                 }
 
                 throw new InvalidOperationException("Unexpected lossy quality.");
-            }
-        };
+            });
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
         AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
@@ -197,13 +189,10 @@ public sealed class AttachedImagePreparationServiceTests
     [Fact]
     public async Task PrepareAsync_WhenQualitySearchIsNeeded_EncodesKnownBoundsOnce()
     {
-        RecordingAttachedImageCodec codec = new()
-        {
-            LosslessEncoder = _ => new byte[200],
-            LossyEncoder = quality => quality <= 75
+        RecordingAttachedImageCodec codec = CreateOversizedLosslessCodec(
+            quality => quality <= 75
                 ? new byte[90]
-                : new byte[110]
-        };
+                : new byte[110]);
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
         AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
@@ -219,17 +208,12 @@ public sealed class AttachedImagePreparationServiceTests
     {
         const int largeWidth = 10923;
         const int largeHeight = AttachedImagePreparationPlanner.MaximumWebpDimension;
-        RecordingAttachedImageCodec codec = new()
-        {
-            ImageInfo = new AttachedImageCodecInfo(
-                largeWidth,
-                largeHeight,
-                SKAlphaType.Opaque),
-            LosslessEncoder = _ => new byte[200],
-            LossyEncoder = quality => quality == 100
-                ? new byte[90]
-                : throw new InvalidOperationException("Unexpected lossy quality.")
-        };
+        RecordingAttachedImageCodec codec = CreateOversizedLosslessCodec(
+            EncodeAtMaximumQuality);
+        codec.ImageInfo = new AttachedImageCodecInfo(
+            largeWidth,
+            largeHeight,
+            SKAlphaType.Opaque);
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
         AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
@@ -292,9 +276,7 @@ public sealed class AttachedImagePreparationServiceTests
                 SKAlphaType.Opaque),
             LosslessEncoder = _ => throw new InvalidOperationException(
                 "Oversized WebP lossless encoding was not expected."),
-            LossyEncoder = quality => quality == 100
-                ? new byte[90]
-                : throw new InvalidOperationException("Unexpected lossy quality.")
+            LossyEncoder = EncodeAtMaximumQuality
         };
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
@@ -380,13 +362,14 @@ public sealed class AttachedImagePreparationServiceTests
         return new SyntheticPreparationScenario(image, selectedModel, service);
     }
 
-    private static async Task<AttachedImageDto?> PrepareSyntheticImageAsync(
-        SyntheticPreparationScenario scenario)
+    private static RecordingAttachedImageCodec CreateOversizedLosslessCodec(
+        Func<int, byte[]> lossyEncoder)
     {
-        return await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
-            CancellationToken.None);
+        return new RecordingAttachedImageCodec
+        {
+            LosslessEncoder = _ => new byte[200],
+            LossyEncoder = lossyEncoder
+        };
     }
 
     private static ImageModelOption CreateModel(
@@ -445,6 +428,25 @@ public sealed class AttachedImagePreparationServiceTests
             ?? throw new InvalidOperationException("Test PNG could not be encoded.");
 
         return data.ToArray();
+    }
+
+    private static async Task<AttachedImageDto?> PrepareSyntheticImageAsync(
+        SyntheticPreparationScenario scenario)
+    {
+        return await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
+            CancellationToken.None);
+    }
+
+    private static byte[] EncodeAtMaximumQuality(int quality)
+    {
+        if (quality != 100)
+        {
+            throw new InvalidOperationException("Unexpected lossy quality.");
+        }
+
+        return new byte[90];
     }
 
     private static SKBitmap Decode(byte[] content)
