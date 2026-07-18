@@ -32,15 +32,7 @@ internal sealed class ImagePreviewLoader
         PixelSize sourcePixelSize,
         CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
-        using FileStream stream = File.OpenRead(previewPath);
-        Bitmap bitmap = new(stream);
-
-        if (ct.IsCancellationRequested)
-        {
-            bitmap.Dispose();
-            ct.ThrowIfCancellationRequested();
-        }
+        Bitmap bitmap = AvaloniaBitmapDecoder.DecodeFile(previewPath, ct);
 
         return new DecodedImagePreview(bitmap, sourcePixelSize);
     }
@@ -50,17 +42,12 @@ internal sealed class ImagePreviewLoader
         PixelSize sourcePixelSize,
         CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
-        Bitmap bitmap = Bitmap.DecodeToWidth(
-            sourceStream,
-            PreviewDecodeWidth,
-            BitmapInterpolationMode.MediumQuality);
-
-        if (ct.IsCancellationRequested)
-        {
-            bitmap.Dispose();
-            ct.ThrowIfCancellationRequested();
-        }
+        Bitmap bitmap = AvaloniaBitmapDecoder.Decode(
+            () => Bitmap.DecodeToWidth(
+                sourceStream,
+                PreviewDecodeWidth,
+                BitmapInterpolationMode.MediumQuality),
+            ct);
 
         return new DecodedImagePreview(bitmap, sourcePixelSize);
     }

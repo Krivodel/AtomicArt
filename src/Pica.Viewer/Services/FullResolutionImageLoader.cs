@@ -13,26 +13,13 @@ internal sealed class FullResolutionImageLoader
 
         try
         {
-            return await Task.Run(() => Decode(fullPath, ct), ct).ConfigureAwait(false);
+            return await Task
+                .Run(() => AvaloniaBitmapDecoder.DecodeFile(fullPath, ct), ct)
+                .ConfigureAwait(false);
         }
         finally
         {
             DecodeLock.Release();
         }
-    }
-
-    private static Bitmap Decode(string fullPath, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        using FileStream stream = File.OpenRead(fullPath);
-        Bitmap bitmap = new(stream);
-
-        if (ct.IsCancellationRequested)
-        {
-            bitmap.Dispose();
-            ct.ThrowIfCancellationRequested();
-        }
-
-        return bitmap;
     }
 }
