@@ -37,13 +37,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"
-                      Version="10.0.9"
                       PrivateAssets="all" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48"
-                      Version="1.0.3"
                       PrivateAssets="all" />
     <PackageReference Include="Ookii.Dialogs.WinForms"
-                      Version="4.0.0"
                       PrivateAssets="all" />
   </ItemGroup>
 
