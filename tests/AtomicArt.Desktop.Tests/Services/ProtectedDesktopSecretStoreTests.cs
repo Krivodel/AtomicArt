@@ -13,37 +13,14 @@ public sealed class ProtectedDesktopSecretStoreTests
     [Fact]
     public async Task SetSecretAsync_WithKey_ReadsStoredValue()
     {
-        string secretsDirectory = CreateTemporarySecretsDirectory();
-        ProtectedDesktopSecretStore store = new(secretsDirectory);
-        string key = CreateUniqueKey();
-        string value = "value-for-test-only";
-
-        try
-        {
-            await store.SetSecretAsync(key, value, CancellationToken.None);
-
-            string? storedValue = await store.GetSecretAsync(key, CancellationToken.None);
-
-            storedValue.Should().Be(value);
-        }
-        finally
-        {
-            DeleteTemporaryDirectory(secretsDirectory);
-        }
+        await AssertStoredSecretAsync();
     }
 
     [Fact]
     public async Task SetSecretAsync_WhenWindows_DoesNotPersistPlainText()
     {
-        string secretsDirectory = CreateTemporarySecretsDirectory();
-        ProtectedDesktopSecretStore store = new(secretsDirectory);
-        string key = CreateUniqueKey();
-        string value = "value-for-test-only";
-
-        try
+        await AssertStoredSecretAsync(async (secretsDirectory, key, value) =>
         {
-            await store.SetSecretAsync(key, value, CancellationToken.None);
-
             if (OperatingSystem.IsWindows())
             {
                 byte[] storedBytes = await File.ReadAllBytesAsync(
@@ -54,14 +31,7 @@ public sealed class ProtectedDesktopSecretStoreTests
                 string plainTextHex = Convert.ToHexString(plainTextBytes);
                 storedHex.Should().NotContain(plainTextHex);
             }
-
-            string? storedValue = await store.GetSecretAsync(key, CancellationToken.None);
-            storedValue.Should().Be(value);
-        }
-        finally
-        {
-            DeleteTemporaryDirectory(secretsDirectory);
-        }
+        });
     }
 
     private static string CreateTemporarySecretsDirectory()
@@ -80,6 +50,34 @@ public sealed class ProtectedDesktopSecretStoreTests
         string fileName = string.Concat(Convert.ToHexString(SHA256.HashData(keyBytes)), ".bin");
 
         return Path.Combine(secretsDirectory, fileName);
+    }
+
+    private static async Task AssertStoredSecretAsync()
+    {
+        await AssertStoredSecretAsync((_, _, _) => Task.CompletedTask);
+    }
+
+    private static async Task AssertStoredSecretAsync(
+        Func<string, string, string, Task> assertPersistedValue)
+    {
+        string secretsDirectory = CreateTemporarySecretsDirectory();
+        ProtectedDesktopSecretStore store = new(secretsDirectory);
+        string key = CreateUniqueKey();
+        string value = "value-for-test-only";
+
+        try
+        {
+            await store.SetSecretAsync(key, value, CancellationToken.None);
+            await assertPersistedValue(secretsDirectory, key, value);
+
+            string? storedValue = await store.GetSecretAsync(key, CancellationToken.None);
+
+            storedValue.Should().Be(value);
+        }
+        finally
+        {
+            DeleteTemporaryDirectory(secretsDirectory);
+        }
     }
 
     private static void DeleteTemporaryDirectory(string secretsDirectory)
