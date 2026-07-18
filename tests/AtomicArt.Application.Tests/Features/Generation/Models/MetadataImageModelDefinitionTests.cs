@@ -168,6 +168,7 @@ public sealed class MetadataImageModelDefinitionTests
     }
 
     private static ImageGenerationRequestDto CreateRequest(
+        GenerationModelMetadataDto? metadata = null,
         string prompt = "Prompt",
         string? aspectRatio = null,
         string? resolution = null,
@@ -175,33 +176,15 @@ public sealed class MetadataImageModelDefinitionTests
         IReadOnlyList<AttachedImageDto>? attachedImages = null,
         string? thinkingLevel = null)
     {
-        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+        GenerationModelMetadataDto modelMetadata =
+            metadata ?? ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
 
-        return CreateRequest(
-            metadata,
-            prompt,
-            aspectRatio,
-            resolution,
-            temperature,
-            attachedImages,
-            thinkingLevel);
-    }
-
-    private static ImageGenerationRequestDto CreateRequest(
-        GenerationModelMetadataDto metadata,
-        string prompt = "Prompt",
-        string? aspectRatio = null,
-        string? resolution = null,
-        double? temperature = null,
-        IReadOnlyList<AttachedImageDto>? attachedImages = null,
-        string? thinkingLevel = null)
-    {
         return ImageGenerationRequestDtoTestFactory.Create(
-            modelId: metadata.Id,
+            modelId: modelMetadata.Id,
             prompt: prompt,
-            aspectRatio: aspectRatio ?? metadata.AspectRatios.First(),
-            resolution: resolution ?? metadata.Resolutions.First(),
-            temperature: temperature ?? metadata.Temperature.Default,
+            aspectRatio: aspectRatio ?? modelMetadata.AspectRatios.First(),
+            resolution: resolution ?? modelMetadata.Resolutions.First(),
+            temperature: temperature ?? modelMetadata.Temperature.Default,
             attachedImages: attachedImages,
             thinkingLevel: thinkingLevel);
     }
