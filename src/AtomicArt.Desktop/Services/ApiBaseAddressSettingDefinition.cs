@@ -10,5 +10,5 @@ public sealed class ApiBaseAddressSettingDefinition : ISettingsDefinition
     public int Order => 50;
     public string DisplayName => UiStrings.SettingsApiBaseAddressLabel;
     public string Placeholder => UiStrings.SettingsApiBaseAddressPlaceholder;
-    public string SaveButtonText => UiStrings.SettingsSaveApiBaseAddress;
+    public string SaveButtonText => UiStrings.SettingsSave;
 }

@@ -46,11 +46,9 @@ public static class UiStrings
     public static string SettingsGoogleApiKeyPlaceholder => "Google API-ключ";
     public static string SettingsScaleLabel => "Масштаб";
     public static string SettingsGpuResourceCacheLabel => "GPU-кэш";
+    public static string SettingsSave => "Сохранить";
     public static string SettingsSaveApiKey => "Сохранить ключ";
-    public static string SettingsSaveApiBaseAddress => "Сохранить";
-    public static string SettingsSaveSecret => "Сохранить";
     public static string SettingsApplyScale => "Применить";
-    public static string SettingsSaveGpuResourceCache => "Сохранить";
     public static string SettingsGpuResourceCacheRestartNotice => "Применится после перезапуска.";
     public static string SettingsSaveSecretFailed => "Не удалось сохранить ключ.";
     public static string UpdateTitle => "Доступно обновление";
