@@ -24,7 +24,7 @@ public sealed class GalleryStateServiceTests
     [Fact]
     public async Task SaveAsync_WithCompletedItem_WritesGalleryJsonOutsideArt()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(GalleryStateServiceTests));
 
         try
         {
@@ -201,14 +201,6 @@ public sealed class GalleryStateServiceTests
             CorrelationId = CorrelationId,
             GenerationOrdinal = 0
         };
-    }
-
-    private static string CreateTempRoot()
-    {
-        return Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.GalleryStateServiceTests",
-            Guid.NewGuid().ToString("N"));
     }
 
 }

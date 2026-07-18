@@ -23,7 +23,7 @@ public sealed class PanelAttachmentStoreTests
     [Fact]
     public async Task SaveAsync_WithPanelId_WritesUnderEncodedStateAttachmentsDirectory()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
 
         try
         {
@@ -45,14 +45,14 @@ public sealed class PanelAttachmentStoreTests
         }
         finally
         {
-            DeleteTempRoot(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
     [Fact]
     public async Task SaveAsync_WithUnsafePanelId_UsesEncodedPathSegment()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
 
         try
         {
@@ -76,14 +76,14 @@ public sealed class PanelAttachmentStoreTests
         }
         finally
         {
-            DeleteTempRoot(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
     [Fact]
     public async Task SaveAsync_WithAttachment_WritesOutsideArtDirectory()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
 
         try
         {
@@ -107,14 +107,14 @@ public sealed class PanelAttachmentStoreTests
         }
         finally
         {
-            DeleteTempRoot(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
     [Fact]
     public void CreateState_WithSourcePathLikeFileName_StoresOnlySafeDisplayName()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
 
         try
         {
@@ -133,14 +133,14 @@ public sealed class PanelAttachmentStoreTests
         }
         finally
         {
-            DeleteTempRoot(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
     [Fact]
     public async Task SaveAsync_WithRegisteredContentTypeAndArbitraryBytes_SavesWithoutAttachmentRuleValidation()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
 
         try
         {
@@ -158,14 +158,14 @@ public sealed class PanelAttachmentStoreTests
         }
         finally
         {
-            DeleteTempRoot(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
     [Fact]
     public async Task SaveAsync_WithUnsafeInternalFileName_RejectsAndDoesNotWriteOutsidePanelDirectory()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
 
         try
         {
@@ -201,14 +201,14 @@ public sealed class PanelAttachmentStoreTests
         }
         finally
         {
-            DeleteTempRoot(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
     [Fact]
     public async Task LoadAsync_WithMissingManagedFile_LogsWarningAndReturnsNull()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
 
         try
         {
@@ -237,14 +237,14 @@ public sealed class PanelAttachmentStoreTests
         }
         finally
         {
-            DeleteTempRoot(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
     [Fact]
     public async Task LoadAsync_WithUnsafeInternalFileName_LogsWarningAndReturnsNull()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
 
         try
         {
@@ -276,14 +276,14 @@ public sealed class PanelAttachmentStoreTests
         }
         finally
         {
-            DeleteTempRoot(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
     [Fact]
     public async Task DeleteAsync_WithExistingAttachment_RemovesManagedFile()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
 
         try
         {
@@ -306,7 +306,7 @@ public sealed class PanelAttachmentStoreTests
         }
         finally
         {
-            DeleteTempRoot(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -319,22 +319,6 @@ public sealed class PanelAttachmentStoreTests
             new FixedStatePathKeyEncoder(),
             new TestGenerationImageFormatRegistry(),
             logger ?? NullLogger<PanelAttachmentStore>.Instance);
-    }
-
-    private static string CreateTempRoot()
-    {
-        return Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.PanelAttachmentStoreTests",
-            Guid.NewGuid().ToString("N"));
-    }
-
-    private static void DeleteTempRoot(string rootDirectory)
-    {
-        if (Directory.Exists(rootDirectory))
-        {
-            Directory.Delete(rootDirectory, recursive: true);
-        }
     }
 
     private sealed class FixedStatePathKeyEncoder : IStatePathKeyEncoder

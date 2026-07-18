@@ -17,7 +17,7 @@ public sealed class AppStateStoreTests
     [Fact]
     public async Task LoadAsync_WhenFileDoesNotExist_ReturnsDefaultState()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
 
         try
         {
@@ -37,7 +37,7 @@ public sealed class AppStateStoreTests
     [Fact]
     public async Task LoadAsync_WithInvalidJson_ReturnsDefaultStateAndLogsWarning()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
 
         try
         {
@@ -65,7 +65,7 @@ public sealed class AppStateStoreTests
     [Fact]
     public async Task SaveAsync_WithValidState_WritesUtf8JsonEnvelope()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
 
         try
         {
@@ -95,7 +95,7 @@ public sealed class AppStateStoreTests
     [Fact]
     public async Task SaveAsync_WhenWriteFails_KeepsPreviousStateFile()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
 
         try
         {
@@ -128,7 +128,7 @@ public sealed class AppStateStoreTests
     [Fact]
     public async Task SaveAsync_WithSectionFileName_WritesSectionOwnedFileName()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
 
         try
         {
@@ -154,7 +154,7 @@ public sealed class AppStateStoreTests
     [Fact]
     public async Task LoadAsync_WithUnsupportedSchemaVersion_ReturnsDefaultStateAndLogsWarning()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
 
         try
         {
@@ -198,14 +198,6 @@ public sealed class AppStateStoreTests
         return new AppStateStore(
             pathProvider,
             logger ?? new RecordingLogger<AppStateStore>());
-    }
-
-    private static string CreateTempRoot()
-    {
-        return Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.AppStateStoreTests",
-            Guid.NewGuid().ToString("N"));
     }
 
     private sealed class TestStateSection : TestStateSectionTestDouble

@@ -11,7 +11,7 @@ public sealed class AtomicArtDataPathProviderTests
     [Fact]
     public void Constructor_WithTestRoot_ReturnsKnownDirectoriesUnderRoot()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AtomicArtDataPathProviderTests));
 
         AtomicArtDataPathProvider provider = new(rootDirectory);
 
@@ -29,7 +29,7 @@ public sealed class AtomicArtDataPathProviderTests
     [Fact]
     public void EnsureDirectoryExists_WithKnownDirectory_CreatesDirectory()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AtomicArtDataPathProviderTests));
 
         try
         {
@@ -48,7 +48,7 @@ public sealed class AtomicArtDataPathProviderTests
     [Fact]
     public void EnsureDirectoryExists_WithUnknownDirectory_ThrowsInvalidOperationException()
     {
-        string rootDirectory = CreateTempRoot();
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AtomicArtDataPathProviderTests));
         AtomicArtDataPathProvider provider = new(rootDirectory);
         string unknownDirectory = Path.Combine(provider.RootDirectory, "Unknown");
 
@@ -56,14 +56,6 @@ public sealed class AtomicArtDataPathProviderTests
 
         act.Should().Throw<InvalidOperationException>();
         Directory.Exists(unknownDirectory).Should().BeFalse();
-    }
-
-    private static string CreateTempRoot()
-    {
-        return Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.AtomicArtDataPathProviderTests",
-            Guid.NewGuid().ToString("N"));
     }
 
 }
