@@ -82,11 +82,11 @@ public sealed class GoogleInteractionsResponseParserTests
                 "total_tokens": 3800,
                 "input_tokens_by_modality": [
                   {
-                    "modality": "text",
+                    "modality": " TeXt ",
                     "tokens": 400
                   },
                   {
-                    "modality": "image",
+                    "modality": " IMAGE ",
                     "tokens": 600
                   }
                 ],

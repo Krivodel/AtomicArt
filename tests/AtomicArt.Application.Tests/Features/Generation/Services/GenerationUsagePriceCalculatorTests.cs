@@ -150,8 +150,8 @@ public sealed class GenerationUsagePriceCalculatorTests
             TotalTokens: 3800,
             OutputTokensByModality:
             [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 2000),
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Text, 500)
+                new GenerationModalityTokensDto(" IMAGE ", 2000),
+                new GenerationModalityTokensDto(" TeXt ", 500)
             ],
             TotalThoughtTokens: 250,
             TotalToolUseTokens: 0);

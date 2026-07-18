@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 using AtomicArt.Application.Features.Generation.Models;
+using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
@@ -433,7 +434,7 @@ internal sealed class GoogleInteractionsResponseParser
             }
 
             int tokens = ExtractModalityTokenCount(tokenElement);
-            string normalizedModality = NormalizeModality(modality);
+            string normalizedModality = GenerationUsageModalityNormalizer.Normalize(modality);
 
             modalityTokens.Add(new GenerationModalityTokensDto(normalizedModality, tokens));
         }
@@ -480,23 +481,6 @@ internal sealed class GoogleInteractionsResponseParser
         }
 
         return value;
-    }
-
-    private static string NormalizeModality(string modality)
-    {
-        string normalizedModality = modality.Trim().ToLowerInvariant();
-
-        if (string.Equals(normalizedModality, GenerationUsageModalityNames.Image, StringComparison.Ordinal))
-        {
-            return GenerationUsageModalityNames.Image;
-        }
-
-        if (string.Equals(normalizedModality, GenerationUsageModalityNames.Text, StringComparison.Ordinal))
-        {
-            return GenerationUsageModalityNames.Text;
-        }
-
-        return normalizedModality;
     }
 
     private static GoogleInteractionsException CreateInvalidUsageException()

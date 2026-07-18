@@ -90,7 +90,8 @@ public sealed class GenerationUsagePriceCalculator
         {
             foreach (GenerationModalityTokensDto modalityTokens in usage.OutputTokensByModality)
             {
-                string modality = modalityTokens.Modality.Trim().ToLowerInvariant();
+                string modality = GenerationUsageModalityNormalizer.Normalize(
+                    modalityTokens.Modality);
 
                 if (string.Equals(modality, GenerationUsageModalityNames.Text, StringComparison.Ordinal))
                 {
@@ -123,7 +124,8 @@ public sealed class GenerationUsagePriceCalculator
                 return true;
             }
 
-            string modality = modalityTokens.Modality.Trim().ToLowerInvariant();
+            string modality = GenerationUsageModalityNormalizer.Normalize(
+                modalityTokens.Modality);
 
             if (!supportedModalities.Contains(modality, StringComparer.Ordinal))
             {
