@@ -1,8 +1,8 @@
 using FluentValidation;
 
 using AtomicArt.Application.Features.Generation.Interfaces;
+using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Application.Features.Generation.Validators;
-using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 
@@ -38,7 +38,9 @@ public sealed class CreateImageGenerationCommandValidator : AbstractValidator<Cr
         IImageModelDefinition? modelDefinition = _modelRegistry.GetById(command.Request.ModelId);
 
         if (modelDefinition is null
-            || !string.Equals(modelDefinition.Provider, GenerationProviderIds.Google, StringComparison.Ordinal))
+            || !GenerationProviderCredentialRequirements
+                .Resolve(modelDefinition.Provider)
+                .RequiredForApplicationValidation)
         {
             return true;
         }

@@ -148,7 +148,11 @@ internal sealed class GoogleImageGenerationContentProvider : IProviderImageGener
                 "The model provider is not supported.");
         }
 
-        if (string.IsNullOrWhiteSpace(context.ProviderCredential))
+        GenerationProviderCredentialRequirement credentialRequirement =
+            GenerationProviderCredentialRequirements.Resolve(context.Provider);
+
+        if (credentialRequirement.RequiredForApplicationValidation
+            && string.IsNullOrWhiteSpace(context.ProviderCredential))
         {
             _logger.LogWarning(
                 "Google image generation rejected a context without provider credentials.");

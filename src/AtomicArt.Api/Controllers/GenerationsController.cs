@@ -5,6 +5,7 @@ using MediatR;
 using AtomicArt.Application.Common.Models;
 using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Models;
+using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Api.Controllers;
@@ -130,7 +131,9 @@ public sealed class GenerationsController : ControllerBase
             .FirstOrDefault(candidate => string.Equals(candidate.Id, modelId, StringComparison.Ordinal));
 
         return model is not null
-            && !string.Equals(model.Provider, GenerationProviderIds.Test, StringComparison.Ordinal);
+            && GenerationProviderCredentialRequirements
+                .Resolve(model.Provider)
+                .RequiredAtApiBoundary;
     }
 
     private static ProblemDetails CreateProblemDetails(
