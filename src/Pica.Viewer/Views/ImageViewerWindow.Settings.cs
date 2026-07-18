@@ -248,7 +248,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             () => animationId == _settingsPanelAnimationId,
             progress =>
             {
-                double easedProgress = 1d - Math.Pow(1d - progress, 3d);
+                double easedProgress = EaseOutCubic(progress);
                 _view.SettingsPanel.Opacity = startOpacity
                     + ((targetOpacity - startOpacity) * easedProgress);
                 transform.Y = startOffset + ((targetOffset - startOffset) * easedProgress);

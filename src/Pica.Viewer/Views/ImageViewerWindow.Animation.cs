@@ -4,6 +4,11 @@ namespace Pica.Viewer.Views;
 
 public sealed partial class ImageViewerWindow : SukiWindow
 {
+    private static double EaseOutCubic(double progress)
+    {
+        return 1d - Math.Pow(1d - progress, 3d);
+    }
+
     private void StartFrameAnimation(
         TimeSpan duration,
         Func<bool> isCurrent,

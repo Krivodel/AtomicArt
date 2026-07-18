@@ -539,7 +539,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             () => animationId == _scaleAnimationId,
             progress =>
             {
-                double easedProgress = 1d - Math.Pow(1d - progress, 3d);
+                double easedProgress = EaseOutCubic(progress);
                 _scale = startScale + ((targetScale - startScale) * easedProgress);
                 _offsetX = startOffsetX + ((targetOffsetX - startOffsetX) * easedProgress);
                 _offsetY = startOffsetY + ((targetOffsetY - startOffsetY) * easedProgress);
@@ -747,7 +747,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             () => animationId == _scaleAnimationId,
             progress =>
             {
-                double easedProgress = 1d - Math.Pow(1d - progress, 3d);
+                double easedProgress = EaseOutCubic(progress);
                 double frameScale = startScale + ((clampedScale - startScale) * easedProgress);
                 ApplyScaleAtAnchor(frameScale, anchor, imageX, imageY);
             });
