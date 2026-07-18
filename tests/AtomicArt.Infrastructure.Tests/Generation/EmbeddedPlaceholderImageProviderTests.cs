@@ -2,6 +2,7 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
 
 namespace AtomicArt.Infrastructure.Tests.Generation;
@@ -9,6 +10,30 @@ namespace AtomicArt.Infrastructure.Tests.Generation;
 public sealed class EmbeddedPlaceholderImageProviderTests
 {
     private const long MaxPlaceholderImageBytes = 128L * 1024L * 1024L;
+
+    [Theory]
+    [InlineData("placeholder.jpg", GenerationImageContentTypes.Jpeg)]
+    [InlineData("placeholder.jpeg", GenerationImageContentTypes.Jpeg)]
+    [InlineData("placeholder.png", GenerationImageContentTypes.Png)]
+    [InlineData("placeholder.webp", GenerationImageContentTypes.Webp)]
+    [InlineData("placeholder.JPG", GenerationImageContentTypes.Jpeg)]
+    public void GetContentType_WithSupportedExtension_ReturnsCatalogContentType(
+        string resourceName,
+        string expectedContentType)
+    {
+        string contentType = EmbeddedPlaceholderImageProvider.GetContentType(resourceName);
+
+        contentType.Should().Be(expectedContentType);
+    }
+
+    [Fact]
+    public void GetContentType_WithUnsupportedCatalogExtension_ThrowsInvalidOperationException()
+    {
+        Func<string> act = () => EmbeddedPlaceholderImageProvider.GetContentType("placeholder.gif");
+
+        act.Should()
+            .Throw<InvalidOperationException>();
+    }
 
     [Fact]
     public async Task ReadResourceContentAsync_WhenResourceExceedsLimit_ThrowsInvalidOperationException()

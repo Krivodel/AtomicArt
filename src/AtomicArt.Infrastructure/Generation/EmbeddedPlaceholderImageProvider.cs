@@ -1,24 +1,35 @@
 using System.Reflection;
 
+using AtomicArt.Contracts.Generation;
+
 namespace AtomicArt.Infrastructure.Generation;
 
 internal sealed class EmbeddedPlaceholderImageProvider : IPlaceholderImageProvider
 {
-    private const string JpegContentType = "image/jpeg";
     private const long MaxPlaceholderImageBytes = 128L * 1024L * 1024L;
     private const string PlaceholdersResourceSegment = ".Placeholders.";
-    private const string PngContentType = "image/png";
-    private const string WebpContentType = "image/webp";
 
     private static readonly Assembly ResourceAssembly = typeof(EmbeddedPlaceholderImageProvider).Assembly;
+    private static readonly string[] SupportedContentTypes =
+    [
+        GenerationImageContentTypes.Jpeg,
+        GenerationImageContentTypes.Png,
+        GenerationImageContentTypes.Webp
+    ];
     private static readonly IReadOnlyDictionary<string, string> ContentTypesByExtension =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [".jpeg"] = JpegContentType,
-            [".jpg"] = JpegContentType,
-            [".png"] = PngContentType,
-            [".webp"] = WebpContentType
-        };
+        GenerationImageFileFormats.All
+            .Where(format => SupportedContentTypes.Contains(
+                format.ContentType,
+                StringComparer.Ordinal))
+            .SelectMany(
+                format => format.Extensions,
+                (format, extension) => new KeyValuePair<string, string>(
+                    extension,
+                    format.ContentType))
+            .ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value,
+                StringComparer.OrdinalIgnoreCase);
     private static readonly string[] ResourceNames = ResourceAssembly
         .GetManifestResourceNames()
         .Where(IsPlaceholderImageResource)
@@ -73,13 +84,7 @@ internal sealed class EmbeddedPlaceholderImageProvider : IPlaceholderImageProvid
             .ConfigureAwait(false);
     }
 
-    private static bool IsPlaceholderImageResource(string resourceName)
-    {
-        return resourceName.Contains(PlaceholdersResourceSegment, StringComparison.Ordinal)
-            && ContentTypesByExtension.ContainsKey(Path.GetExtension(resourceName));
-    }
-
-    private static string GetContentType(string resourceName)
+    internal static string GetContentType(string resourceName)
     {
         string extension = Path.GetExtension(resourceName);
 
@@ -89,6 +94,12 @@ internal sealed class EmbeddedPlaceholderImageProvider : IPlaceholderImageProvid
         }
 
         throw new InvalidOperationException("The embedded placeholder image type is not supported.");
+    }
+
+    private static bool IsPlaceholderImageResource(string resourceName)
+    {
+        return resourceName.Contains(PlaceholdersResourceSegment, StringComparison.Ordinal)
+            && ContentTypesByExtension.ContainsKey(Path.GetExtension(resourceName));
     }
 
     private static InvalidOperationException CreateResourceTooLargeException(string resourceName)
