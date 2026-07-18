@@ -318,16 +318,13 @@ public sealed class AnimatedGalleryControlEmptyGenerationTests : AnimatedGallery
 
     private static GenerationItemViewModel CreateItem(Guid id, int index)
     {
-        GenerationItemDto item = new(
-            id,
-            "test-model",
-            "Test Model",
-            $"Prompt {index}",
-            "1:1",
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            null);
+        GenerationItemDto item = GenerationItemDtoTestFactory.Create(
+            id: id,
+            modelId: "test-model",
+            modelDisplayName: "Test Model",
+            prompt: $"Prompt {index}",
+            aspectRatio: "1:1",
+            createdAtUtc: CreatedAtUtc);
 
         return new GenerationItemViewModel(
             item,
@@ -353,16 +350,13 @@ public sealed class AnimatedGalleryControlEmptyGenerationTests : AnimatedGallery
         Guid finalId,
         int index)
     {
-        GenerationItemDto result = new(
-            finalId,
-            "test-model",
-            "Test Model",
-            $"Prompt {index}",
-            "1:1",
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            null);
+        GenerationItemDto result = GenerationItemDtoTestFactory.Create(
+            id: finalId,
+            modelId: "test-model",
+            modelDisplayName: "Test Model",
+            prompt: $"Prompt {index}",
+            aspectRatio: "1:1",
+            createdAtUtc: CreatedAtUtc);
 
         item.UpdateFromResult(result, null, null);
     }

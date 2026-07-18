@@ -73,21 +73,14 @@ public sealed class GenerationItemViewModelTests
             TotalTokens: 2320);
         GenerationPriceDto price = new(0.0678m, "USD", "ActualProviderUsage");
         DateTime completedAtUtc = CreatedAtUtc.AddSeconds(30);
-        GenerationItemDto item = new(
-            ItemId,
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            "Prompt",
-            "Авто",
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            null,
-            null,
-            completedAtUtc,
-            TimeSpan.FromSeconds(30),
-            price,
-            usage);
+        GenerationItemDto item = GenerationItemDtoTestFactory.Create(
+            id: ItemId,
+            aspectRatio: "Авто",
+            createdAtUtc: CreatedAtUtc,
+            completedAtUtc: completedAtUtc,
+            generationDuration: TimeSpan.FromSeconds(30),
+            price: price,
+            usage: usage);
 
         viewModel.UpdateFromResult(item, "result.png", null);
 
@@ -140,16 +133,12 @@ public sealed class GenerationItemViewModelTests
         GenerationItemStatus status = GenerationItemStatus.Generated,
         string? imagePath = null)
     {
-        GenerationItemDto item = new(
-            ItemId,
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            "Prompt",
-            "Авто",
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            createdAtUtc,
-            status,
-            imagePath);
+        GenerationItemDto item = GenerationItemDtoTestFactory.Create(
+            id: ItemId,
+            aspectRatio: "Авто",
+            createdAtUtc: createdAtUtc,
+            status: status,
+            imagePath: imagePath);
 
         return new GenerationItemViewModel(
             item,

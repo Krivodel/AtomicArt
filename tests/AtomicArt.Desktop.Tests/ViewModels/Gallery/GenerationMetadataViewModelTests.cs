@@ -62,20 +62,13 @@ public sealed class GenerationMetadataViewModelTests
         GenerationPriceDto? price = null,
         TimeSpan? generationDuration = null)
     {
-        return new GenerationItemDto(
-            ItemId,
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            "Prompt",
-            "1:1",
-            ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().Resolutions[1],
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            null,
-            null,
-            CreatedAtUtc.AddSeconds(30),
-            generationDuration,
-            price,
-            null);
+        return GenerationItemDtoTestFactory.Create(
+            id: ItemId,
+            aspectRatio: "1:1",
+            resolution: ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().Resolutions[1],
+            createdAtUtc: CreatedAtUtc,
+            completedAtUtc: CreatedAtUtc.AddSeconds(30),
+            generationDuration: generationDuration,
+            price: price);
     }
 }

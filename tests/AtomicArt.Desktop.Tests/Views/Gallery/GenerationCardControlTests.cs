@@ -197,16 +197,12 @@ public sealed class GenerationCardControlTests
 
     private static GenerationItemViewModel CreateItem(string imagePath)
     {
-        GenerationItemDto item = new(
-            ItemId,
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            Prompt,
-            AspectRatio,
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            imagePath);
+        GenerationItemDto item = GenerationItemDtoTestFactory.Create(
+            id: ItemId,
+            prompt: Prompt,
+            aspectRatio: AspectRatio,
+            createdAtUtc: CreatedAtUtc,
+            imagePath: imagePath);
 
         return new GenerationItemViewModel(
             item,

@@ -16,17 +16,13 @@ internal sealed class SuccessfulImageGenerationApiClient : IImageGenerationApiCl
 
         List<GenerationItemDto> items = Enumerable
             .Range(0, request.GenerationCount)
-            .Select(index => new GenerationItemDto(
-                Guid.NewGuid(),
-                request.ModelId,
-                ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-                request.Prompt,
-                request.AspectRatio,
-                request.Resolution,
-                CreatedAtUtc.AddSeconds(index),
-                GenerationItemStatus.Generated,
-                null,
-                null))
+            .Select(index => GenerationItemDtoTestFactory.Create(
+                id: Guid.NewGuid(),
+                modelId: request.ModelId,
+                prompt: request.Prompt,
+                aspectRatio: request.AspectRatio,
+                resolution: request.Resolution,
+                createdAtUtc: CreatedAtUtc.AddSeconds(index)))
             .ToList();
         GenerationBatchDto batch = new(Guid.NewGuid(), items);
 

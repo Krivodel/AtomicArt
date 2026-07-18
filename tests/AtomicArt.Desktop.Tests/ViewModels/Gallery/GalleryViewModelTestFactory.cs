@@ -141,17 +141,12 @@ internal static class GalleryViewModelTestFactory
         GenerationItemStatus status = GenerationItemStatus.Generated,
         string? imagePath = null)
     {
-        return new GenerationItemDto(
-            Guid.NewGuid(),
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            prompt,
-            GenerationAspectRatios.Auto,
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc,
-            status,
-            imagePath,
-            null);
+        return GenerationItemDtoTestFactory.Create(
+            id: Guid.NewGuid(),
+            prompt: prompt,
+            createdAtUtc: CreatedAtUtc,
+            status: status,
+            imagePath: imagePath);
     }
 
     private sealed class NullGalleryItemDeletionService : IGalleryItemDeletionService

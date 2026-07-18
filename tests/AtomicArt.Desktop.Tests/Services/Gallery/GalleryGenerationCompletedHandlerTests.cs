@@ -254,17 +254,11 @@ public sealed class GalleryGenerationCompletedHandlerTests
         string? imagePath = null,
         GenerationImageContentDto? imageContent = null)
     {
-        return new GenerationItemDto(
-            ItemId,
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            "Prompt",
-            GenerationAspectRatios.Auto,
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            imagePath,
-            imageContent);
+        return GenerationItemDtoTestFactory.Create(
+            id: ItemId,
+            createdAtUtc: CreatedAtUtc,
+            imagePath: imagePath,
+            imageContent: imageContent);
     }
 
     private static GenerationResultStorage CreateStorage(string rootDirectory)

@@ -421,17 +421,13 @@ public sealed class GenerationRunDispatcherTests
 
     private static GenerationBatchDto CreateBatch(ImageGenerationRequestDto request)
     {
-        GenerationItemDto item = new(
-            Guid.Parse("22222222-2222-2222-2222-222222222222"),
-            request.ModelId,
-            "Test Model",
-            request.Prompt,
-            request.AspectRatio,
-            request.Resolution,
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            null,
-            null);
+        GenerationItemDto item = GenerationItemDtoTestFactory.Create(
+            modelId: request.ModelId,
+            modelDisplayName: "Test Model",
+            prompt: request.Prompt,
+            aspectRatio: request.AspectRatio,
+            resolution: request.Resolution,
+            createdAtUtc: CreatedAtUtc);
 
         return new GenerationBatchDto(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),

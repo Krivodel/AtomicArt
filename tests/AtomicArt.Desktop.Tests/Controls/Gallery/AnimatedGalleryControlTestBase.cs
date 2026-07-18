@@ -142,16 +142,12 @@ public abstract class AnimatedGalleryControlTestBase
 
     private protected static GenerationItemViewModel CreateItem()
     {
-        GenerationItemDto item = new(
-            ItemId,
-            "test-model",
-            "Test Model",
-            "Prompt",
-            "1:1",
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            CreatedAtUtc,
-            GenerationItemStatus.Generated,
-            null);
+        GenerationItemDto item = GenerationItemDtoTestFactory.Create(
+            id: ItemId,
+            modelId: "test-model",
+            modelDisplayName: "Test Model",
+            aspectRatio: "1:1",
+            createdAtUtc: CreatedAtUtc);
 
         return new GenerationItemViewModel(
             item,
