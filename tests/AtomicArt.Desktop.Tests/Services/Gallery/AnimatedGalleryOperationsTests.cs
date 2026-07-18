@@ -27,11 +27,10 @@ public sealed class AnimatedGalleryOperationsTests
     [Fact]
     public async Task GenerateFrontAsync_WhenSceneAttached_DelegatesToActiveOperations()
     {
-        AnimatedGalleryOperations operations = CreateOperations();
-        RecordingAnimatedGalleryOperations sceneOperations = new();
-        IAnimatedGalleryOperationsRegistration registration = operations;
+        (
+            AnimatedGalleryOperations operations,
+            RecordingAnimatedGalleryOperations sceneOperations) = CreateAttachedOperations();
         List<object> items = [Guid.NewGuid()];
-        registration.Attach(sceneOperations);
 
         await operations.GenerateFrontAsync(items, CancellationToken.None);
 
@@ -42,11 +41,11 @@ public sealed class AnimatedGalleryOperationsTests
     [Fact]
     public async Task RemoveAsync_AfterSceneDetached_CompletesWithoutDelegating()
     {
-        AnimatedGalleryOperations operations = CreateOperations();
-        RecordingAnimatedGalleryOperations sceneOperations = new();
+        (
+            AnimatedGalleryOperations operations,
+            RecordingAnimatedGalleryOperations sceneOperations) = CreateAttachedOperations();
         IAnimatedGalleryOperationsRegistration registration = operations;
         Guid itemId = Guid.NewGuid();
-        registration.Attach(sceneOperations);
         registration.Detach(sceneOperations);
 
         await operations.RemoveAsync(itemId, CancellationToken.None);
@@ -57,11 +56,10 @@ public sealed class AnimatedGalleryOperationsTests
     [Fact]
     public async Task RestoreSnapshotAsync_WhenSceneAttached_DelegatesToActiveOperations()
     {
-        AnimatedGalleryOperations operations = CreateOperations();
-        RecordingAnimatedGalleryOperations sceneOperations = new();
-        IAnimatedGalleryOperationsRegistration registration = operations;
+        (
+            AnimatedGalleryOperations operations,
+            RecordingAnimatedGalleryOperations sceneOperations) = CreateAttachedOperations();
         List<object> items = [Guid.NewGuid()];
-        registration.Attach(sceneOperations);
 
         await operations.RestoreSnapshotAsync(items, CancellationToken.None);
 
@@ -77,6 +75,18 @@ public sealed class AnimatedGalleryOperationsTests
         return new AnimatedGalleryOperations(
             sceneFactory,
             NullLogger<AnimatedGalleryOperations>.Instance);
+    }
+
+    private static (
+        AnimatedGalleryOperations Operations,
+        RecordingAnimatedGalleryOperations SceneOperations) CreateAttachedOperations()
+    {
+        AnimatedGalleryOperations operations = CreateOperations();
+        RecordingAnimatedGalleryOperations sceneOperations = new();
+        IAnimatedGalleryOperationsRegistration registration = operations;
+        registration.Attach(sceneOperations);
+
+        return (operations, sceneOperations);
     }
 
     private static AnimatedGalleryScene CreateScene(TopLevel topLevel)
