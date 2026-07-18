@@ -80,7 +80,7 @@ internal static class AttachedImageValidationService
         {
             return Result<AttachedImageDto>.ValidationError(
                 GenerationErrorCodes.ModelRequestValidation,
-                "Содержимое вложения не передано.");
+                GenerationValidationMessages.MissingAttachedImageContent);
         }
 
         return null;

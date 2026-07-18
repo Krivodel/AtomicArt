@@ -187,7 +187,9 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
     {
         return attachedImageSize switch
         {
-            <= 0 => GenerationValidationResult.Invalid(GenerationErrorCodes.ModelRequestValidation, "Содержимое вложения не передано."),
+            <= 0 => GenerationValidationResult.Invalid(
+                GenerationErrorCodes.ModelRequestValidation,
+                GenerationValidationMessages.MissingAttachedImageContent),
             var size when size > constraints.MaxAttachedImageBytes => GenerationValidationResult.Invalid(GenerationErrorCodes.ModelRequestValidation, "Размер вложения превышает допустимый лимит."),
             _ => null
         };
