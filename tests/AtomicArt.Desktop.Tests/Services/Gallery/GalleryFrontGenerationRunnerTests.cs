@@ -182,17 +182,10 @@ public sealed class GalleryFrontGenerationRunnerTests
         TestUiFrameScheduler frameScheduler,
         IGalleryOperationRunnerRegistry registry)
     {
-        GalleryOperationCoordinator context = GalleryOperationCoordinatorTestFactory.Create(frameScheduler, registry);
-        context.AttachScene(
-            new ScrollViewer(),
-            new Canvas(),
-            new Canvas(),
-            new List<object>(),
-            item => (Guid)item,
-            _ => new Border(),
-            () => Task.CompletedTask);
-
-        return context;
+        return GalleryOperationCoordinatorTestFactory.CreateAttached(
+            frameScheduler,
+            registry,
+            new List<object>());
     }
 
     private static GalleryOperationCoordinator CreateContextWithVirtualizedTopCard(

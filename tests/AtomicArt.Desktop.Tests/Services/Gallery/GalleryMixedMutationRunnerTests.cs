@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
 
-using Avalonia.Controls;
 using FluentAssertions;
 using Xunit;
 
@@ -45,18 +44,8 @@ public sealed class GalleryMixedMutationRunnerTests
         IUiFrameScheduler frameScheduler,
         IList<object> items)
     {
-        GalleryOperationCoordinator context = GalleryOperationCoordinatorTestFactory.Create(
+        return GalleryOperationCoordinatorTestFactory.CreateAttached(
             frameScheduler,
-            new GalleryOperationRunnerRegistry(new List<IGalleryOperationRunner>()));
-        context.AttachScene(
-            new ScrollViewer(),
-            new Canvas(),
-            new Canvas(),
-            items,
-            item => (Guid)item,
-            _ => new Border(),
-            () => Task.CompletedTask);
-
-        return context;
+            items);
     }
 }

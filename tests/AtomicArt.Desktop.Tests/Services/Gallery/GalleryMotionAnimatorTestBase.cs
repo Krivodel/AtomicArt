@@ -29,19 +29,9 @@ public abstract class GalleryMotionAnimatorTestBase
 
     private protected static GalleryOperationCoordinator CreateContext(TestUiFrameScheduler frameScheduler)
     {
-        GalleryOperationCoordinator context = GalleryOperationCoordinatorTestFactory.Create(
+        return GalleryOperationCoordinatorTestFactory.CreateAttached(
             frameScheduler,
-            new GalleryOperationRunnerRegistry(new List<IGalleryOperationRunner>()));
-        context.AttachScene(
-            new ScrollViewer(),
-            new Canvas(),
-            new Canvas(),
-            new List<object>(),
-            item => (Guid)item,
-            _ => new Border(),
-            () => Task.CompletedTask);
-
-        return context;
+            new List<object>());
     }
 
     private protected static List<object> CreatePositionedItems(
