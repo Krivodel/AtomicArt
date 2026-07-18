@@ -55,10 +55,10 @@ public sealed class MetadataImageModelDefinitionTests
         MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         ImageGenerationRequestDto request = CreateRequest(resolution: "1x1");
 
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.UnsupportedResolution);
+        AssertValidationError(
+            definition,
+            request,
+            GenerationErrorCodes.UnsupportedResolution);
     }
 
     [Fact]
@@ -78,10 +78,10 @@ public sealed class MetadataImageModelDefinitionTests
         MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         ImageGenerationRequestDto request = CreateRequest(temperature: 0.15d);
 
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(
+            definition,
+            request,
+            GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -103,10 +103,10 @@ public sealed class MetadataImageModelDefinitionTests
         MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
         ImageGenerationRequestDto request = CreateRequest(thinkingLevel: "medium");
 
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(
+            definition,
+            request,
+            GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -116,10 +116,10 @@ public sealed class MetadataImageModelDefinitionTests
         MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition(metadata);
         ImageGenerationRequestDto request = CreateRequest(metadata, thinkingLevel: "high");
 
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(
+            definition,
+            request,
+            GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -132,10 +132,10 @@ public sealed class MetadataImageModelDefinitionTests
             .ToList();
         ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
 
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(
+            definition,
+            request,
+            GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -145,10 +145,10 @@ public sealed class MetadataImageModelDefinitionTests
         string prompt = new('a', definition.Constraints.MaxPromptLength + 1);
         ImageGenerationRequestDto request = CreateRequest(prompt: prompt);
 
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        AssertValidationError(
+            definition,
+            request,
+            GenerationErrorCodes.ModelRequestValidation);
     }
 
     [Fact]
@@ -220,9 +220,24 @@ public sealed class MetadataImageModelDefinitionTests
             new List<AttachedImageDto> { attachedImage };
         ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
 
+        AssertValidationError(
+            definition,
+            request,
+            GenerationErrorCodes.ModelRequestValidation);
+    }
+
+    private static void AssertValidationError(
+        MetadataImageModelDefinition definition,
+        ImageGenerationRequestDto request,
+        string expectedErrorCode)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedErrorCode);
+
         Result<ImageGenerationRequestDto> result = definition.Validate(request);
 
         result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+        result.ErrorCode.Should().Be(expectedErrorCode);
     }
 }

@@ -20,12 +20,7 @@ public sealed class GenerationUsagePriceCalculatorTests
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
         GenerationUsageDto usage = GenerationUsageTestFactory.CreateNanoBananaImageUsage();
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.0678m,
@@ -46,12 +41,7 @@ public sealed class GenerationUsagePriceCalculatorTests
                 new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 2000)
             ]);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.1364m,
@@ -64,12 +54,7 @@ public sealed class GenerationUsagePriceCalculatorTests
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            null,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, null);
 
         price.Should().BeNull();
     }
@@ -83,12 +68,7 @@ public sealed class GenerationUsagePriceCalculatorTests
             TotalOutputTokens: 1120,
             TotalTokens: 2320);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.0678m,
@@ -102,12 +82,7 @@ public sealed class GenerationUsagePriceCalculatorTests
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
         GenerationUsageDto usage = GenerationUsageTestFactory.CreateNanoBananaImageUsage();
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            FourKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage, FourKResolution);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.1518m,
@@ -121,12 +96,11 @@ public sealed class GenerationUsagePriceCalculatorTests
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
         GenerationUsageDto usage = GenerationUsageTestFactory.CreateNanoBananaImageUsage();
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
+        GenerationPriceDto? price = Calculate(
+            metadata,
             usage,
             FourKResolution,
-            2);
+            generatedImageCount: 2);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.303m,
@@ -150,12 +124,7 @@ public sealed class GenerationUsagePriceCalculatorTests
             TotalThoughtTokens: 250,
             TotalToolUseTokens: 0);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            FourKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage, FourKResolution);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.15395m,
@@ -167,26 +136,9 @@ public sealed class GenerationUsagePriceCalculatorTests
     public void Calculate_WithInputTokenModalityBreakdown_UsesTotalInputTokensIncludingAttachedImages()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        GenerationUsageDto usage = new(
-            TotalInputTokens: 2320,
-            TotalOutputTokens: 1120,
-            TotalTokens: 3440,
-            InputTokensByModality:
-            [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Text, 1200),
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
-            ],
-            OutputTokensByModality:
-            [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
-            ]);
+        GenerationUsageDto usage = CreateInputModalityUsage(GenerationUsageModalityNames.Image);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.06836m,
@@ -198,26 +150,9 @@ public sealed class GenerationUsagePriceCalculatorTests
     public void Calculate_WithUnknownInputModality_ReturnsUnavailableResult()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        GenerationUsageDto usage = new(
-            TotalInputTokens: 2320,
-            TotalOutputTokens: 1120,
-            TotalTokens: 3440,
-            InputTokensByModality:
-            [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Text, 1200),
-                new GenerationModalityTokensDto("audio", 1120)
-            ],
-            OutputTokensByModality:
-            [
-                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
-            ]);
+        GenerationUsageDto usage = CreateInputModalityUsage("audio");
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeNull();
     }
@@ -238,12 +173,7 @@ public sealed class GenerationUsagePriceCalculatorTests
             ],
             TotalThoughtTokens: 250);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            FourKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage, FourKResolution);
 
         price.Should().BeNull();
     }
@@ -262,12 +192,7 @@ public sealed class GenerationUsagePriceCalculatorTests
             ],
             TotalToolUseTokens: 50);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeNull();
     }
@@ -286,12 +211,7 @@ public sealed class GenerationUsagePriceCalculatorTests
             ],
             TotalCachedTokens: 200);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeNull();
     }
@@ -305,12 +225,7 @@ public sealed class GenerationUsagePriceCalculatorTests
             TotalOutputTokens: 1120,
             TotalTokens: 0);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeNull();
     }
@@ -324,12 +239,7 @@ public sealed class GenerationUsagePriceCalculatorTests
             TotalOutputTokens: 1120,
             TotalTokens: 2321);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.0678m,
@@ -343,12 +253,7 @@ public sealed class GenerationUsagePriceCalculatorTests
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
         GenerationUsageDto usage = GenerationUsageTestFactory.CreateNanoBananaImageUsage();
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            "8K",
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage, "8K");
 
         price.Should().BeNull();
     }
@@ -366,12 +271,7 @@ public sealed class GenerationUsagePriceCalculatorTests
                 new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1119)
             ]);
 
-        GenerationPriceDto? price = _calculator.Calculate(
-            metadata.Id,
-            metadata.Pricing,
-            usage,
-            OneKResolution,
-            1);
+        GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
             0.0678m,
@@ -393,13 +293,43 @@ public sealed class GenerationUsagePriceCalculatorTests
                 new GenerationModalityTokensDto(GenerationUsageModalityNames.Text, 1)
             ]);
 
-        GenerationPriceDto? price = _calculator.Calculate(
+        GenerationPriceDto? price = Calculate(metadata, usage);
+
+        price.Should().BeNull();
+    }
+
+    private static GenerationUsageDto CreateInputModalityUsage(string additionalInputModality)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(additionalInputModality);
+
+        return new GenerationUsageDto(
+            TotalInputTokens: 2320,
+            TotalOutputTokens: 1120,
+            TotalTokens: 3440,
+            InputTokensByModality:
+            [
+                new GenerationModalityTokensDto(GenerationUsageModalityNames.Text, 1200),
+                new GenerationModalityTokensDto(additionalInputModality, 1120)
+            ],
+            OutputTokensByModality:
+            [
+                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
+            ]);
+    }
+
+    private GenerationPriceDto? Calculate(
+        GenerationModelMetadataDto metadata,
+        GenerationUsageDto? usage,
+        string resolution = OneKResolution,
+        int generatedImageCount = 1)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+
+        return _calculator.Calculate(
             metadata.Id,
             metadata.Pricing,
             usage,
-            OneKResolution,
-            1);
-
-        price.Should().BeNull();
+            resolution,
+            generatedImageCount);
     }
 }
