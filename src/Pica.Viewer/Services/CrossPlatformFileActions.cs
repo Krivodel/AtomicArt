@@ -2,22 +2,20 @@ using System.Diagnostics;
 
 namespace Pica.Viewer.Services;
 
-internal sealed class CrossPlatformFileActions : IPlatformFileActions
+internal sealed class CrossPlatformFileActions : PlatformFileActions
 {
-    public bool SupportsOpenWith => false;
+    public override bool SupportsOpenWith => false;
 
-    public IReadOnlyList<OpenWithApplication> GetOpenWithApplications(string filePath)
+    protected override IReadOnlyList<OpenWithApplication> GetOpenWithApplicationsCore(
+        string filePath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-
         return new List<OpenWithApplication>();
     }
 
-    public Task RevealInFolderAsync(string filePath, CancellationToken ct)
+    protected override Task RevealInFolderCoreAsync(
+        string filePath,
+        CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        ct.ThrowIfCancellationRequested();
-
         ProcessStartInfo startInfo = OperatingSystem.IsMacOS()
             ? CreateMacRevealStartInfo(filePath)
             : CreateLinuxRevealStartInfo(filePath);
@@ -26,23 +24,18 @@ internal sealed class CrossPlatformFileActions : IPlatformFileActions
         return Task.CompletedTask;
     }
 
-    public Task OpenWithAsync(
+    protected override Task OpenWithCoreAsync(
         string filePath,
         OpenWithApplication application,
         CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        ArgumentNullException.ThrowIfNull(application);
-        ct.ThrowIfCancellationRequested();
-
         return Task.CompletedTask;
     }
 
-    public Task ChooseApplicationAsync(string filePath, CancellationToken ct)
+    protected override Task ChooseApplicationCoreAsync(
+        string filePath,
+        CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        ct.ThrowIfCancellationRequested();
-
         return Task.CompletedTask;
     }
 

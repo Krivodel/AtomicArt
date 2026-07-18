@@ -4,9 +4,9 @@ using System.Runtime.Versioning;
 namespace Pica.Viewer.Services;
 
 [SupportedOSPlatform("windows")]
-internal sealed class WindowsFileActions : IPlatformFileActions
+internal sealed class WindowsFileActions : PlatformFileActions
 {
-    public bool SupportsOpenWith => true;
+    public override bool SupportsOpenWith => true;
 
     private readonly WindowsApplicationIconLoader _applicationIconLoader;
 
@@ -16,9 +16,9 @@ internal sealed class WindowsFileActions : IPlatformFileActions
             ?? throw new ArgumentNullException(nameof(applicationIconLoader));
     }
 
-    public IReadOnlyList<OpenWithApplication> GetOpenWithApplications(string filePath)
+    protected override IReadOnlyList<OpenWithApplication> GetOpenWithApplicationsCore(
+        string filePath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         string extension = Path.GetExtension(filePath);
 
         if (string.IsNullOrWhiteSpace(extension))
@@ -76,23 +76,20 @@ internal sealed class WindowsFileActions : IPlatformFileActions
             .ToList();
     }
 
-    public Task RevealInFolderAsync(string filePath, CancellationToken ct)
+    protected override Task RevealInFolderCoreAsync(
+        string filePath,
+        CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        ct.ThrowIfCancellationRequested();
         WindowsFileReveal.Reveal(filePath);
 
         return Task.CompletedTask;
     }
 
-    public Task OpenWithAsync(
+    protected override Task OpenWithCoreAsync(
         string filePath,
         OpenWithApplication application,
         CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        ArgumentNullException.ThrowIfNull(application);
-        ct.ThrowIfCancellationRequested();
         string extension = Path.GetExtension(filePath);
         IWindowsAssocHandler? handler = FindHandler(extension, application.Identifier);
 
@@ -115,10 +112,10 @@ internal sealed class WindowsFileActions : IPlatformFileActions
         return Task.CompletedTask;
     }
 
-    public Task ChooseApplicationAsync(string filePath, CancellationToken ct)
+    protected override Task ChooseApplicationCoreAsync(
+        string filePath,
+        CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        ct.ThrowIfCancellationRequested();
         WindowsOpenAsInfo openAsInfo = new()
         {
             FilePath = filePath,
