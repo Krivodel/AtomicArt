@@ -20,7 +20,8 @@ public sealed class GenerationResultStorageTests
     [Fact]
     public async Task SaveAsync_WithValidImageContent_WritesFileInsideResults()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(SaveAsync_WithValidImageContent_WritesFileInsideResults));
+        string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
+            nameof(SaveAsync_WithValidImageContent_WritesFileInsideResults));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
         byte[] validPngBytes = GenerationImageTestData.ValidPngBytes;
         GenerationImageContentValidationResult content = ValidateContent(GenerationImageContentTypes.Png, validPngBytes);
@@ -53,7 +54,8 @@ public sealed class GenerationResultStorageTests
     [Fact]
     public async Task SaveAsync_WhenResultsDirectoryIsFile_ThrowsAndDoesNotWriteFile()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(SaveAsync_WhenResultsDirectoryIsFile_ThrowsAndDoesNotWriteFile));
+        string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
+            nameof(SaveAsync_WhenResultsDirectoryIsFile_ThrowsAndDoesNotWriteFile));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
         File.WriteAllText(pathProvider.ArtDirectory, "occupied");
         GenerationImageContentValidationResult content = ValidateContent(
@@ -84,7 +86,8 @@ public sealed class GenerationResultStorageTests
     [Fact]
     public void SaveAsync_WithUnsupportedContentType_ReturnsErrorState()
     {
-        string resultsDirectory = CreateCleanDirectory(nameof(SaveAsync_WithUnsupportedContentType_ReturnsErrorState));
+        string resultsDirectory = DesktopTestDirectories.CreateCleanDirectory(
+            nameof(SaveAsync_WithUnsupportedContentType_ReturnsErrorState));
         GenerationImageContentValidator validator = GenerationImageFormatRegistryTestFactory.CreateValidator();
         GenerationImageContentDto content = new(
             GenerationImageContentTypes.Gif,
@@ -100,7 +103,8 @@ public sealed class GenerationResultStorageTests
     [Fact]
     public void SaveAsync_WithOversizedBase64_ReturnsErrorState()
     {
-        string resultsDirectory = CreateCleanDirectory(nameof(SaveAsync_WithOversizedBase64_ReturnsErrorState));
+        string resultsDirectory = DesktopTestDirectories.CreateCleanDirectory(
+            nameof(SaveAsync_WithOversizedBase64_ReturnsErrorState));
         GenerationImageContentValidator validator = GenerationImageFormatRegistryTestFactory.CreateValidator(
             GenerationImageTestData.TestMaxImageBytes);
         GenerationImageContentDto content = new(
@@ -117,7 +121,8 @@ public sealed class GenerationResultStorageTests
     [Fact]
     public void SaveAsync_WithInvalidSignature_ReturnsErrorState()
     {
-        string resultsDirectory = CreateCleanDirectory(nameof(SaveAsync_WithInvalidSignature_ReturnsErrorState));
+        string resultsDirectory = DesktopTestDirectories.CreateCleanDirectory(
+            nameof(SaveAsync_WithInvalidSignature_ReturnsErrorState));
         GenerationImageContentValidator validator = GenerationImageFormatRegistryTestFactory.CreateValidator();
         GenerationImageContentDto content = new(
             GenerationImageContentTypes.Png,
@@ -133,7 +138,8 @@ public sealed class GenerationResultStorageTests
     [Fact]
     public async Task SaveAsync_WhenParentDirectoryIsReparsePoint_ThrowsAndDoesNotWriteOutsideResults()
     {
-        string rootDirectory = CreateCleanDirectory(nameof(SaveAsync_WhenParentDirectoryIsReparsePoint_ThrowsAndDoesNotWriteOutsideResults));
+        string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
+            nameof(SaveAsync_WhenParentDirectoryIsReparsePoint_ThrowsAndDoesNotWriteOutsideResults));
         string redirectedDirectory = Path.Combine(rootDirectory, "Redirected");
         string atomicArtDirectory = Path.Combine(rootDirectory, "AtomicArt");
         AtomicArtDataPathProvider pathProvider = new(atomicArtDirectory);
@@ -161,7 +167,7 @@ public sealed class GenerationResultStorageTests
     [Fact]
     public void GetExpectedResultPathOrDefault_WithSupportedContentType_UsesFileNamePolicy()
     {
-        string rootDirectory = CreateCleanDirectory(
+        string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(GetExpectedResultPathOrDefault_WithSupportedContentType_UsesFileNamePolicy));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
         GenerationImageFileNamePolicy fileNamePolicy = new();
@@ -195,16 +201,6 @@ public sealed class GenerationResultStorageTests
         return validationResult;
     }
 
-    private static string CreateCleanDirectory(string name)
-    {
-        string directory = DesktopTestDirectories.GetDirectoryPath(name);
-
-        DeleteDirectoryIfExists(directory);
-        Directory.CreateDirectory(directory);
-
-        return directory;
-    }
-
     private static async Task CreateJunctionAsync(string junctionPath, string targetPath)
     {
         ProcessStartInfo startInfo = new()
@@ -231,52 +227,5 @@ public sealed class GenerationResultStorageTests
         {
             throw new InvalidOperationException($"Failed to create test junction. Output: {output}. Error: {error}.");
         }
-    }
-
-    private static void DeleteDirectoryIfExists(string directory)
-    {
-        DirectoryInfo directoryInfo = new(directory);
-
-        if (!directoryInfo.Exists)
-        {
-            return;
-        }
-
-        DeleteDirectory(directoryInfo);
-    }
-
-    private static void DeleteDirectory(DirectoryInfo directory)
-    {
-        directory.Refresh();
-
-        if (!directory.Exists)
-        {
-            return;
-        }
-
-        if ((directory.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
-        {
-            directory.Delete();
-            return;
-        }
-
-        foreach (FileSystemInfo child in directory.EnumerateFileSystemInfos())
-        {
-            if ((child.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
-            {
-                child.Delete();
-                continue;
-            }
-
-            if (child is DirectoryInfo childDirectory)
-            {
-                DeleteDirectory(childDirectory);
-                continue;
-            }
-
-            child.Delete();
-        }
-
-        directory.Delete();
     }
 }

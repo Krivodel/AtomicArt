@@ -12,10 +12,7 @@ internal static class DesktopTestDirectories
     {
         string directory = GetDirectoryPath(name, sourceFilePath);
 
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        DeleteDirectoryIfExists(directory);
 
         Directory.CreateDirectory(directory);
 
@@ -42,5 +39,61 @@ internal static class DesktopTestDirectories
             RootDirectoryName,
             sourceName,
             name);
+    }
+
+    private static void DeleteDirectoryIfExists(string directory)
+    {
+        DirectoryInfo directoryInfo = new(directory);
+
+        if (!directoryInfo.Exists)
+        {
+            return;
+        }
+
+        DeleteDirectory(directoryInfo);
+    }
+
+    private static void DeleteDirectory(DirectoryInfo directory)
+    {
+        directory.Refresh();
+
+        if (!directory.Exists)
+        {
+            return;
+        }
+
+        if (IsReparsePoint(directory))
+        {
+            directory.Delete();
+
+            return;
+        }
+
+        foreach (FileSystemInfo child in directory.EnumerateFileSystemInfos())
+        {
+            if (IsReparsePoint(child))
+            {
+                child.Delete();
+
+                continue;
+            }
+
+            if (child is DirectoryInfo childDirectory)
+            {
+                DeleteDirectory(childDirectory);
+
+                continue;
+            }
+
+            child.Delete();
+        }
+
+        directory.Delete();
+    }
+
+    private static bool IsReparsePoint(FileSystemInfo fileSystemInfo)
+    {
+        return (fileSystemInfo.Attributes & FileAttributes.ReparsePoint)
+            == FileAttributes.ReparsePoint;
     }
 }
