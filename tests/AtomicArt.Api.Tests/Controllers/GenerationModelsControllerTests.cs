@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
@@ -26,66 +25,58 @@ public sealed class GenerationModelsControllerTests
     [Fact]
     public async Task GetAsync_ThroughAspNetPipeline_ReturnsSerializedCatalog()
     {
-        string contentRoot = CreateContentRoot(testGenerationEnabled: false);
+        using TemporaryDirectory contentRoot = new(
+            TestDirectories.GetUniqueAssemblyDirectoryPath(typeof(GenerationModelsControllerTests)));
+        ConfigureContentRoot(
+            contentRoot,
+            ApiTestAppSettingsJson.Create(false, "TestGenerationImages"));
+        await using WebApplicationFactory<Program> factory = CreateFactory(contentRoot.DirectoryPath);
+        using HttpClient client = factory.CreateClient();
 
-        try
+        HttpResponseMessage response = await client.GetAsync(
+            $"/{GenerationApiRoutes.Models}",
+            CancellationToken.None);
+        GenerationModelCatalogDto? catalog = await response.Content
+            .ReadFromJsonAsync<GenerationModelCatalogDto>(CancellationToken.None);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        if (catalog is null)
         {
-            await using WebApplicationFactory<Program> factory = CreateFactory(contentRoot);
-            using HttpClient client = factory.CreateClient();
-
-            HttpResponseMessage response = await client.GetAsync(
-                $"/{GenerationApiRoutes.Models}",
-                CancellationToken.None);
-            GenerationModelCatalogDto? catalog = await response.Content
-                .ReadFromJsonAsync<GenerationModelCatalogDto>(CancellationToken.None);
-
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-            if (catalog is null)
-            {
-                throw new InvalidOperationException("Generation model catalog response is missing.");
-            }
-
-            catalog.Models.Should().HaveCount(
-                ApiModelMetadataStartupTestCatalog.LoadCatalog().Models.Count);
-            catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId);
-            catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBananaProModelId);
-            catalog.Models.Should().NotContain(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
+            throw new InvalidOperationException("Generation model catalog response is missing.");
         }
-        finally
-        {
-            TestDirectories.DeleteIfExists(contentRoot);
-        }
+
+        catalog.Models.Should().HaveCount(
+            ApiModelMetadataStartupTestCatalog.LoadCatalog().Models.Count);
+        catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId);
+        catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBananaProModelId);
+        catalog.Models.Should().NotContain(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
     }
 
     [Fact]
     public async Task GetAsync_ThroughAspNetPipelineWithTestGenerationEnabled_ReturnsTestModel()
     {
-        string contentRoot = CreateContentRoot(testGenerationEnabled: true);
+        using TemporaryDirectory contentRoot = new(
+            TestDirectories.GetUniqueAssemblyDirectoryPath(typeof(GenerationModelsControllerTests)));
+        ConfigureContentRoot(
+            contentRoot,
+            ApiTestAppSettingsJson.Create(true, "TestGenerationImages"));
+        await using WebApplicationFactory<Program> factory = CreateFactory(contentRoot.DirectoryPath);
+        using HttpClient client = factory.CreateClient();
 
-        try
-        {
-            await using WebApplicationFactory<Program> factory = CreateFactory(contentRoot);
-            using HttpClient client = factory.CreateClient();
+        HttpResponseMessage response = await client.GetAsync(
+            $"/{GenerationApiRoutes.Models}",
+            CancellationToken.None);
+        GenerationModelCatalogDto? catalog = await response.Content
+            .ReadFromJsonAsync<GenerationModelCatalogDto>(CancellationToken.None);
 
-            HttpResponseMessage response = await client.GetAsync(
-                $"/{GenerationApiRoutes.Models}",
-                CancellationToken.None);
-            GenerationModelCatalogDto? catalog = await response.Content
-                .ReadFromJsonAsync<GenerationModelCatalogDto>(CancellationToken.None);
-
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
-            catalog.Should().NotBeNull();
-            GenerationModelMetadataDto testModel = catalog.Models
-                .Single(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
-            testModel.DisplayName.Should().Be("Test");
-            testModel.Provider.Should().Be(GenerationProviderIds.Test);
-            testModel.PanelId.Should().Be(GenerationPanelIds.NanoBanana);
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(contentRoot);
-        }
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        catalog.Should().NotBeNull();
+        GenerationModelMetadataDto testModel = catalog.Models
+            .Single(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
+        testModel.DisplayName.Should().Be("Test");
+        testModel.Provider.Should().Be(GenerationProviderIds.Test);
+        testModel.PanelId.Should().Be(GenerationPanelIds.NanoBanana);
     }
 
     [Fact]
@@ -136,26 +127,12 @@ public sealed class GenerationModelsControllerTests
             .WithWebHostBuilder(builder => builder.UseContentRoot(contentRoot));
     }
 
-    private static string CreateContentRoot(bool testGenerationEnabled)
+    private static void ConfigureContentRoot(
+        TemporaryDirectory contentRoot,
+        string appSettingsJson)
     {
-        string contentRoot = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.Api.Tests",
-            nameof(GenerationModelsControllerTests),
-            Guid.NewGuid().ToString("N"));
-        string metadataPath = Path.Combine(contentRoot, GenerationModelCatalogDefaults.RelativePath);
-        string metadataDirectory = Path.GetDirectoryName(metadataPath)
-            ?? throw new InvalidOperationException("Model metadata directory was not found.");
-        string sourceMetadataPath = ApiModelMetadataTestCatalog.GetMetadataPath();
-
-        Directory.CreateDirectory(metadataDirectory);
-        File.Copy(sourceMetadataPath, metadataPath);
-        File.WriteAllText(
-            Path.Combine(contentRoot, "appsettings.json"),
-            ApiTestAppSettingsJson.Create(testGenerationEnabled, "TestGenerationImages"),
-            Encoding.UTF8);
-
-        return contentRoot;
+        ApiContentRootTestFiles.CopyModelMetadata(contentRoot.DirectoryPath);
+        ApiContentRootTestFiles.WriteAppSettings(contentRoot.DirectoryPath, appSettingsJson);
     }
 
     private static GenerationModelCatalogDto CreateMinimalCatalog()

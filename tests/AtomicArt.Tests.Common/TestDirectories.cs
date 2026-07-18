@@ -36,6 +36,17 @@ public static class TestDirectories
             Guid.NewGuid().ToString("N"));
     }
 
+    public static string GetUniqueAssemblyDirectoryPath(Type testType)
+    {
+        ArgumentNullException.ThrowIfNull(testType);
+
+        return Path.Combine(
+            Path.GetTempPath(),
+            GetAssemblyName(testType),
+            testType.Name,
+            Guid.NewGuid().ToString("N"));
+    }
+
     public static void DeleteIfExists(string directoryPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directoryPath);

@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -140,39 +139,39 @@ public sealed class GenerationsControllerTests
     public async Task CreateEndpoint_WithTestModelWithoutProviderCredential_ReturnsOk()
     {
         string relativeImagesDirectory = Path.Combine("TestGenerationImages", Guid.NewGuid().ToString("N"));
-        string contentRoot = CreateApiContentRoot(relativeImagesDirectory);
-        string imagesDirectory = Path.Combine(AppContext.BaseDirectory, relativeImagesDirectory);
+        using TemporaryDirectory contentRoot = new(
+            TestDirectories.GetUniqueDirectoryPath(
+                typeof(GenerationsControllerTests),
+                "ContentRoot"));
+        ApiContentRootTestFiles.CopyModelMetadata(contentRoot.DirectoryPath);
+        ApiContentRootTestFiles.WriteAppSettings(
+            contentRoot.DirectoryPath,
+            ApiTestAppSettingsJson.Create(true, relativeImagesDirectory));
+        using TemporaryDirectory imagesDirectory = new(
+            Path.Combine(AppContext.BaseDirectory, relativeImagesDirectory));
+        await File.WriteAllBytesAsync(
+            Path.Combine(imagesDirectory.DirectoryPath, "any-file-name"),
+            CreatePngBytes(),
+            CancellationToken.None);
+        await using WebApplicationFactory<Program> factory = CreateFactoryWithTestGeneration(
+            contentRoot.DirectoryPath);
+        using HttpClient client = factory.CreateClient();
+        ImageGenerationRequestDto request = CreateTestRequest();
 
-        try
-        {
-            Directory.CreateDirectory(imagesDirectory);
-            await File.WriteAllBytesAsync(
-                Path.Combine(imagesDirectory, "any-file-name"),
-                CreatePngBytes(),
-                CancellationToken.None);
-            await using WebApplicationFactory<Program> factory = CreateFactoryWithTestGeneration(contentRoot);
-            using HttpClient client = factory.CreateClient();
-            ImageGenerationRequestDto request = CreateTestRequest();
+        using HttpResponseMessage response = await client.PostAsJsonAsync(
+            GenerationApiRoutes.Generations,
+            request,
+            CancellationToken.None);
+        GenerationBatchDto? batch = await response.Content
+            .ReadFromJsonAsync<GenerationBatchDto>(CancellationToken.None);
 
-            using HttpResponseMessage response = await client.PostAsJsonAsync(
-                GenerationApiRoutes.Generations,
-                request,
-                CancellationToken.None);
-            GenerationBatchDto? batch = await response.Content
-                .ReadFromJsonAsync<GenerationBatchDto>(CancellationToken.None);
-
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
-            batch.Should().NotBeNull();
-            GenerationItemDto item = batch.Items.Should().ContainSingle().Which;
-            item.ModelId.Should().Be(TestGenerationModelCatalogAugmenter.ModelId);
-            item.ImageContent.Should().NotBeNull();
-            item.ImageContent!.ContentType.Should().Be(GenerationImageContentTypes.Png);
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(imagesDirectory);
-            TestDirectories.DeleteIfExists(contentRoot);
-        }
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        batch.Should().NotBeNull();
+        GenerationItemDto item = batch.Items.Should().ContainSingle().Which;
+        item.ModelId.Should().Be(TestGenerationModelCatalogAugmenter.ModelId);
+        GenerationImageContentDto imageContent = item.ImageContent
+            ?? throw new InvalidOperationException("Generated image content is missing.");
+        imageContent.ContentType.Should().Be(GenerationImageContentTypes.Png);
     }
 
     [Fact]
@@ -498,29 +497,6 @@ public sealed class GenerationsControllerTests
     {
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder => builder.UseContentRoot(contentRoot));
-    }
-
-    private static string CreateApiContentRoot(string imagesDirectory)
-    {
-        string contentRoot = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.Api.Tests",
-            nameof(GenerationsControllerTests),
-            "ContentRoot",
-            Guid.NewGuid().ToString("N"));
-        string metadataPath = Path.Combine(contentRoot, GenerationModelCatalogDefaults.RelativePath);
-        string metadataDirectory = Path.GetDirectoryName(metadataPath)
-            ?? throw new InvalidOperationException("Model metadata directory was not found.");
-        string sourceMetadataPath = ApiModelMetadataTestCatalog.GetMetadataPath();
-
-        Directory.CreateDirectory(metadataDirectory);
-        File.Copy(sourceMetadataPath, metadataPath);
-        File.WriteAllText(
-            Path.Combine(contentRoot, "appsettings.json"),
-            ApiTestAppSettingsJson.Create(true, imagesDirectory),
-            Encoding.UTF8);
-
-        return contentRoot;
     }
 
     private static byte[] CreatePngBytes()

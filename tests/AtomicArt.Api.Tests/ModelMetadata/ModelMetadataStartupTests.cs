@@ -1,5 +1,3 @@
-using System.Text;
-
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -16,44 +14,16 @@ public sealed class ModelMetadataStartupTests
     [Fact]
     public void Startup_WithInvalidModelMetadataJson_ThrowsInvalidOperationException()
     {
-        string contentRoot = CreateContentRoot("{");
+        string contentRootPath = TestDirectories.GetUniqueAssemblyDirectoryPath(
+            typeof(ModelMetadataStartupTests));
+        using TemporaryDirectory contentRoot = new(contentRootPath);
+        ApiContentRootTestFiles.WriteModelMetadata(contentRoot.DirectoryPath, "{");
+        using WebApplicationFactory<Program> factory = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder => builder.UseContentRoot(contentRoot.DirectoryPath));
 
-        try
-        {
-            using WebApplicationFactory<Program> factory = new WebApplicationFactory<Program>()
-                .WithWebHostBuilder(builder => builder.UseContentRoot(contentRoot));
+        Action action = () => factory.CreateClient();
 
-            Action action = () => factory.CreateClient();
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*malformed JSON*");
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(contentRoot);
-        }
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("*malformed JSON*");
     }
-
-    private static string CreateContentRoot(string metadataJson)
-    {
-        string contentRoot = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.Api.Tests",
-            nameof(ModelMetadataStartupTests),
-            Guid.NewGuid().ToString("N"));
-        string metadataPath = Path.Combine(
-            contentRoot,
-            GenerationModelCatalogDefaults.RelativePath);
-        string metadataDirectory = Path.GetDirectoryName(metadataPath)
-            ?? throw new InvalidOperationException("Model metadata directory was not found.");
-
-        Directory.CreateDirectory(metadataDirectory);
-        File.WriteAllText(
-            metadataPath,
-            metadataJson,
-            Encoding.UTF8);
-
-        return contentRoot;
-    }
-
 }
