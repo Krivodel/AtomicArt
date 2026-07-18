@@ -23,40 +23,26 @@ public sealed class ClipboardImageServiceTests
     {
         Mock<IStorageFile> fileMock = new();
         fileMock.SetupGet(file => file.Name).Returns(FileName);
-        DataTransferItem pngItem = new();
-        DataFormat<byte[]> pngFormat = DataFormat.CreateBytesPlatformFormat(
-            PicaClipboardFormats.WindowsPng);
-        pngItem.Set(pngFormat, PngContent);
         DataTransfer dataTransfer = new();
         dataTransfer.Add(DataTransferItem.CreateFile(fileMock.Object));
-        dataTransfer.Add(pngItem);
-        ClipboardImageService service = CreateService(dataTransfer);
+        dataTransfer.Add(CreatePngTransferItem());
 
-        ImageAttachmentInput? input = await service.TryGetImageAsync(
-            MaxInputBytes,
-            CancellationToken.None);
+        ImageAttachmentInput actualInput = await GetRequiredImageInputAsync(
+            dataTransfer,
+            "Clipboard file input should be created.");
 
-        ImageAttachmentInput actualInput = input
-            ?? throw new InvalidOperationException("Clipboard file input should be created.");
         actualInput.FileName.Should().Be(FileName);
     }
 
     [Fact]
     public async Task TryGetImageAsync_WithPicaPngFormat_ReturnsPngInput()
     {
-        DataTransferItem item = new();
-        DataFormat<byte[]> pngFormat = DataFormat.CreateBytesPlatformFormat(
-            PicaClipboardFormats.WindowsPng);
-        item.Set(pngFormat, PngContent);
         DataTransfer dataTransfer = new();
-        dataTransfer.Add(item);
-        ClipboardImageService service = CreateService(dataTransfer);
+        dataTransfer.Add(CreatePngTransferItem());
 
-        ImageAttachmentInput? input = await service.TryGetImageAsync(
-            MaxInputBytes,
-            CancellationToken.None);
-        ImageAttachmentInput actualInput = input
-            ?? throw new InvalidOperationException("Clipboard PNG input should be created.");
+        ImageAttachmentInput actualInput = await GetRequiredImageInputAsync(
+            dataTransfer,
+            "Clipboard PNG input should be created.");
         AttachedImageDto? image = await actualInput.ReadAsync(CancellationToken.None);
 
         AttachedImageDto actualImage = image
@@ -64,6 +50,16 @@ public sealed class ClipboardImageServiceTests
         actualImage.FileName.Should().Be("clipboard.png");
         actualImage.ContentType.Should().Be(PicaImageFormats.PngContentType);
         actualImage.Content.Should().Equal(PngContent);
+    }
+
+    private static DataTransferItem CreatePngTransferItem()
+    {
+        DataTransferItem item = new();
+        DataFormat<byte[]> pngFormat = DataFormat.CreateBytesPlatformFormat(
+            PicaClipboardFormats.WindowsPng);
+        item.Set(pngFormat, PngContent);
+
+        return item;
     }
 
     private static ClipboardImageService CreateService(IAsyncDataTransfer dataTransfer)
@@ -77,5 +73,19 @@ public sealed class ClipboardImageServiceTests
         service.Attach(clipboardMock.Object);
 
         return service;
+    }
+
+    private static async Task<ImageAttachmentInput> GetRequiredImageInputAsync(
+        IAsyncDataTransfer dataTransfer,
+        string missingInputMessage)
+    {
+        ClipboardImageService service = CreateService(dataTransfer);
+
+        ImageAttachmentInput? input = await service
+            .TryGetImageAsync(MaxInputBytes, CancellationToken.None)
+            .ConfigureAwait(false);
+
+        return input
+            ?? throw new InvalidOperationException(missingInputMessage);
     }
 }
