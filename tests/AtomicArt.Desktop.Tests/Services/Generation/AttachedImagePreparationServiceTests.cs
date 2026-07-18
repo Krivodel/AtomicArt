@@ -448,13 +448,7 @@ public sealed class AttachedImagePreparationServiceTests
                 GenerationImageContentTypes.Jpeg,
                 GenerationImageContentTypes.Webp
             ],
-            new GenerationModelPricingMetadataDto(
-                "USD",
-                0m,
-                0m,
-                0m,
-                0,
-                new Dictionary<string, int>()));
+            GenerationModelPricingMetadataTestFactory.CreateFreePricing());
     }
 
     private static byte[] CreateDeterministicPng()

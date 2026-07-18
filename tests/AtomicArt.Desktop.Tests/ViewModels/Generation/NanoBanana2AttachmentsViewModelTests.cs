@@ -291,13 +291,7 @@ public sealed class NanoBanana2AttachmentsViewModelTests
             1024 * 1024,
             8L * 1024L * 1024L,
             new List<string> { GenerationImageContentTypes.Png },
-            new GenerationModelPricingMetadataDto(
-                "USD",
-                0m,
-                0m,
-                0m,
-                0,
-                new Dictionary<string, int>()));
+            GenerationModelPricingMetadataTestFactory.CreateFreePricing());
     }
 
     private sealed class PassThroughAttachmentValidator : INanoBanana2AttachmentValidator

@@ -1755,12 +1755,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
                         1024,
                         2048,
                         [GenerationImageContentTypes.Png]),
-                    new GenerationModelPricingMetadataDto(
-                        "USD",
-                        0.25m,
-                        1.50m,
-                        30.00m,
-                        1120,
+                    GenerationModelPricingMetadataTestFactory.CreateCatalogPricing(
                         new Dictionary<string, int>
                         {
                             ["1k"] = 1120
@@ -1832,12 +1827,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             outputImageTokensByResolution[resolution] = 1120;
         }
 
-        return new GenerationModelPricingMetadataDto(
-            "USD",
-            0.25m,
-            1.50m,
-            30.00m,
-            1120,
+        return GenerationModelPricingMetadataTestFactory.CreateCatalogPricing(
             outputImageTokensByResolution);
     }
 

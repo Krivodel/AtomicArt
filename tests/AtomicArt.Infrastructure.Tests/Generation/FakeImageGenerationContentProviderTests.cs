@@ -103,12 +103,7 @@ public sealed class FakeImageGenerationContentProviderTests
 
     private static GenerationModelPricingMetadataDto CreatePricing()
     {
-        return new GenerationModelPricingMetadataDto(
-            "USD",
-            0.50m,
-            3.00m,
-            60.00m,
-            1120,
+        return GenerationModelPricingMetadataTestFactory.CreateProviderPricing(
             new Dictionary<string, int>(StringComparer.Ordinal)
             {
                 ["1k"] = 1120
