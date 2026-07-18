@@ -169,7 +169,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         _settings.ResizeBehavior = selectedOption.Value;
 
-        if (_isWindowedMode && (_settings.ResizeBehavior != WindowResizeBehavior.Free))
+        if (ShouldFitWindowToCurrentImage())
         {
             FitWindowToCurrentImage();
         }

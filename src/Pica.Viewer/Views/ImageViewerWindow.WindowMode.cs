@@ -92,7 +92,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         if (_isWindowedMode)
         {
-            if (_settings.ResizeBehavior == WindowResizeBehavior.Free)
+            if (UsesFreeWindowResize())
             {
                 RestoreWindowedGeometry();
             }
@@ -118,7 +118,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         {
             WindowState = WindowState.Normal;
             ApplyWindowChrome(ViewerWindowMode.Windowed);
-            if (_settings.ResizeBehavior == WindowResizeBehavior.Free)
+            if (UsesFreeWindowResize())
             {
                 RestoreWindowedGeometry();
             }
@@ -180,6 +180,16 @@ public sealed partial class ImageViewerWindow : SukiWindow
         ApplyWindowedClientSize(targetSize);
         ApplyWindowedPosition(targetSize);
         ResetScaleAndCenterAfterLayout();
+    }
+
+    private bool UsesFreeWindowResize()
+    {
+        return _settings.ResizeBehavior == WindowResizeBehavior.Free;
+    }
+
+    private bool ShouldFitWindowToCurrentImage()
+    {
+        return _isWindowedMode && !UsesFreeWindowResize();
     }
 
     private void RestoreWindowedGeometry()
@@ -360,7 +370,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _windowModeLayoutTimer.Stop();
         _isWindowModeLayoutSettling = false;
 
-        if (_isWindowedMode && (_settings.ResizeBehavior != WindowResizeBehavior.Free))
+        if (ShouldFitWindowToCurrentImage())
         {
             FitWindowToCurrentImage();
             return;
