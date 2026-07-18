@@ -95,18 +95,13 @@ public sealed partial class ImageViewerWindow : SukiWindow
     private void ApplyWindowRectangle(WindowRectangle rectangle)
     {
         double scaling = RenderScaling;
-        _isApplyingWindowGeometry = true;
 
-        try
+        ApplyWindowGeometry(() =>
         {
             Width = rectangle.Width / scaling;
             Height = rectangle.Height / scaling;
             Position = new PixelPoint(rectangle.Left, rectangle.Top);
-        }
-        finally
-        {
-            _isApplyingWindowGeometry = false;
-        }
+        });
     }
 
     private void OnWindowResized(object? sender, WindowResizedEventArgs e)

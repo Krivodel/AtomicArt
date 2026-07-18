@@ -84,17 +84,12 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private void ApplyInitialWindowMode()
     {
-        _view.UpdateSettingsPanelPlacement(GetViewerWindowMode());
+        ViewerWindowMode mode = GetViewerWindowMode();
+        _view.UpdateSettingsPanelPlacement(mode);
+        ApplyWindowChrome(mode);
 
         if (_isWindowedMode)
         {
-            IsTitleBarVisible = true;
-            ShowTitlebarBackground = true;
-            _view.WindowResizeOverlay.IsVisible = true;
-            _view.FullscreenSettingsButton.IsVisible = false;
-            _view.WindowModeButton.IsVisible = false;
-            _view.CloseButton.IsVisible = false;
-
             if (_resizeBehavior == WindowResizeBehavior.Free)
             {
                 RestoreWindowedGeometry();
@@ -108,12 +103,6 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
-        IsTitleBarVisible = false;
-        ShowTitlebarBackground = false;
-        _view.WindowResizeOverlay.IsVisible = false;
-        _view.FullscreenSettingsButton.IsVisible = true;
-        _view.WindowModeButton.IsVisible = true;
-        _view.CloseButton.IsVisible = true;
         BeginWindowModeLayoutSettlement();
     }
 
@@ -126,12 +115,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         try
         {
             WindowState = WindowState.Normal;
-            IsTitleBarVisible = true;
-            ShowTitlebarBackground = true;
-            _view.WindowResizeOverlay.IsVisible = true;
-            _view.FullscreenSettingsButton.IsVisible = false;
-            _view.WindowModeButton.IsVisible = false;
-            _view.CloseButton.IsVisible = false;
+            ApplyWindowChrome(ViewerWindowMode.Windowed);
             if (_resizeBehavior == WindowResizeBehavior.Free)
             {
                 RestoreWindowedGeometry();
@@ -155,12 +139,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         try
         {
             HideSettingsPanelImmediately();
-            IsTitleBarVisible = false;
-            ShowTitlebarBackground = false;
-            _view.WindowResizeOverlay.IsVisible = false;
-            _view.FullscreenSettingsButton.IsVisible = true;
-            _view.WindowModeButton.IsVisible = true;
-            _view.CloseButton.IsVisible = true;
+            ApplyWindowChrome(ViewerWindowMode.FullScreen);
             WindowState = WindowState.FullScreen;
         }
         finally
@@ -169,6 +148,17 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         BeginWindowModeLayoutSettlement();
+    }
+
+    private void ApplyWindowChrome(ViewerWindowMode mode)
+    {
+        bool isWindowed = mode == ViewerWindowMode.Windowed;
+        IsTitleBarVisible = isWindowed;
+        ShowTitlebarBackground = isWindowed;
+        _view.WindowResizeOverlay.IsVisible = isWindowed;
+        _view.FullscreenSettingsButton.IsVisible = !isWindowed;
+        _view.WindowModeButton.IsVisible = !isWindowed;
+        _view.CloseButton.IsVisible = !isWindowed;
     }
 
     private void FitWindowToCurrentImage()
@@ -215,18 +205,12 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private void ApplyWindowedClientSize(Size clientSize)
     {
-        _isApplyingWindowGeometry = true;
-
-        try
+        ApplyWindowGeometry(() =>
         {
             Width = clientSize.Width;
             Height = clientSize.Height;
             _windowedClientSize = clientSize;
-        }
-        finally
-        {
-            _isApplyingWindowGeometry = false;
-        }
+        });
     }
 
     private void ApplyWindowedPosition(Size clientSize)
@@ -251,13 +235,23 @@ public sealed partial class ImageViewerWindow : SukiWindow
             Math.Clamp(left, screen.WorkingArea.X, maximumLeft),
             Math.Clamp(top, screen.WorkingArea.Y, maximumTop));
 
-        _isApplyingWindowGeometry = true;
-
-        try
+        ApplyWindowGeometry(() =>
         {
             WindowStartupLocation = WindowStartupLocation.Manual;
             Position = position;
             _windowedPosition = position;
+        });
+    }
+
+    private void ApplyWindowGeometry(Action applyGeometry)
+    {
+        ArgumentNullException.ThrowIfNull(applyGeometry);
+
+        _isApplyingWindowGeometry = true;
+
+        try
+        {
+            applyGeometry();
         }
         finally
         {
