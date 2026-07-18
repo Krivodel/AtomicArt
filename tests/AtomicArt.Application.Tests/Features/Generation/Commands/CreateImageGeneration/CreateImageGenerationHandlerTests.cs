@@ -36,10 +36,8 @@ public sealed class CreateImageGenerationHandlerTests
             contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand();
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
 
-        result.IsSuccess.Should().BeTrue();
-        GenerationBatchDto batch = result.Value ?? throw new InvalidOperationException("Generation batch result is missing.");
         batch.BatchId.Should().Be(plannedBatchId);
         plannedBatchId.Should().NotBe(Guid.Empty);
         GenerationItemDto item = batch.Items.Single();
@@ -84,10 +82,8 @@ public sealed class CreateImageGenerationHandlerTests
             contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand();
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
 
-        result.IsSuccess.Should().BeTrue();
-        GenerationBatchDto batch = result.Value ?? throw new InvalidOperationException("Generation batch result is missing.");
         GenerationItemDto item = batch.Items.Single();
         item.CompletedAtUtc.Should().Be(completedAtUtc);
         item.GenerationDuration.Should().Be(generationDuration);
@@ -109,10 +105,8 @@ public sealed class CreateImageGenerationHandlerTests
             contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand();
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
 
-        result.IsSuccess.Should().BeTrue();
-        GenerationBatchDto batch = result.Value ?? throw new InvalidOperationException("Generation batch result is missing.");
         batch.Items.Single().GenerationDuration.Should().Be(TimeSpan.Zero);
     }
 
@@ -162,9 +156,8 @@ public sealed class CreateImageGenerationHandlerTests
                     CreatePngContent())
             ]);
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        await HandleSuccessfullyAsync(handler, command);
 
-        result.IsSuccess.Should().BeTrue();
         ImageGenerationRequestDto capturedPlannedRequest = plannedRequest
             ?? throw new InvalidOperationException("Planned request is missing.");
         ImageGenerationRequestDto capturedContentRequest = contentRequest
@@ -187,10 +180,8 @@ public sealed class CreateImageGenerationHandlerTests
             contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand(generationCount: 2);
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
 
-        result.IsSuccess.Should().BeTrue();
-        GenerationBatchDto batch = result.Value ?? throw new InvalidOperationException("Generation batch result is missing.");
         batch.Items.Should().HaveCount(2);
 
         foreach (GenerationItemDto item in batch.Items)
@@ -348,10 +339,8 @@ public sealed class CreateImageGenerationHandlerTests
             contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand();
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
 
-        result.IsSuccess.Should().BeTrue();
-        GenerationBatchDto batch = result.Value ?? throw new InvalidOperationException("Generation batch result is missing.");
         GenerationItemDto item = batch.Items.Single();
         item.ImagePath.Should().BeNull();
         Directory.Exists(Path.Combine(outputDirectory.DirectoryPath, "generations")).Should().BeFalse();
@@ -428,6 +417,20 @@ public sealed class CreateImageGenerationHandlerTests
             outputPlanner,
             contentProvider,
             new TestDateTimeProvider());
+    }
+
+    private static async Task<GenerationBatchDto> HandleSuccessfullyAsync(
+        CreateImageGenerationHandler handler,
+        CreateImageGenerationCommand command)
+    {
+        Result<GenerationBatchDto> result = await handler.Handle(
+            command,
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+
+        return result.Value
+            ?? throw new InvalidOperationException("Generation batch result is missing.");
     }
 
     private static Mock<IImageGenerationOutputPlanner> CreatePlannerMock(
