@@ -84,12 +84,10 @@ public sealed class GalleryAnimationSchedulerTests
         MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
         int completedCount = 0;
 
-        Task animationTask = scenario.Scheduler.AnimateAsync(
-            scenario.Control,
-            new MotionFrame[] { firstFrame, lastFrame },
-            100,
-            0,
-            Identity,
+        Task animationTask = StartAnimation(
+            scenario,
+            firstFrame,
+            lastFrame,
             () =>
             {
                 completedCount++;
@@ -112,12 +110,10 @@ public sealed class GalleryAnimationSchedulerTests
         MotionFrame lastFrame = new(100d, 50d, 2d, 20d, 1d);
         int completedCount = 0;
 
-        Task animationTask = scenario.Scheduler.AnimateAsync(
-            scenario.Control,
-            new MotionFrame[] { firstFrame, lastFrame },
-            100,
-            0,
-            Identity,
+        Task animationTask = StartAnimation(
+            scenario,
+            firstFrame,
+            lastFrame,
             () =>
             {
                 completedCount++;
@@ -138,6 +134,21 @@ public sealed class GalleryAnimationSchedulerTests
         Border control = new();
 
         return new SchedulerScenario(frameScheduler, appliedFrames, scheduler, control);
+    }
+
+    private static Task StartAnimation(
+        SchedulerScenario scenario,
+        MotionFrame firstFrame,
+        MotionFrame lastFrame,
+        Action completed)
+    {
+        return scenario.Scheduler.AnimateAsync(
+            scenario.Control,
+            new MotionFrame[] { firstFrame, lastFrame },
+            100,
+            0,
+            Identity,
+            completed);
     }
 
     private static double Identity(double value)
