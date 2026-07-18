@@ -1,7 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
 
-using Avalonia;
 using FluentAssertions;
 using Xunit;
 
@@ -14,22 +13,20 @@ public sealed class WindowsClipboardContentTests
     [Fact]
     public void Build_WithPreparedBitmap_CreatesTopDownDibV5WithExactPixels()
     {
-        byte[] pixels =
-        [
-            11, 21, 32, 255, 12, 21, 33, 255,
-            11, 22, 33, 255, 12, 22, 34, 255
-        ];
+        byte[] pixels = BgraBitmapTestData.Pixels;
         PreparedClipboardBitmap bitmap = new(
-            new PixelSize(2, 2),
-            8,
+            BgraBitmapTestData.PixelSize,
+            BgraBitmapTestData.RowBytes,
             pixels);
 
         byte[] content = WindowsDibV5Builder.Build(bitmap);
 
         BinaryPrimitives.ReadUInt32LittleEndian(content.AsSpan(0, 4))
             .Should().Be(WindowsDibV5Builder.HeaderSize);
-        BinaryPrimitives.ReadInt32LittleEndian(content.AsSpan(4, 4)).Should().Be(2);
-        BinaryPrimitives.ReadInt32LittleEndian(content.AsSpan(8, 4)).Should().Be(-2);
+        BinaryPrimitives.ReadInt32LittleEndian(content.AsSpan(4, 4))
+            .Should().Be(BgraBitmapTestData.Width);
+        BinaryPrimitives.ReadInt32LittleEndian(content.AsSpan(8, 4))
+            .Should().Be(-BgraBitmapTestData.Height);
         BinaryPrimitives.ReadUInt16LittleEndian(content.AsSpan(14, 2)).Should().Be(32);
         content.AsSpan(WindowsDibV5Builder.HeaderSize).ToArray().Should().Equal(pixels);
     }

@@ -37,22 +37,18 @@ public sealed class SelectionImagePipelineTests
     [Fact]
     public void EncodePixels_WithBgraPixels_PreservesPixelValues()
     {
-        byte[] pixels =
-        [
-            11, 21, 32, 255, 12, 21, 33, 255,
-            11, 22, 33, 255, 12, 22, 34, 255
-        ];
+        byte[] pixels = BgraBitmapTestData.Pixels;
         GCHandle pixelsHandle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
         byte[] content;
 
         try
         {
             content = PngImageEncoder.EncodePixels(
-                new PixelSize(2, 2),
+                BgraBitmapTestData.PixelSize,
                 PixelFormat.Bgra8888,
                 AlphaFormat.Premul,
                 pixelsHandle.AddrOfPinnedObject(),
-                8,
+                BgraBitmapTestData.RowBytes,
                 CancellationToken.None);
         }
         finally
@@ -62,8 +58,8 @@ public sealed class SelectionImagePipelineTests
 
         using SKBitmap decoded = SKBitmap.Decode(content)
             ?? throw new InvalidOperationException("Failed to decode the test PNG.");
-        decoded.Width.Should().Be(2);
-        decoded.Height.Should().Be(2);
+        decoded.Width.Should().Be(BgraBitmapTestData.Width);
+        decoded.Height.Should().Be(BgraBitmapTestData.Height);
         decoded.GetPixel(0, 0).Should().Be(new SKColor(32, 21, 11, 255));
         decoded.GetPixel(1, 1).Should().Be(new SKColor(34, 22, 12, 255));
     }
