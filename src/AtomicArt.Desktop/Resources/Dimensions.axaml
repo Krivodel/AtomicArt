@@ -33,7 +33,6 @@
     <CornerRadius x:Key="AttachmentPreviewCornerRadius">6</CornerRadius>
     <CornerRadius x:Key="AttachmentRemoveButtonCornerRadius">6,0,6,6</CornerRadius>
     <CornerRadius x:Key="GenerationCardCornerRadius">8</CornerRadius>
-    <Thickness x:Key="ShellSectionPadding">24</Thickness>
     <Thickness x:Key="GenerationPanelMargin">20,0,20,20</Thickness>
     <Thickness x:Key="GenerationPanelPadding">18</Thickness>
     <Thickness x:Key="GenerationPanelInnerSpacing">0,10,0,0</Thickness>

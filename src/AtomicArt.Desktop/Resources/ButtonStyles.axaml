@@ -203,24 +203,6 @@
                 Value="{DynamicResource SukiText}" />
     </Style>
 
-    <Style Selector="Button.card-hit-target">
-        <Setter Property="Padding"
-                Value="{StaticResource ZeroThickness}" />
-        <Setter Property="Background"
-                Value="{DynamicResource SukiPrimaryColor0}" />
-        <Setter Property="BorderThickness"
-                Value="{StaticResource ZeroThickness}" />
-        <Setter Property="HorizontalContentAlignment"
-                Value="Stretch" />
-        <Setter Property="VerticalContentAlignment"
-                Value="Stretch" />
-    </Style>
-
-    <Style Selector="Button.card-hit-target:pointerover">
-        <Setter Property="Background"
-                Value="{DynamicResource SukiPrimaryColor5}" />
-    </Style>
-
     <Style Selector="Button.overlay-backdrop">
         <Setter Property="Background">
             <Setter.Value>
