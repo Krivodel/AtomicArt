@@ -95,7 +95,7 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
     private Result<ImageGenerationRequestDto> ValidateAttachedImages(ImageGenerationRequestDto request)
     {
         Result<IReadOnlyList<AttachedImageDto>> attachmentValidationResult = AttachedImageValidationService
-            .Validate(request.AttachedImages, CreateAttachedImageValidationOptions());
+            .Validate(request.AttachedImages, _formatRegistry);
 
         if (!attachmentValidationResult.IsSuccess)
         {
@@ -148,12 +148,6 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
         {
             ThinkingLevel = _constraints.Thinking.Default
         };
-    }
-
-    private AttachedImageValidationOptions CreateAttachedImageValidationOptions()
-    {
-        return new AttachedImageValidationOptions(
-            _formatRegistry);
     }
 
     private static GenerationAttachedImage CreateGenerationAttachedImage(AttachedImageDto? attachedImage)

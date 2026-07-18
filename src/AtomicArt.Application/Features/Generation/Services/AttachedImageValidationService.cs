@@ -1,6 +1,5 @@
 using AtomicArt.Application.Common.Models;
 using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
-using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain.Generation;
 
@@ -10,9 +9,9 @@ internal static class AttachedImageValidationService
 {
     internal static Result<IReadOnlyList<AttachedImageDto>> Validate(
         IReadOnlyList<AttachedImageDto>? attachedImages,
-        AttachedImageValidationOptions options)
+        IAttachedImageFormatRegistry formatRegistry)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(formatRegistry);
 
         if (attachedImages is null)
         {
@@ -21,18 +20,18 @@ internal static class AttachedImageValidationService
                 "Список вложений не передан.");
         }
 
-        return ValidateItems(attachedImages, options);
+        return ValidateItems(attachedImages, formatRegistry);
     }
 
     private static Result<IReadOnlyList<AttachedImageDto>> ValidateItems(
         IReadOnlyList<AttachedImageDto> attachedImages,
-        AttachedImageValidationOptions options)
+        IAttachedImageFormatRegistry formatRegistry)
     {
         List<AttachedImageDto> normalizedAttachedImages = [];
 
         foreach (AttachedImageDto? attachedImage in attachedImages)
         {
-            Result<AttachedImageDto> result = ValidateItem(attachedImage, options);
+            Result<AttachedImageDto> result = ValidateItem(attachedImage, formatRegistry);
 
             if (result is not { IsSuccess: true, Value: { } normalizedAttachedImage })
             {
@@ -55,7 +54,7 @@ internal static class AttachedImageValidationService
 
     private static Result<AttachedImageDto> ValidateItem(
         AttachedImageDto? attachedImage,
-        AttachedImageValidationOptions options)
+        IAttachedImageFormatRegistry formatRegistry)
     {
         if (attachedImage is null)
         {
@@ -71,7 +70,7 @@ internal static class AttachedImageValidationService
             return contentResult;
         }
 
-        return ValidateMetadata(attachedImage, options);
+        return ValidateMetadata(attachedImage, formatRegistry);
     }
 
     private static Result<AttachedImageDto>? ValidateContent(
@@ -89,10 +88,10 @@ internal static class AttachedImageValidationService
 
     private static Result<AttachedImageDto> ValidateMetadata(
         AttachedImageDto attachedImage,
-        AttachedImageValidationOptions options)
+        IAttachedImageFormatRegistry formatRegistry)
     {
         string? fileName = AttachedImageFileNamePolicy.Normalize(attachedImage.FileName);
-        bool hasFormat = options.FormatRegistry.TryGetByContentType(
+        bool hasFormat = formatRegistry.TryGetByContentType(
             attachedImage.ContentType,
             out IAttachedImageFormat? format);
 
