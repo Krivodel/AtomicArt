@@ -73,19 +73,20 @@ internal sealed class ImageViewerView : IDisposable
     private readonly List<Bitmap> _openWithIcons = [];
 
     internal ImageViewerView(
-        ImageViewerState state,
+        bool isFilteringEnabled,
+        IReadOnlyList<ViewerSettingControl> settingControls,
         IReadOnlyList<PicaActionDefinition> actions,
         ViewerWindowMode windowMode,
         ImageViewerViewEvents events)
     {
-        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(settingControls);
         ArgumentNullException.ThrowIfNull(actions);
         ArgumentNullException.ThrowIfNull(events);
 
         Root = CreateRoot();
         ViewerArea = CreateViewerArea();
         WindowResizeOverlay = CreateWindowResizeOverlay(windowMode, events);
-        SettingsPanel = CreateSettingsPanel(state, windowMode);
+        SettingsPanel = CreateSettingsPanel(settingControls, windowMode);
         FadeOverlay = CreateFadeOverlay();
         ImageCanvas = CreateImageCanvas();
         Image = CreateImage();
@@ -97,7 +98,7 @@ internal sealed class ImageViewerView : IDisposable
             "M9,4 L17,12 L9,20 Z");
         FilteringToggle = new PixelFilteringToggleSwitch
         {
-            IsFilteringEnabled = state.IsFilteringEnabled
+            IsFilteringEnabled = isFilteringEnabled
         };
         BottomControls = CreateBottomControls(FilteringToggle, events);
         FullscreenSettingsButton = CreateFullscreenSettingsButton(events.SettingsClicked);
@@ -265,10 +266,10 @@ internal sealed class ImageViewerView : IDisposable
     }
 
     private static ViewerSettingsPanel CreateSettingsPanel(
-        ImageViewerState state,
+        IReadOnlyList<ViewerSettingControl> settingControls,
         ViewerWindowMode windowMode)
     {
-        return new ViewerSettingsPanel(state)
+        return new ViewerSettingsPanel(settingControls)
         {
             Margin = CreateSettingsPanelMargin(windowMode),
             HorizontalAlignment = HorizontalAlignment.Right,

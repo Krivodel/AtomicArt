@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using SukiUI.Controls;
 
 using Pica.Protocol;
+using Pica.Viewer.Controls;
 using Pica.Viewer.Resources;
 using Pica.Viewer.Services;
 
@@ -206,8 +207,10 @@ public sealed partial class ImageViewerWindow : SukiWindow
             WindowResizePointerMoved = OnWindowResizePointerMoved,
             WindowResizePointerReleased = OnWindowResizePointerReleased
         };
+        IReadOnlyList<ViewerSettingControl> settingControls = CreateSettingControls();
         _view = new ImageViewerView(
-            _settings,
+            _settings.IsFilteringEnabled,
+            settingControls,
             request.Actions,
             GetViewerWindowMode(),
             viewEvents);
@@ -432,16 +435,6 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _view.SelectionToolbar.PointerPressed += OnFloatingMenuPointerPressed;
         _view.SettingsPanel.PointerPressed += OnFloatingMenuPointerPressed;
         _view.Root.PointerExited += OnRootPointerExited;
-        _view.SettingsPanel.MovementSpeedComboBox.SelectionChanged += OnMovementSpeedSelectionChanged;
-        _view.SettingsPanel.ZoomSpeedComboBox.SelectionChanged += OnZoomSpeedSelectionChanged;
-        _view.SettingsPanel.ExpandOnDoubleClickCheckBox.IsCheckedChanged += OnExpandOnDoubleClickChanged;
-        _view.SettingsPanel.FastLoadingCheckBox.IsCheckedChanged += OnFastLoadingChanged;
-        _view.SettingsPanel.AllowFreeZoomOutCheckBox.IsCheckedChanged += OnAllowFreeZoomOutChanged;
-        _view.SettingsPanel.SmoothPanningCheckBox.IsCheckedChanged += OnSmoothPanningChanged;
-        _view.SettingsPanel.PanningInertiaCheckBox.IsCheckedChanged += OnPanningInertiaChanged;
-        _view.SettingsPanel.ResizeBehaviorComboBox.SelectionChanged += OnResizeBehaviorSelectionChanged;
-        _view.SettingsPanel.RememberWindowPlacementCheckBox.IsCheckedChanged +=
-            OnRememberWindowPlacementChanged;
     }
 
     [Flags]

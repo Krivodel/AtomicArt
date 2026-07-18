@@ -1,7 +1,5 @@
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Media;
 using SukiUI.Controls;
 
@@ -34,53 +32,79 @@ public sealed partial class ImageViewerWindow : SukiWindow
         await SaveCurrentStateAsync();
     }
 
-    private async void OnMovementSpeedSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private IReadOnlyList<ViewerSettingControl> CreateSettingControls()
     {
-        _ = sender;
-        _ = e;
+        ViewerCheckBoxSettingControl panningInertiaControl = new(
+            "Инерция перемещения",
+            _settings.IsPanningInertiaEnabled,
+            ChangePanningInertiaAsync,
+            _settings.IsSmoothPanningEnabled);
 
-        if (_view.SettingsPanel.MovementSpeedComboBox.SelectedItem
-            is not ViewerSettingOption<int> selectedOption)
-        {
-            return;
-        }
+        List<ViewerSettingControl> settingControls =
+        [
+            new ViewerChoiceSettingControl<int>(
+                "Скорость перемещения",
+                ViewerSettingChoices.SpeedOptions,
+                _settings.MovementSpeed,
+                ChangeMovementSpeedAsync),
+            new ViewerCheckBoxSettingControl(
+                "Плавное перемещение",
+                _settings.IsSmoothPanningEnabled,
+                isEnabled => ChangeSmoothPanningAsync(isEnabled, panningInertiaControl)),
+            panningInertiaControl,
+            new ViewerChoiceSettingControl<int>(
+                "Скорость масштабирования",
+                ViewerSettingChoices.SpeedOptions,
+                _settings.ZoomSpeed,
+                ChangeZoomSpeedAsync),
+            new ViewerCheckBoxSettingControl(
+                "Свободное отдаление",
+                _settings.AllowFreeZoomOut,
+                ChangeAllowFreeZoomOutAsync),
+            new ViewerChoiceSettingControl<WindowResizeBehavior>(
+                "Изменение размера окна",
+                ViewerSettingChoices.ResizeBehaviorOptions,
+                _settings.ResizeBehavior,
+                ChangeResizeBehaviorAsync),
+            new ViewerCheckBoxSettingControl(
+                "Разворачивать двойным щелчком",
+                _settings.ExpandOnDoubleClick,
+                ChangeExpandOnDoubleClickAsync),
+            new ViewerCheckBoxSettingControl(
+                "Запоминать положение и размер окна",
+                _settings.RememberWindowPlacement,
+                ChangeRememberWindowPlacementAsync),
+            new ViewerCheckBoxSettingControl(
+                "Быстрая загрузка",
+                _settings.IsFastLoadingEnabled,
+                ChangeFastLoadingAsync)
+        ];
 
-        _settings.MovementSpeed = selectedOption.Value;
+        return settingControls;
+    }
+
+    private async Task ChangeMovementSpeedAsync(int movementSpeed)
+    {
+        _settings.MovementSpeed = movementSpeed;
         await SaveCurrentStateAsync();
     }
 
-    private async void OnZoomSpeedSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async Task ChangeZoomSpeedAsync(int zoomSpeed)
     {
-        _ = sender;
-        _ = e;
-
-        if (_view.SettingsPanel.ZoomSpeedComboBox.SelectedItem
-            is not ViewerSettingOption<int> selectedOption)
-        {
-            return;
-        }
-
-        _settings.ZoomSpeed = selectedOption.Value;
+        _settings.ZoomSpeed = zoomSpeed;
         await SaveCurrentStateAsync();
     }
 
-    private async void OnExpandOnDoubleClickChanged(object? sender, RoutedEventArgs e)
+    private async Task ChangeExpandOnDoubleClickAsync(bool expandOnDoubleClick)
     {
-        _ = sender;
-        _ = e;
-
-        _settings.ExpandOnDoubleClick =
-            _view.SettingsPanel.ExpandOnDoubleClickCheckBox.IsChecked == true;
+        _settings.ExpandOnDoubleClick = expandOnDoubleClick;
         _imageDoubleClickTracker.Reset();
         await SaveCurrentStateAsync();
     }
 
-    private async void OnFastLoadingChanged(object? sender, RoutedEventArgs e)
+    private async Task ChangeFastLoadingAsync(bool isFastLoadingEnabled)
     {
-        _ = sender;
-        _ = e;
-
-        _settings.IsFastLoadingEnabled = _view.SettingsPanel.FastLoadingCheckBox.IsChecked == true;
+        _settings.IsFastLoadingEnabled = isFastLoadingEnabled;
 
         if (_settings.IsFastLoadingEnabled)
         {
@@ -99,13 +123,9 @@ public sealed partial class ImageViewerWindow : SukiWindow
         await SaveCurrentStateAsync();
     }
 
-    private async void OnAllowFreeZoomOutChanged(object? sender, RoutedEventArgs e)
+    private async Task ChangeAllowFreeZoomOutAsync(bool allowFreeZoomOut)
     {
-        _ = sender;
-        _ = e;
-
-        _settings.AllowFreeZoomOut =
-            _view.SettingsPanel.AllowFreeZoomOutCheckBox.IsChecked == true;
+        _settings.AllowFreeZoomOut = allowFreeZoomOut;
 
         if (!_settings.AllowFreeZoomOut
             && TryGetResetImagePlacement(out double fittedScale, out _, out _)
@@ -120,54 +140,35 @@ public sealed partial class ImageViewerWindow : SukiWindow
         await SaveCurrentStateAsync();
     }
 
-    private async void OnSmoothPanningChanged(object? sender, RoutedEventArgs e)
+    private async Task ChangeSmoothPanningAsync(
+        bool isSmoothPanningEnabled,
+        ViewerCheckBoxSettingControl panningInertiaControl)
     {
-        _ = sender;
-        _ = e;
-
-        _settings.IsSmoothPanningEnabled =
-            _view.SettingsPanel.SmoothPanningCheckBox.IsChecked == true;
-        _view.SettingsPanel.PanningInertiaCheckBox.IsEnabled = _settings.IsSmoothPanningEnabled;
+        _settings.IsSmoothPanningEnabled = isSmoothPanningEnabled;
+        panningInertiaControl.IsEnabled = _settings.IsSmoothPanningEnabled;
 
         if (!_settings.IsSmoothPanningEnabled)
         {
             _settings.IsPanningInertiaEnabled = false;
-            SetPanningInertiaCheckBox(false);
+            panningInertiaControl.SetValue(false);
         }
 
         ResetPanMotion();
         await SaveCurrentStateAsync();
     }
 
-    private async void OnPanningInertiaChanged(object? sender, RoutedEventArgs e)
+    private async Task ChangePanningInertiaAsync(bool isPanningInertiaEnabled)
     {
-        _ = sender;
-        _ = e;
-
         _settings.IsPanningInertiaEnabled = _settings.IsSmoothPanningEnabled
-            && (_view.SettingsPanel.PanningInertiaCheckBox.IsChecked == true);
-
-        if (!_settings.IsPanningInertiaEnabled)
-        {
-            SetPanningInertiaCheckBox(false);
-        }
+            && isPanningInertiaEnabled;
 
         ResetPanMotion();
         await SaveCurrentStateAsync();
     }
 
-    private async void OnResizeBehaviorSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    private async Task ChangeResizeBehaviorAsync(WindowResizeBehavior resizeBehavior)
     {
-        _ = sender;
-        _ = e;
-
-        if (_view.SettingsPanel.ResizeBehaviorComboBox.SelectedItem
-            is not ViewerSettingOption<WindowResizeBehavior> selectedOption)
-        {
-            return;
-        }
-
-        _settings.ResizeBehavior = selectedOption.Value;
+        _settings.ResizeBehavior = resizeBehavior;
 
         if (ShouldFitWindowToCurrentImage())
         {
@@ -177,13 +178,9 @@ public sealed partial class ImageViewerWindow : SukiWindow
         await SaveCurrentStateAsync();
     }
 
-    private async void OnRememberWindowPlacementChanged(object? sender, RoutedEventArgs e)
+    private async Task ChangeRememberWindowPlacementAsync(bool rememberWindowPlacement)
     {
-        _ = sender;
-        _ = e;
-
-        _settings.RememberWindowPlacement =
-            _view.SettingsPanel.RememberWindowPlacementCheckBox.IsChecked == true;
+        _settings.RememberWindowPlacement = rememberWindowPlacement;
 
         if (_settings.RememberWindowPlacement)
         {

@@ -61,13 +61,6 @@ public sealed partial class ImageViewerWindow : SukiWindow
             : ImagePanMotionMode.Smooth;
     }
 
-    private void SetPanningInertiaCheckBox(bool isChecked)
-    {
-        _view.SettingsPanel.PanningInertiaCheckBox.IsCheckedChanged -= OnPanningInertiaChanged;
-        _view.SettingsPanel.PanningInertiaCheckBox.IsChecked = isChecked;
-        _view.SettingsPanel.PanningInertiaCheckBox.IsCheckedChanged += OnPanningInertiaChanged;
-    }
-
     private void BeginPanMotion(Point pointerPosition)
     {
         StopScaleAnimation();
