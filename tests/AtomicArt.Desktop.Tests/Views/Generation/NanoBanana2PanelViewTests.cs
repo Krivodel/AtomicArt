@@ -26,6 +26,7 @@ using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.Tests.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Generation;
+using static AtomicArt.Desktop.Tests.ViewModels.Generation.UniversalNanoBananaPanelViewModelTestHelper;
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Desktop.Tests.Views.Generation;
@@ -763,12 +764,6 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         }
 
         throw new InvalidOperationException($"Brush resource '{resourceKey}' was not found.");
-    }
-
-    private static ImageModelOption GetSelectedModel(UniversalNanoBananaPanelViewModel viewModel)
-    {
-        return viewModel.SelectedModel
-            ?? throw new InvalidOperationException("Selected model is required for this test.");
     }
 
     private static UniversalNanoBananaPanelViewModel CreateViewModel(

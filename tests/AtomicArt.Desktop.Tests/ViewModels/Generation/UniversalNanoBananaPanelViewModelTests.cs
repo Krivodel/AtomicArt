@@ -18,6 +18,7 @@ using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Tests.Common;
+using static AtomicArt.Desktop.Tests.ViewModels.Generation.UniversalNanoBananaPanelViewModelTestHelper;
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Generation;
@@ -1860,12 +1861,6 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     private static async Task FillAttachedImagesToLimitAsync(UniversalNanoBananaPanelViewModel viewModel)
     {
         await AttachValidImagesAsync(viewModel, GetSelectedModel(viewModel).MaxAttachedImages);
-    }
-
-    private static ImageModelOption GetSelectedModel(UniversalNanoBananaPanelViewModel viewModel)
-    {
-        return viewModel.SelectedModel
-            ?? throw new InvalidOperationException("Selected model is required for this test.");
     }
 
     private static ImageModelOption GetModel(
