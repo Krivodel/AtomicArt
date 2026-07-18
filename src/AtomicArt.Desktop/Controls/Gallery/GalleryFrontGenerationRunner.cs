@@ -68,12 +68,12 @@ internal sealed class GalleryFrontGenerationRunner : IGalleryRetargetableOperati
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            CancelOperations(GetTrackedOperations(state, operations), ct);
+            GalleryOperationCompletion.Cancel(GetTrackedOperations(state, operations), ct);
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to generate front gallery items.");
-            FailOperations(GetTrackedOperations(state, operations), exception);
+            GalleryOperationCompletion.Fail(GetTrackedOperations(state, operations), exception);
         }
         finally
         {
@@ -99,41 +99,9 @@ internal sealed class GalleryFrontGenerationRunner : IGalleryRetargetableOperati
         GalleryOperationCoordinator context,
         GalleryFrontGenerationRunState state)
     {
-        RemoveOverlays(context.OverlayCanvas, state.OverlayControls);
+        GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, state.OverlayControls);
         state.SpawnClones.Clear();
         state.OverlayControls.Clear();
-    }
-
-    private static void RemoveOverlays(Canvas overlayCanvas, IEnumerable<Control> overlays)
-    {
-        foreach (Control overlay in overlays)
-        {
-            overlayCanvas.Children.Remove(overlay);
-        }
-    }
-
-    private static void CompleteOperations(IEnumerable<GalleryOperation> operations)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetResult();
-        }
-    }
-
-    private static void CancelOperations(IEnumerable<GalleryOperation> operations, CancellationToken ct)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetCanceled(ct);
-        }
-    }
-
-    private static void FailOperations(IEnumerable<GalleryOperation> operations, Exception exception)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetException(exception);
-        }
     }
 
     private static void RevealFrontItems(
@@ -181,10 +149,10 @@ internal sealed class GalleryFrontGenerationRunner : IGalleryRetargetableOperati
             _animationScheduler.Cancel(state.RunningControls);
         }
 
-        RemoveOverlays(context.OverlayCanvas, state.OverlayControls);
+        GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, state.OverlayControls);
         state.SpawnClones.Clear();
         state.OverlayControls.Clear();
-        CompleteOperations(state.AllOperations);
+        GalleryOperationCompletion.Complete(state.AllOperations);
     }
 
     private async Task<FrontGenerationCycleResult> RunCycleAsync(
@@ -287,7 +255,7 @@ internal sealed class GalleryFrontGenerationRunner : IGalleryRetargetableOperati
         GalleryOperationCoordinator context,
         GalleryFrontGenerationRunState state)
     {
-        RemoveOverlays(context.OverlayCanvas, state.OverlayControls);
+        GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, state.OverlayControls);
         state.SpawnClones.Clear();
         state.OverlayControls.Clear();
 

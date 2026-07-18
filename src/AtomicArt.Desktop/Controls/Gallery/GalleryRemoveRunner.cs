@@ -58,7 +58,7 @@ internal sealed class GalleryRemoveRunner : IGalleryOperationRunner
         try
         {
             await ExecuteRemovalAsync(context, operations, deleteOverlays, runningMoveControls, ct);
-            CompleteOperations(operations);
+            GalleryOperationCompletion.Complete(operations);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -110,38 +110,6 @@ internal sealed class GalleryRemoveRunner : IGalleryOperationRunner
         {
             MotionFrameApplier.Apply(control, new MotionFrame(0d, 0d, 1d, 0d, 1d));
             control.ZIndex = 0;
-        }
-    }
-
-    private static void RemoveOverlays(Canvas overlayCanvas, IEnumerable<Control> overlays)
-    {
-        foreach (Control overlay in overlays)
-        {
-            overlayCanvas.Children.Remove(overlay);
-        }
-    }
-
-    private static void CompleteOperations(IEnumerable<GalleryOperation> operations)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetResult();
-        }
-    }
-
-    private static void CancelOperations(IEnumerable<GalleryOperation> operations, CancellationToken ct)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetCanceled(ct);
-        }
-    }
-
-    private static void FailOperations(IEnumerable<GalleryOperation> operations, Exception exception)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetException(exception);
         }
     }
 
@@ -201,7 +169,7 @@ internal sealed class GalleryRemoveRunner : IGalleryOperationRunner
         IEnumerable<Control> deleteOverlays)
     {
         _animationScheduler.Cancel(runningMoveControls.Concat(deleteOverlays));
-        RemoveOverlays(context.OverlayCanvas, deleteOverlays);
+        GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, deleteOverlays);
     }
 
     private void HandleCancellation(
@@ -212,7 +180,7 @@ internal sealed class GalleryRemoveRunner : IGalleryOperationRunner
         CancellationToken ct)
     {
         CancelAnimations(context, runningMoveControls, deleteOverlays);
-        CancelOperations(operations, ct);
+        GalleryOperationCompletion.Cancel(operations, ct);
     }
 
     private void HandleFailure(
@@ -224,7 +192,7 @@ internal sealed class GalleryRemoveRunner : IGalleryOperationRunner
     {
         _logger.LogError(exception, "Failed to remove gallery items.");
         CancelAnimations(context, runningMoveControls, deleteOverlays);
-        FailOperations(operations, exception);
+        GalleryOperationCompletion.Fail(operations, exception);
     }
 
     private List<Task> StartRemoveAnimations(

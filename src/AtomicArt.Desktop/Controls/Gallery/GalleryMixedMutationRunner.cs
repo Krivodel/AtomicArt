@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Logging;
 
 using Avalonia;
-using Avalonia.Controls;
-
 using AtomicArt.Desktop.Services.Gallery;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
@@ -54,41 +52,17 @@ internal sealed class GalleryMixedMutationRunner : IGalleryOperationRunner
         try
         {
             await ExecuteMutationAsync(context, operations, deleteOverlays);
-            CompleteOperations(operations);
+            GalleryOperationCompletion.Complete(operations);
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to apply gallery mutation.");
-            FailOperations(operations, exception);
+            GalleryOperationCompletion.Fail(operations, exception);
         }
         finally
         {
-            RemoveOverlays(context.OverlayCanvas, deleteOverlays);
+            GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, deleteOverlays);
             context.NotifyStateChanged();
-        }
-    }
-
-    private static void RemoveOverlays(Canvas overlayCanvas, IEnumerable<Control> overlays)
-    {
-        foreach (Control overlay in overlays)
-        {
-            overlayCanvas.Children.Remove(overlay);
-        }
-    }
-
-    private static void CompleteOperations(IEnumerable<GalleryOperation> operations)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetResult();
-        }
-    }
-
-    private static void FailOperations(IEnumerable<GalleryOperation> operations, Exception exception)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetException(exception);
         }
     }
 

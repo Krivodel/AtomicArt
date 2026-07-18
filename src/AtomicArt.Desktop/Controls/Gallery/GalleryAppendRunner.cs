@@ -56,7 +56,7 @@ internal sealed class GalleryAppendRunner : IGalleryOperationRunner
 
         if (materialization.NewIds.Count == 0)
         {
-            CompleteOperations(operations);
+            GalleryOperationCompletion.Complete(operations);
             return;
         }
 
@@ -119,28 +119,12 @@ internal sealed class GalleryAppendRunner : IGalleryOperationRunner
         try
         {
             await Task.WhenAll(animations);
-            CompleteOperations(operations);
+            GalleryOperationCompletion.Complete(operations);
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to append gallery items.");
-            FailOperations(operations, exception);
-        }
-    }
-
-    private static void CompleteOperations(IEnumerable<GalleryOperation> operations)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetResult();
-        }
-    }
-
-    private static void FailOperations(IEnumerable<GalleryOperation> operations, Exception exception)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetException(exception);
+            GalleryOperationCompletion.Fail(operations, exception);
         }
     }
 

@@ -183,13 +183,13 @@ internal sealed class GalleryOperationQueueProcessor
                 ex,
                 "Cancelled gallery operation batch with {OperationCount} operations",
                 operations.Count);
-            CancelOperations(operations, ct);
+            GalleryOperationCompletion.Cancel(operations, ct);
             CancelPendingOperations(ct);
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to flush gallery operations.");
-            FailOperations(operations, exception);
+            GalleryOperationCompletion.Fail(operations, exception);
             FailPendingOperations(exception);
         }
     }
@@ -213,10 +213,7 @@ internal sealed class GalleryOperationQueueProcessor
             operations = DrainPendingOperationsCore();
         }
 
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetCanceled(ct);
-        }
+        GalleryOperationCompletion.Cancel(operations, ct);
     }
 
     private void FailPendingOperations(Exception exception)
@@ -227,25 +224,6 @@ internal sealed class GalleryOperationQueueProcessor
             operations = DrainPendingOperationsCore();
         }
 
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetException(exception);
-        }
-    }
-
-    private static void CancelOperations(IEnumerable<GalleryOperation> operations, CancellationToken ct)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetCanceled(ct);
-        }
-    }
-
-    private static void FailOperations(IEnumerable<GalleryOperation> operations, Exception exception)
-    {
-        foreach (GalleryOperation operation in operations)
-        {
-            operation.Completion.TrySetException(exception);
-        }
+        GalleryOperationCompletion.Fail(operations, exception);
     }
 }
