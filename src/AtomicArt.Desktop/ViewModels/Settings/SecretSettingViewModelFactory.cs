@@ -2,7 +2,8 @@ using AtomicArt.Desktop.Services;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
-public sealed class SecretSettingViewModelFactory : ISettingsItemViewModelFactory
+public sealed class SecretSettingViewModelFactory :
+    SettingItemViewModelFactory<ISecretSettingDefinition>
 {
     private readonly ISecretStore _secretStore;
     private readonly IViewModelErrorHandler _errorHandler;
@@ -10,6 +11,7 @@ public sealed class SecretSettingViewModelFactory : ISettingsItemViewModelFactor
     public SecretSettingViewModelFactory(
         ISecretStore secretStore,
         IViewModelErrorHandler errorHandler)
+        : base("Secret setting definition expected.")
     {
         ArgumentNullException.ThrowIfNull(secretStore);
         ArgumentNullException.ThrowIfNull(errorHandler);
@@ -18,22 +20,11 @@ public sealed class SecretSettingViewModelFactory : ISettingsItemViewModelFactor
         _errorHandler = errorHandler;
     }
 
-    public bool CanCreate(ISettingsDefinition definition)
+    protected override ISettingItemViewModel CreateItemViewModel(
+        ISecretSettingDefinition definition)
     {
-        return definition is ISecretSettingDefinition;
-    }
-
-    public ISettingItemViewModel Create(ISettingsDefinition definition)
-    {
-        ArgumentNullException.ThrowIfNull(definition);
-
-        if (definition is not ISecretSettingDefinition secretSetting)
-        {
-            throw new InvalidOperationException("Secret setting definition expected.");
-        }
-
         return new SecretSettingViewModel(
-            secretSetting,
+            definition,
             _secretStore,
             _errorHandler);
     }

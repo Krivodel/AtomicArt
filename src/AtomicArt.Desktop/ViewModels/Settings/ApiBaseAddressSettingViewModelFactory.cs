@@ -3,7 +3,8 @@ using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
-public sealed class ApiBaseAddressSettingViewModelFactory : ISettingsItemViewModelFactory
+public sealed class ApiBaseAddressSettingViewModelFactory :
+    SettingItemViewModelFactory<ApiBaseAddressSettingDefinition>
 {
     private readonly IApiEndpointService _apiEndpointService;
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
@@ -15,6 +16,7 @@ public sealed class ApiBaseAddressSettingViewModelFactory : ISettingsItemViewMod
         IUiThreadDispatcher uiThreadDispatcher,
         ISettingsStateService settingsStateService,
         IViewModelErrorHandler errorHandler)
+        : base("API base address setting definition expected.")
     {
         _apiEndpointService = apiEndpointService
             ?? throw new ArgumentNullException(nameof(apiEndpointService));
@@ -25,22 +27,11 @@ public sealed class ApiBaseAddressSettingViewModelFactory : ISettingsItemViewMod
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
     }
 
-    public bool CanCreate(ISettingsDefinition definition)
+    protected override ISettingItemViewModel CreateItemViewModel(
+        ApiBaseAddressSettingDefinition definition)
     {
-        return definition is ApiBaseAddressSettingDefinition;
-    }
-
-    public ISettingItemViewModel Create(ISettingsDefinition definition)
-    {
-        ArgumentNullException.ThrowIfNull(definition);
-
-        if (definition is not ApiBaseAddressSettingDefinition apiBaseAddressSetting)
-        {
-            throw new InvalidOperationException("API base address setting definition expected.");
-        }
-
         return new ApiBaseAddressSettingViewModel(
-            apiBaseAddressSetting,
+            definition,
             _apiEndpointService,
             _uiThreadDispatcher,
             _settingsStateService,

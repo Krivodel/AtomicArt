@@ -4,7 +4,8 @@ using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
-public sealed class ScaleSettingViewModelFactory : ISettingsItemViewModelFactory
+public sealed class ScaleSettingViewModelFactory :
+    SettingItemViewModelFactory<IScaleSettingDefinition>
 {
     private readonly ISettingsDefinitionCatalog _settingsDefinitionCatalog;
     private readonly IUiScaleService _uiScaleService;
@@ -18,6 +19,7 @@ public sealed class ScaleSettingViewModelFactory : ISettingsItemViewModelFactory
         ISettingsStateService settingsStateService,
         IUiScaleSettingValueConverter valueConverter,
         IViewModelErrorHandler errorHandler)
+        : base("Scale setting definition expected.")
     {
         ArgumentNullException.ThrowIfNull(settingsDefinitionCatalog);
         ArgumentNullException.ThrowIfNull(uiScaleService);
@@ -32,24 +34,13 @@ public sealed class ScaleSettingViewModelFactory : ISettingsItemViewModelFactory
         _errorHandler = errorHandler;
     }
 
-    public bool CanCreate(ISettingsDefinition definition)
+    protected override ISettingItemViewModel CreateItemViewModel(
+        IScaleSettingDefinition definition)
     {
-        return definition is IScaleSettingDefinition;
-    }
-
-    public ISettingItemViewModel Create(ISettingsDefinition definition)
-    {
-        ArgumentNullException.ThrowIfNull(definition);
-
-        if (definition is not IScaleSettingDefinition scaleSetting)
-        {
-            throw new InvalidOperationException("Scale setting definition expected.");
-        }
-
         IReadOnlyList<UiScaleOption> scaleOptions = _settingsDefinitionCatalog.GetScaleOptions();
 
         return new ScaleSettingViewModel(
-            scaleSetting,
+            definition,
             scaleOptions,
             UiScaleOptionMatcher.FindByValueOrFirst(scaleOptions, _uiScaleService.CurrentScale),
             _settingsStateService,
