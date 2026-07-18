@@ -41,7 +41,7 @@ public sealed class ImageModelRegistry : IImageModelRegistry
     public IReadOnlyList<GenerationModelMetadataDto> GetModels()
     {
         List<GenerationModelMetadataDto> models = _definitions
-            .Select(CreateMetadata)
+            .Select(definition => definition.Metadata)
             .ToList();
 
         return models;
@@ -57,32 +57,6 @@ public sealed class ImageModelRegistry : IImageModelRegistry
         }
 
         return null;
-    }
-
-    private static GenerationModelMetadataDto CreateMetadata(IImageModelDefinition definition)
-    {
-        GenerationModelConstraints constraints = definition.Constraints;
-
-        return new GenerationModelMetadataDto(
-            constraints.ModelId,
-            definition.DisplayName,
-            definition.Provider,
-            definition.ProviderModelId,
-            definition.PanelId,
-            definition.ContextWindowTokens,
-            definition.MaxOutputTokens,
-            constraints.MaxPromptLength,
-            constraints.AspectRatios,
-            constraints.Resolutions,
-            constraints.GenerationCounts,
-            definition.Temperature,
-            new GenerationModelAttachmentMetadataDto(
-                constraints.MaxAttachedImages,
-                constraints.MaxAttachedImageBytes,
-                constraints.MaxTotalAttachedImageBytes,
-                constraints.SupportedContentTypes),
-            definition.Pricing,
-            definition.Thinking);
     }
 
     private static IReadOnlyList<IImageModelDefinition> CreateDefinitions(

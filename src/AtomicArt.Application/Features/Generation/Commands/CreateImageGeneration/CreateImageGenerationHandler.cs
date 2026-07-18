@@ -101,12 +101,12 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
         ImageGenerationOutputPlan outputPlan = _outputPlanner.CreatePlan(
             validatedRequest,
             batchId,
-            modelDefinition.DisplayName);
+            modelDefinition.Metadata.DisplayName);
 
         _logger.LogInformation(
             "Generation batch {BatchId} was planned for provider {Provider} with {ItemCount} items.",
             batchId,
-            modelDefinition.Provider,
+            modelDefinition.Metadata.Provider,
             outputPlan.Items.Count);
 
         Result<GenerationBatchDto> batchResult = await CreateBatchAsync(
@@ -221,7 +221,7 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
         return new GenerationItemDto(
             itemPlan.Id,
             request.ModelId,
-            modelDefinition.DisplayName,
+            modelDefinition.Metadata.DisplayName,
             request.Prompt,
             request.AspectRatio,
             request.Resolution,
@@ -249,13 +249,13 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
             "Generation item {ItemId} at index {ItemIndex} started for provider {Provider}.",
             itemPlan.Id,
             itemIndex,
-            modelDefinition.Provider);
+            modelDefinition.Metadata.Provider);
 
         ImageGenerationContentProviderContext context = new(
             request,
-            modelDefinition.Provider,
-            modelDefinition.ProviderModelId,
-            modelDefinition.Pricing,
+            modelDefinition.Metadata.Provider,
+            modelDefinition.Metadata.ProviderModelId,
+            modelDefinition.Metadata.Pricing,
             itemIndex,
             providerCredential);
         ImageGenerationContentResult content = await _contentProvider
@@ -268,7 +268,7 @@ public sealed class CreateImageGenerationHandler : IRequestHandler<CreateImageGe
             "Generation item {ItemId} at index {ItemIndex} was created by provider {Provider} in {ElapsedMilliseconds} ms. Content type: {ContentType}; Base64 length: {Base64Length} characters.",
             itemPlan.Id,
             itemIndex,
-            modelDefinition.Provider,
+            modelDefinition.Metadata.Provider,
             Math.Max(0L, (long)generationDuration.TotalMilliseconds),
             content.ContentType,
             content.Base64Data.Length);

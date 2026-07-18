@@ -9,20 +9,12 @@ namespace AtomicArt.Application.Features.Generation.Models;
 
 public sealed class MetadataImageModelDefinition : IImageModelDefinition
 {
+    public GenerationModelMetadataDto Metadata { get; }
+    public GenerationModelConstraints Constraints => _constraints;
+
     private readonly GenerationModelRules _rules;
     private readonly GenerationModelConstraints _constraints;
     private readonly IAttachedImageFormatRegistry _formatRegistry;
-
-    public string DisplayName { get; }
-    public string Provider { get; }
-    public string ProviderModelId { get; }
-    public string PanelId { get; }
-    public int ContextWindowTokens { get; }
-    public int MaxOutputTokens { get; }
-    public GenerationModelTemperatureMetadataDto Temperature { get; }
-    public GenerationModelThinkingMetadataDto? Thinking { get; }
-    public GenerationModelPricingMetadataDto Pricing { get; }
-    public GenerationModelConstraints Constraints => _constraints;
 
     public MetadataImageModelDefinition(
         GenerationModelMetadataDto metadata,
@@ -43,15 +35,7 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
         _rules = rules;
         _constraints = GenerationModelMetadataDomainMapper.ToConstraints(metadata);
         _formatRegistry = formatRegistry;
-        DisplayName = metadata.DisplayName;
-        Provider = metadata.Provider;
-        ProviderModelId = metadata.ProviderModelId;
-        PanelId = metadata.PanelId;
-        ContextWindowTokens = metadata.ContextWindowTokens;
-        MaxOutputTokens = metadata.MaxOutputTokens;
-        Temperature = metadata.Temperature;
-        Thinking = metadata.Thinking;
-        Pricing = metadata.Pricing;
+        Metadata = metadata;
     }
 
     public Result<ImageGenerationRequestDto> Validate(ImageGenerationRequestDto request)

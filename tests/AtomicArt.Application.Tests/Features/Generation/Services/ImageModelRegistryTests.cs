@@ -195,26 +195,18 @@ public sealed class ImageModelRegistryTests
 
     private sealed class TestImageModelDefinition : IImageModelDefinition
     {
-        public string DisplayName { get; }
-        public string Provider => _metadata.Provider;
-        public string ProviderModelId => _metadata.ProviderModelId;
-        public string PanelId => _metadata.PanelId;
-        public int ContextWindowTokens => _metadata.ContextWindowTokens;
-        public int MaxOutputTokens => _metadata.MaxOutputTokens;
-        public GenerationModelTemperatureMetadataDto Temperature => _metadata.Temperature;
-        public GenerationModelThinkingMetadataDto? Thinking => _metadata.Thinking;
-        public GenerationModelPricingMetadataDto Pricing => _metadata.Pricing;
+        public GenerationModelMetadataDto Metadata { get; }
         public GenerationModelConstraints Constraints { get; }
-
-        private readonly GenerationModelMetadataDto _metadata;
 
         public TestImageModelDefinition(GenerationModelMetadataDto metadata, string displayName)
         {
             ArgumentNullException.ThrowIfNull(metadata);
             ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
 
-            _metadata = metadata;
-            DisplayName = displayName;
+            Metadata = metadata with
+            {
+                DisplayName = displayName
+            };
             Constraints = MetadataImageModelTestFactory.CreateDefinition(metadata).Constraints;
         }
 

@@ -18,11 +18,11 @@ public sealed class MetadataImageModelDefinitionTests
     private static readonly byte[] PngBytes = [.. GenerationImageFileSignatures.Png, 0x00];
 
     [Fact]
-    public void DisplayName_WithNanoBanana2_ReturnsDisplayName()
+    public void Metadata_WithNanoBanana2_ReturnsDisplayName()
     {
         MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
 
-        string displayName = definition.DisplayName;
+        string displayName = definition.Metadata.DisplayName;
 
         displayName.Should().Be(ApiModelMetadataTestCatalog.NanoBanana2DisplayName);
     }

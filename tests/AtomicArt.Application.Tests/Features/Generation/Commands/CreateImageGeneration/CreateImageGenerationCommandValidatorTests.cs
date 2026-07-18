@@ -363,10 +363,15 @@ public sealed class CreateImageGenerationCommandValidatorTests
 
     private static IImageModelDefinition CreateModelDefinition(string provider)
     {
+        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog
+            .LoadNanoBanana2Metadata() with
+        {
+            Provider = provider
+        };
         Mock<IImageModelDefinition> modelDefinition = new();
         modelDefinition
-            .SetupGet(currentModelDefinition => currentModelDefinition.Provider)
-            .Returns(provider);
+            .SetupGet(currentModelDefinition => currentModelDefinition.Metadata)
+            .Returns(metadata);
 
         return modelDefinition.Object;
     }

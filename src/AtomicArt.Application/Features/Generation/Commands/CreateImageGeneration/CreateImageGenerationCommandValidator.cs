@@ -39,7 +39,7 @@ public sealed class CreateImageGenerationCommandValidator : AbstractValidator<Cr
 
         if (modelDefinition is null
             || !GenerationProviderCredentialRequirements
-                .Resolve(modelDefinition.Provider)
+                .Resolve(modelDefinition.Metadata.Provider)
                 .RequiredForApplicationValidation)
         {
             return true;

@@ -6,15 +6,7 @@ namespace AtomicArt.Application.Features.Generation.Interfaces;
 
 public interface IImageModelDefinition
 {
-    string DisplayName { get; }
-    string Provider { get; }
-    string ProviderModelId { get; }
-    string PanelId { get; }
-    int ContextWindowTokens { get; }
-    int MaxOutputTokens { get; }
-    GenerationModelTemperatureMetadataDto Temperature { get; }
-    GenerationModelThinkingMetadataDto? Thinking { get; }
-    GenerationModelPricingMetadataDto Pricing { get; }
+    GenerationModelMetadataDto Metadata { get; }
     GenerationModelConstraints Constraints { get; }
 
     Result<ImageGenerationRequestDto> Validate(ImageGenerationRequestDto request);
