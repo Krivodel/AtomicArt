@@ -138,14 +138,11 @@ public sealed class GoogleImageGenerationContentProviderTests
         string resolution = "1K")
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        ImageGenerationRequestDto request = new(
-            metadata.Id,
-            "Prompt",
-            "1:1",
-            resolution,
-            metadata.Temperature.Default,
-            1,
-            []);
+        ImageGenerationRequestDto request = ImageGenerationRequestDtoTestFactory.Create(
+            modelId: metadata.Id,
+            aspectRatio: "1:1",
+            resolution: resolution,
+            temperature: metadata.Temperature.Default);
 
         return new ImageGenerationContentProviderContext(
             request,

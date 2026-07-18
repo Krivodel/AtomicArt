@@ -109,20 +109,20 @@ public sealed class GoogleInteractionsRequestBuilderTests
         string? thinkingLevel = null)
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        ImageGenerationRequestDto request = new(
-            metadata.Id,
-            "Prompt",
-            aspectRatio,
-            "1K",
-            metadata.Temperature.Default,
-            1,
-            [
-                new(
-                    "reference.png",
-                    "image/png",
-                    [0x01, 0x02])
-            ],
-            thinkingLevel);
+        List<AttachedImageDto> attachedImages =
+        [
+            new AttachedImageDto(
+                "reference.png",
+                "image/png",
+                new byte[] { 0x01, 0x02 })
+        ];
+        ImageGenerationRequestDto request = ImageGenerationRequestDtoTestFactory.Create(
+            modelId: metadata.Id,
+            aspectRatio: aspectRatio,
+            resolution: "1K",
+            temperature: metadata.Temperature.Default,
+            attachedImages: attachedImages,
+            thinkingLevel: thinkingLevel);
 
         return new ImageGenerationContentProviderContext(
             request,

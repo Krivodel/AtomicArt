@@ -9,6 +9,7 @@ using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Tests.Generation;
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Tests.Common.Generation;
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Application.Tests.Features.Generation.Commands.CreateImageGeneration;
@@ -290,14 +291,10 @@ public sealed class CreateImageGenerationCommandValidatorTests
     public void Validate_WithEmptyAttachedImages_IsValid()
     {
         CreateImageGenerationCommand command = new(
-            new ImageGenerationRequestDto(
-                ModelId,
-                "Prompt",
-                "Авто",
-                "1k",
-                1d,
-                1,
-                new List<AttachedImageDto>()),
+            ImageGenerationRequestDtoTestFactory.Create(
+                modelId: ModelId,
+                aspectRatio: "Авто",
+                resolution: "1k"),
             TestGenerationCredentials.ProviderCredential);
 
         ValidationResult result = _validator.Validate(command);
@@ -336,14 +333,14 @@ public sealed class CreateImageGenerationCommandValidatorTests
         IReadOnlyList<AttachedImageDto>? attachedImages = null,
         string? providerCredential = TestGenerationCredentials.ProviderCredential)
     {
-        ImageGenerationRequestDto request = new(
-            modelId ?? ModelId,
-            prompt,
-            "Авто",
-            "1k",
-            temperature,
-            generationCount,
-            attachedImages ?? []);
+        ImageGenerationRequestDto request = ImageGenerationRequestDtoTestFactory.Create(
+            modelId: modelId ?? ModelId,
+            prompt: prompt,
+            aspectRatio: "Авто",
+            resolution: "1k",
+            temperature: temperature,
+            generationCount: generationCount,
+            attachedImages: attachedImages);
 
         return new CreateImageGenerationCommand(request, providerCredential);
     }

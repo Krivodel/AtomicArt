@@ -4,5 +4,7 @@ global using GenerationItemDtoTestFactory =
     AtomicArt.Tests.Common.Generation.GenerationItemDtoTestFactory;
 global using GenerationModelPricingMetadataTestFactory =
     AtomicArt.Tests.Common.Generation.GenerationModelPricingMetadataTestFactory;
+global using ImageGenerationRequestDtoTestFactory =
+    AtomicArt.Tests.Common.Generation.ImageGenerationRequestDtoTestFactory;
 global using TestGenerationOutputMetadata =
     AtomicArt.Tests.Common.Generation.TestGenerationOutputMetadata;

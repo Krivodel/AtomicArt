@@ -7,6 +7,7 @@ using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Application.Tests.Generation;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain.Generation;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Application.Tests.Features.Generation.Models;
 
@@ -208,15 +209,14 @@ public sealed class MetadataImageModelDefinitionTests
         string? thinkingLevel = null)
     {
 
-        return new ImageGenerationRequestDto(
-            metadata.Id,
-            prompt,
-            aspectRatio ?? metadata.AspectRatios.First(),
-            resolution ?? metadata.Resolutions.First(),
-            temperature ?? metadata.Temperature.Default,
-            1,
-            attachedImages ?? [],
-            thinkingLevel);
+        return ImageGenerationRequestDtoTestFactory.Create(
+            modelId: metadata.Id,
+            prompt: prompt,
+            aspectRatio: aspectRatio ?? metadata.AspectRatios.First(),
+            resolution: resolution ?? metadata.Resolutions.First(),
+            temperature: temperature ?? metadata.Temperature.Default,
+            attachedImages: attachedImages,
+            thinkingLevel: thinkingLevel);
     }
 
     private static AttachedImageDto CreateAttachedImage(string fileName)

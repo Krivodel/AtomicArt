@@ -44,13 +44,9 @@ public sealed class FakeImageGenerationOutputPlannerTests
 
     private static ImageGenerationRequestDto CreateRequest(int generationCount = 1)
     {
-        return new ImageGenerationRequestDto(
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            "Prompt",
-            "Авто",
-            "1k",
-            1d,
-            generationCount,
-            []);
+        return ImageGenerationRequestDtoTestFactory.Create(
+            aspectRatio: "Авто",
+            resolution: "1k",
+            generationCount: generationCount);
     }
 }

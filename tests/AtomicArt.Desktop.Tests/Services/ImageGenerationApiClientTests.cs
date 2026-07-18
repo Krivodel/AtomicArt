@@ -172,16 +172,18 @@ public sealed class ImageGenerationApiClientTests
 
     private static ImageGenerationRequestDto CreateRequest()
     {
-        return new ImageGenerationRequestDto(
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            "Create a studio product shot",
-            "16:9",
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            1d,
-            1,
-            [
-                new("reference.png", "image/png", [0x01, 0x02, 0x03])
-            ]);
+        List<AttachedImageDto> attachedImages =
+        [
+            new AttachedImageDto(
+                "reference.png",
+                "image/png",
+                new byte[] { 0x01, 0x02, 0x03 })
+        ];
+
+        return ImageGenerationRequestDtoTestFactory.Create(
+            prompt: "Create a studio product shot",
+            aspectRatio: "16:9",
+            attachedImages: attachedImages);
     }
 
     private static string CreateBatchJson()

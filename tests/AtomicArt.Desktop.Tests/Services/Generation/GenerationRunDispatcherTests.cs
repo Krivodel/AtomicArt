@@ -390,14 +390,10 @@ public sealed class GenerationRunDispatcherTests
 
     private static GenerationRunRequest CreateRunRequest()
     {
-        ImageGenerationRequestDto request = new(
-            ModelId,
-            "Prompt",
-            "1:1",
-            "1k",
-            1d,
-            1,
-            []);
+        ImageGenerationRequestDto request = ImageGenerationRequestDtoTestFactory.Create(
+            modelId: ModelId,
+            aspectRatio: "1:1",
+            resolution: "1k");
         GenerationStartSnapshot startSnapshot = new(
             request.ModelId,
             "Test Model",

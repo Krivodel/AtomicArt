@@ -12,6 +12,7 @@ using AtomicArt.Application.Tests.Generation;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain.Generation;
 using AtomicArt.Tests.Common;
+using AtomicArt.Tests.Common.Generation;
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Application.Tests.Features.Generation.Commands.CreateImageGeneration;
@@ -642,14 +643,13 @@ public sealed class CreateImageGenerationHandlerTests
         string? providerCredential = null)
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        ImageGenerationRequestDto request = new(
-            modelId ?? ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            "Prompt",
-            metadata.AspectRatios.First(),
-            metadata.Resolutions.First(),
-            metadata.Temperature.Default,
-            generationCount,
-            attachedImages ?? []);
+        ImageGenerationRequestDto request = ImageGenerationRequestDtoTestFactory.Create(
+            modelId: modelId,
+            aspectRatio: metadata.AspectRatios.First(),
+            resolution: metadata.Resolutions.First(),
+            temperature: metadata.Temperature.Default,
+            generationCount: generationCount,
+            attachedImages: attachedImages);
 
         return new CreateImageGenerationCommand(request, providerCredential);
     }

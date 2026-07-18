@@ -589,14 +589,9 @@ public sealed class GalleryViewModelTests
 
     private static GenerationRunRequest CreateRunRequest()
     {
-        ImageGenerationRequestDto request = new(
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            "Prompt",
-            "Авто",
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().Temperature.Default,
-            1,
-            []);
+        ImageGenerationRequestDto request = ImageGenerationRequestDtoTestFactory.Create(
+            aspectRatio: "Авто",
+            temperature: ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().Temperature.Default);
         GenerationStartSnapshot startSnapshot = new(
             request.ModelId,
             ApiModelMetadataTestCatalog.NanoBanana2DisplayName,

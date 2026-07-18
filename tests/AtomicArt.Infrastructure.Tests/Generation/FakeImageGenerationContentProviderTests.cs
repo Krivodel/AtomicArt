@@ -78,14 +78,10 @@ public sealed class FakeImageGenerationContentProviderTests
             "image/png",
             attachedContent);
 
-        return new ImageGenerationRequestDto(
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            "Prompt",
-            "Авто",
-            "1k",
-            1d,
-            1,
-            [attachedImage]);
+        return ImageGenerationRequestDtoTestFactory.Create(
+            aspectRatio: "Авто",
+            resolution: "1k",
+            attachedImages: new List<AttachedImageDto> { attachedImage });
     }
 
     private static ImageGenerationContentProviderContext CreateContext(

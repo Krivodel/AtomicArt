@@ -59,14 +59,10 @@ internal sealed class DelayedImageGenerationApiClient : IImageGenerationApiClien
 
     private static ImageGenerationRequestDto CreateDefaultRequest()
     {
-        return new ImageGenerationRequestDto(
-            "test-model",
-            "Prompt",
-            "1:1",
-            "1k",
-            1d,
-            1,
-            []);
+        return ImageGenerationRequestDtoTestFactory.Create(
+            modelId: "test-model",
+            aspectRatio: "1:1",
+            resolution: "1k");
     }
 
     private bool HasProviderCredential()

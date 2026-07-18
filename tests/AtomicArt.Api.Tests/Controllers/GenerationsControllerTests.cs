@@ -474,14 +474,11 @@ public sealed class GenerationsControllerTests
             .Models
             .Single(model => model.Id == modelId);
 
-        return new ImageGenerationRequestDto(
-            modelId,
-            "Prompt",
-            metadata.AspectRatios.First(),
-            metadata.Resolutions.First(),
-            metadata.Temperature.Default,
-            1,
-            []);
+        return ImageGenerationRequestDtoTestFactory.Create(
+            modelId: modelId,
+            aspectRatio: metadata.AspectRatios.First(),
+            resolution: metadata.Resolutions.First(),
+            temperature: metadata.Temperature.Default);
     }
 
     private static WebApplicationFactory<Program> CreateFactoryWithTestGeneration(string contentRoot)
