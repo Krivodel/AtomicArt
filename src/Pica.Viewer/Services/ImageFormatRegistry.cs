@@ -6,8 +6,8 @@ public sealed class ImageFormatRegistry : IImageFormatRegistry
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             [PicaImageFormats.PngExtension] = PicaImageFormats.PngContentType,
-            [".jpg"] = "image/jpeg",
-            [".jpeg"] = "image/jpeg",
+            [".jpg"] = PicaImageFormats.JpegContentType,
+            [".jpeg"] = PicaImageFormats.JpegContentType,
             [".webp"] = "image/webp",
             [".bmp"] = "image/bmp",
             [".gif"] = "image/gif",

@@ -62,7 +62,9 @@ public sealed class ViewerActionDispatcher : IViewerActionDispatcher
         }
 
         Directory.CreateDirectory(_payloadDirectory);
-        string filePath = Path.Combine(_payloadDirectory, $"{Guid.NewGuid():N}.png");
+        string filePath = Path.Combine(
+            _payloadDirectory,
+            $"{Guid.NewGuid():N}{PicaImageFormats.PngExtension}");
         await using FileStream stream = new(
             filePath,
             FileMode.CreateNew,
