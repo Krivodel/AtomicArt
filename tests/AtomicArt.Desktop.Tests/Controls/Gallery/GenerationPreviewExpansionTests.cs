@@ -32,95 +32,83 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         {
             Dispatch(() =>
             {
-                GenerationItemViewModel item = CreateItem();
-                item.ImagePath = imagePath;
-                ObservableCollection<GenerationItemViewModel> items = [item];
-                AnimatedGalleryControl gallery = new(CreateSceneFactory())
-                {
-                    Items = items
-                };
-                Window window = Show(gallery, 640d, 260d);
+                PreviewTestContext context = CreateScenario(imagePath);
 
                 try
                 {
-                    GenerationCardControl card = GetGalleryPanel(gallery)
-                        .Children
-                        .OfType<GenerationCardControl>()
-                        .Single();
-                    Grid previewHost = card.FindControl<Grid>("PreviewExpansionHost")
-                        ?? throw new InvalidOperationException("Generation preview host was not found.");
-                    Panel originalParent = previewHost.Parent as Panel
+                    Panel originalParent = context.PreviewHost.Parent as Panel
                         ?? throw new InvalidOperationException("Generation preview parent was not found.");
-                    ScrollViewer scrollViewer = GetGalleryScrollViewer(gallery);
-                    ScrollContentPresenter scrollPresenter = scrollViewer
+                    ScrollContentPresenter scrollPresenter = context.ScrollViewer
                         .GetVisualDescendants()
                         .OfType<ScrollContentPresenter>()
                         .Single();
-                    bool originalScrollViewerClipToBounds = scrollViewer.ClipToBounds;
-                    object? originalScrollViewerClip = scrollViewer.Clip;
+                    bool originalScrollViewerClipToBounds = context.ScrollViewer.ClipToBounds;
+                    object? originalScrollViewerClip = context.ScrollViewer.Clip;
                     bool originalPresenterClipToBounds = scrollPresenter.ClipToBounds;
-                    Point? cardPosition = card.TranslatePoint(new Point(0d, 0d), window);
+                    Point? cardPosition = context.Card.TranslatePoint(
+                        new Point(0d, 0d),
+                        context.Window);
                     cardPosition.Should().NotBeNull();
                     Point previewCenter = cardPosition.Value + new Vector(110d, 110d);
                     originalScrollViewerClipToBounds.Should().BeFalse();
                     originalScrollViewerClip.Should().BeNull();
 
-                    window.MouseMove(previewCenter, RawInputModifiers.Shift);
-                    window.CaptureRenderedFrame();
+                    context.Window.MouseMove(previewCenter, RawInputModifiers.Shift);
+                    context.Window.CaptureRenderedFrame();
 
-                    previewHost.Parent.Should().BeSameAs(originalParent);
-                    GetOverlayCanvas(gallery).Children.Should().NotContain(previewHost);
-                    previewHost.Width.Should().Be(748d);
-                    scrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
-                    scrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
+                    context.PreviewHost.Parent.Should().BeSameAs(originalParent);
+                    GetOverlayCanvas(context.Gallery).Children.Should().NotContain(context.PreviewHost);
+                    context.PreviewHost.Width.Should().Be(748d);
+                    context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
+                    context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
                     scrollPresenter.ClipToBounds.Should().BeFalse();
-                    card.ZIndex.Should().Be(1001);
+                    context.Card.ZIndex.Should().Be(1001);
 
-                    bool allPreviewAncestorsAllowOverflow = previewHost
+                    bool allPreviewAncestorsAllowOverflow = context.PreviewHost
                         .GetVisualAncestors()
-                        .TakeWhile(visual => !ReferenceEquals(visual, scrollViewer))
+                        .TakeWhile(visual => !ReferenceEquals(visual, context.ScrollViewer))
                         .All(visual => visual is { ClipToBounds: false, Clip: null });
                     allPreviewAncestorsAllowOverflow.Should().BeTrue();
 
-                    scrollViewer.Offset = new Vector(0d, 40d);
-                    window.CaptureRenderedFrame();
+                    context.ScrollViewer.Offset = new Vector(0d, 40d);
+                    context.Window.CaptureRenderedFrame();
 
-                    previewHost.Parent.Should().BeSameAs(originalParent);
-                    GetOverlayCanvas(gallery).Children.Should().NotContain(previewHost);
-                    previewHost.Width.Should().Be(748d);
-                    scrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
-                    scrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
+                    context.PreviewHost.Parent.Should().BeSameAs(originalParent);
+                    GetOverlayCanvas(context.Gallery).Children.Should().NotContain(context.PreviewHost);
+                    context.PreviewHost.Width.Should().Be(748d);
+                    context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
+                    context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
 
-                    Point? viewportPosition = scrollViewer.TranslatePoint(
+                    Point? viewportPosition = context.ScrollViewer.TranslatePoint(
                         new Point(0d, 0d),
-                        window);
+                        context.Window);
                     viewportPosition.Should().NotBeNull();
                     Point pointerOverInfo = new(
                         previewCenter.X,
                         viewportPosition.Value.Y + 200d);
-                    window.MouseMove(pointerOverInfo, RawInputModifiers.Shift);
-                    window.CaptureRenderedFrame();
+                    context.Window.MouseMove(pointerOverInfo, RawInputModifiers.Shift);
+                    context.Window.CaptureRenderedFrame();
 
-                    previewHost.Width.Should().Be(220d);
-                    card.ZIndex.Should().Be(1000);
+                    context.PreviewHost.Width.Should().Be(220d);
+                    context.Card.ZIndex.Should().Be(1000);
 
-                    scrollViewer.Offset = new Vector(0d, 0d);
-                    window.CaptureRenderedFrame();
+                    context.ScrollViewer.Offset = new Vector(0d, 0d);
+                    context.Window.CaptureRenderedFrame();
 
-                    previewHost.Width.Should().Be(748d);
-                    card.ZIndex.Should().Be(1001);
+                    context.PreviewHost.Width.Should().Be(748d);
+                    context.Card.ZIndex.Should().Be(1001);
 
-                    window.Content = null;
-                    window.CaptureRenderedFrame();
+                    context.Window.Content = null;
+                    context.Window.CaptureRenderedFrame();
 
-                    previewHost.Parent.Should().BeSameAs(originalParent);
-                    scrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
-                    scrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
+                    context.PreviewHost.Parent.Should().BeSameAs(originalParent);
+                    context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
+                    context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
                     scrollPresenter.ClipToBounds.Should().Be(originalPresenterClipToBounds);
                 }
                 finally
                 {
-                    window.Close();
+                    context.Window.Close();
                 }
             });
         }
@@ -144,45 +132,34 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         {
             Dispatch(() =>
             {
-                GenerationItemViewModel item = CreateItem();
-                item.ImagePath = imagePath;
-                AnimatedGalleryControl gallery = new(CreateSceneFactory())
-                {
-                    Items = new ObservableCollection<GenerationItemViewModel> { item }
-                };
-                Window window = Show(gallery, 640d, 260d);
+                PreviewTestContext context = CreateScenario(imagePath);
 
                 try
                 {
-                    GenerationCardControl card = GetGalleryPanel(gallery)
-                        .Children
-                        .OfType<GenerationCardControl>()
-                        .Single();
-                    Grid previewHost = card.FindControl<Grid>("PreviewExpansionHost")
-                        ?? throw new InvalidOperationException("Generation preview host was not found.");
-                    ScrollViewer scrollViewer = GetGalleryScrollViewer(gallery);
-                    Point? cardPosition = card.TranslatePoint(new Point(0d, 0d), window);
+                    Point? cardPosition = context.Card.TranslatePoint(
+                        new Point(0d, 0d),
+                        context.Window);
                     cardPosition.Should().NotBeNull();
                     Point pointerPosition = cardPosition.Value + new Vector(110d, 150d);
 
-                    window.MouseMove(pointerPosition, RawInputModifiers.None);
-                    scrollViewer.Offset = new Vector(0d, 40d);
-                    window.CaptureRenderedFrame();
+                    context.Window.MouseMove(pointerPosition, RawInputModifiers.None);
+                    context.ScrollViewer.Offset = new Vector(0d, 40d);
+                    context.Window.CaptureRenderedFrame();
 
-                    previewHost.Width.Should().Be(220d);
+                    context.PreviewHost.Width.Should().Be(220d);
 
-                    window.KeyPress(
+                    context.Window.KeyPress(
                         Key.LeftShift,
                         RawInputModifiers.Shift,
                         PhysicalKey.ShiftLeft,
                         null);
-                    window.CaptureRenderedFrame();
+                    context.Window.CaptureRenderedFrame();
 
-                    previewHost.Width.Should().Be(748d);
+                    context.PreviewHost.Width.Should().Be(748d);
                 }
                 finally
                 {
-                    window.Close();
+                    context.Window.Close();
                 }
             });
         }
@@ -191,5 +168,38 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             File.Delete(imagePath);
         }
     }
+
+    private static PreviewTestContext CreateScenario(string imagePath)
+    {
+        GenerationItemViewModel item = CreateItem();
+        item.ImagePath = imagePath;
+        ObservableCollection<GenerationItemViewModel> items = [item];
+        AnimatedGalleryControl gallery = new(CreateSceneFactory())
+        {
+            Items = items
+        };
+        Window window = Show(gallery, 640d, 260d);
+        GenerationCardControl card = GetGalleryPanel(gallery)
+            .Children
+            .OfType<GenerationCardControl>()
+            .Single();
+        Grid previewHost = card.FindControl<Grid>("PreviewExpansionHost")
+            ?? throw new InvalidOperationException("Generation preview host was not found.");
+        ScrollViewer scrollViewer = GetGalleryScrollViewer(gallery);
+
+        return new PreviewTestContext(
+            gallery,
+            window,
+            card,
+            previewHost,
+            scrollViewer);
+    }
+
+    private sealed record PreviewTestContext(
+        AnimatedGalleryControl Gallery,
+        Window Window,
+        GenerationCardControl Card,
+        Grid PreviewHost,
+        ScrollViewer ScrollViewer);
 
 }
