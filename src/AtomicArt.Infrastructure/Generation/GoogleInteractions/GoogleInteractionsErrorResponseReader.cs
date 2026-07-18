@@ -44,7 +44,10 @@ internal static class GoogleInteractionsErrorResponseReader
             using JsonDocument document = JsonDocument.Parse(body);
             JsonElement root = document.RootElement;
 
-            if (!TryGetProperty(root, "error", out JsonElement errorElement))
+            if (!GoogleInteractionsJsonElementReader.TryGetProperty(
+                root,
+                "error",
+                out JsonElement errorElement))
             {
                 return CreateMalformedDiagnostics(body.Length);
             }
@@ -69,7 +72,10 @@ internal static class GoogleInteractionsErrorResponseReader
     private static int? GetErrorCode(JsonElement errorElement)
     {
         if (errorElement.ValueKind != JsonValueKind.Object
-            || !TryGetProperty(errorElement, "code", out JsonElement codeElement)
+            || !GoogleInteractionsJsonElementReader.TryGetProperty(
+                errorElement,
+                "code",
+                out JsonElement codeElement)
             || codeElement.ValueKind != JsonValueKind.Number
             || !codeElement.TryGetInt32(out int errorCode))
         {
@@ -92,7 +98,10 @@ internal static class GoogleInteractionsErrorResponseReader
     private static string? GetStringProperty(JsonElement element, string propertyName)
     {
         if (element.ValueKind != JsonValueKind.Object
-            || !TryGetProperty(element, propertyName, out JsonElement propertyElement)
+            || !GoogleInteractionsJsonElementReader.TryGetProperty(
+                element,
+                propertyName,
+                out JsonElement propertyElement)
             || propertyElement.ValueKind != JsonValueKind.String)
         {
             return null;
@@ -139,22 +148,6 @@ internal static class GoogleInteractionsErrorResponseReader
         return ProviderStatusRegex.IsMatch(normalizedStatus)
             ? normalizedStatus
             : null;
-    }
-
-    private static bool TryGetProperty(
-        JsonElement element,
-        string propertyName,
-        out JsonElement value)
-    {
-        if (element.ValueKind == JsonValueKind.Object
-            && element.TryGetProperty(propertyName, out value))
-        {
-            return true;
-        }
-
-        value = default;
-
-        return false;
     }
 
     private static GoogleInteractionsErrorDiagnostics CreateMalformedDiagnostics(

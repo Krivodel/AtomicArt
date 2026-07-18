@@ -54,8 +54,14 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static void ValidateStatus(JsonElement root)
     {
-        if (!TryGetProperty(root, "status", out JsonElement statusElement)
-            && !TryGetProperty(root, "state", out statusElement))
+        if (!GoogleInteractionsJsonElementReader.TryGetProperty(
+            root,
+            "status",
+            out JsonElement statusElement)
+            && !GoogleInteractionsJsonElementReader.TryGetProperty(
+                root,
+                "state",
+                out statusElement))
         {
             return;
         }
@@ -109,7 +115,10 @@ internal sealed class GoogleInteractionsResponseParser
         JsonElement root,
         List<GoogleInteractionImageContent> images)
     {
-        if (!TryGetProperty(root, "steps", out JsonElement stepsElement)
+        if (!GoogleInteractionsJsonElementReader.TryGetProperty(
+            root,
+            "steps",
+            out JsonElement stepsElement)
             || stepsElement.ValueKind != JsonValueKind.Array)
         {
             return;
@@ -162,7 +171,10 @@ internal sealed class GoogleInteractionsResponseParser
         string propertyName,
         List<GoogleInteractionImageContent> images)
     {
-        if (!TryGetProperty(element, propertyName, out JsonElement propertyElement))
+        if (!GoogleInteractionsJsonElementReader.TryGetProperty(
+            element,
+            propertyName,
+            out JsonElement propertyElement))
         {
             return;
         }
@@ -252,7 +264,7 @@ internal sealed class GoogleInteractionsResponseParser
             category,
             ExtractStatus(root),
             TryGetProperty(root, "output_image", "outputImage", out _),
-            TryGetProperty(root, "output", out _),
+            GoogleInteractionsJsonElementReader.TryGetProperty(root, "output", out _),
             TryGetProperty(root, "output_images", "outputImages", out _),
             textContentDiagnostics.HasStepsTextContent,
             textContentDiagnostics.HasModelOutputTextContent,
@@ -347,7 +359,10 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static GenerationUsageDto ExtractUsage(JsonElement root)
     {
-        if (!TryGetProperty(root, "usage", out JsonElement usageElement)
+        if (!GoogleInteractionsJsonElementReader.TryGetProperty(
+            root,
+            "usage",
+            out JsonElement usageElement)
             || usageElement.ValueKind != JsonValueKind.Object)
         {
             throw new GoogleInteractionsException(
@@ -466,9 +481,18 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static int ExtractModalityTokenCount(JsonElement element)
     {
-        if (!TryGetProperty(element, "tokens", out JsonElement tokensElement)
-            && !TryGetProperty(element, "token_count", out tokensElement)
-            && !TryGetProperty(element, "tokenCount", out tokensElement))
+        if (!GoogleInteractionsJsonElementReader.TryGetProperty(
+            element,
+            "tokens",
+            out JsonElement tokensElement)
+            && !GoogleInteractionsJsonElementReader.TryGetProperty(
+                element,
+                "token_count",
+                out tokensElement)
+            && !GoogleInteractionsJsonElementReader.TryGetProperty(
+                element,
+                "tokenCount",
+                out tokensElement))
         {
             throw CreateInvalidUsageException();
         }
@@ -514,7 +538,10 @@ internal sealed class GoogleInteractionsResponseParser
     {
         value = null;
 
-        if (!TryGetProperty(element, name, out JsonElement propertyElement)
+        if (!GoogleInteractionsJsonElementReader.TryGetProperty(
+            element,
+            name,
+            out JsonElement propertyElement)
             || propertyElement.ValueKind != JsonValueKind.String)
         {
             return false;
@@ -546,27 +573,22 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static bool TryGetProperty(
         JsonElement element,
-        string propertyName,
-        out JsonElement propertyElement)
-    {
-        propertyElement = default;
-
-        return element.ValueKind == JsonValueKind.Object
-            && element.TryGetProperty(propertyName, out propertyElement);
-    }
-
-    private static bool TryGetProperty(
-        JsonElement element,
         string firstName,
         string secondName,
         out JsonElement propertyElement)
     {
-        if (TryGetProperty(element, firstName, out propertyElement))
+        if (GoogleInteractionsJsonElementReader.TryGetProperty(
+            element,
+            firstName,
+            out propertyElement))
         {
             return true;
         }
 
-        return TryGetProperty(element, secondName, out propertyElement);
+        return GoogleInteractionsJsonElementReader.TryGetProperty(
+            element,
+            secondName,
+            out propertyElement);
     }
 
     private static bool IsPropertyName(JsonProperty property, string name)
