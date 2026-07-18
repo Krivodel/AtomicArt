@@ -678,8 +678,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         viewModel.Prompt.Should().Be("restored prompt");
     }
 
-    [Fact]
-    public async Task RestorePanelStateCommand_WithUnsupportedOptions_RestoresModelDefaultsWithoutSelectionResetNotifications()
+    [Theory]
+    [InlineData("999:1", "999K", 999)]
+    [InlineData("", "", 0)]
+    public async Task RestorePanelStateCommand_WithUnavailableOptions_RestoresModelDefaultsWithoutSelectionResetNotifications(
+        string aspectRatio,
+        string resolution,
+        int generationCount)
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
         RecordingGenerationPanelStateService stateService = new()
@@ -688,9 +693,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             {
                 PanelId = GenerationPanelIds.NanoBanana,
                 SelectedModelId = metadata.Id,
-                AspectRatio = "999:1",
-                Resolution = "999K",
-                GenerationCount = 999,
+                AspectRatio = aspectRatio,
+                Resolution = resolution,
+                GenerationCount = generationCount,
                 Prompt = "restored prompt"
             }
         };
@@ -705,41 +710,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         viewModel.SelectedResolution.Should().Be(metadata.Resolutions.First());
         viewModel.GenerationCount.Should().Be(metadata.GenerationCounts.First());
         viewModel.Prompt.Should().Be("restored prompt");
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedAspectRatio)).Should().Be(0);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedResolution)).Should().Be(0);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.GenerationCount)).Should().Be(0);
-    }
-
-    [Fact]
-    public async Task RestorePanelStateCommand_WithEmptyOptions_RestoresModelDefaultsWithoutSelectionResetNotifications()
-    {
-        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
-        RecordingGenerationPanelStateService stateService = new()
-        {
-            StateToLoad = new GenerationPanelState
-            {
-                PanelId = GenerationPanelIds.NanoBanana,
-                SelectedModelId = metadata.Id,
-                AspectRatio = string.Empty,
-                Resolution = string.Empty,
-                GenerationCount = 0,
-                Prompt = "restored prompt"
-            }
-        };
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            generationPanelStateService: stateService);
-        SelectionValueResetRecorder resetRecorder = new(viewModel);
-
-        await viewModel.RestorePanelStateCommand.ExecuteAsync(null);
-
-        viewModel.SelectedModel?.Id.Should().Be(metadata.Id);
-        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.First());
-        viewModel.SelectedResolution.Should().Be(metadata.Resolutions.First());
-        viewModel.GenerationCount.Should().Be(metadata.GenerationCounts.First());
-        viewModel.Prompt.Should().Be("restored prompt");
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedAspectRatio)).Should().Be(0);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedResolution)).Should().Be(0);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.GenerationCount)).Should().Be(0);
+        resetRecorder.AssertCounts(0, 0, 0);
     }
 
     [Fact]
@@ -1181,41 +1152,14 @@ public sealed class UniversalNanoBananaPanelViewModelTests
                 [1])));
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
-        viewModel.PropertyChanged += (_, args) =>
-        {
-            if (string.Equals(
-                    args.PropertyName,
-                    nameof(UniversalNanoBananaPanelViewModel.AspectRatios),
-                    StringComparison.Ordinal))
-            {
-                viewModel.SelectedAspectRatio = string.Empty;
-            }
-
-            if (string.Equals(
-                    args.PropertyName,
-                    nameof(UniversalNanoBananaPanelViewModel.Resolutions),
-                    StringComparison.Ordinal))
-            {
-                viewModel.SelectedResolution = string.Empty;
-            }
-
-            if (string.Equals(
-                    args.PropertyName,
-                    nameof(UniversalNanoBananaPanelViewModel.GenerationCounts),
-                    StringComparison.Ordinal))
-            {
-                viewModel.GenerationCount = 0;
-            }
-        };
+        SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(viewModel);
 
         viewModel.SelectedModel = secondModel;
 
         viewModel.SelectedAspectRatio.Should().Be("1:1");
         viewModel.SelectedResolution.Should().Be("1K");
         viewModel.GenerationCount.Should().Be(1);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedAspectRatio)).Should().Be(1);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedResolution)).Should().Be(1);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.GenerationCount)).Should().Be(1);
+        resetRecorder.AssertCounts(1, 1, 1);
     }
 
     [Fact]
@@ -1231,41 +1175,14 @@ public sealed class UniversalNanoBananaPanelViewModelTests
                 [4, 1])));
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
-        viewModel.PropertyChanged += (_, args) =>
-        {
-            if (string.Equals(
-                    args.PropertyName,
-                    nameof(UniversalNanoBananaPanelViewModel.AspectRatios),
-                    StringComparison.Ordinal))
-            {
-                viewModel.SelectedAspectRatio = string.Empty;
-            }
-
-            if (string.Equals(
-                    args.PropertyName,
-                    nameof(UniversalNanoBananaPanelViewModel.Resolutions),
-                    StringComparison.Ordinal))
-            {
-                viewModel.SelectedResolution = string.Empty;
-            }
-
-            if (string.Equals(
-                    args.PropertyName,
-                    nameof(UniversalNanoBananaPanelViewModel.GenerationCounts),
-                    StringComparison.Ordinal))
-            {
-                viewModel.GenerationCount = 0;
-            }
-        };
+        SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(viewModel);
 
         viewModel.SelectedModel = secondModel;
 
         viewModel.SelectedAspectRatio.Should().Be("16:9");
         viewModel.SelectedResolution.Should().Be("2K");
         viewModel.GenerationCount.Should().Be(4);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedAspectRatio)).Should().Be(0);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedResolution)).Should().Be(0);
-        resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.GenerationCount)).Should().Be(0);
+        resetRecorder.AssertCounts(0, 0, 0);
     }
 
     [Fact]
@@ -1611,6 +1528,37 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         viewModel.GenerateButtonText.Should().Contain("USD");
     }
 
+    private static void SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(
+        UniversalNanoBananaPanelViewModel viewModel)
+    {
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (string.Equals(
+                    args.PropertyName,
+                    nameof(UniversalNanoBananaPanelViewModel.AspectRatios),
+                    StringComparison.Ordinal))
+            {
+                viewModel.SelectedAspectRatio = string.Empty;
+            }
+
+            if (string.Equals(
+                    args.PropertyName,
+                    nameof(UniversalNanoBananaPanelViewModel.Resolutions),
+                    StringComparison.Ordinal))
+            {
+                viewModel.SelectedResolution = string.Empty;
+            }
+
+            if (string.Equals(
+                    args.PropertyName,
+                    nameof(UniversalNanoBananaPanelViewModel.GenerationCounts),
+                    StringComparison.Ordinal))
+            {
+                viewModel.GenerationCount = 0;
+            }
+        };
+    }
+
     private static UniversalNanoBananaPanelViewModel CreateViewModel(
         IImageGenerationApiClient? apiClient = null,
         IGenerationLifecycleEventHub? lifecycleEventHub = null,
@@ -1885,6 +1833,19 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         public int CountFor(string propertyName)
         {
             return _counts.GetValueOrDefault(propertyName);
+        }
+
+        public void AssertCounts(
+            int aspectRatioCount,
+            int resolutionCount,
+            int generationCount)
+        {
+            CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedAspectRatio)).Should()
+                .Be(aspectRatioCount);
+            CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedResolution)).Should()
+                .Be(resolutionCount);
+            CountFor(nameof(UniversalNanoBananaPanelViewModel.GenerationCount)).Should()
+                .Be(generationCount);
         }
 
         private void OnSelectionValueReset(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
