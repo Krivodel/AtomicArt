@@ -47,13 +47,12 @@ public sealed class GenerationsControllerTests
     public async Task CreateAsync_WithValidRequest_ReturnsOkResponse()
     {
         GenerationBatchDto batch = CreateBatchWithContent();
-        Mock<IMediator> mediator = CreateMediator(Result<GenerationBatchDto>.Success(batch));
-        GenerationsController controller = CreateController(
-            mediator.Object,
-            TestGenerationCredentials.ProviderCredential);
-        ImageGenerationRequestDto request = CreateRequest();
+        ControllerTestContext context = CreateControllerTestContext(
+            Result<GenerationBatchDto>.Success(batch));
 
-        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
+        IActionResult actionResult = await context.Controller.CreateAsync(
+            context.Request,
+            CancellationToken.None);
 
         OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().Be(batch);
@@ -61,15 +60,15 @@ public sealed class GenerationsControllerTests
         responseJson.Should().Contain("\"imageContent\"");
         responseJson.Should().NotContain("previewContent");
         responseJson.Should().NotContain("previewPath");
-        mediator.Verify(
+        context.Mediator.Verify(
             currentMediator => currentMediator.Send(
                 It.Is<CreateImageGenerationCommand>(command =>
-                    command.Request.ModelId == request.ModelId
-                    && command.Request.Prompt == request.Prompt
-                    && command.Request.AspectRatio == request.AspectRatio
-                    && command.Request.Resolution == request.Resolution
-                    && command.Request.GenerationCount == request.GenerationCount
-                    && ReferenceEquals(command.Request.AttachedImages, request.AttachedImages)
+                    command.Request.ModelId == context.Request.ModelId
+                    && command.Request.Prompt == context.Request.Prompt
+                    && command.Request.AspectRatio == context.Request.AspectRatio
+                    && command.Request.Resolution == context.Request.Resolution
+                    && command.Request.GenerationCount == context.Request.GenerationCount
+                    && ReferenceEquals(command.Request.AttachedImages, context.Request.AttachedImages)
                     && command.ProviderCredential == TestGenerationCredentials.ProviderCredential),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -79,19 +78,18 @@ public sealed class GenerationsControllerTests
     public async Task CreateAsync_WithHttpsBoundary_ReturnsOkResponse()
     {
         GenerationBatchDto batch = CreateBatchWithContent();
-        Mock<IMediator> mediator = CreateMediator(Result<GenerationBatchDto>.Success(batch));
-        GenerationsController controller = CreateController(
-            mediator.Object,
-            TestGenerationCredentials.ProviderCredential,
+        ControllerTestContext context = CreateControllerTestContext(
+            Result<GenerationBatchDto>.Success(batch),
             isHttps: true,
             remoteIpAddress: IPAddress.Parse("203.0.113.10"));
-        ImageGenerationRequestDto request = CreateRequest();
 
-        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
+        IActionResult actionResult = await context.Controller.CreateAsync(
+            context.Request,
+            CancellationToken.None);
 
         OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().Be(batch);
-        mediator.Verify(
+        context.Mediator.Verify(
             currentMediator => currentMediator.Send(
                 It.IsAny<CreateImageGenerationCommand>(),
                 It.IsAny<CancellationToken>()),
@@ -102,19 +100,18 @@ public sealed class GenerationsControllerTests
     public async Task CreateAsync_WithNonLoopbackHttpBoundary_ReturnsOkResponse()
     {
         GenerationBatchDto batch = CreateBatchWithContent();
-        Mock<IMediator> mediator = CreateMediator(Result<GenerationBatchDto>.Success(batch));
-        GenerationsController controller = CreateController(
-            mediator.Object,
-            TestGenerationCredentials.ProviderCredential,
+        ControllerTestContext context = CreateControllerTestContext(
+            Result<GenerationBatchDto>.Success(batch),
             isHttps: false,
             remoteIpAddress: IPAddress.Parse("203.0.113.10"));
-        ImageGenerationRequestDto request = CreateRequest();
 
-        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
+        IActionResult actionResult = await context.Controller.CreateAsync(
+            context.Request,
+            CancellationToken.None);
 
         OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().Be(batch);
-        mediator.Verify(
+        context.Mediator.Verify(
             currentMediator => currentMediator.Send(
                 It.IsAny<CreateImageGenerationCommand>(),
                 It.IsAny<CancellationToken>()),
@@ -227,11 +224,11 @@ public sealed class GenerationsControllerTests
         Result<GenerationBatchDto> result = Result<GenerationBatchDto>.ValidationError(
             GenerationErrorCodes.ModelRequestValidation,
             "Invalid request");
-        Mock<IMediator> mediator = CreateMediator(result);
-        GenerationsController controller = CreateController(mediator.Object);
-        ImageGenerationRequestDto request = CreateRequest();
+        ControllerTestContext context = CreateControllerTestContext(result);
 
-        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
+        IActionResult actionResult = await context.Controller.CreateAsync(
+            context.Request,
+            CancellationToken.None);
 
         ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
@@ -245,17 +242,20 @@ public sealed class GenerationsControllerTests
         Result<GenerationBatchDto> result = Result<GenerationBatchDto>.ValidationError(
             GenerationErrorCodes.ModelRequestValidation,
             "Invalid attachment");
-        Mock<IMediator> mediator = CreateMediator(result);
-        GenerationsController controller = CreateController(mediator.Object);
         ImageGenerationRequestDto request = CreateRequestWithNullAttachedImage();
+        ControllerTestContext context = CreateControllerTestContext(
+            result,
+            request: request);
 
-        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
+        IActionResult actionResult = await context.Controller.CreateAsync(
+            context.Request,
+            CancellationToken.None);
 
         ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
         objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
         problemDetails.Extensions.Should().ContainKey("code");
-        mediator.Verify(
+        context.Mediator.Verify(
             currentMediator => currentMediator.Send(
                 It.Is<CreateImageGenerationCommand>(command => CommandHasSingleNullAttachedImage(command)),
                 It.IsAny<CancellationToken>()),
@@ -308,11 +308,11 @@ public sealed class GenerationsControllerTests
         Result<GenerationBatchDto> result = Result<GenerationBatchDto>.NotFound(
             GenerationErrorCodes.ModelNotFound,
             "Model not found");
-        Mock<IMediator> mediator = CreateMediator(result);
-        GenerationsController controller = CreateController(mediator.Object);
-        ImageGenerationRequestDto request = CreateRequest();
+        ControllerTestContext context = CreateControllerTestContext(result);
 
-        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
+        IActionResult actionResult = await context.Controller.CreateAsync(
+            context.Request,
+            CancellationToken.None);
 
         ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
@@ -326,11 +326,11 @@ public sealed class GenerationsControllerTests
     {
         string rawErrorMessage = "Provider failed at C:\\internal\\path";
         Result<GenerationBatchDto> result = Result<GenerationBatchDto>.Unavailable("ERR-GEN-999", rawErrorMessage);
-        Mock<IMediator> mediator = CreateMediator(result);
-        GenerationsController controller = CreateController(mediator.Object);
-        ImageGenerationRequestDto request = CreateRequest();
+        ControllerTestContext context = CreateControllerTestContext(result);
 
-        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
+        IActionResult actionResult = await context.Controller.CreateAsync(
+            context.Request,
+            CancellationToken.None);
 
         ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
@@ -377,11 +377,11 @@ public sealed class GenerationsControllerTests
         string rawErrorMessage = "Provider failed with secret response body";
         string errorCode = ImageGenerationProviderFailureCatalog.GetErrorCode(failureKind);
         Result<GenerationBatchDto> result = Result<GenerationBatchDto>.Unavailable(errorCode, rawErrorMessage);
-        Mock<IMediator> mediator = CreateMediator(result);
-        GenerationsController controller = CreateController(mediator.Object);
-        ImageGenerationRequestDto request = CreateRequest();
+        ControllerTestContext context = CreateControllerTestContext(result);
 
-        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
+        IActionResult actionResult = await context.Controller.CreateAsync(
+            context.Request,
+            CancellationToken.None);
 
         ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
@@ -389,6 +389,25 @@ public sealed class GenerationsControllerTests
         problemDetails.Detail.Should().NotBe(rawErrorMessage);
         problemDetails.Extensions.Should().ContainKey("code");
         problemDetails.Extensions["code"].Should().Be(errorCode);
+    }
+
+    private static ControllerTestContext CreateControllerTestContext(
+        Result<GenerationBatchDto> result,
+        ImageGenerationRequestDto? request = null,
+        bool isHttps = false,
+        IPAddress? remoteIpAddress = null)
+    {
+        Mock<IMediator> mediator = CreateMediator(result);
+        GenerationsController controller = CreateController(
+            mediator.Object,
+            isHttps: isHttps,
+            remoteIpAddress: remoteIpAddress);
+        ImageGenerationRequestDto generationRequest = request ?? CreateRequest();
+
+        return new ControllerTestContext(
+            controller,
+            mediator,
+            generationRequest);
     }
 
     private static Mock<IMediator> CreateMediator(Result<GenerationBatchDto> result)
@@ -449,11 +468,6 @@ public sealed class GenerationsControllerTests
         return new ConfigurationBuilder()
             .AddInMemoryCollection(values)
             .Build();
-    }
-
-    private static bool CommandHasSingleNullAttachedImage(CreateImageGenerationCommand command)
-    {
-        return command.Request.AttachedImages is [null];
     }
 
     private static ImageGenerationRequestDto CreateRequest()
@@ -586,6 +600,28 @@ public sealed class GenerationsControllerTests
                 }
             }
         };
+    }
+
+    private static bool CommandHasSingleNullAttachedImage(CreateImageGenerationCommand command)
+    {
+        return command.Request.AttachedImages is [null];
+    }
+
+    private sealed class ControllerTestContext
+    {
+        public GenerationsController Controller { get; }
+        public Mock<IMediator> Mediator { get; }
+        public ImageGenerationRequestDto Request { get; }
+
+        public ControllerTestContext(
+            GenerationsController controller,
+            Mock<IMediator> mediator,
+            ImageGenerationRequestDto request)
+        {
+            Controller = controller;
+            Mediator = mediator;
+            Request = request;
+        }
     }
 
     private sealed class TestImageGenerationContentProvider
