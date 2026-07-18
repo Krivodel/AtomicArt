@@ -265,44 +265,18 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithUnsupportedGenerationCount_ReturnsValidationError()
     {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = new(
-            registry,
-            outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+        HandlerTestContext context = new();
         CreateImageGenerationCommand command = CreateCommand(generationCount: 5);
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
 
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
-        outputPlanner.Verify(
-            planner => planner.CreatePlan(
-                It.IsAny<ImageGenerationRequestDto>(),
-                It.IsAny<Guid>(),
-                It.IsAny<string>()),
-            Times.Never);
-        contentProvider.Verify(
-            provider => provider.GetContentAsync(
-                It.IsAny<ImageGenerationContentProviderContext>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        context.AssertValidationRejected(result);
     }
 
     [Fact]
     public async Task Handle_WithTooManyAttachedImages_ReturnsValidationError()
     {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = new(
-            registry,
-            outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+        HandlerTestContext context = new();
         IReadOnlyList<AttachedImageDto> attachedImages = Enumerable
             .Range(0, 15)
             .Select(index => new AttachedImageDto(
@@ -312,21 +286,9 @@ public sealed class CreateImageGenerationHandlerTests
             .ToList();
         CreateImageGenerationCommand command = CreateCommand(attachedImages: attachedImages);
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
 
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
-        outputPlanner.Verify(
-            planner => planner.CreatePlan(
-                It.IsAny<ImageGenerationRequestDto>(),
-                It.IsAny<Guid>(),
-                It.IsAny<string>()),
-            Times.Never);
-        contentProvider.Verify(
-            provider => provider.GetContentAsync(
-                It.IsAny<ImageGenerationContentProviderContext>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        context.AssertValidationRejected(result);
     }
 
     [Fact]
@@ -336,35 +298,16 @@ public sealed class CreateImageGenerationHandlerTests
             maxCount: 3,
             maxSingleFileBytes: PngSignatureLength,
             maxTotalBytes: PngSignatureLength * 3L);
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry(metadata);
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = new(
-            registry,
-            outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+        HandlerTestContext context = new(metadata);
         CreateImageGenerationCommand command = CreateCommand(
             attachedImages:
             [
                 new AttachedImageDto("reference.png", "image/png", CreateLargePngContent(PngSignatureLength + 1))
             ]);
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
 
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
-        outputPlanner.Verify(
-            planner => planner.CreatePlan(
-                It.IsAny<ImageGenerationRequestDto>(),
-                It.IsAny<Guid>(),
-                It.IsAny<string>()),
-            Times.Never);
-        contentProvider.Verify(
-            provider => provider.GetContentAsync(
-                It.IsAny<ImageGenerationContentProviderContext>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        context.AssertValidationRejected(result);
     }
 
     [Fact]
@@ -374,14 +317,7 @@ public sealed class CreateImageGenerationHandlerTests
             maxCount: 3,
             maxSingleFileBytes: PngSignatureLength,
             maxTotalBytes: PngSignatureLength + 1L);
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry(metadata);
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = new(
-            registry,
-            outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+        HandlerTestContext context = new(metadata);
         CreateImageGenerationCommand command = CreateCommand(
             attachedImages:
             [
@@ -389,85 +325,35 @@ public sealed class CreateImageGenerationHandlerTests
                 new AttachedImageDto("reference-2.png", "image/png", CreatePngContent())
             ]);
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
 
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
-        outputPlanner.Verify(
-            planner => planner.CreatePlan(
-                It.IsAny<ImageGenerationRequestDto>(),
-                It.IsAny<Guid>(),
-                It.IsAny<string>()),
-            Times.Never);
-        contentProvider.Verify(
-            provider => provider.GetContentAsync(
-                It.IsAny<ImageGenerationContentProviderContext>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        context.AssertValidationRejected(result);
     }
 
     [Fact]
     public async Task Handle_WithUnsupportedAttachmentContentType_ReturnsValidationError()
     {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = new(
-            registry,
-            outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+        HandlerTestContext context = new();
         CreateImageGenerationCommand command = CreateCommand(
             attachedImages:
             [
                 new AttachedImageDto("reference.gif", "image/gif", CreateGifContent())
             ]);
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
 
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-004");
-        outputPlanner.Verify(
-            planner => planner.CreatePlan(
-                It.IsAny<ImageGenerationRequestDto>(),
-                It.IsAny<Guid>(),
-                It.IsAny<string>()),
-            Times.Never);
-        contentProvider.Verify(
-            provider => provider.GetContentAsync(
-                It.IsAny<ImageGenerationContentProviderContext>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        context.AssertValidationRejected(result);
     }
 
     [Fact]
     public async Task Handle_WithUnknownModel_ReturnsNotFound()
     {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = new(
-            registry,
-            outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+        HandlerTestContext context = new();
         CreateImageGenerationCommand command = CreateCommand(modelId: "unknown");
 
-        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
 
-        result.IsNotFound.Should().BeTrue();
-        result.ErrorCode.Should().Be("ERR-GEN-001");
-        outputPlanner.Verify(
-            planner => planner.CreatePlan(
-                It.IsAny<ImageGenerationRequestDto>(),
-                It.IsAny<Guid>(),
-                It.IsAny<string>()),
-            Times.Never);
-        contentProvider.Verify(
-            provider => provider.GetContentAsync(
-                It.IsAny<ImageGenerationContentProviderContext>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+        context.AssertModelNotFound(result);
     }
 
     [Fact]
@@ -687,6 +573,66 @@ public sealed class CreateImageGenerationHandlerTests
                 maxTotalBytes,
                 metadata.Attachments.SupportedContentTypes)
         };
+    }
+
+    private sealed class HandlerTestContext
+    {
+        public CreateImageGenerationHandler Handler { get; }
+
+        private readonly Mock<IImageGenerationOutputPlanner> _outputPlanner;
+        private readonly Mock<IImageGenerationContentProvider> _contentProvider;
+
+        public HandlerTestContext()
+            : this(MetadataImageModelTestFactory.CreateRegistry())
+        {
+        }
+
+        public HandlerTestContext(GenerationModelMetadataDto metadata)
+            : this(MetadataImageModelTestFactory.CreateRegistry(metadata))
+        {
+        }
+
+        private HandlerTestContext(ImageModelRegistry registry)
+        {
+            _outputPlanner = CreatePlannerMock();
+            _contentProvider = CreateContentProviderMock();
+            Handler = new CreateImageGenerationHandler(
+                registry,
+                _outputPlanner.Object,
+                _contentProvider.Object,
+                new TestDateTimeProvider());
+        }
+
+        public void AssertValidationRejected(Result<GenerationBatchDto> result)
+        {
+            result.IsValidationError.Should().BeTrue();
+            result.ErrorCode.Should().Be(GenerationErrorCodes.ModelRequestValidation);
+
+            AssertExecutionNotStarted();
+        }
+
+        public void AssertModelNotFound(Result<GenerationBatchDto> result)
+        {
+            result.IsNotFound.Should().BeTrue();
+            result.ErrorCode.Should().Be(GenerationErrorCodes.ModelNotFound);
+
+            AssertExecutionNotStarted();
+        }
+
+        private void AssertExecutionNotStarted()
+        {
+            _outputPlanner.Verify(
+                planner => planner.CreatePlan(
+                    It.IsAny<ImageGenerationRequestDto>(),
+                    It.IsAny<Guid>(),
+                    It.IsAny<string>()),
+                Times.Never);
+            _contentProvider.Verify(
+                provider => provider.GetContentAsync(
+                    It.IsAny<ImageGenerationContentProviderContext>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
     }
 
     private sealed class TestDateTimeProvider : IDateTimeProvider
