@@ -455,21 +455,10 @@ internal sealed class ImageViewerView : IDisposable
             clickHandler,
             0d,
             DestructiveIconBrush);
-        button.HorizontalAlignment = HorizontalAlignment.Right;
-        button.VerticalAlignment = VerticalAlignment.Top;
-        button.Margin = new Thickness(0d);
-        button.Width = ImageViewerVisualMetrics.CloseRevealSize;
-        button.Height = ImageViewerVisualMetrics.CloseRevealSize;
-        button.Background = Brushes.Transparent;
-        button.BorderBrush = Brushes.Transparent;
-        button.BorderThickness = new Thickness(0d);
-        button.CornerRadius = new CornerRadius(0d);
         button.HorizontalContentAlignment = HorizontalAlignment.Center;
         button.Padding = new Thickness(0d);
         button.VerticalContentAlignment = VerticalAlignment.Center;
-        button.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
-        button.Transitions = CreateOpacityTransition(ControlsFadeDuration);
-        WrapButtonContentWithFloatingShadow(button);
+        ConfigureWindowCornerButton(button, 0d);
 
         return button;
     }
@@ -481,12 +470,19 @@ internal sealed class ImageViewerView : IDisposable
             clickHandler,
             0d,
             Brushes.White);
+        ConfigureWindowCornerButton(button, ImageViewerVisualMetrics.CloseRevealSize);
+
+        return button;
+    }
+
+    private static void ConfigureWindowCornerButton(Button button, double rightMargin)
+    {
         button.HorizontalAlignment = HorizontalAlignment.Right;
         button.VerticalAlignment = VerticalAlignment.Top;
         button.Margin = new Thickness(
             0d,
             0d,
-            ImageViewerVisualMetrics.CloseRevealSize,
+            rightMargin,
             0d);
         button.Width = ImageViewerVisualMetrics.CloseRevealSize;
         button.Height = ImageViewerVisualMetrics.CloseRevealSize;
@@ -497,8 +493,6 @@ internal sealed class ImageViewerView : IDisposable
         button.Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity;
         button.Transitions = CreateOpacityTransition(ControlsFadeDuration);
         WrapButtonContentWithFloatingShadow(button);
-
-        return button;
     }
 
     private static Button CreateFullscreenSettingsButton(EventHandler<RoutedEventArgs> clickHandler)
