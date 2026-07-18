@@ -226,18 +226,20 @@ public sealed class JsonModelMetadataStartupLoaderTests
         }
     }
 
-    [Fact]
-    public void Load_WithMissingRequiredList_ThrowsInvalidOperationException()
+    [Theory]
+    [InlineData("aspectRatios")]
+    [InlineData("pricing")]
+    public void Load_WithMissingRequiredProperty_ThrowsInvalidOperationException(
+        string propertyName)
     {
-        const string PropertyName = "aspectRatios";
-        string path = CreateTempFile(CreateJsonWithoutModelProperty(PropertyName));
+        string path = CreateTempFile(CreateJsonWithoutModelProperty(propertyName));
 
         try
         {
             Action action = () => Load(path);
 
             action.Should().Throw<InvalidOperationException>()
-                .WithMessage($"*{PropertyName}*");
+                .WithMessage($"*{propertyName}*");
         }
         finally
         {
@@ -264,57 +266,20 @@ public sealed class JsonModelMetadataStartupLoaderTests
         }
     }
 
-    [Fact]
-    public void Load_WithMissingPricing_ThrowsInvalidOperationException()
+    [Theory]
+    [InlineData("provider")]
+    [InlineData("panelId")]
+    public void Load_WithMissingNamedProperty_ThrowsInvalidOperationExceptionWithModelName(
+        string propertyName)
     {
-        const string PropertyName = "pricing";
-        string path = CreateTempFile(CreateJsonWithoutModelProperty(PropertyName));
+        string path = CreateTempFile(CreateJsonWithoutModelProperty(propertyName));
 
         try
         {
             Action action = () => Load(path);
 
             action.Should().Throw<InvalidOperationException>()
-                .WithMessage($"*{PropertyName}*");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
-    }
-
-    [Fact]
-    public void Load_WithMissingProvider_ThrowsInvalidOperationExceptionWithModelName()
-    {
-        const string PropertyName = "provider";
-        string path = CreateTempFile(CreateJsonWithoutModelProperty(PropertyName));
-
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage($"*Test Model*test-model*{PropertyName}*")
-                .And.Message.Should().NotContain("index");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
-    }
-
-    [Fact]
-    public void Load_WithMissingPanelId_ThrowsInvalidOperationExceptionWithModelName()
-    {
-        const string PropertyName = "panelId";
-        string path = CreateTempFile(CreateJsonWithoutModelProperty(PropertyName));
-
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage($"*Test Model*test-model*{PropertyName}*")
+                .WithMessage($"*Test Model*test-model*{propertyName}*")
                 .And.Message.Should().NotContain("index");
         }
         finally
