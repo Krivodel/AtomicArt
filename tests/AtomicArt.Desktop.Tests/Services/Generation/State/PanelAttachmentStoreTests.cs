@@ -29,10 +29,7 @@ public sealed class PanelAttachmentStoreTests
         {
             AtomicArtDataPathProvider pathProvider = new(rootDirectory);
             PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = new(
-                "source.png",
-                GenerationImageContentTypes.Png,
-                ImageBytes);
+            AttachedImageDto image = CreateImage();
 
             PanelAttachmentState state = store.CreateState(image);
             await store.SaveAsync(RawPanelId, state, image, CancellationToken.None);
@@ -58,10 +55,7 @@ public sealed class PanelAttachmentStoreTests
         {
             AtomicArtDataPathProvider pathProvider = new(rootDirectory);
             PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = new(
-                "source.png",
-                GenerationImageContentTypes.Png,
-                ImageBytes);
+            AttachedImageDto image = CreateImage();
 
             PanelAttachmentState state = store.CreateState(image);
             await store.SaveAsync(UnsafePanelId, state, image, CancellationToken.None);
@@ -89,10 +83,7 @@ public sealed class PanelAttachmentStoreTests
         {
             AtomicArtDataPathProvider pathProvider = new(rootDirectory);
             PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = new(
-                "source.png",
-                GenerationImageContentTypes.Png,
-                ImageBytes);
+            AttachedImageDto image = CreateImage();
 
             PanelAttachmentState state = store.CreateState(image);
             await store.SaveAsync(RawPanelId, state, image, CancellationToken.None);
@@ -120,10 +111,7 @@ public sealed class PanelAttachmentStoreTests
         {
             AtomicArtDataPathProvider pathProvider = new(rootDirectory);
             PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = new(
-                @"C:\Users\Name\secret.png",
-                GenerationImageContentTypes.Png,
-                ImageBytes);
+            AttachedImageDto image = CreateImage(@"C:\Users\Name\secret.png");
 
             PanelAttachmentState state = store.CreateState(image);
 
@@ -146,10 +134,7 @@ public sealed class PanelAttachmentStoreTests
         {
             AtomicArtDataPathProvider pathProvider = new(rootDirectory);
             PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = new(
-                "source.png",
-                GenerationImageContentTypes.Png,
-                ImageBytes);
+            AttachedImageDto image = CreateImage();
 
             PanelAttachmentState state = store.CreateState(image);
             await store.SaveAsync(RawPanelId, state, image, CancellationToken.None);
@@ -171,10 +156,7 @@ public sealed class PanelAttachmentStoreTests
         {
             AtomicArtDataPathProvider pathProvider = new(rootDirectory);
             PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = new(
-                "source.png",
-                GenerationImageContentTypes.Png,
-                ImageBytes);
+            AttachedImageDto image = CreateImage();
             PanelAttachmentState state = new()
             {
                 Id = "unsafe-attachment",
@@ -289,10 +271,7 @@ public sealed class PanelAttachmentStoreTests
         {
             AtomicArtDataPathProvider pathProvider = new(rootDirectory);
             PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = new(
-                "source.png",
-                GenerationImageContentTypes.Png,
-                ImageBytes);
+            AttachedImageDto image = CreateImage();
             PanelAttachmentState state = store.CreateState(image);
             await store.SaveAsync(RawPanelId, state, image, CancellationToken.None);
             string attachmentPath = Path.Combine(
@@ -321,6 +300,14 @@ public sealed class PanelAttachmentStoreTests
             logger ?? NullLogger<PanelAttachmentStore>.Instance);
     }
 
+    private static AttachedImageDto CreateImage(string fileName = "source.png")
+    {
+        return new AttachedImageDto(
+            fileName,
+            GenerationImageContentTypes.Png,
+            ImageBytes);
+    }
+
     private sealed class FixedStatePathKeyEncoder : IStatePathKeyEncoder
     {
         public string Encode(string key)
@@ -334,7 +321,7 @@ public sealed class PanelAttachmentStoreTests
         private static readonly IGenerationImageFormat PngFormat = new TestGenerationImageFormat();
 
         public IReadOnlyCollection<IGenerationImageFormat> Formats { get; } =
-            [PngFormat];
+            new IGenerationImageFormat[] { PngFormat };
 
         public bool TryGetByContentType(string? contentType, out IGenerationImageFormat? format)
         {
