@@ -27,13 +27,11 @@ public sealed class GetGenerationModelsHandlerTests
 
         catalog.Models.Should().ContainSingle();
         GenerationModelMetadataDto metadata = catalog.Models.Single();
-        metadata.Id.Should().Be("test-model");
-        metadata.Provider.Should().Be("google");
-        metadata.ProviderModelId.Should().Be("provider-test-model");
-        metadata.PanelId.Should().Be(GenerationPanelIds.NanoBanana);
-        metadata.Temperature.Should().Be(new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d));
-        metadata.Attachments.MaxTotalBytes.Should().Be(2048);
-        metadata.Pricing.OutputImageTokensByResolution["1k"].Should().Be(1120);
+        GenerationModelCatalogTestSnapshot snapshot =
+            GenerationModelCatalogJsonTestFactory.CreateSnapshot(metadata);
+        snapshot.Should().Be(GenerationModelCatalogJsonTestFactory.ExpectedModelSnapshot);
+        metadata.Attachments.MaxTotalBytes.Should().Be(
+            GenerationModelCatalogJsonTestFactory.MaxTotalAttachmentBytes);
         registry.Verify(currentRegistry => currentRegistry.GetModels(), Times.Once);
     }
 }

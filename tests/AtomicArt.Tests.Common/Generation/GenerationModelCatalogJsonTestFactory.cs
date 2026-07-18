@@ -6,11 +6,28 @@ namespace AtomicArt.Tests.Common.Generation;
 
 public static class GenerationModelCatalogJsonTestFactory
 {
+    public const string DefaultModelId = "test-model";
+    public const string DefaultDisplayName = "Test Model";
+    public const string Provider = "google";
+    public const string ProviderModelId = "provider-test-model";
+    public const string PanelId = GenerationPanelIds.NanoBanana;
+    public const string Resolution = "1k";
+    public const long MaxTotalAttachmentBytes = 2048;
+    public const int OutputImageTokens = 1120;
+
+    public static GenerationModelCatalogTestSnapshot ExpectedModelSnapshot { get; } = new(
+        DefaultModelId,
+        Provider,
+        ProviderModelId,
+        PanelId,
+        new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),
+        OutputImageTokens);
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public static string CreateJson(
-        string? modelId = "test-model",
-        string? displayName = "Test Model",
+        string? modelId = DefaultModelId,
+        string? displayName = DefaultDisplayName,
         IReadOnlyList<string>? aspectRatios = null)
     {
         string[] defaultAspectRatios = [GenerationAspectRatios.Auto, "1:1"];
@@ -26,20 +43,20 @@ public static class GenerationModelCatalogJsonTestFactory
                 {
                   "id": {{modelIdJson}},
                   "displayName": {{displayNameJson}},
-                  "provider": "google",
-                  "providerModelId": "provider-test-model",
-                  "panelId": "nano-banana",
+                  "provider": "{{Provider}}",
+                  "providerModelId": "{{ProviderModelId}}",
+                  "panelId": "{{PanelId}}",
                   "contextWindowTokens": 1000,
                   "maxOutputTokens": 500,
                   "maxPromptLength": 100,
                   "aspectRatios": {{aspectRatiosJson}},
-                  "resolutions": [ "1k" ],
+                  "resolutions": [ "{{Resolution}}" ],
                   "generationCounts": [ 1 ],
                   "temperature": { "minimum": 0.1, "maximum": 2.0, "default": 1.0, "step": 0.1 },
                   "attachments": {
                     "maxCount": 1,
                     "maxSingleFileBytes": 1024,
-                    "maxTotalBytes": 2048,
+                    "maxTotalBytes": {{MaxTotalAttachmentBytes}},
                     "supportedContentTypes": [ "image/png" ]
                   },
                   "pricing": {
@@ -49,7 +66,7 @@ public static class GenerationModelCatalogJsonTestFactory
                     "imageOutputTokenUsdPerMillion": 30.00,
                     "inputImageTokens": 1120,
                     "outputImageTokensByResolution": {
-                      "1k": 1120
+                      "{{Resolution}}": {{OutputImageTokens}}
                     }
                   }
                 }
@@ -59,8 +76,8 @@ public static class GenerationModelCatalogJsonTestFactory
     }
 
     public static GenerationModelCatalogDto CreateCatalog(
-        string? modelId = "test-model",
-        string? displayName = "Test Model",
+        string? modelId = DefaultModelId,
+        string? displayName = DefaultDisplayName,
         IReadOnlyList<string>? aspectRatios = null)
     {
         string json = CreateJson(modelId, displayName, aspectRatios);
@@ -69,5 +86,19 @@ public static class GenerationModelCatalogJsonTestFactory
 
         return catalog
             ?? throw new InvalidOperationException("Generation model catalog test JSON is missing.");
+    }
+
+    public static GenerationModelCatalogTestSnapshot CreateSnapshot(
+        GenerationModelMetadataDto metadata)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+
+        return new GenerationModelCatalogTestSnapshot(
+            metadata.Id,
+            metadata.Provider,
+            metadata.ProviderModelId,
+            metadata.PanelId,
+            metadata.Temperature,
+            metadata.Pricing.OutputImageTokensByResolution[Resolution]);
     }
 }

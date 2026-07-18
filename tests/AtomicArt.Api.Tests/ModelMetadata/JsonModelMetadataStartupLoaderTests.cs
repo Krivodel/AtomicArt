@@ -68,15 +68,11 @@ public sealed class JsonModelMetadataStartupLoaderTests
 
             catalog.Models.Should().ContainSingle();
             GenerationModelMetadataDto metadata = catalog.Models.Single();
-            metadata.Id.Should().Be("test-model");
-            metadata.Provider.Should().Be("google");
-            metadata.ProviderModelId.Should().Be("provider-test-model");
-            metadata.PanelId.Should().Be(GenerationPanelIds.NanoBanana);
+            GenerationModelCatalogTestSnapshot snapshot =
+                GenerationModelCatalogJsonTestFactory.CreateSnapshot(metadata);
+            snapshot.Should().Be(GenerationModelCatalogJsonTestFactory.ExpectedModelSnapshot);
             metadata.AspectRatios.Should().Equal("Авто", "1:1");
-            metadata.Temperature.Should().Be(
-                new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d));
             metadata.Attachments.SupportedContentTypes.Should().Equal(GenerationImageContentTypes.Png);
-            metadata.Pricing.OutputImageTokensByResolution["1k"].Should().Be(1120);
         }
         finally
         {
