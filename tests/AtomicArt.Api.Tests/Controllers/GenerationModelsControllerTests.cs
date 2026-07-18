@@ -25,21 +25,11 @@ public sealed class GenerationModelsControllerTests
     [Fact]
     public async Task GetAsync_ThroughAspNetPipeline_ReturnsSerializedCatalog()
     {
-        using TemporaryDirectory contentRoot = new(
-            TestDirectories.GetUniqueAssemblyDirectoryPath(typeof(GenerationModelsControllerTests)));
-        ConfigureContentRoot(
-            contentRoot,
-            ApiTestAppSettingsJson.Create(false, "TestGenerationImages"));
-        await using WebApplicationFactory<Program> factory = CreateFactory(contentRoot.DirectoryPath);
-        using HttpClient client = factory.CreateClient();
+        (HttpStatusCode statusCode, GenerationModelCatalogDto? catalog) =
+            await GetCatalogAsync(
+                ApiTestAppSettingsJson.Create(false, "TestGenerationImages"));
 
-        HttpResponseMessage response = await client.GetAsync(
-            $"/{GenerationApiRoutes.Models}",
-            CancellationToken.None);
-        GenerationModelCatalogDto? catalog = await response.Content
-            .ReadFromJsonAsync<GenerationModelCatalogDto>(CancellationToken.None);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        statusCode.Should().Be(HttpStatusCode.OK);
 
         if (catalog is null)
         {
@@ -56,21 +46,11 @@ public sealed class GenerationModelsControllerTests
     [Fact]
     public async Task GetAsync_ThroughAspNetPipelineWithTestGenerationEnabled_ReturnsTestModel()
     {
-        using TemporaryDirectory contentRoot = new(
-            TestDirectories.GetUniqueAssemblyDirectoryPath(typeof(GenerationModelsControllerTests)));
-        ConfigureContentRoot(
-            contentRoot,
-            ApiTestAppSettingsJson.Create(true, "TestGenerationImages"));
-        await using WebApplicationFactory<Program> factory = CreateFactory(contentRoot.DirectoryPath);
-        using HttpClient client = factory.CreateClient();
+        (HttpStatusCode statusCode, GenerationModelCatalogDto? catalog) =
+            await GetCatalogAsync(
+                ApiTestAppSettingsJson.Create(true, "TestGenerationImages"));
 
-        HttpResponseMessage response = await client.GetAsync(
-            $"/{GenerationApiRoutes.Models}",
-            CancellationToken.None);
-        GenerationModelCatalogDto? catalog = await response.Content
-            .ReadFromJsonAsync<GenerationModelCatalogDto>(CancellationToken.None);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        statusCode.Should().Be(HttpStatusCode.OK);
         catalog.Should().NotBeNull();
         GenerationModelMetadataDto testModel = catalog.Models
             .Single(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
@@ -114,17 +94,29 @@ public sealed class GenerationModelsControllerTests
             .ContainSingle();
     }
 
-    private static WebApplicationFactory<Program> CreateFactory()
-    {
-        string contentRoot = ApiModelMetadataTestCatalog.GetApiContentRoot();
-
-        return CreateFactory(contentRoot);
-    }
-
     private static WebApplicationFactory<Program> CreateFactory(string contentRoot)
     {
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder => builder.UseContentRoot(contentRoot));
+    }
+
+    private static async Task<(HttpStatusCode StatusCode, GenerationModelCatalogDto? Catalog)>
+        GetCatalogAsync(string appSettingsJson)
+    {
+        using TemporaryDirectory contentRoot = new(
+            TestDirectories.GetUniqueAssemblyDirectoryPath(
+                typeof(GenerationModelsControllerTests)));
+        ConfigureContentRoot(contentRoot, appSettingsJson);
+        await using WebApplicationFactory<Program> factory =
+            CreateFactory(contentRoot.DirectoryPath);
+        using HttpClient client = factory.CreateClient();
+        using HttpResponseMessage response = await client.GetAsync(
+            $"/{GenerationApiRoutes.Models}",
+            CancellationToken.None);
+        GenerationModelCatalogDto? catalog = await response.Content
+            .ReadFromJsonAsync<GenerationModelCatalogDto>(CancellationToken.None);
+
+        return (response.StatusCode, catalog);
     }
 
     private static void ConfigureContentRoot(
