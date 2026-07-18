@@ -188,23 +188,14 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         OpenWithTarget target = _openWithTarget;
         await RunExclusiveImageOperationAsync(
-            async ct =>
-            {
-                string? filePath = await GetOpenWithFilePathAsync(target, ct);
-
-                if (filePath is null)
-                {
-                    return;
-                }
-
-                HideOpenWithAfterAction(target);
-                await RunPlatformFileActionAsync(
-                    actionCt => _platformFileActions.OpenWithAsync(
-                        filePath,
-                        application,
-                        actionCt),
-                    "Open with");
-            },
+            ct => RunOpenWithTargetActionAsync(
+                target,
+                (filePath, actionCt) => _platformFileActions.OpenWithAsync(
+                    filePath,
+                    application,
+                    actionCt),
+                "Open with",
+                ct),
             CancellationToken.None);
     }
 
@@ -215,21 +206,34 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         OpenWithTarget target = _openWithTarget;
         await RunExclusiveImageOperationAsync(
-            async ct =>
-            {
-                string? filePath = await GetOpenWithFilePathAsync(target, ct);
-
-                if (filePath is null)
-                {
-                    return;
-                }
-
-                HideOpenWithAfterAction(target);
-                await RunPlatformFileActionAsync(
-                    actionCt => _platformFileActions.ChooseApplicationAsync(filePath, actionCt),
-                    "Choose application");
-            },
+            ct => RunOpenWithTargetActionAsync(
+                target,
+                _platformFileActions.ChooseApplicationAsync,
+                "Choose application",
+                ct),
             CancellationToken.None);
+    }
+
+    private async Task RunOpenWithTargetActionAsync(
+        OpenWithTarget target,
+        Func<string, CancellationToken, Task> action,
+        string actionName,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentException.ThrowIfNullOrWhiteSpace(actionName);
+
+        string? filePath = await GetOpenWithFilePathAsync(target, ct);
+
+        if (filePath is null)
+        {
+            return;
+        }
+
+        HideOpenWithAfterAction(target);
+        await RunPlatformFileActionAsync(
+            actionCt => action(filePath, actionCt),
+            actionName);
     }
 
     private void OnContextSelectAreaClicked(object? sender, RoutedEventArgs e)
