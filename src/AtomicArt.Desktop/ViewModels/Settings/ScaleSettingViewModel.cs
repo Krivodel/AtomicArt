@@ -4,33 +4,21 @@ using CommunityToolkit.Mvvm.Input;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Settings;
-using AtomicArt.Desktop.ViewModels;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
-public sealed partial class ScaleSettingViewModel : ObservableObject, ISettingItemViewModel
+public sealed partial class ScaleSettingViewModel : SettingItemViewModel
 {
-    public string Key { get; }
-    public int Order { get; }
-    public string DisplayName { get; }
     public string ApplyButtonText { get; }
     public IReadOnlyList<UiScaleOption> Options { get; }
+
     private readonly IScaleSettingDefinition _definition;
     private readonly ISettingsStateService _settingsStateService;
     private readonly IUiScaleSettingValueConverter _valueConverter;
-    private readonly IViewModelErrorHandler _errorHandler;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private UiScaleOption? _selectedOption;
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
-    private bool _isLoading;
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasErrorMessage))]
-    private string? _errorMessage;
-
-    public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
 
     public ScaleSettingViewModel(
         IScaleSettingDefinition definition,
@@ -39,23 +27,23 @@ public sealed partial class ScaleSettingViewModel : ObservableObject, ISettingIt
         ISettingsStateService settingsStateService,
         IUiScaleSettingValueConverter valueConverter,
         IViewModelErrorHandler errorHandler)
+        : base(definition, errorHandler)
     {
-        ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(settingsStateService);
         ArgumentNullException.ThrowIfNull(valueConverter);
-        ArgumentNullException.ThrowIfNull(errorHandler);
 
         _definition = definition;
-        Key = definition.Key;
-        Order = definition.Order;
-        DisplayName = definition.DisplayName;
         ApplyButtonText = definition.ApplyButtonText;
         Options = options;
         SelectedOption = selectedOption;
         _settingsStateService = settingsStateService;
         _valueConverter = valueConverter;
-        _errorHandler = errorHandler;
+    }
+
+    protected override void NotifyActionCanExecuteChanged()
+    {
+        ApplyCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanApply))]
@@ -66,7 +54,7 @@ public sealed partial class ScaleSettingViewModel : ObservableObject, ISettingIt
             return;
         }
 
-        await ViewModelAsyncOperation.RunAsync(
+        await RunOperationAsync(
             async () =>
             {
                 string value = _valueConverter.Format(SelectedOption.Value);
@@ -74,10 +62,7 @@ public sealed partial class ScaleSettingViewModel : ObservableObject, ISettingIt
                 await _settingsStateService.SaveValueAsync(_definition, value, ct);
             },
             ct,
-            _errorHandler,
-            nameof(ApplyAsync),
-            value => IsLoading = value,
-            value => ErrorMessage = value);
+            nameof(ApplyAsync));
     }
 
     private bool CanApply()

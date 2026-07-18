@@ -2,7 +2,7 @@ using AtomicArt.Desktop.Resources;
 
 namespace AtomicArt.Desktop.Services;
 
-public sealed class ApiBaseAddressSettingDefinition : ISettingsDefinition
+public sealed class ApiBaseAddressSettingDefinition : IDisplaySettingDefinition
 {
     public const string KeyValue = "api.baseAddress";
 

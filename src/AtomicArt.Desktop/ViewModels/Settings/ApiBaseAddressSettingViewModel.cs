@@ -10,23 +10,15 @@ using AtomicArt.Desktop.ViewModels;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
-public sealed partial class ApiBaseAddressSettingViewModel :
-    ObservableValidator,
-    ISettingItemViewModel,
-    IDisposable
+public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewModel, IDisposable
 {
-    public string Key { get; }
-    public int Order { get; }
-    public string DisplayName { get; }
     public string Placeholder { get; }
     public string SaveButtonText { get; }
-    public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
 
     private readonly ApiBaseAddressSettingDefinition _definition;
     private readonly IApiEndpointService _apiEndpointService;
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly ISettingsStateService _settingsStateService;
-    private readonly IViewModelErrorHandler _errorHandler;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
     private bool _isDisposed;
 
@@ -37,36 +29,23 @@ public sealed partial class ApiBaseAddressSettingViewModel :
         nameof(ValidateBaseAddress))]
     private string _value;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasErrorMessage))]
-    private string? _errorMessage;
-
     public ApiBaseAddressSettingViewModel(
         ApiBaseAddressSettingDefinition definition,
         IApiEndpointService apiEndpointService,
         IUiThreadDispatcher uiThreadDispatcher,
         ISettingsStateService settingsStateService,
         IViewModelErrorHandler errorHandler)
+        : base(definition, errorHandler)
     {
-        ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(apiEndpointService);
         ArgumentNullException.ThrowIfNull(uiThreadDispatcher);
         ArgumentNullException.ThrowIfNull(settingsStateService);
-        ArgumentNullException.ThrowIfNull(errorHandler);
 
         _definition = definition;
         _apiEndpointService = apiEndpointService;
         _uiThreadDispatcher = uiThreadDispatcher;
         _settingsStateService = settingsStateService;
-        _errorHandler = errorHandler;
         _value = apiEndpointService.BaseAddress.ToString();
-        Key = definition.Key;
-        Order = definition.Order;
-        DisplayName = definition.DisplayName;
         Placeholder = definition.Placeholder;
         SaveButtonText = definition.SaveButtonText;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
@@ -94,6 +73,11 @@ public sealed partial class ApiBaseAddressSettingViewModel :
         _disposeCancellationSource.Dispose();
     }
 
+    protected override void NotifyActionCanExecuteChanged()
+    {
+        SaveCommand.NotifyCanExecuteChanged();
+    }
+
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync(CancellationToken ct)
     {
@@ -107,7 +91,7 @@ public sealed partial class ApiBaseAddressSettingViewModel :
             return;
         }
 
-        await ViewModelAsyncOperation.RunAsync(
+        await RunOperationAsync(
             async () =>
             {
                 string normalizedValue = baseAddress.ToString();
@@ -116,10 +100,7 @@ public sealed partial class ApiBaseAddressSettingViewModel :
                 Value = normalizedValue;
             },
             ct,
-            _errorHandler,
-            nameof(SaveAsync),
-            value => IsLoading = value,
-            value => ErrorMessage = value);
+            nameof(SaveAsync));
     }
 
     private bool CanSave()
@@ -133,7 +114,7 @@ public sealed partial class ApiBaseAddressSettingViewModel :
             _uiThreadDispatcher,
             () => Value = _apiEndpointService.BaseAddress.ToString(),
             _disposeCancellationSource.Token,
-            _errorHandler,
+            ErrorHandler,
             nameof(SynchronizeValueAsync));
     }
 
