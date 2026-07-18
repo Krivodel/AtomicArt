@@ -36,15 +36,7 @@ public sealed class SettingsStateServiceTests
         UiScaleSettingDefinition scaleDefinition = new();
         GoogleApiKeySettingDefinition secretDefinition = new();
         RecordingStateWriteScheduler scheduler = new();
-        SettingsState existingState = new()
-        {
-            Values = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [secretDefinition.Key] = "secret",
-                ["unknown.setting"] = "unknown",
-                [scaleDefinition.Key] = "1.0"
-            }
-        };
+        SettingsState existingState = CreateMixedSettingsState(scaleDefinition, "1.0");
         SettingsStateService service = CreateService(existingState, scheduler);
         string value = CreateValueConverter().Format(new UiScale125OptionDefinition().Option.Value);
 
@@ -109,17 +101,8 @@ public sealed class SettingsStateServiceTests
     public async Task LoadValueAsync_WithSecretAndUnknownKeys_ReturnsOnlyAllowedNonSecretValue()
     {
         UiScaleSettingDefinition definition = new();
-        GoogleApiKeySettingDefinition secretDefinition = new();
         string value = CreateValueConverter().Format(new UiScale125OptionDefinition().Option.Value);
-        SettingsState state = new()
-        {
-            Values = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [secretDefinition.Key] = "secret",
-                ["unknown.setting"] = "unknown",
-                [definition.Key] = value
-            }
-        };
+        SettingsState state = CreateMixedSettingsState(definition, value);
         SettingsStateService service = CreateService(
             state,
             new RecordingStateWriteScheduler());
@@ -132,92 +115,33 @@ public sealed class SettingsStateServiceTests
     [Fact]
     public async Task ApplySavedSettingsAsync_WithSupportedScale_AppliesScale()
     {
-        UiScaleSettingDefinition definition = new();
         UiScaleOption scaleOption = new UiScale125OptionDefinition().Option;
-        RecordingUiScaleService scaleService = new(InitialScale);
-        SettingsState state = new()
-        {
-            Values = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [definition.Key] = CreateValueConverter().Format(scaleOption.Value)
-            }
-        };
-        SettingsStateService service = CreateService(
-            state,
-            new RecordingStateWriteScheduler(),
-            scaleService);
 
-        await service.ApplySavedSettingsAsync(CancellationToken.None);
-
-        scaleService.CurrentScale.Should().Be(scaleOption.Value);
+        await AssertAppliedScaleAsync(
+            CreateValueConverter().Format(scaleOption.Value),
+            scaleOption.Value);
     }
 
     [Fact]
     public async Task ApplySavedSettingsAsync_WithUnsupportedScale_DoesNotApplyScale()
     {
-        const string unsupportedScale = "9.99";
-
-        UiScaleSettingDefinition definition = new();
-        RecordingUiScaleService scaleService = new(InitialScale);
-        double initialScale = scaleService.CurrentScale;
-        SettingsState state = new()
-        {
-            Values = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [definition.Key] = unsupportedScale
-            }
-        };
-        SettingsStateService service = CreateService(
-            state,
-            new RecordingStateWriteScheduler(),
-            scaleService);
-
-        await service.ApplySavedSettingsAsync(CancellationToken.None);
-
-        scaleService.CurrentScale.Should().Be(initialScale);
+        await AssertAppliedScaleAsync("9.99", InitialScale);
     }
 
     [Fact]
     public async Task ApplySavedSettingsAsync_WithSavedApiAddress_AppliesAddress()
     {
-        ApiBaseAddressSettingDefinition definition = new();
-        IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create();
-        SettingsState state = new()
-        {
-            Values = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [definition.Key] = "https://restored.atomicart.test/root"
-            }
-        };
-        SettingsStateService service = CreateApiSettingsService(
-            state,
-            endpointService);
-
-        await service.ApplySavedSettingsAsync(CancellationToken.None);
-
-        endpointService.BaseAddress.ToString().Should().Be(
+        await AssertAppliedApiAddressAsync(
+            "https://restored.atomicart.test/root",
             "https://restored.atomicart.test/root/");
     }
 
     [Fact]
     public async Task ApplySavedSettingsAsync_WithInvalidSavedApiAddress_KeepsConfiguredAddress()
     {
-        ApiBaseAddressSettingDefinition definition = new();
-        IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create();
-        SettingsState state = new()
-        {
-            Values = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [definition.Key] = "ftp://invalid.atomicart.test/"
-            }
-        };
-        SettingsStateService service = CreateApiSettingsService(
-            state,
-            endpointService);
-
-        await service.ApplySavedSettingsAsync(CancellationToken.None);
-
-        endpointService.BaseAddress.ToString().Should().Be("https://atomicart.test/");
+        await AssertAppliedApiAddressAsync(
+            "ftp://invalid.atomicart.test/",
+            "https://atomicart.test/");
     }
 
     private static SettingsStateService CreateService(
@@ -304,6 +228,36 @@ public sealed class SettingsStateServiceTests
             applicators);
     }
 
+    private static SettingsState CreateMixedSettingsState(
+        ISettingsDefinition scaleDefinition,
+        string scaleValue)
+    {
+        GoogleApiKeySettingDefinition secretDefinition = new();
+
+        return new SettingsState
+        {
+            Values = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [secretDefinition.Key] = "secret",
+                ["unknown.setting"] = "unknown",
+                [scaleDefinition.Key] = scaleValue
+            }
+        };
+    }
+
+    private static SettingsState CreateSingleValueState(
+        ISettingsDefinition definition,
+        string value)
+    {
+        return new SettingsState
+        {
+            Values = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                [definition.Key] = value
+            }
+        };
+    }
+
     private static async Task AssertSecretRejectedAsync(
         ISettingsDefinition definition)
     {
@@ -321,6 +275,39 @@ public sealed class SettingsStateServiceTests
 
         await act.Should().ThrowAsync<InvalidOperationException>();
         scheduler.SavedState.Should().BeNull();
+    }
+
+    private static async Task AssertAppliedScaleAsync(
+        string savedValue,
+        double expectedScale)
+    {
+        UiScaleSettingDefinition definition = new();
+        RecordingUiScaleService scaleService = new(InitialScale);
+        SettingsState state = CreateSingleValueState(definition, savedValue);
+        SettingsStateService service = CreateService(
+            state,
+            new RecordingStateWriteScheduler(),
+            scaleService);
+
+        await service.ApplySavedSettingsAsync(CancellationToken.None);
+
+        scaleService.CurrentScale.Should().Be(expectedScale);
+    }
+
+    private static async Task AssertAppliedApiAddressAsync(
+        string savedValue,
+        string expectedAddress)
+    {
+        ApiBaseAddressSettingDefinition definition = new();
+        IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create();
+        SettingsState state = CreateSingleValueState(definition, savedValue);
+        SettingsStateService service = CreateApiSettingsService(
+            state,
+            endpointService);
+
+        await service.ApplySavedSettingsAsync(CancellationToken.None);
+
+        endpointService.BaseAddress.ToString().Should().Be(expectedAddress);
     }
 
     private sealed class SpoofedNonSecretSettingDefinition : ISettingsDefinition
