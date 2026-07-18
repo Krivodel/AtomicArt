@@ -1,10 +1,11 @@
 using System.Diagnostics;
-using System.Reflection;
 
 using Microsoft.Extensions.Logging;
 
 using FluentValidation;
 using MediatR;
+
+using AtomicArt.Application.Common.Models;
 
 namespace AtomicArt.Application.Common.Behaviors;
 
@@ -101,11 +102,9 @@ public sealed class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRe
             return NullResultStatus;
         }
 
-        Type responseType = response.GetType();
-        PropertyInfo? statusProperty = responseType.GetProperty("Status");
-        object? status = statusProperty?.GetValue(response);
-
-        return status?.ToString() ?? SuccessfulResultStatus;
+        return response is IResultMetadata result
+            ? result.Status.ToString()
+            : SuccessfulResultStatus;
     }
 
     private static string? GetErrorCode(TResponse response)
@@ -115,10 +114,8 @@ public sealed class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRe
             return null;
         }
 
-        Type responseType = response.GetType();
-        PropertyInfo? errorCodeProperty = responseType.GetProperty("ErrorCode");
-        object? errorCode = errorCodeProperty?.GetValue(response);
-
-        return errorCode as string;
+        return response is IResultMetadata result
+            ? result.ErrorCode
+            : null;
     }
 }

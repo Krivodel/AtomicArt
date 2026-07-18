@@ -1,6 +1,6 @@
 namespace AtomicArt.Application.Common.Models;
 
-public sealed class Result<T>
+public sealed class Result<T> : IResultMetadata
 {
     public T? Value { get; }
     public ResultStatus Status { get; }
