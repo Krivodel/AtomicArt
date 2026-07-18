@@ -58,7 +58,7 @@
     <Delete Files="@(PublishedSymbolFiles)" />
   </Target>
 
-  <Target Name="CreateMacAppBundleMetadata" AfterTargets="Publish" Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx-'))">
+  <Target Name="CreateMacAppBundleMetadata" AfterTargets="Publish" Condition="'$(PicaIsMacRuntime)' == 'true'">
     <Copy SourceFiles="$(MSBuildProjectDirectory)/Assets/Info.plist"
           DestinationFolder="$(PublishDir).." />
   </Target>

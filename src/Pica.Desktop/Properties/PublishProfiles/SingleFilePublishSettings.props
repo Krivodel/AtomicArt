@@ -4,5 +4,6 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PicaIsMacRuntime>$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx-'))</PicaIsMacRuntime>
   </PropertyGroup>
 </Project>
