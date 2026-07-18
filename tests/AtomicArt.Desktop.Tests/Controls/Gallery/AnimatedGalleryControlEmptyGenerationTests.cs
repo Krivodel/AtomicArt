@@ -70,23 +70,11 @@ public sealed class AnimatedGalleryControlEmptyGenerationTests : AnimatedGallery
         {
             TestUiFrameScheduler frameScheduler = new();
             EmptyGenerationScenario scenario = ShowEmptyGenerationScenario(frameScheduler);
-            List<GenerationItemViewModel> items =
-            [
-                CreateItem(FirstItemId, 0),
-                CreateItem(SecondItemId, 1),
-                CreateItem(ThirdItemId, 2)
-            ];
-            Guid[] finalIds =
-            [
-                FinalFirstItemId,
-                FinalSecondItemId,
-                FinalThirdItemId
-            ];
 
             try
             {
-                await GenerateFrontAsync(scenario, items, frameScheduler);
-                UpdateItemsFromResults(items, finalIds);
+                List<GenerationItemViewModel> items =
+                    await GenerateMultipleItemsAsync(scenario, frameScheduler);
 
                 await RemoveGeneratedItemAsync(scenario, items[FirstItemIndex], frameScheduler);
 
@@ -116,24 +104,12 @@ public sealed class AnimatedGalleryControlEmptyGenerationTests : AnimatedGallery
         {
             TestUiFrameScheduler frameScheduler = new();
             EmptyGenerationScenario scenario = ShowEmptyGenerationScenario(frameScheduler);
-            List<GenerationItemViewModel> items =
-            [
-                CreateItem(FirstItemId, 0),
-                CreateItem(SecondItemId, 1),
-                CreateItem(ThirdItemId, 2)
-            ];
-            Guid[] finalIds =
-            [
-                FinalFirstItemId,
-                FinalSecondItemId,
-                FinalThirdItemId
-            ];
-            GenerationItemViewModel removedItem = items[MiddleItemIndex];
 
             try
             {
-                await GenerateFrontAsync(scenario, items, frameScheduler);
-                UpdateItemsFromResults(items, finalIds);
+                List<GenerationItemViewModel> items =
+                    await GenerateMultipleItemsAsync(scenario, frameScheduler);
+                GenerationItemViewModel removedItem = items[MiddleItemIndex];
 
                 await RemoveGeneratedItemAsync(scenario, removedItem, frameScheduler);
 
@@ -189,6 +165,29 @@ public sealed class AnimatedGalleryControlEmptyGenerationTests : AnimatedGallery
         await generationTask;
 
         AssertGeneratedCardsReady(scenario.Control, items);
+    }
+
+    private static async Task<List<GenerationItemViewModel>> GenerateMultipleItemsAsync(
+        EmptyGenerationScenario scenario,
+        TestUiFrameScheduler frameScheduler)
+    {
+        List<GenerationItemViewModel> items =
+        [
+            CreateItem(FirstItemId, FirstItemIndex),
+            CreateItem(SecondItemId, MiddleItemIndex),
+            CreateItem(ThirdItemId, LastItemIndex)
+        ];
+        Guid[] finalIds =
+        [
+            FinalFirstItemId,
+            FinalSecondItemId,
+            FinalThirdItemId
+        ];
+
+        await GenerateFrontAsync(scenario, items, frameScheduler);
+        UpdateItemsFromResults(items, finalIds);
+
+        return items;
     }
 
     private static async Task RemoveGeneratedItemAsync(
