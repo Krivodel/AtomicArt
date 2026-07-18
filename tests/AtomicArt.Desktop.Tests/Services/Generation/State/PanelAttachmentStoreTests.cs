@@ -46,12 +46,12 @@ public sealed class PanelAttachmentStoreTests
     {
         using PanelAttachmentTestContext context = new();
 
-        PanelAttachmentState state = await SaveImageAsync(context, RawPanelId);
+        (PanelAttachmentState State, string Path) savedImage =
+            await SaveImageAsync(context, RawPanelId);
 
-        string attachmentPath = context.GetAttachmentPath(state);
-        Path.GetFullPath(attachmentPath).Should().StartWith(
+        Path.GetFullPath(savedImage.Path).Should().StartWith(
             Path.GetFullPath(context.PathProvider.StateAttachmentsDirectory));
-        Path.GetFullPath(attachmentPath).Should().NotStartWith(
+        Path.GetFullPath(savedImage.Path).Should().NotStartWith(
             Path.GetFullPath(context.PathProvider.ArtDirectory));
         Directory.Exists(context.PathProvider.ArtDirectory).Should().BeFalse();
     }
@@ -73,9 +73,10 @@ public sealed class PanelAttachmentStoreTests
     {
         using PanelAttachmentTestContext context = new();
 
-        PanelAttachmentState state = await SaveImageAsync(context, RawPanelId);
+        (PanelAttachmentState State, string Path) savedImage =
+            await SaveImageAsync(context, RawPanelId);
 
-        state.SizeBytes.Should().Be(ImageBytes.LongLength);
+        savedImage.State.SizeBytes.Should().Be(ImageBytes.LongLength);
     }
 
     [Fact]
@@ -129,12 +130,15 @@ public sealed class PanelAttachmentStoreTests
     public async Task DeleteAsync_WithExistingAttachment_RemovesManagedFile()
     {
         using PanelAttachmentTestContext context = new();
-        PanelAttachmentState state = await SaveImageAsync(context, RawPanelId);
-        string attachmentPath = context.GetAttachmentPath(state);
+        (PanelAttachmentState State, string Path) savedImage =
+            await SaveImageAsync(context, RawPanelId);
 
-        await context.Store.DeleteAsync(RawPanelId, state, CancellationToken.None);
+        await context.Store.DeleteAsync(
+            RawPanelId,
+            savedImage.State,
+            CancellationToken.None);
 
-        File.Exists(attachmentPath).Should().BeFalse();
+        File.Exists(savedImage.Path).Should().BeFalse();
     }
 
     private static PanelAttachmentStore CreateStore(
@@ -177,12 +181,12 @@ public sealed class PanelAttachmentStoreTests
     {
         using PanelAttachmentTestContext context = new();
 
-        PanelAttachmentState state = await SaveImageAsync(context, panelId);
+        (PanelAttachmentState State, string Path) savedImage =
+            await SaveImageAsync(context, panelId);
 
-        string attachmentPath = context.GetAttachmentPath(state);
-        File.Exists(attachmentPath).Should().BeTrue();
-        attachmentPath.Should().Contain(EncodedPanelId);
-        assertPath(attachmentPath);
+        File.Exists(savedImage.Path).Should().BeTrue();
+        savedImage.Path.Should().Contain(EncodedPanelId);
+        assertPath(savedImage.Path);
     }
 
     private static async Task AssertLoadRejectedAsync(
@@ -211,7 +215,7 @@ public sealed class PanelAttachmentStoreTests
         }
     }
 
-    private static async Task<PanelAttachmentState> SaveImageAsync(
+    private static async Task<(PanelAttachmentState State, string Path)> SaveImageAsync(
         PanelAttachmentTestContext context,
         string panelId)
     {
@@ -223,7 +227,7 @@ public sealed class PanelAttachmentStoreTests
             context.Image,
             CancellationToken.None);
 
-        return state;
+        return (state, context.GetAttachmentPath(state));
     }
 
     private sealed class PanelAttachmentTestContext : IDisposable
