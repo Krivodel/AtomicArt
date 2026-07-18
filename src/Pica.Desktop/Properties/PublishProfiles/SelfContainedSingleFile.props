@@ -4,11 +4,10 @@
     <Configuration>Release</Configuration>
     <Platform>Any CPU</Platform>
     <PublishProtocol>FileSystem</PublishProtocol>
-    <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <PublishDir Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('win-'))">bin\$(Configuration)\$(TargetFramework)\publish\$(RuntimeIdentifier)\</PublishDir>
     <PublishDir Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux-'))">bin/$(Configuration)/$(TargetFramework)/publish/$(RuntimeIdentifier)/</PublishDir>
     <PublishDir Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx-'))">bin/$(Configuration)/$(TargetFramework)/publish/$(RuntimeIdentifier)/Pica.app/Contents/MacOS/</PublishDir>
   </PropertyGroup>
+
+  <Import Project="SingleFilePublishSettings.props" />
 </Project>
