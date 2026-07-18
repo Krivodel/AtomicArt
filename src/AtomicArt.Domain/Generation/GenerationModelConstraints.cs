@@ -126,14 +126,7 @@ public sealed record GenerationModelConstraints
         IReadOnlyList<string> values,
         string parameterName)
     {
-        if (values is null)
-        {
-            throw new DomainException(
-                MissingRequiredValuesErrorCode,
-                $"Generation model constraint '{parameterName}' must contain at least one value.");
-        }
-
-        if (values.Count == 0)
+        if (values is null || values.Count == 0)
         {
             throw new DomainException(
                 MissingRequiredValuesErrorCode,
@@ -163,14 +156,7 @@ public sealed record GenerationModelConstraints
         IReadOnlyList<int> values,
         string parameterName)
     {
-        if (values is null)
-        {
-            throw new DomainException(
-                MissingRequiredValuesErrorCode,
-                $"Generation model constraint '{parameterName}' must contain at least one positive value.");
-        }
-
-        if (values.Count == 0)
+        if (values is null || values.Count == 0)
         {
             throw new DomainException(
                 MissingRequiredValuesErrorCode,
