@@ -209,13 +209,20 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static GoogleInteractionImageContent? TryCreateImageContentFromFields(JsonElement element)
     {
-        if (!TryGetStringProperty(element, "data", out string? base64Data)
+        if (!TryGetStringProperty(
+            element,
+            GoogleInteractionsContentContract.DataPropertyName,
+            out string? base64Data)
             || string.IsNullOrWhiteSpace(base64Data))
         {
             return null;
         }
 
-        if (!TryGetStringProperty(element, "mime_type", "mimeType", out string? contentType)
+        if (!TryGetStringProperty(
+            element,
+            GoogleInteractionsContentContract.MimeTypePropertyName,
+            "mimeType",
+            out string? contentType)
             || string.IsNullOrWhiteSpace(contentType))
         {
             return null;
@@ -328,9 +335,18 @@ internal sealed class GoogleInteractionsResponseParser
         bool isInsideModelOutput,
         bool isInsideContent)
     {
-        if (!TryGetStringProperty(element, "type", out string? type)
-            || !string.Equals(type, "text", StringComparison.OrdinalIgnoreCase)
-            || !TryGetStringProperty(element, "text", out string? text))
+        if (!TryGetStringProperty(
+            element,
+            GoogleInteractionsContentContract.TypePropertyName,
+            out string? type)
+            || !string.Equals(
+                type,
+                GoogleInteractionsContentContract.TextType,
+                StringComparison.OrdinalIgnoreCase)
+            || !TryGetStringProperty(
+                element,
+                GoogleInteractionsContentContract.TextPropertyName,
+                out string? text))
         {
             return;
         }

@@ -8,7 +8,6 @@ namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
 internal sealed class GoogleInteractionsRequestBuilder
 {
-    private const string ImageModality = "image";
     private const string SystemInstruction =
         "Treat **EVERY user input as an image generation request**. Return **image output only**. DO NOT answer with explanatory text.";
 
@@ -26,8 +25,10 @@ internal sealed class GoogleInteractionsRequestBuilder
 
         JsonObject responseFormat = new()
         {
-            ["type"] = ImageModality,
-            ["mime_type"] = GoogleInteractionsImageOutputContract.ContentType,
+            [GoogleInteractionsContentContract.TypePropertyName] =
+                GoogleInteractionsContentContract.ImageType,
+            [GoogleInteractionsContentContract.MimeTypePropertyName] =
+                GoogleInteractionsImageOutputContract.ContentType,
             ["image_size"] = context.Request.Resolution
         };
 
@@ -64,8 +65,9 @@ internal sealed class GoogleInteractionsRequestBuilder
     {
         return new JsonObject
         {
-            ["type"] = "text",
-            ["text"] = prompt
+            [GoogleInteractionsContentContract.TypePropertyName] =
+                GoogleInteractionsContentContract.TextType,
+            [GoogleInteractionsContentContract.TextPropertyName] = prompt
         };
     }
 
@@ -88,9 +90,11 @@ internal sealed class GoogleInteractionsRequestBuilder
     {
         return new JsonObject
         {
-            ["type"] = "image",
-            ["mime_type"] = attachedImage.ContentType,
-            ["data"] = Convert.ToBase64String(attachedImage.Content)
+            [GoogleInteractionsContentContract.TypePropertyName] =
+                GoogleInteractionsContentContract.ImageType,
+            [GoogleInteractionsContentContract.MimeTypePropertyName] = attachedImage.ContentType,
+            [GoogleInteractionsContentContract.DataPropertyName] =
+                Convert.ToBase64String(attachedImage.Content)
         };
     }
 }
