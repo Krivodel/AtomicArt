@@ -29,7 +29,7 @@
 
                 <ComboBox x:Name="AspectRatioComboBox"
                           Grid.Column="1"
-                          MinWidth="{StaticResource GenerationAspectRatioComboMinWidth}"
+                          MinWidth="{StaticResource GenerationOptionComboMinWidth}"
                           IsEnabled="{Binding HasLoadedCatalog}"
                           ItemsSource="{Binding AspectRatios}"
                           SelectedItem="{Binding SelectedAspectRatio}"
@@ -40,7 +40,7 @@
 
                 <ComboBox x:Name="ResolutionComboBox"
                           Grid.Column="2"
-                          MinWidth="{StaticResource GenerationResolutionComboMinWidth}"
+                          MinWidth="{StaticResource GenerationOptionComboMinWidth}"
                           IsEnabled="{Binding HasLoadedCatalog}"
                           ItemsSource="{Binding Resolutions}"
                           SelectedItem="{Binding SelectedResolution}" />
@@ -145,7 +145,7 @@
 
                 <ComboBox x:Name="GenerationCountComboBox"
                           Grid.Column="5"
-                          MinWidth="{StaticResource GenerationCountComboMinWidth}"
+                          MinWidth="{StaticResource GenerationOptionComboMinWidth}"
                           Margin="0,0,-5,0"
                           HorizontalAlignment="Right"
                           IsEnabled="{Binding HasLoadedCatalog}"

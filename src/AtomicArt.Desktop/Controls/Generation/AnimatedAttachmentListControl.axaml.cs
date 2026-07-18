@@ -845,7 +845,7 @@ public partial class AnimatedAttachmentListControl : UserControl
 
     private double GetPreviewSize()
     {
-        if (this.TryFindResource("AttachmentPreviewSize", out object? value)
+        if (this.TryFindResource("AttachmentItemSize", out object? value)
             && value is double size)
         {
             return size;
