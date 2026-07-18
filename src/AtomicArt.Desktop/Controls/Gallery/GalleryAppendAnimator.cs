@@ -31,7 +31,7 @@ internal sealed class GalleryAppendAnimator : GalleryScheduledAnimator
                 new List<MotionFrame>
                 {
                     new(0d, 14d, 0.96d, 0d, 0d),
-                    new(0d, 0d, 1d, 0d, 1d)
+                    MotionFrame.Identity
                 },
                 AnimationTiming.ScaleTime(360, GalleryMotionTimings.SpawnSpeed),
                 AnimationTiming.ScaleTime(i * 28, GalleryMotionTimings.SpawnSpeed),

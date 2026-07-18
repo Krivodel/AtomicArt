@@ -61,7 +61,7 @@ internal static class GalleryMotionPlanner
             FromPoint(startCenter, target, startScale, rotate * 0.18d, startOpacity),
             FromPoint(midFlight, target, Math.Max(startScale, 0.74d), rotate * 1.05d, 1d),
             FromPoint(nearTarget, target, 1.006d, rotate * 0.04d, 1d),
-            new MotionFrame(0d, 0d, 1d, 0d, 1d)
+            MotionFrame.Identity
         ];
     }
 
@@ -113,7 +113,7 @@ internal static class GalleryMotionPlanner
             ToFrame(p2, last, 0.988d, 0d, 1d),
             ToFrame(p3, last, 1.01d, baseRotate * 0.22d, 1d),
             ToFrame(p4, last, 0.998d, 0d, 1d),
-            new MotionFrame(0d, 0d, 1d, 0d, 1d)
+            MotionFrame.Identity
         ];
     }
 
@@ -144,7 +144,7 @@ internal static class GalleryMotionPlanner
             ToFrame(q1, last, 0.984d, 0d, 1d),
             ToFrame(q2, last, 0.992d, baseRotate * 0.20d, 1d),
             ToFrame(q3, last, 1.008d, baseRotate * 0.12d, 1d),
-            new MotionFrame(0d, 0d, 1d, 0d, 1d)
+            MotionFrame.Identity
         ];
     }
 

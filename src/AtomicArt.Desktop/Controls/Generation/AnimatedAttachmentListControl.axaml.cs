@@ -150,7 +150,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         AttachmentMotion motion = CreateAttachmentMotion(itemId, 18d, 16);
         List<MotionFrame> frames =
         [
-            new(0d, 0d, 1d, 0d, 1d),
+            MotionFrame.Identity,
             new(motion.X * 0.36d, motion.Y * 0.36d, 0.97d, motion.Rotate * 0.35d, 0.72d),
             new(motion.X, motion.Y, 0.88d, motion.Rotate, 0d)
         ];
@@ -164,7 +164,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         List<MotionFrame> frames =
         [
             new(-motion.X, -motion.Y, 0.94d, -motion.Rotate * 0.35d, 0d),
-            new(0d, 0d, 1d, 0d, 1d)
+            MotionFrame.Identity
         ];
 
         return frames;
@@ -305,7 +305,7 @@ public partial class AnimatedAttachmentListControl : UserControl
 
         if (mode == AttachmentMutationMode.Instant || _animationScheduler is null)
         {
-            MotionFrameApplier.Apply(entry.Control, new MotionFrame(0d, 0d, 1d, 0d, 1d));
+            MotionFrameApplier.Apply(entry.Control, MotionFrame.Identity);
             return;
         }
 
@@ -332,7 +332,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             || _animationScheduler is null
             || Math.Abs(offsetX) < MovementTolerance)
         {
-            MotionFrameApplier.Apply(entry.Control, new MotionFrame(0d, 0d, 1d, 0d, 1d));
+            MotionFrameApplier.Apply(entry.Control, MotionFrame.Identity);
             return;
         }
 
@@ -342,7 +342,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             new List<MotionFrame>
             {
                 new(offsetX, 0d, 1d, 0d, 1d),
-                new(0d, 0d, 1d, 0d, 1d)
+                MotionFrame.Identity
             },
             MoveDurationMilliseconds,
             0,
@@ -369,7 +369,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         _removingEntries.Add(entry);
         Canvas.SetLeft(entry.Control, overlayX);
         Canvas.SetTop(entry.Control, 0d);
-        MotionFrameApplier.Apply(entry.Control, new MotionFrame(0d, 0d, 1d, 0d, 1d));
+        MotionFrameApplier.Apply(entry.Control, MotionFrame.Identity);
 
         _animationScheduler.Cancel(GetEntryAnimationControls(entry));
         _ = _animationScheduler.AnimateAsync(
@@ -563,7 +563,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             slotWidth);
         Canvas.SetLeft(dragState.Entry.Control, draggedX);
         Canvas.SetTop(dragState.Entry.Control, 0d);
-        MotionFrameApplier.Apply(dragState.Entry.Control, new MotionFrame(0d, 0d, 1d, 0d, 1d));
+        MotionFrameApplier.Apply(dragState.Entry.Control, MotionFrame.Identity);
 
         if (targetIndex != dragState.TargetIndex)
         {
@@ -644,7 +644,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         double currentX = GetCurrentX(dragCandidate.Entry.Control);
         Canvas.SetLeft(dragCandidate.Entry.Control, currentX);
         Canvas.SetTop(dragCandidate.Entry.Control, 0d);
-        MotionFrameApplier.Apply(dragCandidate.Entry.Control, new MotionFrame(0d, 0d, 1d, 0d, 1d));
+        MotionFrameApplier.Apply(dragCandidate.Entry.Control, MotionFrame.Identity);
         _animationScheduler?.Cancel([dragCandidate.Entry.Control]);
         dragCandidate.Entry.Control.ZIndex = 1000;
         _dragCandidate = null;
@@ -762,7 +762,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         {
             MotionFrameApplier.Apply(
                 entry.Image,
-                new MotionFrame(0d, 0d, 1d, 0d, 1d));
+                MotionFrame.Identity);
             return;
         }
 
@@ -772,7 +772,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             new List<MotionFrame>
             {
                 new(0d, 0d, 1d, 0d, 0d),
-                new(0d, 0d, 1d, 0d, 1d)
+                MotionFrame.Identity
             },
             ImageRevealDurationMilliseconds,
             0,

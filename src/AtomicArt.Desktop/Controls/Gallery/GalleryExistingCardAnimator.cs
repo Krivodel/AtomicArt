@@ -252,7 +252,7 @@ internal sealed class GalleryExistingCardAnimator : GalleryLayoutAnimator
 
             if (mode is GalleryExistingAnimationMode.ResetBeforeMeasure or GalleryExistingAnimationMode.ImmediateRetarget)
             {
-                MotionFrameApplier.Apply(pair.Value, new MotionFrame(0d, 0d, 1d, 0d, 1d));
+                MotionFrameApplier.Apply(pair.Value, MotionFrame.Identity);
             }
 
             AddMovingCard(context, pair, first, moving);

@@ -68,7 +68,7 @@ internal sealed class GallerySpawnRetargetAnimator : GalleryLayoutAnimator
     {
         if (context.CardControls.TryGetValue(id, out Control? control))
         {
-            MotionFrameApplier.Apply(control, new MotionFrame(0d, 0d, 1d, 0d, 1d));
+            MotionFrameApplier.Apply(control, MotionFrame.Identity);
             control.Opacity = 1d;
         }
 

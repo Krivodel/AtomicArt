@@ -40,7 +40,7 @@ internal sealed class GalleryRemoveAnimator : GalleryOverlayAnimator
     {
         List<MotionFrame> frames =
         [
-            new(0d, 0d, 1d, 0d, 1d),
+            MotionFrame.Identity,
             new(sign * 10d, -8d, 1.02d, sign * 2.5d, 1d),
             new(sign * 24d, -18d, 0.95d, sign * 5.5d, 0.92d),
             new(sign * 38d, -30d, 0.72d, sign * 8.5d, 0d)
