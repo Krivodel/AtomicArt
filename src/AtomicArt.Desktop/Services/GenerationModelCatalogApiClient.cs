@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
-using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 
@@ -40,11 +39,17 @@ public sealed class GenerationModelCatalogApiClient : IGenerationModelCatalogApi
 
         if (!response.IsSuccessStatusCode)
         {
-            string? errorCode = await TryReadSafeErrorCodeAsync(response, ct).ConfigureAwait(false);
+            SafeApiProblemDetailsReadResult problemDetails = await SafeApiProblemDetailsReader
+                .TryReadErrorCodeAsync(response.Content, ct)
+                .ConfigureAwait(false);
+            SafeApiProblemDetailsReader.LogReadFailure(
+                _logger,
+                problemDetails,
+                SafeApiProblemDetailsApi.GenerationModelCatalog);
             _logger.LogWarning(
                 "Generation model catalog API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
                 (int)response.StatusCode,
-                errorCode ?? "unavailable",
+                problemDetails.ErrorCode ?? "unavailable",
                 stopwatch.ElapsedMilliseconds);
         }
 
@@ -65,41 +70,5 @@ public sealed class GenerationModelCatalogApiClient : IGenerationModelCatalogApi
             stopwatch.ElapsedMilliseconds);
 
         return catalog;
-    }
-
-    private async Task<string?> TryReadSafeErrorCodeAsync(
-        HttpResponseMessage response,
-        CancellationToken ct)
-    {
-        try
-        {
-            return await SafeApiProblemDetailsReader
-                .ReadErrorCodeAsync(response.Content, ct)
-                .ConfigureAwait(false);
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Generation model catalog API returned malformed limited problem details.");
-
-            return null;
-        }
-        catch (IOException ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Failed to read limited generation model catalog API problem details.");
-
-            return null;
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Failed to receive limited generation model catalog API problem details.");
-
-            return null;
-        }
     }
 }
