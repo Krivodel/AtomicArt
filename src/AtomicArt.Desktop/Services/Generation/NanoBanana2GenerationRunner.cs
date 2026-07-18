@@ -30,7 +30,7 @@ public sealed class NanoBanana2GenerationRunner : INanoBanana2GenerationRunner, 
         {
             throw new ArgumentOutOfRangeException(
                 nameof(parameters.GenerationCount),
-                "Generation count must be positive.");
+                GenerationRequestValidationMessages.PositiveGenerationCountRequired);
         }
 
         NanoBanana2GenerationParameters singleGenerationParameters = parameters with

@@ -1,3 +1,5 @@
+using AtomicArt.Desktop.Services.Generation;
+
 namespace AtomicArt.Desktop.Services;
 
 public sealed record GenerationStartSnapshot
@@ -32,7 +34,7 @@ public sealed record GenerationStartSnapshot
             throw new ArgumentOutOfRangeException(
                 nameof(generationCount),
                 generationCount,
-                "Generation count must be positive.");
+                GenerationRequestValidationMessages.PositiveGenerationCountRequired);
         }
 
         if (attachedImagesCount < 0)

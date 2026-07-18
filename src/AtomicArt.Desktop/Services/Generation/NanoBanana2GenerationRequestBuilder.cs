@@ -126,7 +126,7 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
         {
             throw new ArgumentOutOfRangeException(
                 nameof(generationCount),
-                "Generation count must be positive.");
+                GenerationRequestValidationMessages.PositiveGenerationCountRequired);
         }
     }
 
