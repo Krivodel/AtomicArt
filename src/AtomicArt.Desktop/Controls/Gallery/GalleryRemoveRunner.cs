@@ -8,26 +8,21 @@ using AtomicArt.Desktop.Services.GalleryAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryRemoveRunner : GalleryOperationRunner
+internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
 {
     public override Type OperationType => typeof(RemoveGalleryOperation);
     public override bool SupportsBatching => false;
 
     private readonly GalleryAnimationScheduler _animationScheduler;
-    private readonly GalleryMotionAnimator _motionAnimator;
-    private readonly GalleryLayoutService _galleryLayout;
-    private readonly ILogger<GalleryRemoveRunner> _logger;
 
     public GalleryRemoveRunner(
         GalleryAnimationScheduler animationScheduler,
         GalleryMotionAnimator motionAnimator,
         GalleryLayoutService galleryLayout,
         ILogger<GalleryRemoveRunner> logger)
+        : base(motionAnimator, galleryLayout, logger)
     {
         _animationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
-        _motionAnimator = motionAnimator ?? throw new ArgumentNullException(nameof(motionAnimator));
-        _galleryLayout = galleryLayout ?? throw new ArgumentNullException(nameof(galleryLayout));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public override async Task RunAsync(
@@ -129,8 +124,8 @@ internal sealed class GalleryRemoveRunner : GalleryOperationRunner
         IReadOnlyList<GalleryOperation> operations,
         out List<(object Item, Rect Rect)> removedItems)
     {
-        _galleryLayout.SynchronizeCardControlIds(context);
-        Dictionary<Guid, Rect> first = _galleryLayout.TakeSnapshot(context);
+        GalleryLayout.SynchronizeCardControlIds(context);
+        Dictionary<Guid, Rect> first = GalleryLayout.TakeSnapshot(context);
         List<Control> interruptedControls = context.CardControls.Values.ToList();
         _animationScheduler.Cancel(interruptedControls);
         ResetControls(interruptedControls);
@@ -141,7 +136,7 @@ internal sealed class GalleryRemoveRunner : GalleryOperationRunner
 
     private async Task RenderAfterRemovalAsync(GalleryOperationCoordinator context)
     {
-        _galleryLayout.RenderCards(context);
+        GalleryLayout.RenderCards(context);
         await context.WaitForLayoutAsync();
     }
 
@@ -152,7 +147,7 @@ internal sealed class GalleryRemoveRunner : GalleryOperationRunner
         GalleryAnimationTracker deleteOverlays,
         GalleryAnimationTracker runningMoveControls)
     {
-        Task moveAnimation = _motionAnimator.AnimateRemovalLayoutShiftAsync(
+        Task moveAnimation = MotionAnimator.AnimateRemovalLayoutShiftAsync(
             context,
             first,
             runningMoveControls);
@@ -187,7 +182,7 @@ internal sealed class GalleryRemoveRunner : GalleryOperationRunner
         IEnumerable<Control> deleteOverlays,
         Exception exception)
     {
-        _logger.LogError(exception, "Failed to remove gallery items.");
+        Logger.LogError(exception, "Failed to remove gallery items.");
         CancelAnimations(context, runningMoveControls, deleteOverlays);
         GalleryOperationCompletion.Fail(operations, exception);
     }
@@ -200,7 +195,7 @@ internal sealed class GalleryRemoveRunner : GalleryOperationRunner
         List<Task> animations = [];
         foreach ((object item, Rect rect) in removedItems)
         {
-            animations.Add(_motionAnimator.AnimateRemovedItemAsync(context, item, rect, deleteOverlays));
+            animations.Add(MotionAnimator.AnimateRemovedItemAsync(context, item, rect, deleteOverlays));
         }
 
         return animations;
@@ -213,7 +208,7 @@ internal sealed class GalleryRemoveRunner : GalleryOperationRunner
             animation.ContinueWith(
                 completedAnimation =>
                 {
-                    _logger.LogError(completedAnimation.Exception, "Gallery remove animation failed.");
+                    Logger.LogError(completedAnimation.Exception, "Gallery remove animation failed.");
                 },
                 TaskContinuationOptions.OnlyOnFaulted);
         }

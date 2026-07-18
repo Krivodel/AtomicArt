@@ -9,7 +9,7 @@ using AtomicArt.Desktop.Services.GalleryAnimation;
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryFrontGenerationRunner :
-    GalleryOperationRunner,
+    GalleryAnimatedOperationRunner,
     IGalleryRetargetableOperationRunner
 {
     public override Type OperationType => typeof(GenerateFrontGalleryOperation);
@@ -17,9 +17,6 @@ internal sealed class GalleryFrontGenerationRunner :
     public bool IsRunning => _isRunning;
 
     private readonly GalleryAnimationScheduler _animationScheduler;
-    private readonly GalleryMotionAnimator _motionAnimator;
-    private readonly GalleryLayoutService _galleryLayout;
-    private readonly ILogger<GalleryFrontGenerationRunner> _logger;
     private readonly GalleryFrontGenerationRetargetWaiter _retargetWaiter;
     private bool _isRunning;
 
@@ -29,11 +26,9 @@ internal sealed class GalleryFrontGenerationRunner :
         GalleryLayoutService galleryLayout,
         ILogger<GalleryFrontGenerationRunner> logger,
         GalleryFrontGenerationRetargetWaiter retargetWaiter)
+        : base(motionAnimator, galleryLayout, logger)
     {
         _animationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
-        _motionAnimator = motionAnimator ?? throw new ArgumentNullException(nameof(motionAnimator));
-        _galleryLayout = galleryLayout ?? throw new ArgumentNullException(nameof(galleryLayout));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _retargetWaiter = retargetWaiter ?? throw new ArgumentNullException(nameof(retargetWaiter));
     }
 
@@ -58,7 +53,7 @@ internal sealed class GalleryFrontGenerationRunner :
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Failed to generate front gallery items.");
+            Logger.LogError(exception, "Failed to generate front gallery items.");
             GalleryOperationCompletion.Fail(GetTrackedOperations(state, operations), exception);
         }
         finally
@@ -111,11 +106,11 @@ internal sealed class GalleryFrontGenerationRunner :
 
         if (context.ScrollViewer.Dispatcher.CheckAccess())
         {
-            _galleryLayout.RefreshGalleryVirtualization(context);
+            GalleryLayout.RefreshGalleryVirtualization(context);
             return;
         }
 
-        context.ScrollViewer.Dispatcher.Post(() => _galleryLayout.RefreshGalleryVirtualization(context));
+        context.ScrollViewer.Dispatcher.Post(() => GalleryLayout.RefreshGalleryVirtualization(context));
     }
 
     private async Task RunLoopAsync(
@@ -153,10 +148,10 @@ internal sealed class GalleryFrontGenerationRunner :
             await PrepareVisibleCardsForSnapshotAsync(context);
         }
 
-        _galleryLayout.SynchronizeCardControlIds(context);
-        Dictionary<Guid, Rect> firstExisting = _galleryLayout.TakeSnapshotExcept(context, state.ActiveFrontIds);
+        GalleryLayout.SynchronizeCardControlIds(context);
+        Dictionary<Guid, Rect> firstExisting = GalleryLayout.TakeSnapshotExcept(context, state.ActiveFrontIds);
         Dictionary<Guid, Rect> currentSpawnRects =
-            _galleryLayout.TakeOverlaySnapshots(context.OverlayCanvas, state.SpawnClones);
+            GalleryLayout.TakeOverlaySnapshots(context.OverlayCanvas, state.SpawnClones);
         MaterializeOperations(context, state);
         await PrepareMaterializedEmptySceneAsync(context, state, startedEmpty);
 
@@ -173,7 +168,7 @@ internal sealed class GalleryFrontGenerationRunner :
 
     private async Task PrepareVisibleCardsForSnapshotAsync(GalleryOperationCoordinator context)
     {
-        _galleryLayout.RefreshGalleryVirtualization(context);
+        GalleryLayout.RefreshGalleryVirtualization(context);
         await context.WaitForLayoutAsync();
     }
 
@@ -187,7 +182,7 @@ internal sealed class GalleryFrontGenerationRunner :
             return;
         }
 
-        _galleryLayout.RefreshGalleryVirtualization(context);
+        GalleryLayout.RefreshGalleryVirtualization(context);
         await context.WaitForLayoutAsync();
     }
 
@@ -197,18 +192,18 @@ internal sealed class GalleryFrontGenerationRunner :
         Dictionary<Guid, Rect> firstExisting,
         Dictionary<Guid, Rect> currentSpawnRects)
     {
-        _galleryLayout.RenderCards(context, state.ActiveFrontIds);
+        GalleryLayout.RenderCards(context, state.ActiveFrontIds);
         await context.WaitForLayoutAsync();
 
         state.RunningControls.Clear();
         List<Task> animations =
         [
-            _motionAnimator.AnimateFrontMaterializationAsync(
+            MotionAnimator.AnimateFrontMaterializationAsync(
                 context,
                 firstExisting,
                 state.ActiveFrontIds,
                 state.RunningControls),
-            _motionAnimator.AnimateSpawnRetargetAsync(
+            MotionAnimator.AnimateSpawnRetargetAsync(
                 context,
                 currentSpawnRects,
                 state)

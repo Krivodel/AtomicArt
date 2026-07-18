@@ -5,23 +5,17 @@ using AtomicArt.Desktop.Services.Gallery;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryMixedMutationRunner : GalleryOperationRunner
+internal sealed class GalleryMixedMutationRunner : GalleryAnimatedOperationRunner
 {
     public override Type OperationType => typeof(MixedMutationGalleryOperation);
     public override bool SupportsBatching => false;
-
-    private readonly GalleryMotionAnimator _motionAnimator;
-    private readonly GalleryLayoutService _galleryLayout;
-    private readonly ILogger<GalleryMixedMutationRunner> _logger;
 
     public GalleryMixedMutationRunner(
         GalleryMotionAnimator motionAnimator,
         GalleryLayoutService galleryLayout,
         ILogger<GalleryMixedMutationRunner> logger)
+        : base(motionAnimator, galleryLayout, logger)
     {
-        _motionAnimator = motionAnimator ?? throw new ArgumentNullException(nameof(motionAnimator));
-        _galleryLayout = galleryLayout ?? throw new ArgumentNullException(nameof(galleryLayout));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public override async Task RunAsync(
@@ -42,7 +36,7 @@ internal sealed class GalleryMixedMutationRunner : GalleryOperationRunner
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Failed to apply gallery mutation.");
+            Logger.LogError(exception, "Failed to apply gallery mutation.");
             GalleryOperationCompletion.Fail(operations, exception);
         }
         finally
@@ -63,8 +57,8 @@ internal sealed class GalleryMixedMutationRunner : GalleryOperationRunner
         IReadOnlyList<GalleryOperation> operations,
         GalleryAnimationTracker deleteOverlays)
     {
-        _galleryLayout.SynchronizeCardControlIds(context);
-        Dictionary<Guid, Rect> first = _galleryLayout.TakeSnapshot(context);
+        GalleryLayout.SynchronizeCardControlIds(context);
+        Dictionary<Guid, Rect> first = GalleryLayout.TakeSnapshot(context);
         List<(object Item, Rect Rect)> removedItems = MaterializeOperations(context, operations, first);
         await RenderMutationAsync(context);
         await Task.WhenAll(CreateAnimations(context, first, removedItems, deleteOverlays));
@@ -72,7 +66,7 @@ internal sealed class GalleryMixedMutationRunner : GalleryOperationRunner
 
     private async Task RenderMutationAsync(GalleryOperationCoordinator context)
     {
-        _galleryLayout.RenderCards(context);
+        GalleryLayout.RenderCards(context);
         await context.WaitForLayoutAsync();
     }
 
@@ -85,11 +79,11 @@ internal sealed class GalleryMixedMutationRunner : GalleryOperationRunner
         HashSet<Guid> newIds = [];
         List<Task> animations =
         [
-            _motionAnimator.AnimateLayoutShiftAsync(context, first, newIds)
+            MotionAnimator.AnimateLayoutShiftAsync(context, first, newIds)
         ];
         foreach ((object item, Rect rect) in removedItems)
         {
-            animations.Add(_motionAnimator.AnimateRemovedItemAsync(context, item, rect, deleteOverlays));
+            animations.Add(MotionAnimator.AnimateRemovedItemAsync(context, item, rect, deleteOverlays));
         }
 
         return animations;

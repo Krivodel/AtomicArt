@@ -6,23 +6,17 @@ using AtomicArt.Desktop.Services.Gallery;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
-internal sealed class GalleryAppendRunner : GalleryOperationRunner
+internal sealed class GalleryAppendRunner : GalleryAnimatedOperationRunner
 {
     public override Type OperationType => typeof(AppendBatchGalleryOperation);
     public override bool SupportsBatching => true;
-
-    private readonly GalleryMotionAnimator _motionAnimator;
-    private readonly GalleryLayoutService _galleryLayout;
-    private readonly ILogger<GalleryAppendRunner> _logger;
 
     public GalleryAppendRunner(
         GalleryMotionAnimator motionAnimator,
         GalleryLayoutService galleryLayout,
         ILogger<GalleryAppendRunner> logger)
+        : base(motionAnimator, galleryLayout, logger)
     {
-        _motionAnimator = motionAnimator ?? throw new ArgumentNullException(nameof(motionAnimator));
-        _galleryLayout = galleryLayout ?? throw new ArgumentNullException(nameof(galleryLayout));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public override async Task RunAsync(
@@ -34,8 +28,8 @@ internal sealed class GalleryAppendRunner : GalleryOperationRunner
         ArgumentNullException.ThrowIfNull(context);
         ct.ThrowIfCancellationRequested();
 
-        _galleryLayout.SynchronizeCardControlIds(context);
-        Dictionary<Guid, Rect> first = _galleryLayout.TakeSnapshot(context);
+        GalleryLayout.SynchronizeCardControlIds(context);
+        Dictionary<Guid, Rect> first = GalleryLayout.TakeSnapshot(context);
         AppendMaterialization materialization = MaterializeOperations(context, operations);
 
         if (materialization.NewIds.Count == 0)
@@ -44,7 +38,7 @@ internal sealed class GalleryAppendRunner : GalleryOperationRunner
             return;
         }
 
-        _galleryLayout.RenderCards(context);
+        GalleryLayout.RenderCards(context);
         await context.WaitForLayoutAsync();
         await AnimateAsync(context, operations, first, materialization.Batches, materialization.NewIds);
     }
@@ -93,11 +87,11 @@ internal sealed class GalleryAppendRunner : GalleryOperationRunner
     {
         List<Task> animations =
         [
-            _motionAnimator.AnimateLayoutShiftAsync(context, first, allNewIds)
+            MotionAnimator.AnimateLayoutShiftAsync(context, first, allNewIds)
         ];
         foreach (List<object> batch in appendBatches)
         {
-            animations.Add(_motionAnimator.AnimateAppendBatchAsync(context, batch));
+            animations.Add(MotionAnimator.AnimateAppendBatchAsync(context, batch));
         }
 
         try
@@ -107,7 +101,7 @@ internal sealed class GalleryAppendRunner : GalleryOperationRunner
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Failed to append gallery items.");
+            Logger.LogError(exception, "Failed to append gallery items.");
             GalleryOperationCompletion.Fail(operations, exception);
         }
     }
