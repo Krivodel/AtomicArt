@@ -244,14 +244,10 @@ public sealed class GalleryGenerationCompletedHandlerTests
 
     private static GenerationLifecycleEvent CreateCompletedEvent(GenerationItemDto item)
     {
-        GenerationBatchDto batch = new(BatchId, [item]);
-
-        return new GenerationLifecycleEvent(
+        return GalleryLifecycleTestFactory.CreateCompletedEvent(
             CorrelationId,
-            GenerationLifecycleStatus.Completed,
-            null,
-            batch,
-            null);
+            BatchId,
+            item);
     }
 
     private static GenerationItemDto CreateItem(

@@ -18,6 +18,15 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
 internal static class GalleryViewModelTestFactory
 {
+    private static readonly DateTime CreatedAtUtc = new(
+        2026,
+        7,
+        6,
+        12,
+        0,
+        0,
+        DateTimeKind.Utc);
+
     public static GalleryViewModel CreateViewModel(
         IFileRevealService? fileRevealService = null,
         IImageViewerService? imageViewerService = null,
@@ -107,61 +116,24 @@ internal static class GalleryViewModelTestFactory
 
     public static GenerationLifecycleEvent CreateStartedEvent(Guid correlationId, int generationCount)
     {
-        GenerationStartSnapshot start = new(
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
-            ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
-            "Prompt",
-            GenerationAspectRatios.Auto,
-            TestGenerationOutputMetadata.GeneratedImageResolution,
-            generationCount,
-            0,
-            DateTime.UtcNow);
-
-        return new GenerationLifecycleEvent(
-            correlationId,
-            GenerationLifecycleStatus.Started,
-            start,
-            null,
-            null);
+        return GalleryLifecycleTestFactory.CreateStartedEvent(correlationId, generationCount);
     }
 
-    private sealed class NullGalleryItemDeletionService : IGalleryItemDeletionService
-    {
-        public Task DeleteFilesAsync(GalleryItemDeletionRequest request, CancellationToken ct)
-        {
-            return Task.CompletedTask;
-        }
-    }
     public static GenerationLifecycleEvent CreateCompletedEvent(
         Guid correlationId,
         GenerationBatchDto batch)
     {
-        return new GenerationLifecycleEvent(
-            correlationId,
-            GenerationLifecycleStatus.Completed,
-            null,
-            batch,
-            null);
+        return GalleryLifecycleTestFactory.CreateCompletedEvent(correlationId, batch);
     }
 
     public static GenerationLifecycleEvent CreateStartFailedEvent(Guid correlationId)
     {
-        return new GenerationLifecycleEvent(
-            correlationId,
-            GenerationLifecycleStatus.StartFailed,
-            null,
-            null,
-            "Failed to start.");
+        return GalleryLifecycleTestFactory.CreateStartFailedEvent(correlationId);
     }
 
     public static GenerationLifecycleEvent CreateFailedEvent(Guid correlationId)
     {
-        return new GenerationLifecycleEvent(
-            correlationId,
-            GenerationLifecycleStatus.Failed,
-            null,
-            null,
-            "Generation failed.");
+        return GalleryLifecycleTestFactory.CreateFailedEvent(correlationId);
     }
 
     public static GenerationItemDto CreateItem(
@@ -176,9 +148,17 @@ internal static class GalleryViewModelTestFactory
             prompt,
             GenerationAspectRatios.Auto,
             TestGenerationOutputMetadata.GeneratedImageResolution,
-            DateTime.UtcNow,
+            CreatedAtUtc,
             status,
             imagePath,
             null);
+    }
+
+    private sealed class NullGalleryItemDeletionService : IGalleryItemDeletionService
+    {
+        public Task DeleteFilesAsync(GalleryItemDeletionRequest request, CancellationToken ct)
+        {
+            return Task.CompletedTask;
+        }
     }
 }
