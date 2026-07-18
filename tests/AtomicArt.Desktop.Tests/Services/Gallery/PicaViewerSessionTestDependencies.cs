@@ -17,12 +17,13 @@ internal sealed class PicaViewerSessionTestDependencies
     internal Mock<IGenerationImageFormatRegistry> FormatRegistry { get; } = new();
     internal Mock<IUiThreadDispatcher> UiThreadDispatcher { get; } = new();
 
-    internal PicaViewerSession CreateSession()
+    internal PicaViewerSession CreateSession(
+        IGenerationImageFormatRegistry? formatRegistry = null)
     {
         PicaViewerSessionDependencies dependencies = new(
             ClipboardImageWriter.Object,
             TrustedImageFileService.Object,
-            FormatRegistry.Object,
+            formatRegistry ?? FormatRegistry.Object,
             UiThreadDispatcher.Object,
             NullLoggerFactory.Instance);
 
