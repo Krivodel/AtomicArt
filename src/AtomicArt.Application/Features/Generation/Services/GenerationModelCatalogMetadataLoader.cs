@@ -226,35 +226,21 @@ public static class GenerationModelCatalogMetadataLoader
             modelId,
             sourceName);
 
-        return new GenerationModelMetadataDto(
-            modelId,
-            displayName,
-            provider,
-            providerModelId,
-            panelId,
-            contextWindowTokens,
-            maxOutputTokens,
-            constraints.MaxPromptLength,
-            constraints.AspectRatios,
-            constraints.Resolutions,
-            constraints.GenerationCounts,
-            new GenerationModelTemperatureMetadataDto(
-                constraints.Temperature.Minimum,
-                constraints.Temperature.Maximum,
-                constraints.Temperature.Default,
-                constraints.Temperature.Step),
-            new GenerationModelAttachmentMetadataDto(
-                constraints.MaxAttachedImages,
-                constraints.MaxAttachedImageBytes,
-                constraints.MaxTotalAttachedImageBytes,
-                constraints.SupportedContentTypes),
-            new GenerationModelPricingMetadataDto(
-                pricing.CurrencyCode,
-                pricing.InputTokenUsdPerMillion,
-                pricing.TextOutputTokenUsdPerMillion,
-                pricing.ImageOutputTokenUsdPerMillion,
-                pricing.InputImageTokens,
-                pricing.OutputImageTokensByResolution),
+        GenerationModelMetadataDto normalizedMetadata = metadata with
+        {
+            Id = modelId,
+            DisplayName = displayName,
+            Provider = provider,
+            ProviderModelId = providerModelId,
+            PanelId = panelId,
+            ContextWindowTokens = contextWindowTokens,
+            MaxOutputTokens = maxOutputTokens
+        };
+
+        return GenerationModelMetadataDomainMapper.ToMetadataSnapshot(
+            normalizedMetadata,
+            constraints,
+            pricing,
             thinking);
     }
 

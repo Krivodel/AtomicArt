@@ -29,21 +29,6 @@ internal static class GenerationModelMetadataDomainMapper
             CreateThinkingConstraints(metadata.Thinking));
     }
 
-    private static GenerationModelThinkingConstraints? CreateThinkingConstraints(
-        GenerationModelThinkingMetadataDto? thinking)
-    {
-        if (thinking is null)
-        {
-            return null;
-        }
-
-        IReadOnlyList<string>? levels = thinking.Levels?
-            .Select(level => level?.Value ?? string.Empty)
-            .ToList();
-
-        return new GenerationModelThinkingConstraints(levels, thinking.Default);
-    }
-
     public static GenerationModelPricing ToPricing(
         string modelId,
         GenerationModelPricingMetadataDto pricing)
@@ -59,5 +44,57 @@ internal static class GenerationModelMetadataDomainMapper
             pricing.ImageOutputTokenUsdPerMillion,
             pricing.InputImageTokens,
             pricing.OutputImageTokensByResolution);
+    }
+
+    public static GenerationModelMetadataDto ToMetadataSnapshot(
+        GenerationModelMetadataDto metadata,
+        GenerationModelConstraints constraints,
+        GenerationModelPricing pricing,
+        GenerationModelThinkingMetadataDto? thinking)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        ArgumentNullException.ThrowIfNull(constraints);
+        ArgumentNullException.ThrowIfNull(pricing);
+
+        return metadata with
+        {
+            MaxPromptLength = constraints.MaxPromptLength,
+            AspectRatios = constraints.AspectRatios,
+            Resolutions = constraints.Resolutions,
+            GenerationCounts = constraints.GenerationCounts,
+            Temperature = new GenerationModelTemperatureMetadataDto(
+                constraints.Temperature.Minimum,
+                constraints.Temperature.Maximum,
+                constraints.Temperature.Default,
+                constraints.Temperature.Step),
+            Attachments = new GenerationModelAttachmentMetadataDto(
+                constraints.MaxAttachedImages,
+                constraints.MaxAttachedImageBytes,
+                constraints.MaxTotalAttachedImageBytes,
+                constraints.SupportedContentTypes),
+            Pricing = new GenerationModelPricingMetadataDto(
+                pricing.CurrencyCode,
+                pricing.InputTokenUsdPerMillion,
+                pricing.TextOutputTokenUsdPerMillion,
+                pricing.ImageOutputTokenUsdPerMillion,
+                pricing.InputImageTokens,
+                pricing.OutputImageTokensByResolution),
+            Thinking = thinking
+        };
+    }
+
+    private static GenerationModelThinkingConstraints? CreateThinkingConstraints(
+        GenerationModelThinkingMetadataDto? thinking)
+    {
+        if (thinking is null)
+        {
+            return null;
+        }
+
+        IReadOnlyList<string>? levels = thinking.Levels?
+            .Select(level => level?.Value ?? string.Empty)
+            .ToList();
+
+        return new GenerationModelThinkingConstraints(levels, thinking.Default);
     }
 }
