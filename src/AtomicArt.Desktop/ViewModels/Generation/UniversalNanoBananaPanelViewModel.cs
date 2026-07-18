@@ -115,20 +115,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     [ObservableProperty]
     private string _prompt = string.Empty;
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(GenerateCommand))]
-    [NotifyCanExecuteChangedFor(nameof(PickImageCommand))]
-    [NotifyCanExecuteChangedFor(nameof(AttachImagesCommand))]
-    [NotifyCanExecuteChangedFor(nameof(AttachImageInputsCommand))]
-    [NotifyCanExecuteChangedFor(nameof(LoadModelCatalogCommand))]
-    [NotifyPropertyChangedFor(nameof(HasLoadedCatalog))]
     private bool _isLoading;
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(GenerateCommand))]
-    [NotifyCanExecuteChangedFor(nameof(PickImageCommand))]
-    [NotifyCanExecuteChangedFor(nameof(AttachImagesCommand))]
-    [NotifyCanExecuteChangedFor(nameof(AttachImageInputsCommand))]
-    [NotifyCanExecuteChangedFor(nameof(LoadModelCatalogCommand))]
-    [NotifyPropertyChangedFor(nameof(HasLoadedCatalog))]
     private bool _isCatalogLoading;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasErrorMessage))]
@@ -239,6 +227,17 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         CancelCatalogReload();
         CancelPendingPromptStateSave();
         _disposeCancellationSource.Dispose();
+    }
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        if ((e.PropertyName == nameof(IsLoading))
+            || (e.PropertyName == nameof(IsCatalogLoading)))
+        {
+            NotifyCatalogStateChanged();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanLoadModelCatalog))]
