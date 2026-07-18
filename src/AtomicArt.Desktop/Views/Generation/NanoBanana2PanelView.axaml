@@ -225,12 +225,12 @@
                     <Border x:Name="AspectRatioHintShape"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Classes="image-preview-shadow"
-                            Background="{DynamicResource SukiPopupBackground}"
-                            CornerRadius="8">
+                             Classes="image-preview-shadow"
+                             Background="{DynamicResource SukiPopupBackground}"
+                             CornerRadius="{StaticResource OverlayCornerRadius}">
                         <Border x:Name="AspectRatioHintBorder"
                                 ClipToBounds="True"
-                                CornerRadius="8">
+                                CornerRadius="{StaticResource OverlayCornerRadius}">
                             <Image Source="avares://AtomicArt/Assets/AspectRatioHint.png"
                                    Stretch="UniformToFill"
                                    RenderOptions.BitmapInterpolationMode="MediumQuality" />
