@@ -29,10 +29,10 @@ public sealed class GalleryItemDeletionServiceTests
     public async Task DeleteFilesAsync_WithImageAndThumbnail_DeletesBothFiles()
     {
         string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithImageAndThumbnail_DeletesBothFiles));
-        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
-        string thumbnailPath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
+        string imagePath = await WriteManagedFileAsync(directory);
+        string thumbnailPath = await WriteManagedFileAsync(directory);
         GalleryItemDeletionService service = CreateService(new PassthroughTrustedImageFileService());
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, thumbnailPath);
+        GalleryItemDeletionRequest request = CreateRequest(imagePath, thumbnailPath);
 
         await service.DeleteFilesAsync(request, CancellationToken.None);
 
@@ -47,15 +47,14 @@ public sealed class GalleryItemDeletionServiceTests
         AtomicArtDataPathProvider pathProvider = new(directory);
         string imagePath = Path.Combine(pathProvider.ArtDirectory, BuildManagedFileName(ItemId));
         string thumbnailPath = Path.Combine(pathProvider.ThumbnailsDirectory, BuildManagedFileName(ItemId));
-        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
-        GalleryItemDeletionService service = CreateService(
-            CreateRealTrustedImageFileService(pathProvider),
-            loggerMock.Object);
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, thumbnailPath);
+        (
+            GalleryItemDeletionService service,
+            Mock<ILogger<GalleryItemDeletionService>> loggerMock
+        ) = CreateRealServiceWithLogger(pathProvider);
+        GalleryItemDeletionRequest request = CreateRequest(imagePath, thumbnailPath);
 
-        Func<Task> act = () => service.DeleteFilesAsync(request, CancellationToken.None);
+        await VerifyDeletionDoesNotThrowAsync(service, request);
 
-        await act.Should().NotThrowAsync();
         VerifyNoWarningLogged(loggerMock);
     }
 
@@ -74,30 +73,29 @@ public sealed class GalleryItemDeletionServiceTests
     public async Task DeleteFilesAsync_WithUntrustedPath_DoesNotDeleteFile()
     {
         string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithUntrustedPath_DoesNotDeleteFile));
-        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
-        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
-        GalleryItemDeletionService service = CreateService(
-            new RejectingTrustedImageFileService(),
-            loggerMock.Object);
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+        string imagePath = await WriteManagedFileAsync(directory);
+        (
+            GalleryItemDeletionService service,
+            Mock<ILogger<GalleryItemDeletionService>> loggerMock
+        ) = CreateServiceWithLogger(new RejectingTrustedImageFileService());
 
-        await service.DeleteFilesAsync(request, CancellationToken.None);
-
-        File.Exists(imagePath).Should().BeTrue();
-        VerifyWarningLogged(loggerMock, "path is not trusted");
+        await VerifyRejectedDeletionAsync(
+            service,
+            loggerMock,
+            imagePath,
+            "path is not trusted");
     }
 
     [Fact]
     public async Task DeleteFilesAsync_WithUntrustedPath_DoesNotThrow()
     {
         string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithUntrustedPath_DoesNotThrow));
-        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
+        string imagePath = await WriteManagedFileAsync(directory);
         GalleryItemDeletionService service = CreateService(new RejectingTrustedImageFileService());
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+        GalleryItemDeletionRequest request = CreateRequest(imagePath);
 
-        Func<Task> act = () => service.DeleteFilesAsync(request, CancellationToken.None);
+        await VerifyDeletionDoesNotThrowAsync(service, request);
 
-        await act.Should().NotThrowAsync();
         File.Exists(imagePath).Should().BeTrue();
     }
 
@@ -116,10 +114,10 @@ public sealed class GalleryItemDeletionServiceTests
     public async Task DeleteFilesAsync_WithModelScopedTrustedPath_DeletesFile()
     {
         string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithModelScopedTrustedPath_DeletesFile));
-        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
+        string imagePath = await WriteManagedFileAsync(directory);
         ModelScopedTrustedImageFileService trustedImageFileService = new(ModelId);
         GalleryItemDeletionService service = CreateService(trustedImageFileService);
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+        GalleryItemDeletionRequest request = CreateRequest(imagePath);
 
         await service.DeleteFilesAsync(request, CancellationToken.None);
 
@@ -132,12 +130,9 @@ public sealed class GalleryItemDeletionServiceTests
     {
         string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithRealTrustedService_DeletesManagedFile));
         AtomicArtDataPathProvider pathProvider = new(directory);
-        TrustedImageFileService trustedImageFileService = CreateRealTrustedImageFileService(pathProvider);
-        GalleryItemDeletionService service = CreateService(trustedImageFileService);
-        Directory.CreateDirectory(pathProvider.ArtDirectory);
-        string imagePath = Path.Combine(pathProvider.ArtDirectory, BuildManagedFileName(ItemId));
-        await File.WriteAllBytesAsync(imagePath, GenerationImageTestData.ValidPngBytes);
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+        GalleryItemDeletionService service = CreateRealService(pathProvider);
+        string imagePath = await WriteManagedPngAsync(pathProvider, ItemId);
+        GalleryItemDeletionRequest request = CreateRequest(imagePath);
 
         await service.DeleteFilesAsync(request, CancellationToken.None);
 
@@ -152,23 +147,22 @@ public sealed class GalleryItemDeletionServiceTests
         AtomicArtDataPathProvider pathProvider = new(directory);
         Directory.CreateDirectory(pathProvider.ArtDirectory);
         Directory.CreateDirectory(pathProvider.ThumbnailsDirectory);
-        string imagePath = await WriteFileAsync(pathProvider.ArtDirectory, BuildManagedFileName(ItemId));
-        string thumbnailPath = await WriteFileAsync(pathProvider.ThumbnailsDirectory, BuildManagedFileName(ItemId));
-        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
-        GalleryItemDeletionService service = CreateService(
-            CreateRealTrustedImageFileService(pathProvider),
-            loggerMock.Object);
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, thumbnailPath);
-        
+        string imagePath = await WriteManagedFileAsync(pathProvider.ArtDirectory);
+        string thumbnailPath = await WriteManagedFileAsync(pathProvider.ThumbnailsDirectory);
+        (
+            GalleryItemDeletionService service,
+            Mock<ILogger<GalleryItemDeletionService>> loggerMock
+        ) = CreateRealServiceWithLogger(pathProvider);
+        GalleryItemDeletionRequest request = CreateRequest(imagePath, thumbnailPath);
+
         await using FileStream lockedImage = new(
             imagePath,
             FileMode.Open,
             FileAccess.Read,
             FileShare.None);
 
-        Func<Task> act = () => service.DeleteFilesAsync(request, CancellationToken.None);
+        await VerifyDeletionDoesNotThrowAsync(service, request);
 
-        await act.Should().NotThrowAsync();
         File.Exists(imagePath).Should().BeTrue();
         File.Exists(thumbnailPath).Should().BeFalse();
         VerifyErrorLogged(loggerMock, "Failed to delete gallery item");
@@ -180,11 +174,11 @@ public sealed class GalleryItemDeletionServiceTests
         string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WhenCanceled_ThrowsOperationCanceledException));
         string imagePath = Path.Combine(directory, BuildManagedFileName(ItemId));
         GalleryItemDeletionService service = CreateService(new PassthroughTrustedImageFileService());
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+        GalleryItemDeletionRequest request = CreateRequest(imagePath);
         using CancellationTokenSource cancellationTokenSource = new();
         await cancellationTokenSource.CancelAsync();
 
-        Func<Task> act = () => service.DeleteFilesAsync(request, cancellationTokenSource.Token);
+        Func<Task> act = CreateDeleteAction(service, request, cancellationTokenSource.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -194,18 +188,18 @@ public sealed class GalleryItemDeletionServiceTests
     {
         string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithTrustedPathForOtherItem_DoesNotDeleteFile));
         AtomicArtDataPathProvider pathProvider = new(directory);
-        TrustedImageFileService trustedImageFileService = CreateRealTrustedImageFileService(pathProvider);
-        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
-        GalleryItemDeletionService service = CreateService(trustedImageFileService, loggerMock.Object);
-        Directory.CreateDirectory(pathProvider.ArtDirectory);
-        string imagePath = Path.Combine(pathProvider.ArtDirectory, BuildManagedFileName(OtherItemId));
-        await File.WriteAllBytesAsync(imagePath, GenerationImageTestData.ValidPngBytes);
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+        (
+            GalleryItemDeletionService service,
+            Mock<ILogger<GalleryItemDeletionService>> loggerMock
+        ) = CreateRealServiceWithLogger(pathProvider);
+        string imagePath = await WriteManagedPngAsync(pathProvider, OtherItemId);
 
-        await service.DeleteFilesAsync(request, CancellationToken.None);
-
-        File.Exists(imagePath).Should().BeTrue();
-        VerifyWarningLogged(loggerMock, "does not belong to the item", exceptionExpected: false);
+        await VerifyRejectedDeletionAsync(
+            service,
+            loggerMock,
+            imagePath,
+            "does not belong to the item",
+            exceptionExpected: false);
     }
 
     [Fact]
@@ -213,19 +207,22 @@ public sealed class GalleryItemDeletionServiceTests
     {
         string directory = CreateCleanDirectory(
             nameof(DeleteFilesAsync_WhenResolvedPathBelongsToOtherItem_DoesNotDeleteFile));
-        string imagePath = await WriteFileAsync(directory, BuildManagedFileName(ItemId));
-        string otherItemPath = await WriteFileAsync(directory, BuildManagedFileName(OtherItemId));
+        string imagePath = await WriteManagedFileAsync(directory);
+        string otherItemPath = await WriteManagedFileAsync(directory, OtherItemId);
         ResolvedPathTrustedImageFileService trustedImageFileService = new(otherItemPath);
-        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
-        GalleryItemDeletionService service = CreateService(trustedImageFileService, loggerMock.Object);
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+        (
+            GalleryItemDeletionService service,
+            Mock<ILogger<GalleryItemDeletionService>> loggerMock
+        ) = CreateServiceWithLogger(trustedImageFileService);
 
-        await service.DeleteFilesAsync(request, CancellationToken.None);
+        await VerifyRejectedDeletionAsync(
+            service,
+            loggerMock,
+            imagePath,
+            "path is not trusted");
 
         trustedImageFileService.ValidateResolvedPathCallCount.Should().Be(1);
-        File.Exists(imagePath).Should().BeTrue();
         File.Exists(otherItemPath).Should().BeTrue();
-        VerifyWarningLogged(loggerMock, "path is not trusted");
     }
 
     private static GalleryItemDeletionService CreateService(ITrustedImageFileService trustedImageFileService)
@@ -245,6 +242,33 @@ public sealed class GalleryItemDeletionServiceTests
             logger);
     }
 
+    private static GalleryItemDeletionService CreateRealService(
+        AtomicArtDataPathProvider pathProvider)
+    {
+        return CreateService(CreateRealTrustedImageFileService(pathProvider));
+    }
+
+    private static (
+        GalleryItemDeletionService Service,
+        Mock<ILogger<GalleryItemDeletionService>> LoggerMock
+    ) CreateRealServiceWithLogger(AtomicArtDataPathProvider pathProvider)
+    {
+        return CreateServiceWithLogger(CreateRealTrustedImageFileService(pathProvider));
+    }
+
+    private static (
+        GalleryItemDeletionService Service,
+        Mock<ILogger<GalleryItemDeletionService>> LoggerMock
+    ) CreateServiceWithLogger(ITrustedImageFileService trustedImageFileService)
+    {
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
+        GalleryItemDeletionService service = CreateService(
+            trustedImageFileService,
+            loggerMock.Object);
+
+        return (service, loggerMock);
+    }
+
     private static TrustedImageFileService CreateRealTrustedImageFileService(
         AtomicArtDataPathProvider pathProvider)
     {
@@ -252,6 +276,58 @@ public sealed class GalleryItemDeletionServiceTests
             pathProvider,
             GenerationImageFormatRegistryTestFactory.Create(),
             NullLogger<TrustedImageFileService>.Instance);
+    }
+
+    private static GalleryItemDeletionRequest CreateRequest(
+        string imagePath,
+        string? thumbnailPath = null)
+    {
+        return new GalleryItemDeletionRequest(
+            ItemId,
+            ModelId,
+            imagePath,
+            thumbnailPath);
+    }
+
+    private static Func<Task> CreateDeleteAction(
+        GalleryItemDeletionService service,
+        GalleryItemDeletionRequest request)
+    {
+        return CreateDeleteAction(service, request, CancellationToken.None);
+    }
+
+    private static Func<Task> CreateDeleteAction(
+        GalleryItemDeletionService service,
+        GalleryItemDeletionRequest request,
+        CancellationToken ct)
+    {
+        return () => service.DeleteFilesAsync(request, ct);
+    }
+
+    private static async Task VerifyDeletionDoesNotThrowAsync(
+        GalleryItemDeletionService service,
+        GalleryItemDeletionRequest request)
+    {
+        Func<Task> act = CreateDeleteAction(service, request);
+
+        await act.Should().NotThrowAsync().ConfigureAwait(false);
+    }
+
+    private static async Task VerifyRejectedDeletionAsync(
+        GalleryItemDeletionService service,
+        Mock<ILogger<GalleryItemDeletionService>> loggerMock,
+        string imagePath,
+        string expectedMessage,
+        bool exceptionExpected = true)
+    {
+        GalleryItemDeletionRequest request = CreateRequest(imagePath);
+
+        await service
+            .DeleteFilesAsync(request, CancellationToken.None)
+            .ConfigureAwait(false);
+
+        File.Exists(imagePath).Should().BeTrue();
+        VerifyWarningLogged(loggerMock, expectedMessage, exceptionExpected);
     }
 
     private static string BuildManagedFileName(Guid itemId)
@@ -269,6 +345,31 @@ public sealed class GalleryItemDeletionServiceTests
         return path;
     }
 
+    private static Task<string> WriteManagedFileAsync(string directory)
+    {
+        return WriteManagedFileAsync(directory, ItemId);
+    }
+
+    private static Task<string> WriteManagedFileAsync(string directory, Guid itemId)
+    {
+        return WriteFileAsync(directory, BuildManagedFileName(itemId));
+    }
+
+    private static async Task<string> WriteManagedPngAsync(
+        AtomicArtDataPathProvider pathProvider,
+        Guid itemId)
+    {
+        Directory.CreateDirectory(pathProvider.ArtDirectory);
+        string imagePath = Path.Combine(
+            pathProvider.ArtDirectory,
+            BuildManagedFileName(itemId));
+        await File
+            .WriteAllBytesAsync(imagePath, GenerationImageTestData.ValidPngBytes)
+            .ConfigureAwait(false);
+
+        return imagePath;
+    }
+
     private static async Task<Mock<ILogger<GalleryItemDeletionService>>> DeleteMissingFileAsync(
         string testName,
         string trustedModelId)
@@ -276,11 +377,11 @@ public sealed class GalleryItemDeletionServiceTests
         string directory = CreateCleanDirectory(testName);
         string imagePath = Path.Combine(directory, BuildManagedFileName(ItemId));
         ModelScopedTrustedImageFileService trustedImageFileService = new(trustedModelId);
-        Mock<ILogger<GalleryItemDeletionService>> loggerMock = new();
-        GalleryItemDeletionService service = CreateService(
-            trustedImageFileService,
-            loggerMock.Object);
-        GalleryItemDeletionRequest request = new(ItemId, ModelId, imagePath, null);
+        (
+            GalleryItemDeletionService service,
+            Mock<ILogger<GalleryItemDeletionService>> loggerMock
+        ) = CreateServiceWithLogger(trustedImageFileService);
+        GalleryItemDeletionRequest request = CreateRequest(imagePath);
 
         await service
             .DeleteFilesAsync(request, CancellationToken.None)
