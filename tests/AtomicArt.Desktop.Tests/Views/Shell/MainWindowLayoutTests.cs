@@ -43,43 +43,34 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 .Setup(service => service.CheckForUpdateAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ApplicationUpdate("1.2.3"));
 
-            ServiceCollection services = new();
-            services.AddSingleton(TestApiConfiguration.Create());
-            services.AddDesktopServices();
-            services.AddSingleton(updateServiceMock.Object);
-            using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            RegisterViewTemplates(serviceProvider);
-            MainWindow window = serviceProvider.GetRequiredService<MainWindow>();
+            using MainWindowTestContext context = new(services =>
+            {
+                services.AddSingleton(updateServiceMock.Object);
+            });
+            MainWindow window = context.Window;
 
             window.Show();
 
-            try
-            {
-                MainWindowViewModel viewModel = window.DataContext
-                    .Should()
-                    .BeOfType<MainWindowViewModel>()
-                    .Subject;
-                await viewModel.ApplicationUpdate.StartMonitoringCommand.ExecuteAsync(null);
-                window.CaptureRenderedFrame();
+            MainWindowViewModel viewModel = window.DataContext
+                .Should()
+                .BeOfType<MainWindowViewModel>()
+                .Subject;
+            await viewModel.ApplicationUpdate.StartMonitoringCommand.ExecuteAsync(null);
+            window.CaptureRenderedFrame();
 
-                SukiToast toast = window
-                    .GetVisualDescendants()
-                    .OfType<SukiToast>()
-                    .Single();
-                Button[] actionButtons = toast
-                    .GetVisualDescendants()
-                    .OfType<Button>()
-                    .ToArray();
+            SukiToast toast = window
+                .GetVisualDescendants()
+                .OfType<SukiToast>()
+                .Single();
+            Button[] actionButtons = toast
+                .GetVisualDescendants()
+                .OfType<Button>()
+                .ToArray();
 
-                actionButtons
-                    .Select(button => button.Content)
-                    .Should()
-                    .Equal(UiStrings.UpdateLater, UiStrings.UpdateInstall);
-            }
-            finally
-            {
-                window.Close();
-            }
+            actionButtons
+                .Select(button => button.Content)
+                .Should()
+                .Equal(UiStrings.UpdateLater, UiStrings.UpdateInstall);
         });
     }
 
@@ -88,42 +79,31 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            ServiceCollection services = new();
-            services.AddSingleton(TestApiConfiguration.Create());
-            services.AddDesktopServices();
-            using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            RegisterViewTemplates(serviceProvider);
-            MainWindow window = serviceProvider.GetRequiredService<MainWindow>();
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
 
             window.Show();
             window.CaptureRenderedFrame();
 
-            try
-            {
-                GridSplitter resizeGrip = window
-                    .GetVisualDescendants()
-                    .OfType<GridSplitter>()
-                    .Single(splitter => splitter.Name == GenerationPanelResizeGripName);
-                Grid shellContentGrid = resizeGrip.Parent
-                    .Should()
-                    .BeOfType<Grid>()
-                    .Subject;
-                RowDefinitions rowDefinitions = shellContentGrid.RowDefinitions;
+            GridSplitter resizeGrip = window
+                .GetVisualDescendants()
+                .OfType<GridSplitter>()
+                .Single(splitter => splitter.Name == GenerationPanelResizeGripName);
+            Grid shellContentGrid = resizeGrip.Parent
+                .Should()
+                .BeOfType<Grid>()
+                .Subject;
+            RowDefinitions rowDefinitions = shellContentGrid.RowDefinitions;
 
-                Grid.GetRow(resizeGrip).Should().Be(GenerationPanelRowIndex);
-                resizeGrip.ResizeDirection.Should().Be(GridResizeDirection.Rows);
-                resizeGrip.ResizeBehavior.Should().Be(GridResizeBehavior.PreviousAndCurrent);
-                rowDefinitions.Should().HaveCount(ExpectedShellRowCount);
-                rowDefinitions[GalleryRowIndex].MinHeight.Should().Be(0d);
-                rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeGreaterThan(0d);
-                rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeApproximately(
-                    rowDefinitions[GenerationPanelRowIndex].ActualHeight,
-                    HeightTolerance);
-            }
-            finally
-            {
-                window.Close();
-            }
+            Grid.GetRow(resizeGrip).Should().Be(GenerationPanelRowIndex);
+            resizeGrip.ResizeDirection.Should().Be(GridResizeDirection.Rows);
+            resizeGrip.ResizeBehavior.Should().Be(GridResizeBehavior.PreviousAndCurrent);
+            rowDefinitions.Should().HaveCount(ExpectedShellRowCount);
+            rowDefinitions[GalleryRowIndex].MinHeight.Should().Be(0d);
+            rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeGreaterThan(0d);
+            rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeApproximately(
+                rowDefinitions[GenerationPanelRowIndex].ActualHeight,
+                HeightTolerance);
         });
     }
 
@@ -139,5 +119,30 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                     typeof(IModelPanelViewModel),
                     serviceProvider.GetRequiredService<GenerationPanelView>)
             ]));
+    }
+
+    private sealed class MainWindowTestContext : IDisposable
+    {
+        public MainWindow Window { get; }
+
+        private readonly ServiceProvider _serviceProvider;
+
+        public MainWindowTestContext(Action<ServiceCollection>? configureServices = null)
+        {
+            ServiceCollection services = new();
+            services.AddSingleton(TestApiConfiguration.Create());
+            services.AddDesktopServices();
+            configureServices?.Invoke(services);
+
+            _serviceProvider = services.BuildServiceProvider();
+            RegisterViewTemplates(_serviceProvider);
+            Window = _serviceProvider.GetRequiredService<MainWindow>();
+        }
+
+        public void Dispose()
+        {
+            Window.Close();
+            _serviceProvider.Dispose();
+        }
     }
 }
