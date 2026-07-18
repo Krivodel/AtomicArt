@@ -17,6 +17,8 @@ using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Tests.Common;
 
+using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
+
 namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
 public sealed class GalleryViewModelTests
@@ -626,24 +628,6 @@ public sealed class GalleryViewModelTests
             Status = GenerationItemStatus.Generated,
             ImagePath = "image.png"
         };
-    }
-
-    private static string CreateCleanDirectory(string name)
-    {
-        string directory = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArtDesktopTests",
-            nameof(GalleryViewModelTests),
-            name);
-
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-
-        Directory.CreateDirectory(directory);
-
-        return directory;
     }
 
     private static string GetFileSourcePath(GalleryImageViewerItem item)

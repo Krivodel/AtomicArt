@@ -12,6 +12,8 @@ using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Tests.Services.Generation;
 
+using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
+
 namespace AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 
 public sealed class GalleryThumbnailStorageTests
@@ -266,28 +268,6 @@ public sealed class GalleryThumbnailStorageTests
     private static GalleryThumbnailGenerator CreateGenerator()
     {
         return new GalleryThumbnailGenerator(new GalleryThumbnailImageFormat());
-    }
-
-    private static string CreateCleanDirectory(string name)
-    {
-        string directory = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArtDesktopTests",
-            nameof(GalleryThumbnailStorageTests),
-            name);
-
-        DeleteDirectoryIfExists(directory);
-        Directory.CreateDirectory(directory);
-
-        return directory;
-    }
-
-    private static void DeleteDirectoryIfExists(string directory)
-    {
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
     }
 
     private static async Task<string> WriteSourceImageAsync(AtomicArtDataPathProvider pathProvider)

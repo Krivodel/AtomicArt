@@ -8,6 +8,7 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Desktop.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
@@ -196,7 +197,7 @@ public sealed class GenerationResultStorageTests
 
     private static string CreateCleanDirectory(string name)
     {
-        string directory = Path.Combine(Path.GetTempPath(), "AtomicArtDesktopTests", name);
+        string directory = DesktopTestDirectories.GetDirectoryPath(name);
 
         DeleteDirectoryIfExists(directory);
         Directory.CreateDirectory(directory);

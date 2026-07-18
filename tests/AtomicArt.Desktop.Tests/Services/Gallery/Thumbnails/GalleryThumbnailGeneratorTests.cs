@@ -4,6 +4,8 @@ using Xunit;
 
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
+using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
+
 namespace AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 
 public sealed class GalleryThumbnailGeneratorTests
@@ -139,30 +141,9 @@ public sealed class GalleryThumbnailGeneratorTests
             .WithMessage("*500 MB*");
     }
 
-    private static string CreateCleanDirectory(string name)
-    {
-        string directory = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArtDesktopTests",
-            nameof(GalleryThumbnailGeneratorTests),
-            name);
-
-        DeleteDirectoryIfExists(directory);
-        Directory.CreateDirectory(directory);
-
-        return directory;
-    }
-
     private static GalleryThumbnailGenerator CreateGenerator()
     {
         return new GalleryThumbnailGenerator(new GalleryThumbnailImageFormat());
     }
 
-    private static void DeleteDirectoryIfExists(string directory)
-    {
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-    }
 }

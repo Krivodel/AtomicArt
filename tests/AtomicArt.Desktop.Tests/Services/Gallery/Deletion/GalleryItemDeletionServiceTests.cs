@@ -12,6 +12,8 @@ using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 
+using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
+
 namespace AtomicArt.Desktop.Tests.Services.Gallery.Deletion;
 
 public sealed class GalleryItemDeletionServiceTests
@@ -274,24 +276,6 @@ public sealed class GalleryItemDeletionServiceTests
             pathProvider,
             GenerationImageFormatRegistryTestFactory.Create(),
             NullLogger<TrustedImageFileService>.Instance);
-    }
-
-    private static string CreateCleanDirectory(string name)
-    {
-        string directory = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArtDesktopTests",
-            nameof(GalleryItemDeletionServiceTests),
-            name);
-
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-
-        Directory.CreateDirectory(directory);
-
-        return directory;
     }
 
     private static async Task<string> WriteFileAsync(string directory, string fileName)

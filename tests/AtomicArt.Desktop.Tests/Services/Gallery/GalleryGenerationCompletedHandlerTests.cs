@@ -17,6 +17,8 @@ using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
+using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
+
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
 public sealed class GalleryGenerationCompletedHandlerTests
@@ -287,20 +289,6 @@ public sealed class GalleryGenerationCompletedHandlerTests
             GenerationItemStatus.Generated,
             imagePath,
             imageContent);
-    }
-
-    private static string CreateCleanDirectory(string name)
-    {
-        string directory = Path.Combine(Path.GetTempPath(), "AtomicArtDesktopTests", name);
-
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, true);
-        }
-
-        Directory.CreateDirectory(directory);
-
-        return directory;
     }
 
     private static GenerationResultStorage CreateStorage(string rootDirectory)

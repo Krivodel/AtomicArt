@@ -8,9 +8,10 @@ using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Generation;
-using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.Services;
+using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -41,7 +42,8 @@ internal static class GalleryViewModelTestFactory
             trustedImageFileService ?? new PassthroughTrustedImageFileService();
         IGenerationResultStorage resultStorage =
             generationResultStorage ?? new GenerationResultStorage(
-                new AtomicArtDataPathProvider(CreateTempRootDirectory()),
+                new AtomicArtDataPathProvider(
+                    DesktopTestDirectories.CreateUniqueDirectoryPath()),
                 GenerationImageFormatRegistryTestFactory.Create(),
                 new GenerationImageFileNamePolicy(),
                 NullLogger<GenerationResultStorage>.Instance);
@@ -122,15 +124,6 @@ internal static class GalleryViewModelTestFactory
             start,
             null,
             null);
-    }
-
-    private static string CreateTempRootDirectory()
-    {
-        return Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArtDesktopTests",
-            nameof(GalleryViewModelTestFactory),
-            Guid.NewGuid().ToString("N"));
     }
 
     private sealed class NullGalleryItemDeletionService : IGalleryItemDeletionService
