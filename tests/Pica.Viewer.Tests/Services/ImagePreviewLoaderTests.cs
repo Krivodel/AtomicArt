@@ -14,6 +14,10 @@ namespace Pica.Viewer.Tests.Services;
 
 public sealed class ImagePreviewLoaderTests
 {
+    private const int SourceWidth = 400;
+    private const int SourceHeight = 200;
+    private const string SourceFileName = "source.png";
+
     private static readonly Guid ItemId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly SemaphoreSlim SessionLock = new(1, 1);
 
@@ -29,17 +33,12 @@ public sealed class ImagePreviewLoaderTests
     {
         await DispatchAsync(async () =>
         {
-            using PicaTemporaryDirectory temporaryDirectory = new();
-            string sourcePath = Path.Combine(temporaryDirectory.DirectoryPath, "source.png");
-            string previewPath = Path.Combine(temporaryDirectory.DirectoryPath, "provided.png");
-            CreatePng(sourcePath, 400, 200);
-            CreatePng(previewPath, 32, 16);
-            ImagePreviewLoader loader = new(NullLogger<ImagePreviewLoader>.Instance);
-            PicaImageItem item = new(ItemId, sourcePath, "source.png", previewPath);
+            using ImagePreviewTestContext context = new();
+            context.AddProvidedPreview(32, 16);
 
-            DecodedImagePreview preview = await loader.LoadAsync(item, CancellationToken.None);
+            DecodedImagePreview preview = await context.LoadAsync(CancellationToken.None);
 
-            preview.SourcePixelSize.Should().Be(new PixelSize(400, 200));
+            AssertSourcePixelSize(preview);
             preview.Bitmap.Dispose();
         });
     }
@@ -49,24 +48,25 @@ public sealed class ImagePreviewLoaderTests
     {
         await DispatchAsync(async () =>
         {
-            using PicaTemporaryDirectory temporaryDirectory = new();
-            string sourcePath = Path.Combine(temporaryDirectory.DirectoryPath, "source.png");
-            CreatePng(sourcePath, 400, 200);
-            ImagePreviewLoader loader = new(NullLogger<ImagePreviewLoader>.Instance);
-            PicaImageItem item = new(ItemId, sourcePath, "source.png");
+            using ImagePreviewTestContext context = new();
 
-            DecodedImagePreview preview = await loader.LoadAsync(item, CancellationToken.None);
+            DecodedImagePreview preview = await context.LoadAsync(CancellationToken.None);
 
-            preview.SourcePixelSize.Should().Be(new PixelSize(400, 200));
+            AssertSourcePixelSize(preview);
             ImagePreviewLoader.PreviewDecodeWidth.Should().Be(128);
-            Directory.GetFiles(temporaryDirectory.DirectoryPath)
+            Directory.GetFiles(context.DirectoryPath)
                 .Should()
                 .ContainSingle()
                 .Which
                 .Should()
-                .Be(sourcePath);
+                .Be(context.SourcePath);
             preview.Bitmap.Dispose();
         });
+    }
+
+    private static void AssertSourcePixelSize(DecodedImagePreview preview)
+    {
+        preview.SourcePixelSize.Should().Be(new PixelSize(SourceWidth, SourceHeight));
     }
 
     private static async Task DispatchAsync(Func<Task> action)
@@ -86,5 +86,43 @@ public sealed class ImagePreviewLoaderTests
             ?? throw new InvalidOperationException("Failed to create the test image.");
         using FileStream stream = new(path, FileMode.Create, FileAccess.Write, FileShare.None);
         data.SaveTo(stream);
+    }
+
+    private sealed class ImagePreviewTestContext : IDisposable
+    {
+        public string DirectoryPath => _temporaryDirectory.DirectoryPath;
+        public string SourcePath { get; }
+
+        private readonly PicaTemporaryDirectory _temporaryDirectory;
+        private readonly ImagePreviewLoader _loader;
+        private string? _previewPath;
+
+        public ImagePreviewTestContext()
+        {
+            _temporaryDirectory = new PicaTemporaryDirectory();
+            _loader = new ImagePreviewLoader(NullLogger<ImagePreviewLoader>.Instance);
+            SourcePath = Path.Combine(DirectoryPath, SourceFileName);
+            CreatePng(SourcePath, SourceWidth, SourceHeight);
+        }
+
+        public void AddProvidedPreview(int width, int height)
+        {
+            _previewPath = Path.Combine(DirectoryPath, "provided.png");
+            CreatePng(_previewPath, width, height);
+        }
+
+        public async Task<DecodedImagePreview> LoadAsync(CancellationToken ct)
+        {
+            PicaImageItem item = _previewPath is null
+                ? new PicaImageItem(ItemId, SourcePath, SourceFileName)
+                : new PicaImageItem(ItemId, SourcePath, SourceFileName, _previewPath);
+
+            return await _loader.LoadAsync(item, ct).ConfigureAwait(false);
+        }
+
+        public void Dispose()
+        {
+            _temporaryDirectory.Dispose();
+        }
     }
 }
