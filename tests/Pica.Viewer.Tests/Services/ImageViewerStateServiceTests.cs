@@ -14,24 +14,7 @@ public sealed class ImageViewerStateServiceTests
     {
         using PicaTemporaryDirectory temporaryDirectory = PicaTemporaryDirectory.Create();
         string stateFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "image-viewer.json");
-        ImageViewerState state = new()
-        {
-            IsFilteringEnabled = false,
-            MovementSpeed = 2,
-            ZoomSpeed = 1,
-            ExpandOnDoubleClick = false,
-            IsFastLoadingEnabled = true,
-            AllowFreeZoomOut = true,
-            IsSmoothPanningEnabled = true,
-            IsPanningInertiaEnabled = true,
-            ResizeBehavior = WindowResizeBehavior.FitWhenWindowed,
-            RememberWindowPlacement = true,
-            IsWindowed = true,
-            WindowX = -1200,
-            WindowY = 80,
-            WindowWidth = 900d,
-            WindowHeight = 506.25d
-        };
+        ImageViewerState state = ImageViewerStateTestFactory.CreateRememberedPlacementState();
         ImageViewerStateService writer = CreateService(stateFilePath);
 
         await writer.SaveAsync(state, CancellationToken.None);

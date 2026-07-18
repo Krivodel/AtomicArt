@@ -12,24 +12,8 @@ public sealed class ViewerSettingsStateTests
     [Fact]
     public void CreateImageViewerState_WithRememberedPlacement_PreservesSettingsAndPlacement()
     {
-        ImageViewerState initialState = new()
-        {
-            IsFilteringEnabled = false,
-            MovementSpeed = 2,
-            ZoomSpeed = 1,
-            ExpandOnDoubleClick = false,
-            IsFastLoadingEnabled = true,
-            AllowFreeZoomOut = true,
-            IsSmoothPanningEnabled = true,
-            IsPanningInertiaEnabled = true,
-            ResizeBehavior = WindowResizeBehavior.FitWhenWindowed,
-            RememberWindowPlacement = true,
-            IsWindowed = true,
-            WindowX = -1200,
-            WindowY = 80,
-            WindowWidth = 900d,
-            WindowHeight = 506.25d
-        };
+        ImageViewerState initialState =
+            ImageViewerStateTestFactory.CreateRememberedPlacementState();
         ViewerSettingsState settings = ViewerSettingsState.Create(initialState);
 
         ImageViewerState result = settings.CreateImageViewerState(
