@@ -20,13 +20,9 @@ public sealed class SettingsStateSection : StateSection<SettingsState>
             return new SettingsState();
         }
 
-        Dictionary<string, string> values = state.Values
-            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && pair.Value is not null)
-            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        IEnumerable<KeyValuePair<string, string>> values = state.Values
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && pair.Value is not null);
 
-        return new SettingsState
-        {
-            Values = values
-        };
+        return SettingsState.FromValues(values);
     }
 }

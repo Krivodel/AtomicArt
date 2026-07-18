@@ -114,10 +114,7 @@ public sealed class SettingsStateService : ISettingsStateService
             {
                 [registeredDefinition.Key] = value
             };
-            SettingsState nextState = new()
-            {
-                Values = values
-            };
+            SettingsState nextState = SettingsState.FromValues(values);
 
             _currentState = nextState;
             _writeScheduler.ScheduleWrite(_section, nextState);
@@ -165,14 +162,10 @@ public sealed class SettingsStateService : ISettingsStateService
     private SettingsState FilterAllowedState(SettingsState state)
     {
         IReadOnlySet<string> allowedKeys = GetAllowedNonSecretKeys();
-        Dictionary<string, string> values = state.Values
-            .Where(pair => allowedKeys.Contains(pair.Key) && pair.Value is not null)
-            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        IEnumerable<KeyValuePair<string, string>> values = state.Values
+            .Where(pair => allowedKeys.Contains(pair.Key) && pair.Value is not null);
 
-        return new SettingsState
-        {
-            Values = values
-        };
+        return SettingsState.FromValues(values);
     }
 
     private IReadOnlyDictionary<string, ISettingsStateApplicator> CreateApplicatorRegistry(
