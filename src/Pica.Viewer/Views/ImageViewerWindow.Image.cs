@@ -537,14 +537,10 @@ public sealed partial class ImageViewerWindow : SukiWindow
         double startScale = _scale;
         double startOffsetX = _offsetX;
         double startOffsetY = _offsetY;
-        long animationId = ++_scaleAnimationId;
 
-        StartFrameAnimation(
-            ScaleAnimationDuration,
-            () => animationId == _scaleAnimationId,
-            progress =>
+        StartScaleFrameAnimation(
+            easedProgress =>
             {
-                double easedProgress = EaseOutCubic(progress);
                 _scale = startScale + ((targetScale - startScale) * easedProgress);
                 _offsetX = startOffsetX + ((targetOffsetX - startOffsetX) * easedProgress);
                 _offsetY = startOffsetY + ((targetOffsetY - startOffsetY) * easedProgress);
@@ -745,17 +741,22 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
+        StartScaleFrameAnimation(
+            easedProgress =>
+            {
+                double frameScale = startScale + ((clampedScale - startScale) * easedProgress);
+                ApplyScaleAtAnchor(frameScale, anchor, imageX, imageY);
+            });
+    }
+
+    private void StartScaleFrameAnimation(Action<double> applyFrame)
+    {
         long animationId = ++_scaleAnimationId;
 
         StartFrameAnimation(
             ScaleAnimationDuration,
             () => animationId == _scaleAnimationId,
-            progress =>
-            {
-                double easedProgress = EaseOutCubic(progress);
-                double frameScale = startScale + ((clampedScale - startScale) * easedProgress);
-                ApplyScaleAtAnchor(frameScale, anchor, imageX, imageY);
-            });
+            progress => applyFrame(EaseOutCubic(progress)));
     }
 
     private void ApplyScaleAtAnchor(
