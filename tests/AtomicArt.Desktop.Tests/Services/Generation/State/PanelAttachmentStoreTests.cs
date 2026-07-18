@@ -23,270 +23,152 @@ public sealed class PanelAttachmentStoreTests
     [Fact]
     public async Task SaveAsync_WithPanelId_WritesUnderEncodedStateAttachmentsDirectory()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
+        using PanelAttachmentTestContext context = new();
 
-        try
-        {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = CreateImage();
+        PanelAttachmentState state = await SaveImageAsync(context, RawPanelId);
 
-            PanelAttachmentState state = store.CreateState(image);
-            await store.SaveAsync(RawPanelId, state, image, CancellationToken.None);
-
-            string panelDirectory = Path.Combine(pathProvider.StateAttachmentsDirectory, EncodedPanelId);
-            string attachmentPath = Path.Combine(panelDirectory, state.InternalFileName);
-            File.Exists(attachmentPath).Should().BeTrue();
-            attachmentPath.Should().Contain(EncodedPanelId);
-            attachmentPath.Should().NotContain(RawPanelId);
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        string attachmentPath = context.GetAttachmentPath(state);
+        File.Exists(attachmentPath).Should().BeTrue();
+        attachmentPath.Should().Contain(EncodedPanelId);
+        attachmentPath.Should().NotContain(RawPanelId);
     }
 
     [Fact]
     public async Task SaveAsync_WithUnsafePanelId_UsesEncodedPathSegment()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
+        using PanelAttachmentTestContext context = new();
 
-        try
-        {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = CreateImage();
+        PanelAttachmentState state = await SaveImageAsync(context, UnsafePanelId);
 
-            PanelAttachmentState state = store.CreateState(image);
-            await store.SaveAsync(UnsafePanelId, state, image, CancellationToken.None);
-
-            string panelDirectory = Path.Combine(pathProvider.StateAttachmentsDirectory, EncodedPanelId);
-            string attachmentPath = Path.Combine(panelDirectory, state.InternalFileName);
-            File.Exists(attachmentPath).Should().BeTrue();
-            attachmentPath.Should().Contain(EncodedPanelId);
-            attachmentPath.Should().NotContain("unsafe");
-            attachmentPath.Should().NotContain("panel:id");
-            attachmentPath.Should().NotContain("..");
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        string attachmentPath = context.GetAttachmentPath(state);
+        File.Exists(attachmentPath).Should().BeTrue();
+        attachmentPath.Should().Contain(EncodedPanelId);
+        attachmentPath.Should().NotContain("unsafe");
+        attachmentPath.Should().NotContain("panel:id");
+        attachmentPath.Should().NotContain("..");
     }
 
     [Fact]
     public async Task SaveAsync_WithAttachment_WritesOutsideArtDirectory()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
+        using PanelAttachmentTestContext context = new();
 
-        try
-        {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = CreateImage();
+        PanelAttachmentState state = await SaveImageAsync(context, RawPanelId);
 
-            PanelAttachmentState state = store.CreateState(image);
-            await store.SaveAsync(RawPanelId, state, image, CancellationToken.None);
-
-            string attachmentPath = Path.Combine(
-                pathProvider.StateAttachmentsDirectory,
-                EncodedPanelId,
-                state.InternalFileName);
-            Path.GetFullPath(attachmentPath).Should().StartWith(Path.GetFullPath(pathProvider.StateAttachmentsDirectory));
-            Path.GetFullPath(attachmentPath).Should().NotStartWith(Path.GetFullPath(pathProvider.ArtDirectory));
-            Directory.Exists(pathProvider.ArtDirectory).Should().BeFalse();
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        string attachmentPath = context.GetAttachmentPath(state);
+        Path.GetFullPath(attachmentPath).Should().StartWith(
+            Path.GetFullPath(context.PathProvider.StateAttachmentsDirectory));
+        Path.GetFullPath(attachmentPath).Should().NotStartWith(
+            Path.GetFullPath(context.PathProvider.ArtDirectory));
+        Directory.Exists(context.PathProvider.ArtDirectory).Should().BeFalse();
     }
 
     [Fact]
     public void CreateState_WithSourcePathLikeFileName_StoresOnlySafeDisplayName()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
+        using PanelAttachmentTestContext context = new(@"C:\Users\Name\secret.png");
 
-        try
-        {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = CreateImage(@"C:\Users\Name\secret.png");
+        PanelAttachmentState state = context.Store.CreateState(context.Image);
 
-            PanelAttachmentState state = store.CreateState(image);
-
-            state.FileName.Should().Be("secret.png");
-            state.InternalFileName.Should().NotContain("secret");
-            state.InternalFileName.Should().NotContain("Users");
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        state.FileName.Should().Be("secret.png");
+        state.InternalFileName.Should().NotContain("secret");
+        state.InternalFileName.Should().NotContain("Users");
     }
 
     [Fact]
     public async Task SaveAsync_WithRegisteredContentTypeAndArbitraryBytes_SavesWithoutAttachmentRuleValidation()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
+        using PanelAttachmentTestContext context = new();
 
-        try
-        {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = CreateImage();
+        PanelAttachmentState state = await SaveImageAsync(context, RawPanelId);
 
-            PanelAttachmentState state = store.CreateState(image);
-            await store.SaveAsync(RawPanelId, state, image, CancellationToken.None);
-
-            state.SizeBytes.Should().Be(ImageBytes.LongLength);
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        state.SizeBytes.Should().Be(ImageBytes.LongLength);
     }
 
     [Fact]
     public async Task SaveAsync_WithUnsafeInternalFileName_RejectsAndDoesNotWriteOutsidePanelDirectory()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
-
-        try
+        using PanelAttachmentTestContext context = new();
+        PanelAttachmentState state = new()
         {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = CreateImage();
-            PanelAttachmentState state = new()
-            {
-                Id = "unsafe-attachment",
-                FileName = "unsafe.png",
-                ContentType = GenerationImageContentTypes.Png,
-                SizeBytes = ImageBytes.LongLength,
-                InternalFileName = @"..\x.png"
-            };
+            Id = "unsafe-attachment",
+            FileName = "unsafe.png",
+            ContentType = GenerationImageContentTypes.Png,
+            SizeBytes = ImageBytes.LongLength,
+            InternalFileName = @"..\x.png"
+        };
 
-            Func<Task> act = async () => await store.SaveAsync(
-                RawPanelId,
-                state,
-                image,
-                CancellationToken.None);
+        Func<Task> act = async () => await context.Store.SaveAsync(
+            RawPanelId,
+            state,
+            context.Image,
+            CancellationToken.None);
 
-            await act.Should().ThrowAsync<IOException>();
-            string escapedAttachmentPath = Path.Combine(
-                pathProvider.StateAttachmentsDirectory,
-                "x.png");
-            File.Exists(escapedAttachmentPath).Should().BeFalse();
-            Directory.Exists(Path.Combine(
-                pathProvider.StateAttachmentsDirectory,
-                EncodedPanelId)).Should().BeFalse();
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        await act.Should().ThrowAsync<IOException>();
+        string escapedAttachmentPath = Path.Combine(
+            context.PathProvider.StateAttachmentsDirectory,
+            "x.png");
+        File.Exists(escapedAttachmentPath).Should().BeFalse();
+        Directory.Exists(Path.Combine(
+            context.PathProvider.StateAttachmentsDirectory,
+            EncodedPanelId)).Should().BeFalse();
     }
 
     [Fact]
     public async Task LoadAsync_WithMissingManagedFile_LogsWarningAndReturnsNull()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
-
-        try
+        RecordingLogger<PanelAttachmentStore> logger = new RecordingLogger<PanelAttachmentStore>();
+        using PanelAttachmentTestContext context = new(logger: logger);
+        PanelAttachmentState state = new()
         {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            RecordingLogger<PanelAttachmentStore> logger = new RecordingLogger<PanelAttachmentStore>();
-            PanelAttachmentStore store = CreateStore(pathProvider, logger);
-            PanelAttachmentState state = new()
-            {
-                Id = "missing-attachment",
-                FileName = "missing.png",
-                ContentType = GenerationImageContentTypes.Png,
-                SizeBytes = ImageBytes.LongLength,
-                InternalFileName = "missing.png"
-            };
+            Id = "missing-attachment",
+            FileName = "missing.png",
+            ContentType = GenerationImageContentTypes.Png,
+            SizeBytes = ImageBytes.LongLength,
+            InternalFileName = "missing.png"
+        };
 
-            AttachedImageDto? image = await store.LoadAsync(RawPanelId, state, CancellationToken.None);
+        await AssertLoadRejectedAsync(context, logger, state);
 
-            image.Should().BeNull();
-            logger.WarningCount.Should().Be(1);
-            logger.WarningMessages.Should().Contain(message => message.Contains(
-                state.Id,
-                StringComparison.Ordinal));
-            logger.WarningMessages.Should().NotContain(message => message.Contains(
-                "missing.png",
-                StringComparison.Ordinal));
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        logger.WarningMessages.Should().NotContain(message => message.Contains(
+            "missing.png",
+            StringComparison.Ordinal));
     }
 
     [Fact]
     public async Task LoadAsync_WithUnsafeInternalFileName_LogsWarningAndReturnsNull()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
-
-        try
+        RecordingLogger<PanelAttachmentStore> logger = new RecordingLogger<PanelAttachmentStore>();
+        using PanelAttachmentTestContext context = new(logger: logger);
+        PanelAttachmentState state = new()
         {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            RecordingLogger<PanelAttachmentStore> logger = new RecordingLogger<PanelAttachmentStore>();
-            PanelAttachmentStore store = CreateStore(pathProvider, logger);
-            PanelAttachmentState state = new()
-            {
-                Id = "unsafe-attachment",
-                FileName = "unsafe.png",
-                ContentType = GenerationImageContentTypes.Png,
-                SizeBytes = ImageBytes.LongLength,
-                InternalFileName = @"..\x.png"
-            };
+            Id = "unsafe-attachment",
+            FileName = "unsafe.png",
+            ContentType = GenerationImageContentTypes.Png,
+            SizeBytes = ImageBytes.LongLength,
+            InternalFileName = @"..\x.png"
+        };
 
-            AttachedImageDto? image = await store.LoadAsync(RawPanelId, state, CancellationToken.None);
+        await AssertLoadRejectedAsync(context, logger, state);
 
-            image.Should().BeNull();
-            logger.WarningCount.Should().Be(1);
-            logger.WarningMessages.Should().Contain(message => message.Contains(
-                state.Id,
-                StringComparison.Ordinal));
-            logger.WarningMessages.Should().NotContain(message => message.Contains(
-                "..",
-                StringComparison.Ordinal));
-            logger.WarningMessages.Should().NotContain(message => message.Contains(
-                "x.png",
-                StringComparison.Ordinal));
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        logger.WarningMessages.Should().NotContain(message => message.Contains(
+            "..",
+            StringComparison.Ordinal));
+        logger.WarningMessages.Should().NotContain(message => message.Contains(
+            "x.png",
+            StringComparison.Ordinal));
     }
 
     [Fact]
     public async Task DeleteAsync_WithExistingAttachment_RemovesManagedFile()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(PanelAttachmentStoreTests));
+        using PanelAttachmentTestContext context = new();
+        PanelAttachmentState state = await SaveImageAsync(context, RawPanelId);
+        string attachmentPath = context.GetAttachmentPath(state);
 
-        try
-        {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            PanelAttachmentStore store = CreateStore(pathProvider);
-            AttachedImageDto image = CreateImage();
-            PanelAttachmentState state = store.CreateState(image);
-            await store.SaveAsync(RawPanelId, state, image, CancellationToken.None);
-            string attachmentPath = Path.Combine(
-                pathProvider.StateAttachmentsDirectory,
-                EncodedPanelId,
-                state.InternalFileName);
+        await context.Store.DeleteAsync(RawPanelId, state, CancellationToken.None);
 
-            await store.DeleteAsync(RawPanelId, state, CancellationToken.None);
-
-            File.Exists(attachmentPath).Should().BeFalse();
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        File.Exists(attachmentPath).Should().BeFalse();
     }
 
     private static PanelAttachmentStore CreateStore(
@@ -306,6 +188,71 @@ public sealed class PanelAttachmentStoreTests
             fileName,
             GenerationImageContentTypes.Png,
             ImageBytes);
+    }
+
+    private static async Task AssertLoadRejectedAsync(
+        PanelAttachmentTestContext context,
+        RecordingLogger<PanelAttachmentStore> logger,
+        PanelAttachmentState state)
+    {
+        AttachedImageDto? image = await context.Store.LoadAsync(
+            RawPanelId,
+            state,
+            CancellationToken.None);
+
+        image.Should().BeNull();
+        logger.WarningCount.Should().Be(1);
+        logger.WarningMessages.Should().Contain(message => message.Contains(
+            state.Id,
+            StringComparison.Ordinal));
+    }
+
+    private static async Task<PanelAttachmentState> SaveImageAsync(
+        PanelAttachmentTestContext context,
+        string panelId)
+    {
+        PanelAttachmentState state = context.Store.CreateState(context.Image);
+
+        await context.Store.SaveAsync(
+            panelId,
+            state,
+            context.Image,
+            CancellationToken.None);
+
+        return state;
+    }
+
+    private sealed class PanelAttachmentTestContext : IDisposable
+    {
+        public AtomicArtDataPathProvider PathProvider { get; }
+        public PanelAttachmentStore Store { get; }
+        public AttachedImageDto Image { get; }
+
+        private readonly string _rootDirectory;
+
+        public PanelAttachmentTestContext(
+            string fileName = "source.png",
+            ILogger<PanelAttachmentStore>? logger = null)
+        {
+            _rootDirectory = TestDirectories.GetUniqueDirectoryPath(
+                typeof(PanelAttachmentStoreTests));
+            PathProvider = new AtomicArtDataPathProvider(_rootDirectory);
+            Store = CreateStore(PathProvider, logger);
+            Image = CreateImage(fileName);
+        }
+
+        public string GetAttachmentPath(PanelAttachmentState state)
+        {
+            return Path.Combine(
+                PathProvider.StateAttachmentsDirectory,
+                EncodedPanelId,
+                state.InternalFileName);
+        }
+
+        public void Dispose()
+        {
+            TestDirectories.DeleteIfExists(_rootDirectory);
+        }
     }
 
     private sealed class FixedStatePathKeyEncoder : IStatePathKeyEncoder
