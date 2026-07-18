@@ -547,7 +547,7 @@ public sealed class JsonModelMetadataStartupLoaderTests
 
         return JsonModelMetadataStartupLoader.Load(
             path,
-            new TestGenerationModelCatalogJsonSource(json));
+            new FixedGenerationModelCatalogJsonSource(json));
     }
 
     private static void DeleteFileDirectory(string path)
@@ -557,23 +557,6 @@ public sealed class JsonModelMetadataStartupLoaderTests
         if (directoryPath is not null && Directory.Exists(directoryPath))
         {
             Directory.Delete(directoryPath, true);
-        }
-    }
-
-    private sealed class TestGenerationModelCatalogJsonSource : IGenerationModelCatalogJsonSource
-    {
-        private readonly string _json;
-
-        public TestGenerationModelCatalogJsonSource(string json)
-        {
-            _json = json;
-        }
-
-        public string Read(string path)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(path);
-
-            return _json;
         }
     }
 

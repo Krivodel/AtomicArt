@@ -17,7 +17,7 @@ internal static class ApiModelMetadataTestCatalog
 
         return JsonModelMetadataStartupLoader.Load(
             metadataPath,
-            new TestGenerationModelCatalogJsonSource(json));
+            new FixedGenerationModelCatalogJsonSource(json));
     }
 
     public static GenerationModelMetadataDto LoadNanoBanana2Metadata()
@@ -33,22 +33,5 @@ internal static class ApiModelMetadataTestCatalog
     public static string GetMetadataPath()
     {
         return CommonApiModelMetadataTestCatalog.GetMetadataPath();
-    }
-
-    private sealed class TestGenerationModelCatalogJsonSource : IGenerationModelCatalogJsonSource
-    {
-        private readonly string _json;
-
-        public TestGenerationModelCatalogJsonSource(string json)
-        {
-            _json = json;
-        }
-
-        public string Read(string path)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(path);
-
-            return _json;
-        }
     }
 }
