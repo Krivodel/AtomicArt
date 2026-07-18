@@ -127,10 +127,7 @@ public sealed class AttachedImagePreparationServiceTests
         };
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
 
         result.Should().NotBeNull();
         codec.LosslessCalls.Should().Equal(
@@ -151,10 +148,7 @@ public sealed class AttachedImagePreparationServiceTests
         };
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
 
         result.Should().NotBeNull();
         codec.LosslessCalls.Should().Equal(
@@ -191,10 +185,7 @@ public sealed class AttachedImagePreparationServiceTests
         };
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
 
         result.Should().NotBeNull();
         codec.LossyCalls.Select(call => call.Quality)
@@ -215,10 +206,7 @@ public sealed class AttachedImagePreparationServiceTests
         };
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
 
         result.Should().NotBeNull();
         codec.LossyCalls.Count(call => call.Quality == 100).Should().Be(1);
@@ -244,10 +232,7 @@ public sealed class AttachedImagePreparationServiceTests
         };
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
 
         result.Should().NotBeNull();
         codec.DecodeCallCount.Should().Be(1);
@@ -281,10 +266,7 @@ public sealed class AttachedImagePreparationServiceTests
             contentLength: 10001,
             maxAttachedImageBytes: 10000);
 
-        AttachedImageDto? result = await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
 
         result.Should().NotBeNull();
         codec.DecodeCallCount.Should().Be(1);
@@ -316,10 +298,7 @@ public sealed class AttachedImagePreparationServiceTests
         };
         SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
 
         result.Should().NotBeNull();
         codec.DecodeCallCount.Should().Be(1);
@@ -348,10 +327,7 @@ public sealed class AttachedImagePreparationServiceTests
             codec,
             supportedContentTypes: supportedContentTypes);
 
-        AttachedImageDto? result = await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
 
         result.Should().NotBeNull();
         codec.DecodeCallCount.Should().Be(1);
@@ -402,6 +378,15 @@ public sealed class AttachedImagePreparationServiceTests
         AttachedImagePreparationService service = CreateService(codec);
 
         return new SyntheticPreparationScenario(image, selectedModel, service);
+    }
+
+    private static async Task<AttachedImageDto?> PrepareSyntheticImageAsync(
+        SyntheticPreparationScenario scenario)
+    {
+        return await scenario.Service.PrepareAsync(
+            scenario.Image,
+            scenario.SelectedModel,
+            CancellationToken.None);
     }
 
     private static ImageModelOption CreateModel(
