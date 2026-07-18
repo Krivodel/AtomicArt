@@ -49,7 +49,7 @@ public sealed class GenerationModelCatalogApiClient : IGenerationModelCatalogApi
             _logger.LogWarning(
                 "Generation model catalog API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
                 (int)response.StatusCode,
-                problemDetails.ErrorCode ?? "unavailable",
+                problemDetails.LogErrorCode,
                 stopwatch.ElapsedMilliseconds);
         }
 

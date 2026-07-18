@@ -75,7 +75,7 @@ public sealed class ImageGenerationApiClient : IImageGenerationApiClient
             _logger.LogWarning(
                 "Image generation API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
                 (int)response.StatusCode,
-                problemDetails.ErrorCode ?? "unavailable",
+                problemDetails.LogErrorCode,
                 stopwatch.ElapsedMilliseconds);
         }
 
