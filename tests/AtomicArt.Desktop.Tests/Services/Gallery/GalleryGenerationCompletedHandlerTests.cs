@@ -105,11 +105,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
             imagePath: "legacy.png",
             imageContent: content));
 
-        await context.Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
-
-        GalleryCompletedItemUpdate update = context.GetSingleUpdate();
-        update.TrustedImagePath.Should().BeNull();
-        GetArtFiles(context.RootDirectory).Should().BeEmpty();
+        await context.AssertEmptyImageStateAsync(lifecycleEvent);
     }
 
     [Fact]
@@ -122,11 +118,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
             Convert.ToBase64String(GenerationImageTestData.ValidPngBytes));
         GenerationLifecycleEvent lifecycleEvent = CreateCompletedEvent(CreateItem(imageContent: content));
 
-        await context.Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
-
-        GalleryCompletedItemUpdate update = context.GetSingleUpdate();
-        update.TrustedImagePath.Should().BeNull();
-        GetArtFiles(context.RootDirectory).Should().BeEmpty();
+        await context.AssertEmptyImageStateAsync(lifecycleEvent);
     }
 
     [Fact]
@@ -150,11 +142,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
             new RejectingTrustedImageFileService());
         GenerationLifecycleEvent lifecycleEvent = CreateCompletedEvent(CreateItem());
 
-        await context.Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
-
-        GalleryCompletedItemUpdate update = context.GetSingleUpdate();
-        update.TrustedImagePath.Should().BeNull();
-        GetArtFiles(context.RootDirectory).Should().BeEmpty();
+        await context.AssertEmptyImageStateAsync(lifecycleEvent);
     }
 
     [Fact]
@@ -317,6 +305,15 @@ public sealed class GalleryGenerationCompletedHandlerTests
             Storage = storage;
             Handler = handler;
             UpdateBatches = updateBatches;
+        }
+
+        public async Task AssertEmptyImageStateAsync(GenerationLifecycleEvent lifecycleEvent)
+        {
+            await Handler.HandleAsync(lifecycleEvent, CancellationToken.None);
+
+            GalleryCompletedItemUpdate update = GetSingleUpdate();
+            update.TrustedImagePath.Should().BeNull();
+            GetArtFiles(RootDirectory).Should().BeEmpty();
         }
 
         public GalleryCompletedItemUpdate GetSingleUpdate()
