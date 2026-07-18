@@ -4,6 +4,8 @@ using Avalonia.Input;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using SukiUI.Controls;
+
+using Pica.Viewer.Resources;
 using Pica.Viewer.Services;
 
 namespace Pica.Viewer.Views;
@@ -24,7 +26,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         if (!_view.Root.IsPointerOver || _view.SettingsPanel.IsPointerOver)
         {
-            SetVisibleCursor(ArrowCursor);
+            SetVisibleCursor(ViewerCursors.Arrow);
             _cursorTimer.Stop();
             return;
         }
@@ -53,7 +55,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         HideViewerControls();
         _lastPointerScreenPosition = null;
         _cursorTimer.Stop();
-        SetVisibleCursor(ArrowCursor);
+        SetVisibleCursor(ViewerCursors.Arrow);
     }
 
     private void OnWindowResizeAnimationFrame(TimeSpan frameTime)

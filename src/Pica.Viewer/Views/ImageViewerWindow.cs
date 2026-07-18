@@ -8,8 +8,10 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using SukiUI.Controls;
-using Pica.Viewer.Services;
+
 using Pica.Protocol;
+using Pica.Viewer.Resources;
+using Pica.Viewer.Services;
 
 namespace Pica.Viewer.Views;
 
@@ -53,14 +55,6 @@ public sealed partial class ImageViewerWindow : SukiWindow
         TimeSpan.FromSeconds(SettingsPanelAnimationDurationSeconds);
     private static readonly double ZoomButtonStepBase =
         Math.Pow(DefaultZoomButtonFactor, 1d / ViewerSettingsDefaults.ZoomSpeed);
-    private static readonly Cursor ArrowCursor = new(StandardCursorType.Arrow);
-    private static readonly Cursor HiddenCursor = new(StandardCursorType.None);
-    private static readonly Cursor CrosshairCursor = new(StandardCursorType.Cross);
-    private static readonly Cursor MoveCursor = new(StandardCursorType.SizeAll);
-    private static readonly Cursor HorizontalResizeCursor = new(StandardCursorType.SizeWestEast);
-    private static readonly Cursor VerticalResizeCursor = new(StandardCursorType.SizeNorthSouth);
-    private static readonly Cursor TopLeftResizeCursor = new(StandardCursorType.TopLeftCorner);
-    private static readonly Cursor TopRightResizeCursor = new(StandardCursorType.TopRightCorner);
     private readonly PicaViewerRequest _request;
     private readonly IImageViewerStateService _imageViewerStateService;
     private readonly ImagePreviewLoader _imagePreviewLoader;
@@ -336,7 +330,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         CanResize = false;
         CanFullScreen = true;
         CanPin = false;
-        Cursor = ArrowCursor;
+        Cursor = ViewerCursors.Arrow;
         Icon = LoadWindowIcon(AppIconAssetUri);
         IsMenuVisible = false;
         IsTitleBarVisible = _isWindowedMode;

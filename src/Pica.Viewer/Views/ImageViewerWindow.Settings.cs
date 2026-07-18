@@ -6,6 +6,7 @@ using Avalonia.Media;
 using SukiUI.Controls;
 
 using Pica.Viewer.Controls;
+using Pica.Viewer.Resources;
 using Pica.Viewer.Services;
 
 namespace Pica.Viewer.Views;
@@ -274,7 +275,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
-        SetVisibleCursor(ArrowCursor);
+        SetVisibleCursor(ViewerCursors.Arrow);
 
         if (_view.ViewerArea.IsPointerOver && !_view.SettingsPanel.IsPointerOver)
         {
@@ -285,7 +286,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
     private void HideCursor()
     {
         _isCursorHidden = true;
-        Cursor = HiddenCursor;
+        Cursor = ViewerCursors.Hidden;
     }
 
     private void SetVisibleCursor(Cursor cursor)

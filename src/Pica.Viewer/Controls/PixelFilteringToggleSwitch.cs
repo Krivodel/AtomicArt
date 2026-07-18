@@ -5,6 +5,8 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Media;
 
+using Pica.Viewer.Resources;
+
 namespace Pica.Viewer.Controls;
 
 public sealed class PixelFilteringToggleSwitch : UserControl
@@ -43,7 +45,7 @@ public sealed class PixelFilteringToggleSwitch : UserControl
         Height = SwitchHeight;
         MinWidth = SwitchWidth;
         MinHeight = SwitchHeight;
-        Cursor = new Cursor(StandardCursorType.Hand);
+        Cursor = ViewerCursors.Hand;
         Focusable = false;
 
         _thumbTransform = new TranslateTransform

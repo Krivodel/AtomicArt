@@ -70,11 +70,6 @@ internal sealed class ImageViewerView : IDisposable
         TimeSpan.FromSeconds(ControlsFadeDurationSeconds);
     private static readonly IBrush DestructiveIconBrush =
         new SolidColorBrush(Color.FromRgb(179, 38, 30));
-    private static readonly Cursor HandCursor = new(StandardCursorType.Hand);
-    private static readonly Cursor HorizontalResizeCursor = new(StandardCursorType.SizeWestEast);
-    private static readonly Cursor VerticalResizeCursor = new(StandardCursorType.SizeNorthSouth);
-    private static readonly Cursor TopLeftResizeCursor = new(StandardCursorType.TopLeftCorner);
-    private static readonly Cursor TopRightResizeCursor = new(StandardCursorType.TopRightCorner);
     private readonly List<Bitmap> _openWithIcons = [];
 
     internal ImageViewerView(
@@ -346,20 +341,20 @@ internal sealed class ImageViewerView : IDisposable
 
         if (!includesVerticalEdge)
         {
-            return HorizontalResizeCursor;
+            return ViewerCursors.HorizontalResize;
         }
 
         if (!includesHorizontalEdge)
         {
-            return VerticalResizeCursor;
+            return ViewerCursors.VerticalResize;
         }
 
         bool slopesDownRight = sizingEdges.HasFlag(WindowSizingEdges.Top)
             == sizingEdges.HasFlag(WindowSizingEdges.Left);
 
         return slopesDownRight
-            ? TopLeftResizeCursor
-            : TopRightResizeCursor;
+            ? ViewerCursors.TopLeftResize
+            : ViewerCursors.TopRightResize;
     }
 
     private static Border CreateFadeOverlay()
@@ -413,7 +408,7 @@ internal sealed class ImageViewerView : IDisposable
             VerticalAlignment = VerticalAlignment.Stretch,
             Background = Brushes.Transparent,
             Child = iconHost,
-            Cursor = HandCursor,
+            Cursor = ViewerCursors.Hand,
             Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
             Transitions = CreateOpacityTransition(ControlsFadeDuration)
         };
@@ -532,7 +527,7 @@ internal sealed class ImageViewerView : IDisposable
             BorderThickness = new Thickness(0d),
             Content = CreateFloatingControlShadowHost(icon, ToolIconSize, ToolShadowPadding),
             CornerRadius = new CornerRadius(0d),
-            Cursor = HandCursor,
+            Cursor = ViewerCursors.Hand,
             Focusable = false,
             Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
             Transitions = CreateOpacityTransition(ControlsFadeDuration)
@@ -728,7 +723,7 @@ internal sealed class ImageViewerView : IDisposable
             Height = ToolButtonSize,
             MinWidth = 0d,
             MinHeight = 0d,
-            Cursor = HandCursor,
+            Cursor = ViewerCursors.Hand,
             Focusable = false,
             Padding = new Thickness(0d),
             Background = new SolidColorBrush(Color.FromArgb(150, 16, 16, 16)),
@@ -858,7 +853,7 @@ internal sealed class ImageViewerView : IDisposable
         Button button = new()
         {
             MinWidth = 148d,
-            Cursor = HandCursor,
+            Cursor = ViewerCursors.Hand,
             Focusable = false,
             Padding = new Thickness(10d, 8d),
             HorizontalContentAlignment = HorizontalAlignment.Left,

@@ -5,6 +5,8 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Microsoft.Extensions.Logging;
 using SukiUI.Controls;
+
+using Pica.Viewer.Resources;
 using Pica.Viewer.Services;
 
 namespace Pica.Viewer.Views;
@@ -336,7 +338,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         if (_isSelecting || _isSelectionArmed)
         {
-            SetVisibleCursor(CrosshairCursor);
+            SetVisibleCursor(ViewerCursors.Crosshair);
             return;
         }
 
@@ -344,7 +346,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         {
             if (!_isCursorHidden)
             {
-                SetVisibleCursor(ArrowCursor);
+                SetVisibleCursor(ViewerCursors.Arrow);
             }
 
             return;
@@ -354,13 +356,13 @@ public sealed partial class ImageViewerWindow : SukiWindow
         {
             if (_isPanning)
             {
-                SetVisibleCursor(MoveCursor);
+                SetVisibleCursor(ViewerCursors.Move);
                 return;
             }
 
             if (_isSelectionMoving)
             {
-                SetVisibleCursor(MoveCursor);
+                SetVisibleCursor(ViewerCursors.Move);
                 return;
             }
 
@@ -370,7 +372,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
                 return;
             }
 
-            SetVisibleCursor(ArrowCursor);
+            SetVisibleCursor(ViewerCursors.Arrow);
             return;
         }
 
@@ -383,8 +385,8 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
         Rect rect = NormalizeSelectionRect(_selectionRect);
         SetVisibleCursor(rect.Contains(position)
-            ? MoveCursor
-            : ArrowCursor);
+            ? ViewerCursors.Move
+            : ViewerCursors.Arrow);
     }
 
     private static Cursor GetSelectionResizeCursor(SelectionResizeMode resizeMode)
@@ -392,14 +394,14 @@ public sealed partial class ImageViewerWindow : SukiWindow
         return resizeMode switch
         {
             SelectionResizeMode.Left or SelectionResizeMode.Right =>
-                HorizontalResizeCursor,
+                ViewerCursors.HorizontalResize,
             SelectionResizeMode.Top or SelectionResizeMode.Bottom =>
-                VerticalResizeCursor,
+                ViewerCursors.VerticalResize,
             SelectionResizeMode.TopLeft or SelectionResizeMode.BottomRight =>
-                TopLeftResizeCursor,
+                ViewerCursors.TopLeftResize,
             SelectionResizeMode.TopRight or SelectionResizeMode.BottomLeft =>
-                TopRightResizeCursor,
-            _ => ArrowCursor
+                ViewerCursors.TopRightResize,
+            _ => ViewerCursors.Arrow
         };
     }
 
