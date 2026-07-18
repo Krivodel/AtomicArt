@@ -6,6 +6,7 @@ using Xunit;
 
 using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Logging;
 
@@ -14,19 +15,12 @@ public sealed class DesktopFileLoggerProviderTests
     [Fact]
     public void Log_WithFileSizeLimit_RotatesAndRetainsConfiguredFileCount()
     {
-        string rootDirectory = Path.Combine(
-            Path.GetTempPath(),
-            $"AtomicArtLoggingRotationTests-{Guid.NewGuid():N}");
+        string rootDirectory = CreateLoggingRootPath("AtomicArtLoggingRotationTests");
 
         try
         {
-            IConfiguration configuration = CreateConfiguration();
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            DesktopFileLoggingOptions options = new(configuration);
-
-            using (DesktopFileLoggerProvider provider = new(pathProvider, options))
+            ExecuteLogging(rootDirectory, logger =>
             {
-                ILogger logger = provider.CreateLogger("AtomicArt.Tests");
                 string padding = new('x', 4096);
 
                 for (int index = 0; index < 40; index++)
@@ -36,7 +30,7 @@ public sealed class DesktopFileLoggerProviderTests
                         index,
                         padding);
                 }
-            }
+            });
 
             string[] logPaths = Directory.GetFiles(
                 Path.Combine(rootDirectory, "Logs"),
@@ -50,33 +44,24 @@ public sealed class DesktopFileLoggerProviderTests
         }
         finally
         {
-            if (Directory.Exists(rootDirectory))
-            {
-                Directory.Delete(rootDirectory, true);
-            }
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
     [Fact]
     public void Log_WithUnavailableLogDirectory_DoesNotThrow()
     {
-        string rootPath = Path.Combine(
-            Path.GetTempPath(),
-            $"AtomicArtLoggingRoot-{Guid.NewGuid():N}");
+        string rootPath = CreateLoggingRootPath("AtomicArtLoggingRoot");
         File.WriteAllText(rootPath, "not a directory");
 
         try
         {
-            IConfiguration configuration = CreateConfiguration();
-            AtomicArtDataPathProvider pathProvider = new(rootPath);
-
             Action act = () =>
             {
-                using DesktopFileLoggerProvider provider = new(
-                    pathProvider,
-                    new DesktopFileLoggingOptions(configuration));
-                ILogger logger = provider.CreateLogger("AtomicArt.Tests");
-                logger.LogError("This write cannot reach the file system.");
+                ExecuteLogging(rootPath, logger =>
+                {
+                    logger.LogError("This write cannot reach the file system.");
+                });
             };
 
             act.Should().NotThrow();
@@ -90,9 +75,7 @@ public sealed class DesktopFileLoggerProviderTests
     [Fact]
     public void Log_WithException_WritesSanitizedMessageWithoutSensitiveDataOrSourcePath()
     {
-        string rootDirectory = Path.Combine(
-            Path.GetTempPath(),
-            $"AtomicArtLoggingTests-{Guid.NewGuid():N}");
+        string rootDirectory = CreateLoggingRootPath("AtomicArtLoggingTests");
         string confidentialValue = "provider-key-confidential";
         string confidentialPath = Path.Combine(rootDirectory, "private-image.png");
         string apiKey = "desktop-api-key-secret-value";
@@ -101,13 +84,8 @@ public sealed class DesktopFileLoggerProviderTests
 
         try
         {
-            IConfiguration configuration = CreateConfiguration();
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            DesktopFileLoggingOptions options = new(configuration);
-
-            using (DesktopFileLoggerProvider provider = new(pathProvider, options))
+            ExecuteLogging(rootDirectory, logger =>
             {
-                ILogger logger = provider.CreateLogger("AtomicArt.Tests");
                 InvalidOperationException exception = new(
                     $"Failure included {confidentialValue}, path '{confidentialPath}', "
                         + $"URL https://private.example.invalid/resource, owner@example.com, "
@@ -121,7 +99,7 @@ public sealed class DesktopFileLoggerProviderTests
                     exception,
                     "Safe operation {OperationName} failed.\r\nForged log line",
                     "generation");
-            }
+            });
 
             string logPath = Directory
                 .GetFiles(Path.Combine(rootDirectory, "Logs"), "atomicart-*.log")
@@ -158,11 +136,24 @@ public sealed class DesktopFileLoggerProviderTests
         }
         finally
         {
-            if (Directory.Exists(rootDirectory))
-            {
-                Directory.Delete(rootDirectory, true);
-            }
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
+    }
+
+    private static DesktopFileLoggerProvider CreateLoggerProvider(string rootPath)
+    {
+        IConfiguration configuration = CreateConfiguration();
+        AtomicArtDataPathProvider pathProvider = new(rootPath);
+        DesktopFileLoggingOptions options = new(configuration);
+
+        return new DesktopFileLoggerProvider(pathProvider, options);
+    }
+
+    private static string CreateLoggingRootPath(string prefix)
+    {
+        return Path.Combine(
+            Path.GetTempPath(),
+            $"{prefix}-{Guid.NewGuid():N}");
     }
 
     private static IConfiguration CreateConfiguration()
@@ -178,5 +169,13 @@ public sealed class DesktopFileLoggerProviderTests
         return new ConfigurationBuilder()
             .AddInMemoryCollection(values)
             .Build();
+    }
+
+    private static void ExecuteLogging(string rootPath, Action<ILogger> writeLog)
+    {
+        using DesktopFileLoggerProvider provider = CreateLoggerProvider(rootPath);
+        ILogger logger = provider.CreateLogger("AtomicArt.Tests");
+
+        writeLog(logger);
     }
 }
