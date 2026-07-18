@@ -16,57 +16,32 @@ namespace AtomicArt.Desktop.Tests.Services.State;
 
 public sealed class AppStateBootstrapperTests
 {
+    private const string SavedPrompt = "prompt";
     private static readonly Guid GalleryItemId =
         Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [Fact]
     public async Task RestoreAsync_WithSavedState_RestoresSettingsPanelsAndGalleryInOrder()
     {
-        List<string> calls = [];
-        RecordingSettingsStateService settingsStateService = new(calls);
-        RecordingGalleryStateService galleryStateService = new(calls);
-        RecordingRestoreTarget target = new(calls);
-        AppStateBootstrapper bootstrapper = new(
-            settingsStateService,
-            galleryStateService,
-            new NoOpStateWriteScheduler(),
-            NullLogger<AppStateBootstrapper>.Instance);
+        RestoreTestContext context = new();
 
-        await bootstrapper.RestoreAsync(target, CancellationToken.None);
+        await context.Bootstrapper.RestoreAsync(context.Target, CancellationToken.None);
 
-        calls.Should().Equal(
-            "settings.apply",
-            "panel.restore:nano-banana",
-            "gallery.load",
-            "gallery.restore");
-        target.RestoredGalleryItems.Should().ContainSingle()
+        AssertRestoreCalls(context.Calls);
+        context.Target.RestoredGalleryItems.Should().ContainSingle()
             .Which.Id.Should().Be(GalleryItemId);
     }
 
     [Fact]
     public async Task RestoreAsync_WhenSettingsThrows_LogsErrorAndRestoresOtherSections()
     {
-        List<string> calls = [];
-        RecordingSettingsStateService settingsStateService = new(calls)
-        {
-            ThrowOnApply = true
-        };
-        RecordingGalleryStateService galleryStateService = new(calls);
-        RecordingRestoreTarget target = new(calls);
         RecordingLogger<AppStateBootstrapper> logger = new RecordingLogger<AppStateBootstrapper>();
-        AppStateBootstrapper bootstrapper = new(
-            settingsStateService,
-            galleryStateService,
-            new NoOpStateWriteScheduler(),
-            logger);
+        RestoreTestContext context = new(logger);
+        context.SettingsStateService.EnableApplyFailure();
 
-        await bootstrapper.RestoreAsync(target, CancellationToken.None);
+        await context.Bootstrapper.RestoreAsync(context.Target, CancellationToken.None);
 
-        calls.Should().Equal(
-            "settings.apply",
-            "panel.restore:nano-banana",
-            "gallery.load",
-            "gallery.restore");
+        AssertRestoreCalls(context.Calls);
         logger.Entries.Should().ContainSingle(entry =>
             entry.Level == LogLevel.Error
             && entry.Message.Contains("settings", StringComparison.Ordinal));
@@ -75,63 +50,119 @@ public sealed class AppStateBootstrapperTests
     [Fact]
     public async Task FlushAsync_WithPendingWrite_SavesDeferredState()
     {
-        RecordingAppStateStore stateStore = new(typeof(TestState));
-        IStateWriteScheduler scheduler = new StateWriteScheduler(
-            stateStore,
-            NullLogger<StateWriteScheduler>.Instance,
-            TimeSpan.FromHours(1));
-        NonDeserializingTestStateSection section = new();
-        AppStateBootstrapper bootstrapper = new(
-            new RecordingSettingsStateService([]),
-            new RecordingGalleryStateService([]),
-            scheduler,
-            NullLogger<AppStateBootstrapper>.Instance);
+        FlushTestContext context = new();
 
-        scheduler.ScheduleWrite(section, new TestState("prompt"));
-        await bootstrapper.FlushAsync(new NoOpFlushTarget(), CancellationToken.None);
+        context.SchedulePromptWrite();
+        await context.Bootstrapper.FlushAsync(new NoOpFlushTarget(), CancellationToken.None);
 
-        stateStore.GetSavedStates<TestState>().Should().ContainSingle()
-            .Which.Value.Should().Be("prompt");
+        context.AssertPromptSaved();
     }
 
     [Fact]
     public async Task FlushAsync_WithPendingPrompt_CommitsBeforeFlushingScheduler()
     {
-        RecordingAppStateStore stateStore = new(typeof(TestState));
-        IStateWriteScheduler scheduler = new StateWriteScheduler(
-            stateStore,
-            NullLogger<StateWriteScheduler>.Instance,
-            TimeSpan.FromHours(1));
-        NonDeserializingTestStateSection section = new();
-        RecordingFlushTarget target = new(
-            () => scheduler.ScheduleWrite(section, new TestState("prompt")));
-        AppStateBootstrapper bootstrapper = new(
-            new RecordingSettingsStateService([]),
-            new RecordingGalleryStateService([]),
-            scheduler,
-            NullLogger<AppStateBootstrapper>.Instance);
+        FlushTestContext context = new();
+        RecordingFlushTarget target = new(context.SchedulePromptWrite);
 
-        await bootstrapper.FlushAsync(target, CancellationToken.None);
+        await context.Bootstrapper.FlushAsync(target, CancellationToken.None);
 
         target.CommitCallCount.Should().Be(1);
-        stateStore.GetSavedStates<TestState>().Should().ContainSingle()
-            .Which.Value.Should().Be("prompt");
+        context.AssertPromptSaved();
     }
 
-    private sealed class RecordingSettingsStateService : ISettingsStateService
+    private static void AssertRestoreCalls(List<string> calls)
     {
-        private readonly List<string> _calls;
+        calls.Should().Equal(
+            "settings.apply",
+            "panel.restore:nano-banana",
+            "gallery.load",
+            "gallery.restore");
+    }
 
-        public bool ThrowOnApply { get; init; }
+    private sealed class RestoreTestContext
+    {
+        public List<string> Calls { get; }
+        public RecordingSettingsStateService SettingsStateService { get; }
+        public RecordingRestoreTarget Target { get; }
+        public AppStateBootstrapper Bootstrapper { get; }
+
+        public RestoreTestContext(ILogger<AppStateBootstrapper>? logger = null)
+        {
+            Calls = [];
+            SettingsStateService = new RecordingSettingsStateService(Calls);
+            RecordingGalleryStateService galleryStateService = new(Calls);
+            Target = new RecordingRestoreTarget(Calls);
+            Bootstrapper = new AppStateBootstrapper(
+                SettingsStateService,
+                galleryStateService,
+                new NoOpStateWriteScheduler(),
+                logger ?? NullLogger<AppStateBootstrapper>.Instance);
+        }
+    }
+
+    private sealed class FlushTestContext
+    {
+        public AppStateBootstrapper Bootstrapper { get; }
+
+        private readonly RecordingAppStateStore _stateStore;
+        private readonly IStateWriteScheduler _scheduler;
+        private readonly NonDeserializingTestStateSection _section;
+
+        public FlushTestContext()
+        {
+            _stateStore = new RecordingAppStateStore(typeof(TestState));
+            _scheduler = new StateWriteScheduler(
+                _stateStore,
+                NullLogger<StateWriteScheduler>.Instance,
+                TimeSpan.FromHours(1));
+            _section = new NonDeserializingTestStateSection();
+            Bootstrapper = new AppStateBootstrapper(
+                new RecordingSettingsStateService([]),
+                new RecordingGalleryStateService([]),
+                _scheduler,
+                NullLogger<AppStateBootstrapper>.Instance);
+        }
+
+        public void SchedulePromptWrite()
+        {
+            _scheduler.ScheduleWrite(_section, new TestState(SavedPrompt));
+        }
+
+        public void AssertPromptSaved()
+        {
+            _stateStore.GetSavedStates<TestState>().Should().ContainSingle()
+                .Which.Value.Should().Be(SavedPrompt);
+        }
+    }
+
+    private abstract class CallRecordingTestDouble
+    {
+        protected List<string> Calls { get; }
+
+        protected CallRecordingTestDouble(List<string> calls)
+        {
+            Calls = calls ?? throw new ArgumentNullException(nameof(calls));
+        }
+    }
+
+    private sealed class RecordingSettingsStateService
+        : CallRecordingTestDouble, ISettingsStateService
+    {
+        public bool ThrowOnApply { get; private set; }
 
         public RecordingSettingsStateService(List<string> calls)
+            : base(calls)
         {
-            _calls = calls ?? throw new ArgumentNullException(nameof(calls));
+        }
+
+        public void EnableApplyFailure()
+        {
+            ThrowOnApply = true;
         }
 
         public Task ApplySavedSettingsAsync(CancellationToken ct)
         {
-            _calls.Add("settings.apply");
+            Calls.Add("settings.apply");
 
             if (ThrowOnApply)
             {
@@ -157,18 +188,17 @@ public sealed class AppStateBootstrapperTests
         }
     }
 
-    private sealed class RecordingGalleryStateService : IGalleryStateService
+    private sealed class RecordingGalleryStateService
+        : CallRecordingTestDouble, IGalleryStateService
     {
-        private readonly List<string> _calls;
-
         public RecordingGalleryStateService(List<string> calls)
+            : base(calls)
         {
-            _calls = calls ?? throw new ArgumentNullException(nameof(calls));
         }
 
         public Task<GalleryState> LoadAsync(CancellationToken ct)
         {
-            _calls.Add("gallery.load");
+            Calls.Add("gallery.load");
             GalleryState state = new()
             {
                 Items = new List<GalleryItemState>
@@ -196,21 +226,20 @@ public sealed class AppStateBootstrapperTests
         }
     }
 
-    private sealed class RecordingRestoreTarget : IAppStateRestoreTarget
+    private sealed class RecordingRestoreTarget
+        : CallRecordingTestDouble, IAppStateRestoreTarget
     {
-        private readonly List<string> _calls;
-
         public IReadOnlyList<GalleryItemState> RestoredGalleryItems { get; private set; } =
             [];
 
         public RecordingRestoreTarget(List<string> calls)
+            : base(calls)
         {
-            _calls = calls ?? throw new ArgumentNullException(nameof(calls));
         }
 
         public Task RestoreGenerationPanelsAsync(CancellationToken ct)
         {
-            _calls.Add("panel.restore:nano-banana");
+            Calls.Add("panel.restore:nano-banana");
             return Task.CompletedTask;
         }
 
@@ -218,7 +247,7 @@ public sealed class AppStateBootstrapperTests
         {
             ArgumentNullException.ThrowIfNull(items);
 
-            _calls.Add("gallery.restore");
+            Calls.Add("gallery.restore");
             RestoredGalleryItems = items.ToList();
 
             return Task.CompletedTask;
