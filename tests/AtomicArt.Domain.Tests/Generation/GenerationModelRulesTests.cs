@@ -69,47 +69,29 @@ public sealed class GenerationModelRulesTests
     [Fact]
     public void Validate_WithTooManyAttachments_ReturnsModelRequestError()
     {
-        GenerationModelConstraints constraints = CreateConstraints();
-        IReadOnlyList<GenerationAttachedImage> attachedImages = Enumerable
+        AssertAttachmentsInvalid(constraints => Enumerable
             .Range(0, constraints.MaxAttachedImages + 1)
             .Select(_ => CreateAttachedImage(1_024L))
-            .ToList();
-        GenerationValidationRequest request = CreateRequest(
-            constraints,
-            attachedImages: attachedImages);
-
-        AssertValidationError(request, GenerationErrorCodes.ModelRequestValidation);
+            .ToList());
     }
 
     [Fact]
     public void Validate_WithTotalAttachmentSizeLimitExceeded_ReturnsModelRequestError()
     {
-        GenerationModelConstraints constraints = CreateConstraints();
-        IReadOnlyList<GenerationAttachedImage> attachedImages =
-        [
+        AssertAttachmentsInvalid(constraints => new List<GenerationAttachedImage>
+        {
             CreateAttachedImage(constraints.MaxTotalAttachedImageBytes),
             CreateAttachedImage(1L)
-        ];
-        GenerationValidationRequest request = CreateRequest(
-            constraints,
-            attachedImages: attachedImages);
-
-        AssertValidationError(request, GenerationErrorCodes.ModelRequestValidation);
+        });
     }
 
     [Fact]
     public void Validate_WithUnsupportedAttachmentContentType_ReturnsModelRequestError()
     {
-        GenerationModelConstraints constraints = CreateConstraints();
-        IReadOnlyList<GenerationAttachedImage> attachedImages =
-        [
+        AssertAttachmentsInvalid(_ => new List<GenerationAttachedImage>
+        {
             new("image/gif", 1_024L)
-        ];
-        GenerationValidationRequest request = CreateRequest(
-            constraints,
-            attachedImages: attachedImages);
-
-        AssertValidationError(request, GenerationErrorCodes.ModelRequestValidation);
+        });
     }
 
     [Fact]
@@ -192,6 +174,22 @@ public sealed class GenerationModelRulesTests
 
         result.IsValid.Should().BeFalse();
         result.ErrorCode.Should().Be(expectedErrorCode);
+    }
+
+    private static void AssertAttachmentsInvalid(
+        Func<GenerationModelConstraints, IReadOnlyList<GenerationAttachedImage>>
+            attachedImagesFactory)
+    {
+        ArgumentNullException.ThrowIfNull(attachedImagesFactory);
+
+        GenerationModelConstraints constraints = CreateConstraints();
+        IReadOnlyList<GenerationAttachedImage> attachedImages =
+            attachedImagesFactory(constraints);
+        GenerationValidationRequest request = CreateRequest(
+            constraints,
+            attachedImages: attachedImages);
+
+        AssertValidationError(request, GenerationErrorCodes.ModelRequestValidation);
     }
 
     private static void AssertRuleSelectionFailure(
