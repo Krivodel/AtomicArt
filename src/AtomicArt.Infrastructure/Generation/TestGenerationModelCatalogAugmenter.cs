@@ -89,9 +89,9 @@ public static class TestGenerationModelCatalogAugmenter
                 TextOutputTokenUsdPerMillion: 0m,
                 ImageOutputTokenUsdPerMillion: 0m,
                 InputImageTokens: 0,
-                OutputImageTokensByResolution: new Dictionary<string, int>(StringComparer.Ordinal)
-                {
-                    ["1K"] = 0
-                }));
+                OutputImageTokensByResolution: Resolutions.ToDictionary(
+                    resolution => resolution,
+                    _ => 0,
+                    StringComparer.Ordinal)));
     }
 }
