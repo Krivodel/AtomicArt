@@ -14,6 +14,9 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
     internal Dictionary<Guid, Control> CardControls { get; } = [];
     internal HashSet<Guid> HiddenItemIds { get; } = [];
 
+    private const string SceneNotAttachedMessage =
+        "Gallery scene has not been attached to operation coordinator.";
+
     private readonly GalleryLayoutService _galleryLayout;
     private readonly GalleryOperationQueueProcessor _operationQueue;
     private IList<object>? _items;
@@ -108,7 +111,7 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         ArgumentNullException.ThrowIfNull(item);
         if (_itemIdSelector is null)
         {
-            throw new InvalidOperationException("Gallery scene has not been attached to operation coordinator.");
+            throw new InvalidOperationException(SceneNotAttachedMessage);
         }
 
         return _itemIdSelector(item);
@@ -120,7 +123,7 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         ArgumentNullException.ThrowIfNull(item);
         if (_controlFactory is null)
         {
-            throw new InvalidOperationException("Gallery scene has not been attached to operation coordinator.");
+            throw new InvalidOperationException(SceneNotAttachedMessage);
         }
 
         Control control = _controlFactory(item);
@@ -192,7 +195,7 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         EnsureSceneAttached();
         if (_waitForLayoutAsync is null)
         {
-            throw new InvalidOperationException("Gallery scene has not been attached to operation coordinator.");
+            throw new InvalidOperationException(SceneNotAttachedMessage);
         }
 
         await _waitForLayoutAsync();
@@ -213,7 +216,7 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
             || (_controlFactory is null)
             || (_waitForLayoutAsync is null))
         {
-            throw new InvalidOperationException("Gallery scene has not been attached to operation coordinator.");
+            throw new InvalidOperationException(SceneNotAttachedMessage);
         }
     }
 
@@ -260,6 +263,6 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
     {
         EnsureSceneAttached();
 
-        return value ?? throw new InvalidOperationException("Gallery scene has not been attached to operation coordinator.");
+        return value ?? throw new InvalidOperationException(SceneNotAttachedMessage);
     }
 }

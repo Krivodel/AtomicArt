@@ -65,6 +65,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     public event EventHandler<PropertyChangedEventArgs>? SelectionValueReset;
 
+    private const string SelectedModelNotInitializedMessage =
+        "Selected model is not initialized.";
+
     private static readonly TimeSpan PromptStateSaveDelay = StateWritePolicy.DeferredWriteDelay;
 
     private bool CanRunCommand => HasLoadedCatalog
@@ -506,7 +509,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             ErrorMessage = null;
             await SavePanelStateAsync(nameof(GenerateAsync), ct);
             ImageModelOption selectedModel = SelectedModel
-                ?? throw new InvalidOperationException("Selected model is not initialized.");
+                ?? throw new InvalidOperationException(SelectedModelNotInitializedMessage);
             string providerCredential = string.Empty;
 
             if (RequiresProviderCredential(selectedModel))
@@ -605,7 +608,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private NanoBanana2GenerationParameters CreateGenerationParameters()
     {
         ImageModelOption selectedModel = SelectedModel
-            ?? throw new InvalidOperationException("Selected model is not initialized.");
+            ?? throw new InvalidOperationException(SelectedModelNotInitializedMessage);
 
         return new NanoBanana2GenerationParameters(
             selectedModel,

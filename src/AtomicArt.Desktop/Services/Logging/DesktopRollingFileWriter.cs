@@ -13,6 +13,7 @@ internal sealed class DesktopRollingFileWriter : IDisposable
 {
     private const string FileNamePrefix = "atomicart-";
     private const string FileNameSearchPattern = "atomicart-*.log";
+    private const string LogRetentionCleanupOperationName = "log retention cleanup";
     private const int MaxMessageLength = 8 * 1024;
     private const int MaxExceptionDepth = 5;
     private const int MaxStackFrameCount = 64;
@@ -321,15 +322,15 @@ internal sealed class DesktopRollingFileWriter : IDisposable
         }
         catch (IOException ex)
         {
-            WriteInternalFailure("log retention cleanup", ex);
+            WriteInternalFailure(LogRetentionCleanupOperationName, ex);
         }
         catch (UnauthorizedAccessException ex)
         {
-            WriteInternalFailure("log retention cleanup", ex);
+            WriteInternalFailure(LogRetentionCleanupOperationName, ex);
         }
         catch (NotSupportedException ex)
         {
-            WriteInternalFailure("log retention cleanup", ex);
+            WriteInternalFailure(LogRetentionCleanupOperationName, ex);
         }
     }
 
