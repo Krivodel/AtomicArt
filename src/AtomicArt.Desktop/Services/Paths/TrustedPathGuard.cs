@@ -220,12 +220,8 @@ internal static class TrustedPathGuard
         string trustedRootDirectory,
         out string? trustedPath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        ArgumentNullException.ThrowIfNull(trustedDirectories);
-        ArgumentException.ThrowIfNullOrWhiteSpace(trustedRootDirectory);
-
+        string fullPath = ValidateAndGetFullPath(path, trustedDirectories, trustedRootDirectory);
         trustedPath = null;
-        string fullPath = Path.GetFullPath(path);
 
         if (!File.Exists(fullPath)
             || !TryGetContainingDirectory(trustedDirectories, fullPath, out string? _))
@@ -236,7 +232,7 @@ internal static class TrustedPathGuard
         FileInfo fileInfo = new(fullPath);
 
         if ((fileInfo.Attributes & FileAttributes.Directory) == FileAttributes.Directory
-            || (fileInfo.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint
+            || IsReparsePoint(fileInfo)
             || HasReparsePointBetween(trustedRootDirectory, fullPath))
         {
             return false;
@@ -252,12 +248,8 @@ internal static class TrustedPathGuard
         string trustedRootDirectory,
         out string? trustedPath)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        ArgumentNullException.ThrowIfNull(trustedDirectories);
-        ArgumentException.ThrowIfNullOrWhiteSpace(trustedRootDirectory);
-
+        string fullPath = ValidateAndGetFullPath(path, trustedDirectories, trustedRootDirectory);
         trustedPath = null;
-        string fullPath = Path.GetFullPath(path);
 
         if (!TryGetContainingDirectory(trustedDirectories, fullPath, out string? _)
             || HasReparsePointBetween(trustedRootDirectory, fullPath))
@@ -274,7 +266,7 @@ internal static class TrustedPathGuard
         {
             FileInfo fileInfo = new(fullPath);
 
-            if ((fileInfo.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint)
+            if (IsReparsePoint(fileInfo))
             {
                 return false;
             }
@@ -310,6 +302,23 @@ internal static class TrustedPathGuard
             trustedDirectories,
             trustedRootDirectory,
             validateResolvedPath);
+    }
+
+    private static string ValidateAndGetFullPath(
+        string path,
+        IReadOnlyCollection<string> trustedDirectories,
+        string trustedRootDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(trustedDirectories);
+        ArgumentException.ThrowIfNullOrWhiteSpace(trustedRootDirectory);
+
+        return Path.GetFullPath(path);
+    }
+
+    private static bool IsReparsePoint(FileInfo fileInfo)
+    {
+        return (fileInfo.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint;
     }
 
     private static string ResolveTrustedOpenedFilePath(
