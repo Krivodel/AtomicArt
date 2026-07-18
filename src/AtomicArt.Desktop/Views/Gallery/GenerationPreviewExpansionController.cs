@@ -13,6 +13,8 @@ namespace AtomicArt.Desktop.Views.Gallery;
 
 internal sealed class GenerationPreviewExpansionController
 {
+    private const string PreviewExpandedClass = "preview-expanded";
+
     private static readonly TimeSpan PreviewAnimationDuration = TimeSpan.FromSeconds(0.15d);
 
     private readonly GenerationCardControl _owner;
@@ -210,7 +212,7 @@ internal sealed class GenerationPreviewExpansionController
 
         _isPreviewExpanded = true;
         _galleryControl?.EnablePreviewOverflow(_owner, _previewExpansionHost);
-        _cardRoot.Classes.Add("preview-expanded");
+        _cardRoot.Classes.Add(PreviewExpandedClass);
         _revealInFolderButton.IsHitTestVisible = false;
         _deleteOrCancelButton.IsHitTestVisible = false;
     }
@@ -224,7 +226,7 @@ internal sealed class GenerationPreviewExpansionController
 
         _isPreviewExpanded = false;
         _galleryControl?.BeginPreviewOverflowCollapse(_owner);
-        _cardRoot.Classes.Remove("preview-expanded");
+        _cardRoot.Classes.Remove(PreviewExpandedClass);
         _revealInFolderButton.IsHitTestVisible = true;
         _deleteOrCancelButton.IsHitTestVisible = true;
         _previewExpansionHost.Width = _collapsedPreviewSize.Width;
@@ -278,7 +280,7 @@ internal sealed class GenerationPreviewExpansionController
     private void RestoreCollapsedPreviewImmediately()
     {
         _isPreviewExpanded = false;
-        _cardRoot.Classes.Remove("preview-expanded");
+        _cardRoot.Classes.Remove(PreviewExpandedClass);
         _revealInFolderButton.IsHitTestVisible = true;
         _deleteOrCancelButton.IsHitTestVisible = true;
 
