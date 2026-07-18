@@ -207,12 +207,8 @@ public static class DependencyInjection
     private static IServiceCollection AddStateSectionsByConvention(this IServiceCollection services)
     {
         Type markerType = typeof(IStateSection);
-        IEnumerable<Type> implementationTypes = typeof(DependencyInjection)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false, IsPublic: true }
-                && markerType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> implementationTypes =
+            DesktopTypeDiscovery.FindPublicImplementations(markerType);
 
         foreach (Type implementationType in implementationTypes)
         {
@@ -227,12 +223,8 @@ public static class DependencyInjection
     private static IServiceCollection AddGenerationImageFormatsByConvention(this IServiceCollection services)
     {
         Type markerType = typeof(IGenerationImageFormat);
-        IEnumerable<Type> implementationTypes = typeof(DependencyInjection)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false }
-                && markerType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> implementationTypes =
+            DesktopTypeDiscovery.FindAllImplementations(markerType);
 
         foreach (Type implementationType in implementationTypes)
         {
@@ -248,12 +240,8 @@ public static class DependencyInjection
     {
         Type markerType = typeof(IRegisteredGenerationItemStatusDescriptor);
         Type descriptorType = typeof(IGenerationItemStatusDescriptor);
-        IEnumerable<Type> implementationTypes = typeof(DependencyInjection)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false }
-                && markerType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> implementationTypes =
+            DesktopTypeDiscovery.FindAllImplementations(markerType);
 
         foreach (Type implementationType in implementationTypes)
         {
@@ -268,12 +256,8 @@ public static class DependencyInjection
     private static IServiceCollection AddModelPanelViewModelsByConvention(this IServiceCollection services)
     {
         Type panelType = typeof(IModelPanelViewModel);
-        IEnumerable<Type> panelTypes = typeof(DependencyInjection)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false, IsPublic: true }
-                && panelType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> panelTypes =
+            DesktopTypeDiscovery.FindPublicImplementations(panelType);
 
         foreach (Type panel in panelTypes)
         {
@@ -288,12 +272,8 @@ public static class DependencyInjection
     private static IServiceCollection AddGenerationModelServicesByConvention(this IServiceCollection services)
     {
         Type markerType = typeof(IGenerationModelService);
-        IEnumerable<Type> implementationTypes = typeof(DependencyInjection)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false, IsPublic: true }
-                && markerType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> implementationTypes =
+            DesktopTypeDiscovery.FindPublicImplementations(markerType);
 
         foreach (Type implementationType in implementationTypes)
         {
@@ -307,12 +287,8 @@ public static class DependencyInjection
     private static IServiceCollection AddGenerationViewModelsByConvention(this IServiceCollection services)
     {
         Type markerType = typeof(IGenerationModelViewModel);
-        IEnumerable<Type> viewModelTypes = typeof(DependencyInjection)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false, IsPublic: true }
-                && markerType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> viewModelTypes =
+            DesktopTypeDiscovery.FindPublicImplementations(markerType);
 
         foreach (Type viewModelType in viewModelTypes)
         {

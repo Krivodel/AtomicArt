@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Avalonia.Controls;
 
 using AtomicArt.Desktop.Controls.Gallery;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
 using AtomicArt.Desktop.Services.GalleryAnimation;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -112,12 +113,8 @@ internal static class GalleryServiceCollectionExtensions
         IGalleryLifecycleViewState viewState)
     {
         Type handlerType = typeof(IGalleryLifecycleEventHandler);
-        IEnumerable<Type> handlerTypes = typeof(GalleryServiceCollectionExtensions)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false }
-                && handlerType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> handlerTypes =
+            DesktopTypeDiscovery.FindAllImplementations(handlerType);
 
         return handlerTypes
             .Select(type => (IGalleryLifecycleEventHandler)ActivatorUtilities.CreateInstance(
@@ -130,12 +127,8 @@ internal static class GalleryServiceCollectionExtensions
     private static IServiceCollection AddGalleryOperationRunners(this IServiceCollection services)
     {
         Type runnerType = typeof(IGalleryOperationRunner);
-        IEnumerable<Type> runnerTypes = typeof(GalleryServiceCollectionExtensions)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false }
-                && runnerType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> runnerTypes =
+            DesktopTypeDiscovery.FindAllImplementations(runnerType);
 
         foreach (Type runner in runnerTypes)
         {

@@ -13,13 +13,9 @@ public static class SettingsServiceCollectionExtensions
 
         Type settingsDefinitionType = typeof(ISettingsDefinition);
         Type scaleOptionDefinitionType = typeof(IUiScaleOptionDefinition);
-        IEnumerable<Type> definitionTypes = typeof(SettingsServiceCollectionExtensions)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false, IsPublic: true })
-            .Where(type => settingsDefinitionType.IsAssignableFrom(type)
-                || scaleOptionDefinitionType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> definitionTypes = DesktopTypeDiscovery.FindPublicImplementations(
+            settingsDefinitionType,
+            scaleOptionDefinitionType);
 
         foreach (Type definitionType in definitionTypes)
         {
@@ -34,12 +30,8 @@ public static class SettingsServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         Type factoryType = typeof(ISettingsItemViewModelFactory);
-        IEnumerable<Type> factoryTypes = typeof(SettingsServiceCollectionExtensions)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false, IsPublic: true })
-            .Where(type => factoryType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> factoryTypes =
+            DesktopTypeDiscovery.FindPublicImplementations(factoryType);
 
         foreach (Type currentFactoryType in factoryTypes)
         {
@@ -54,12 +46,8 @@ public static class SettingsServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         Type applicatorType = typeof(ISettingsStateApplicator);
-        IEnumerable<Type> applicatorTypes = typeof(SettingsServiceCollectionExtensions)
-            .Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false, IsPublic: true })
-            .Where(type => applicatorType.IsAssignableFrom(type))
-            .OrderBy(type => type.FullName, StringComparer.Ordinal);
+        IReadOnlyList<Type> applicatorTypes =
+            DesktopTypeDiscovery.FindPublicImplementations(applicatorType);
 
         foreach (Type currentApplicatorType in applicatorTypes)
         {
