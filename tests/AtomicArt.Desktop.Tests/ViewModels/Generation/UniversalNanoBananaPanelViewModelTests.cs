@@ -26,7 +26,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
 {
     private const string ProviderCredential = "test-provider-key";
     private const int PromptDelayedSaveSettleMilliseconds = 500;
-    private static readonly byte[] PngBytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
+    private static readonly byte[] PngBytes = [.. GenerationImageFileSignatures.Png, 0x00];
 
     [Fact]
     public async Task GenerateCommand_WhenRequestBegins_PublishesStartedEvent()

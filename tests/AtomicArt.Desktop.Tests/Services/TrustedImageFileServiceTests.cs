@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using FluentAssertions;
 using Xunit;
 
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
@@ -18,17 +19,7 @@ public sealed class TrustedImageFileServiceTests
     private const string TestDirectoryNamePrefix = "trusted-large-placeholder-test-";
     private const string TestFileName = "trusted-large-placeholder.png";
 
-    private static readonly byte[] PngSignature =
-    [
-        0x89,
-        0x50,
-        0x4E,
-        0x47,
-        0x0D,
-        0x0A,
-        0x1A,
-        0x0A
-    ];
+    private static readonly byte[] PngSignature = GenerationImageFileSignatures.Png.ToArray();
 
     [Fact]
     public void GetTrustedImagePathOrDefault_WithPngLargerThanPreviousLimitInsideArt_ReturnsTrustedPath()

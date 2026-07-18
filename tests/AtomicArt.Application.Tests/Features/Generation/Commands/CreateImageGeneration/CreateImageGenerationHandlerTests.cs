@@ -672,19 +672,7 @@ public sealed class CreateImageGenerationHandlerTests
 
     private static byte[] CreatePngContent()
     {
-        byte[] content =
-        [
-            0x89,
-            0x50,
-            0x4E,
-            0x47,
-            0x0D,
-            0x0A,
-            0x1A,
-            0x0A
-        ];
-
-        return content;
+        return GenerationImageFileSignatures.Png.ToArray();
     }
 
     private static byte[] CreateLargePngContent(int length)
@@ -697,9 +685,7 @@ public sealed class CreateImageGenerationHandlerTests
 
     private static byte[] CreateGifContent()
     {
-        byte[] content = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61];
-
-        return content;
+        return GenerationImageFileSignatures.Gif89A.ToArray();
     }
 
     private static ImageModelRegistry CreateRegistry(GenerationModelMetadataDto? metadata = null)

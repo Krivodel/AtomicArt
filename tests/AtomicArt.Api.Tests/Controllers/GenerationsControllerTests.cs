@@ -557,7 +557,9 @@ public sealed class GenerationsControllerTests
 
     private static byte[] CreatePngBytes()
     {
-        return [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
+        byte[] content = [.. GenerationImageFileSignatures.Png, 0x00];
+
+        return content;
     }
 
     private static ImageGenerationRequestDto CreateRequestWithNullAttachedImage()

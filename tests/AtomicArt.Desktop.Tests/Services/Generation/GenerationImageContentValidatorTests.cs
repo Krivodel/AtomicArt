@@ -91,7 +91,7 @@ public sealed class GenerationImageContentValidatorTests
     {
         GenerationImageContentDto content = new(
             "image/webp",
-            Convert.ToBase64String([0x52, 0x49, 0x46, 0x46]));
+            Convert.ToBase64String(GenerationImageFileSignatures.Riff.ToArray()));
 
         bool result = _validator.TryValidate(content, out GenerationImageContentValidationResult? validationResult);
 

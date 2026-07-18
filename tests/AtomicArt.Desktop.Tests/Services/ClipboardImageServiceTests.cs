@@ -16,17 +16,7 @@ public sealed class ClipboardImageServiceTests
     private const int MaxInputBytes = 1024;
     private const string FileName = "copied.png";
 
-    private static readonly byte[] PngContent =
-    [
-        0x89,
-        0x50,
-        0x4E,
-        0x47,
-        0x0D,
-        0x0A,
-        0x1A,
-        0x0A
-    ];
+    private static readonly byte[] PngContent = GenerationImageFileSignatures.Png.ToArray();
 
     [Fact]
     public async Task TryGetImageAsync_WithFileAndPngFormats_ReturnsFileInput()

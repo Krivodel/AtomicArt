@@ -22,32 +22,16 @@ public sealed class CreateImageGenerationCommandValidatorTests
 
     private static string ModelId => ApiModelMetadataTestCatalog.NanoBanana2ModelId;
 
-    private static readonly byte[] PngBytes =
-    [
-        0x89,
-        0x50,
-        0x4E,
-        0x47,
-        0x0D,
-        0x0A,
-        0x1A,
-        0x0A
-    ];
-    private static readonly byte[] GifBytes = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61];
+    private static readonly byte[] PngBytes = GenerationImageFileSignatures.Png.ToArray();
+    private static readonly byte[] GifBytes = GenerationImageFileSignatures.Gif89A.ToArray();
     private static readonly byte[] WebpBytes =
     [
-        0x52,
-        0x49,
-        0x46,
-        0x46,
+        .. GenerationImageFileSignatures.Riff,
         0x00,
         0x00,
         0x00,
         0x00,
-        0x57,
-        0x45,
-        0x42,
-        0x50
+        .. GenerationImageFileSignatures.Webp
     ];
 
     private readonly CreateImageGenerationCommandValidator _validator = CreateValidator();

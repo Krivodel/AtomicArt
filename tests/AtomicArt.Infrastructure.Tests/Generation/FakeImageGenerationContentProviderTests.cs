@@ -127,19 +127,7 @@ public sealed class FakeImageGenerationContentProviderTests
 
     private static byte[] CreatePlaceholderContent()
     {
-        byte[] content =
-        [
-            0x89,
-            0x50,
-            0x4E,
-            0x47,
-            0x0D,
-            0x0A,
-            0x1A,
-            0x0A
-        ];
-
-        return content;
+        return GenerationImageFileSignatures.Png.ToArray();
     }
 
     private static string CreateCleanDirectory(string testName)
