@@ -22,13 +22,8 @@ public sealed class AttachedImagePreparationServiceTests
             "source.png",
             GenerationImageContentTypes.Png,
             content);
-        ImageModelOption selectedModel = CreateModel(content.Length + 1);
-        AttachedImagePreparationService service = CreateService();
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareImageAsync(image, content.Length + 1);
 
         result.Should().BeSameAs(image);
         result?.Content.Should().BeSameAs(content);
@@ -52,16 +47,12 @@ public sealed class AttachedImagePreparationServiceTests
             "source.png",
             GenerationImageContentTypes.Png,
             content);
-        ImageModelOption selectedModel = CreateModel(fastLosslessBytes.Length);
-        AttachedImagePreparationService service = CreateService();
+        int maxAttachedImageBytes = fastLosslessBytes.Length;
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareImageAsync(image, maxAttachedImageBytes);
 
         result.Should().NotBeNull();
-        result?.Content.LongLength.Should().BeLessThanOrEqualTo(selectedModel.MaxAttachedImageBytes);
+        result?.Content.LongLength.Should().BeLessThanOrEqualTo(maxAttachedImageBytes);
         using SKBitmap sourceBitmap = Decode(content);
         using SKBitmap preparedBitmap = Decode(result?.Content ?? []);
         preparedBitmap.Width.Should().Be(sourceBitmap.Width);
@@ -77,16 +68,12 @@ public sealed class AttachedImagePreparationServiceTests
             "source.png",
             GenerationImageContentTypes.Png,
             content);
-        ImageModelOption selectedModel = CreateModel(1500);
-        AttachedImagePreparationService service = CreateService();
+        const int MaxAttachedImageBytes = 1500;
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareImageAsync(image, MaxAttachedImageBytes);
 
         result.Should().NotBeNull();
-        result?.Content.LongLength.Should().BeLessThanOrEqualTo(selectedModel.MaxAttachedImageBytes);
+        result?.Content.LongLength.Should().BeLessThanOrEqualTo(MaxAttachedImageBytes);
         using SKBitmap preparedBitmap = Decode(result?.Content ?? []);
         preparedBitmap.Width.Should().BeLessThan(SourceWidth);
         preparedBitmap.Height.Should().BeLessThan(SourceHeight);
@@ -100,13 +87,8 @@ public sealed class AttachedImagePreparationServiceTests
             "source.heic",
             GenerationImageContentTypes.Heic,
             content);
-        ImageModelOption selectedModel = CreateModel(content.Length * 2);
-        AttachedImagePreparationService service = CreateService();
 
-        AttachedImageDto? result = await service.PrepareAsync(
-            image,
-            selectedModel,
-            CancellationToken.None);
+        AttachedImageDto? result = await PrepareImageAsync(image, content.Length * 2);
 
         result.Should().NotBeNull();
         result?.ContentType.Should().BeOneOf(
@@ -120,13 +102,11 @@ public sealed class AttachedImagePreparationServiceTests
     {
         RecordingAttachedImageCodec codec = CreateOversizedLosslessCodec(
             EncodeAtMaximumQuality);
-        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(codec);
 
         result.Should().NotBeNull();
-        codec.LosslessCalls.Should().Equal(
-            (AttachedImageEncodingFormat.Webp, AttachedImageCompressionEffort.Fast));
+        VerifySingleFastWebpLosslessCall(codec);
         codec.LossyCalls.Should().Equal(
             (AttachedImageEncodingFormat.Webp, 100));
     }
@@ -141,9 +121,8 @@ public sealed class AttachedImagePreparationServiceTests
                 : new byte[100],
             LossyEncoder = _ => throw new InvalidOperationException("Lossy encoding was not expected.")
         };
-        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(codec);
 
         result.Should().NotBeNull();
         codec.LosslessCalls.Should().Equal(
@@ -175,9 +154,8 @@ public sealed class AttachedImagePreparationServiceTests
 
                 throw new InvalidOperationException("Unexpected lossy quality.");
             });
-        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(codec);
 
         result.Should().NotBeNull();
         codec.LossyCalls.Select(call => call.Quality)
@@ -193,9 +171,8 @@ public sealed class AttachedImagePreparationServiceTests
             quality => quality <= 75
                 ? new byte[90]
                 : new byte[110]);
-        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(codec);
 
         result.Should().NotBeNull();
         codec.LossyCalls.Count(call => call.Quality == 100).Should().Be(1);
@@ -214,18 +191,14 @@ public sealed class AttachedImagePreparationServiceTests
             largeWidth,
             largeHeight,
             SKAlphaType.Opaque);
-        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(codec);
 
-        result.Should().NotBeNull();
-        codec.DecodeCallCount.Should().Be(1);
-        codec.LosslessCalls.Should().Equal(
-            (AttachedImageEncodingFormat.Webp, AttachedImageCompressionEffort.Fast));
+        VerifyDecodedResizeCount(result, codec, 2);
+        VerifySingleFastWebpLosslessCall(codec);
         codec.LossyCalls.Should().Equal(
             (AttachedImageEncodingFormat.Webp, 100),
             (AttachedImageEncodingFormat.Webp, 100));
-        codec.ResizeCalls.Should().HaveCount(2);
         codec.ResizeCalls.Last().Width.Should().BeLessThan(largeWidth);
         codec.ResizeCalls.Last().Height.Should().BeLessThan(largeHeight);
     }
@@ -245,16 +218,13 @@ public sealed class AttachedImagePreparationServiceTests
             LossyEncoder = _ => throw new InvalidOperationException(
                 "Lossy encoding was not expected.")
         };
-        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(
+
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(
             codec,
             contentLength: 10001,
             maxAttachedImageBytes: 10000);
 
-        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
-
-        result.Should().NotBeNull();
-        codec.DecodeCallCount.Should().Be(1);
-        codec.ResizeCalls.Should().ContainSingle();
+        VerifyDecodedResizeCount(result, codec, 1);
         codec.ResizeCalls.Single().Should().Be(
             AttachedImagePreparationPlanner.CalculateEncodingProbeSize(codec.ImageInfo));
         codec.LosslessCalls.Should().Equal(
@@ -278,13 +248,10 @@ public sealed class AttachedImagePreparationServiceTests
                 "Oversized WebP lossless encoding was not expected."),
             LossyEncoder = EncodeAtMaximumQuality
         };
-        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(codec);
 
-        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(codec);
 
-        result.Should().NotBeNull();
-        codec.DecodeCallCount.Should().Be(1);
-        codec.ResizeCalls.Should().ContainSingle();
+        VerifyDecodedResizeCount(result, codec, 1);
         codec.ResizeCalls.Single().Width
             .Should()
             .BeLessThanOrEqualTo(AttachedImagePreparationPlanner.MaximumWebpDimension);
@@ -305,15 +272,12 @@ public sealed class AttachedImagePreparationServiceTests
                 "Lossy encoding was not expected.")
         };
         string[] supportedContentTypes = [GenerationImageContentTypes.Png];
-        SyntheticPreparationScenario scenario = CreateSyntheticPreparationScenario(
+
+        AttachedImageDto? result = await PrepareSyntheticImageAsync(
             codec,
             supportedContentTypes: supportedContentTypes);
 
-        AttachedImageDto? result = await PrepareSyntheticImageAsync(scenario);
-
-        result.Should().NotBeNull();
-        codec.DecodeCallCount.Should().Be(1);
-        codec.ResizeCalls.Should().HaveCount(2);
+        VerifyDecodedResizeCount(result, codec, 2);
         codec.LosslessCalls.Should().Equal(
             (AttachedImageEncodingFormat.Png, AttachedImageCompressionEffort.Fast),
             (AttachedImageEncodingFormat.Png, AttachedImageCompressionEffort.Fast));
@@ -342,24 +306,6 @@ public sealed class AttachedImagePreparationServiceTests
             codec ?? new SkiaAttachedImageCodec(),
             new AttachedImagePreparationConcurrencyLimiter(),
             NullLogger<AttachedImagePreparationService>.Instance);
-    }
-
-    private static SyntheticPreparationScenario CreateSyntheticPreparationScenario(
-        IAttachedImageCodec codec,
-        int contentLength = 101,
-        int maxAttachedImageBytes = 100,
-        IReadOnlyList<string>? supportedContentTypes = null)
-    {
-        AttachedImageDto image = new(
-            "source.png",
-            GenerationImageContentTypes.Png,
-            new byte[contentLength]);
-        ImageModelOption selectedModel = CreateModel(
-            maxAttachedImageBytes,
-            supportedContentTypes);
-        AttachedImagePreparationService service = CreateService(codec);
-
-        return new SyntheticPreparationScenario(image, selectedModel, service);
     }
 
     private static RecordingAttachedImageCodec CreateOversizedLosslessCodec(
@@ -431,11 +377,36 @@ public sealed class AttachedImagePreparationServiceTests
     }
 
     private static async Task<AttachedImageDto?> PrepareSyntheticImageAsync(
-        SyntheticPreparationScenario scenario)
+        IAttachedImageCodec codec,
+        int contentLength = 101,
+        int maxAttachedImageBytes = 100,
+        IReadOnlyList<string>? supportedContentTypes = null)
     {
-        return await scenario.Service.PrepareAsync(
-            scenario.Image,
-            scenario.SelectedModel,
+        AttachedImageDto image = new(
+            "source.png",
+            GenerationImageContentTypes.Png,
+            new byte[contentLength]);
+        ImageModelOption selectedModel = CreateModel(
+            maxAttachedImageBytes,
+            supportedContentTypes);
+        AttachedImagePreparationService service = CreateService(codec);
+
+        return await service.PrepareAsync(
+            image,
+            selectedModel,
+            CancellationToken.None);
+    }
+
+    private static async Task<AttachedImageDto?> PrepareImageAsync(
+        AttachedImageDto image,
+        int maxAttachedImageBytes)
+    {
+        ImageModelOption selectedModel = CreateModel(maxAttachedImageBytes);
+        AttachedImagePreparationService service = CreateService();
+
+        return await service.PrepareAsync(
+            image,
+            selectedModel,
             CancellationToken.None);
     }
 
@@ -447,6 +418,22 @@ public sealed class AttachedImagePreparationServiceTests
         }
 
         return new byte[90];
+    }
+
+    private static void VerifyDecodedResizeCount(
+        AttachedImageDto? result,
+        RecordingAttachedImageCodec codec,
+        int expectedResizeCount)
+    {
+        result.Should().NotBeNull();
+        codec.DecodeCallCount.Should().Be(1);
+        codec.ResizeCalls.Should().HaveCount(expectedResizeCount);
+    }
+
+    private static void VerifySingleFastWebpLosslessCall(RecordingAttachedImageCodec codec)
+    {
+        codec.LosslessCalls.Should().Equal(
+            (AttachedImageEncodingFormat.Webp, AttachedImageCompressionEffort.Fast));
     }
 
     private static SKBitmap Decode(byte[] content)
@@ -469,9 +456,4 @@ public sealed class AttachedImagePreparationServiceTests
 
         return pixels;
     }
-
-    private sealed record SyntheticPreparationScenario(
-        AttachedImageDto Image,
-        ImageModelOption SelectedModel,
-        AttachedImagePreparationService Service);
 }
