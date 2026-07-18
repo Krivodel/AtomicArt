@@ -4,6 +4,8 @@ namespace AtomicArt.Desktop.Views.Gallery;
 
 internal static class GenerationPreviewExpansionCalculator
 {
+    private const double ExpandedPreviewScale = 1.7d;
+
     public static (Size Size, Vector Translation) Calculate(
         Size previewSize,
         Size sourceSize,
@@ -38,13 +40,20 @@ internal static class GenerationPreviewExpansionCalculator
     {
         double shortSide = Math.Min(previewSize.Width, previewSize.Height);
         double aspectRatio = sourceSize.Width / sourceSize.Height;
+        Size aspectRatioSize;
 
         if (aspectRatio >= 1d)
         {
-            return new Size(shortSide * aspectRatio, shortSide);
+            aspectRatioSize = new Size(shortSide * aspectRatio, shortSide);
+        }
+        else
+        {
+            aspectRatioSize = new Size(shortSide, shortSide / aspectRatio);
         }
 
-        return new Size(shortSide, shortSide / aspectRatio);
+        return new Size(
+            aspectRatioSize.Width * ExpandedPreviewScale,
+            aspectRatioSize.Height * ExpandedPreviewScale);
     }
 
     private static double FitCoordinate(

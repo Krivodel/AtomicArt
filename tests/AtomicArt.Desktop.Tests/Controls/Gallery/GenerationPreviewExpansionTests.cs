@@ -70,7 +70,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
 
                     previewHost.Parent.Should().BeSameAs(originalParent);
                     GetOverlayCanvas(gallery).Children.Should().NotContain(previewHost);
-                    previewHost.Width.Should().Be(440d);
+                    previewHost.Width.Should().Be(748d);
                     scrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
                     scrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
                     scrollPresenter.ClipToBounds.Should().BeFalse();
@@ -87,7 +87,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
 
                     previewHost.Parent.Should().BeSameAs(originalParent);
                     GetOverlayCanvas(gallery).Children.Should().NotContain(previewHost);
-                    previewHost.Width.Should().Be(440d);
+                    previewHost.Width.Should().Be(748d);
                     scrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
                     scrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
 
@@ -107,7 +107,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                     scrollViewer.Offset = new Vector(0d, 0d);
                     window.CaptureRenderedFrame();
 
-                    previewHost.Width.Should().Be(440d);
+                    previewHost.Width.Should().Be(748d);
                     card.ZIndex.Should().Be(1001);
 
                     window.Content = null;
@@ -178,7 +178,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                         null);
                     window.CaptureRenderedFrame();
 
-                    previewHost.Width.Should().Be(440d);
+                    previewHost.Width.Should().Be(748d);
                 }
                 finally
                 {

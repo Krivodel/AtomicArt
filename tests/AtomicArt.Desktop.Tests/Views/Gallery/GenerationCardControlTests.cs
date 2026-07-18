@@ -55,7 +55,7 @@ public sealed class GenerationCardControlTests
     }
 
     [Fact]
-    public void Calculate_WithWideSource_PreservesShortSideAndFitsRightViewportEdge()
+    public void Calculate_WithWideSource_ScalesFullAspectRatioAndFitsRightViewportEdge()
     {
         Size previewSize = new(220d, 220d);
         Size sourceSize = new(440d, 220d);
@@ -68,12 +68,12 @@ public sealed class GenerationCardControlTests
             previewBounds,
             viewportBounds);
 
-        size.Should().Be(new Size(440d, 220d));
-        translation.Should().Be(new Vector(-220d, 0d));
+        size.Should().Be(new Size(748d, 374d));
+        translation.Should().Be(new Vector(-528d, -40d));
     }
 
     [Fact]
-    public void Calculate_WithTallSource_PreservesShortSideAndFitsBottomViewportEdge()
+    public void Calculate_WithTallSource_ScalesFullAspectRatioAndFitsViewportStart()
     {
         Size previewSize = new(220d, 220d);
         Size sourceSize = new(220d, 440d);
@@ -86,8 +86,8 @@ public sealed class GenerationCardControlTests
             previewBounds,
             viewportBounds);
 
-        size.Should().Be(new Size(220d, 440d));
-        translation.Should().Be(new Vector(0d, -220d));
+        size.Should().Be(new Size(374d, 748d));
+        translation.Should().Be(new Vector(-40d, -380d));
     }
 
     [Fact]
@@ -104,8 +104,8 @@ public sealed class GenerationCardControlTests
             previewBounds,
             viewportBounds);
 
-        size.Should().Be(new Size(330d, 220d));
-        translation.Should().Be(new Vector(-55d, 0d));
+        size.Should().Be(new Size(561d, 374d));
+        translation.Should().Be(new Vector(-170.5d, -40d));
     }
 
     [Fact]
@@ -122,8 +122,8 @@ public sealed class GenerationCardControlTests
             previewBounds,
             viewportBounds);
 
-        size.Should().Be(new Size(440d, 220d));
-        translation.Should().Be(new Vector(-240d, 0d));
+        size.Should().Be(new Size(748d, 374d));
+        translation.Should().Be(new Vector(-548d, -40d));
         (previewBounds.Left + translation.X + size.Width).Should().Be(viewportBounds.Right);
     }
 
