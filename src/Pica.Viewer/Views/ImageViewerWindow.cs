@@ -15,6 +15,7 @@ namespace Pica.Viewer.Views;
 
 public sealed partial class ImageViewerWindow : SukiWindow
 {
+    private const string AppIconAssetUri = "avares://Pica.Viewer/Assets/AppIcon.ico";
     private const double EdgeRevealRatio = 0.04d;
     private const double BottomRevealSize = 128d;
     private const double ContextMenuGap = 8d;
@@ -205,7 +206,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _imageDoubleClickTracker = new ImageDoubleClickTracker();
         _panMotion = new ImagePanMotion();
         _previewCache = new ImagePreviewCache();
-        _logoBitmap = LoadBitmap("avares://Pica.Viewer/Assets/AppIcon.ico");
+        _logoBitmap = LoadBitmap(AppIconAssetUri);
         ImageViewerViewEvents viewEvents = new()
         {
             ZoomOutClicked = OnZoomOutClicked,
@@ -354,7 +355,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         CanFullScreen = true;
         CanPin = false;
         Cursor = ArrowCursor;
-        Icon = LoadWindowIcon("avares://Pica.Viewer/Assets/AppIcon.ico");
+        Icon = LoadWindowIcon(AppIconAssetUri);
         IsMenuVisible = false;
         IsTitleBarVisible = _isWindowedMode;
         LogoContent = new Image
