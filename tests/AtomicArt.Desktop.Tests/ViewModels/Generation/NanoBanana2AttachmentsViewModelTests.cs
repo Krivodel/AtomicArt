@@ -17,10 +17,7 @@ public sealed class NanoBanana2AttachmentsViewModelTests
     [Fact]
     public async Task AttachInputsAsync_WithExistingImages_AppendsNewImagesToEnd()
     {
-        NanoBanana2AttachmentsViewModel viewModel = new(
-            new PassThroughAttachmentValidator(),
-            new PassThroughAttachedImagePreparationService(),
-            new InMemoryPanelAttachmentStore());
+        NanoBanana2AttachmentsViewModel viewModel = CreateViewModel();
         ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] firstImages =
         [
@@ -47,10 +44,7 @@ public sealed class NanoBanana2AttachmentsViewModelTests
     [Fact]
     public async Task MoveAttachment_WhenTargetIndexChanges_ReordersAttachedImagesAndDtos()
     {
-        NanoBanana2AttachmentsViewModel viewModel = new(
-            new PassThroughAttachmentValidator(),
-            new PassThroughAttachedImagePreparationService(),
-            new InMemoryPanelAttachmentStore());
+        NanoBanana2AttachmentsViewModel viewModel = CreateViewModel();
         ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] images =
         [
@@ -76,63 +70,51 @@ public sealed class NanoBanana2AttachmentsViewModelTests
     [Fact]
     public async Task MoveAttachment_WhilePreparationRuns_ReordersPendingImages()
     {
-        BlockingAttachedImagePreparationService preparationService = new();
-        NanoBanana2AttachmentsViewModel viewModel = new(
-            new PassThroughAttachmentValidator(),
-            preparationService,
-            new InMemoryPanelAttachmentStore());
-        ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] images =
         [
             GenerationImageTestData.CreateAttachedImage("first.png"),
             GenerationImageTestData.CreateAttachedImage("second.png")
         ];
-        Task attaching = AttachImagesAsync(viewModel, selectedModel, images);
-        await preparationService.WaitUntilStartedAsync();
-        AttachedImageViewModel secondImage = viewModel.AttachedImages[1];
+        PendingAttachmentScenario scenario = new(images);
+        await scenario.WaitUntilStartedAsync();
+        AttachedImageViewModel secondImage = scenario.ViewModel.AttachedImages[1];
 
-        viewModel.MoveAttachment(secondImage, 0);
+        scenario.ViewModel.MoveAttachment(secondImage, 0);
 
-        viewModel.AttachedImages.Select(image => image.FileName)
+        scenario.ViewModel.AttachedImages.Select(image => image.FileName)
             .Should()
             .Equal("second.png", "first.png");
 
-        foreach (AttachedImageViewModel image in viewModel.AttachedImages.ToList())
+        foreach (AttachedImageViewModel image in scenario.ViewModel.AttachedImages.ToList())
         {
-            await viewModel.RemoveAttachmentAsync(
+            await scenario.ViewModel.RemoveAttachmentAsync(
                 PanelId,
                 image,
                 CancellationToken.None);
         }
 
-        await attaching;
+        await scenario.Attaching;
     }
 
     [Fact]
     public async Task RemoveAttachmentAsync_WhilePreparationRuns_CancelsAndRemovesImmediately()
     {
-        BlockingAttachedImagePreparationService preparationService = new();
-        NanoBanana2AttachmentsViewModel viewModel = new(
-            new PassThroughAttachmentValidator(),
-            preparationService,
-            new InMemoryPanelAttachmentStore());
-        ImageModelOption selectedModel = CreateModel();
         AttachedImageDto[] images =
         [
             GenerationImageTestData.CreateAttachedImage("pending.png")
         ];
-        Task attaching = AttachImagesAsync(viewModel, selectedModel, images);
-        await preparationService.WaitUntilStartedAsync();
-        AttachedImageViewModel pendingImage = viewModel.AttachedImages.Single();
+        PendingAttachmentScenario scenario = new(images);
+        await scenario.WaitUntilStartedAsync();
+        AttachedImageViewModel pendingImage = scenario.ViewModel.AttachedImages.Single();
 
-        await viewModel.RemoveAttachmentAsync(
+        await scenario.ViewModel.RemoveAttachmentAsync(
             PanelId,
             pendingImage,
             CancellationToken.None);
 
-        viewModel.AttachedImages.Should().BeEmpty();
-        viewModel.HasPendingAttachments.Should().BeFalse();
-        await attaching;
+        scenario.ViewModel.AttachedImages.Should().BeEmpty();
+        scenario.ViewModel.HasPendingAttachments.Should().BeFalse();
+        await scenario.Attaching;
     }
 
     [Fact]
@@ -140,10 +122,7 @@ public sealed class NanoBanana2AttachmentsViewModelTests
     {
         TaskCompletionSource sourceReadStarted = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        NanoBanana2AttachmentsViewModel viewModel = new(
-            new PassThroughAttachmentValidator(),
-            new PassThroughAttachedImagePreparationService(),
-            new InMemoryPanelAttachmentStore());
+        NanoBanana2AttachmentsViewModel viewModel = CreateViewModel();
         ImageModelOption selectedModel = CreateModel();
         ImageAttachmentInput input = new(
             "reading.png",
@@ -177,10 +156,8 @@ public sealed class NanoBanana2AttachmentsViewModelTests
     [Fact]
     public async Task AttachInputsAsync_WhenPreparationThrows_RemovesPlaceholderAndReportsFailure()
     {
-        NanoBanana2AttachmentsViewModel viewModel = new(
-            new PassThroughAttachmentValidator(),
-            new ThrowingAttachedImagePreparationService(),
-            new InMemoryPanelAttachmentStore());
+        NanoBanana2AttachmentsViewModel viewModel = CreateViewModel(
+            new ThrowingAttachedImagePreparationService());
         AttachmentStateChangedEventArgs? failure = null;
         viewModel.AttachmentStateChanged += (_, eventArgs) =>
         {
@@ -207,10 +184,8 @@ public sealed class NanoBanana2AttachmentsViewModelTests
     public async Task AttachInputsAsync_WhenOnePreparationFails_CompletesOtherAttachment()
     {
         const string rejectedFileName = "rejected.png";
-        NanoBanana2AttachmentsViewModel viewModel = new(
-            new PassThroughAttachmentValidator(),
-            new SelectiveAttachedImagePreparationService(rejectedFileName),
-            new InMemoryPanelAttachmentStore());
+        NanoBanana2AttachmentsViewModel viewModel = CreateViewModel(
+            new SelectiveAttachedImagePreparationService(rejectedFileName));
         List<AttachmentStateChangeKind> changes = [];
         viewModel.AttachmentStateChanged += (_, eventArgs) => changes.Add(eventArgs.Kind);
         ImageModelOption selectedModel = CreateModel();
@@ -235,10 +210,7 @@ public sealed class NanoBanana2AttachmentsViewModelTests
         AttachedImageDto secondImage = GenerationImageTestData.CreateAttachedImage("second.png");
         ControlledAttachedImagePreparationService preparationService = new(
             [firstImage.FileName, secondImage.FileName]);
-        NanoBanana2AttachmentsViewModel viewModel = new(
-            new PassThroughAttachmentValidator(),
-            preparationService,
-            new InMemoryPanelAttachmentStore());
+        NanoBanana2AttachmentsViewModel viewModel = CreateViewModel(preparationService);
         ImageModelOption selectedModel = CreateModel();
 
         Task firstAttachment = AttachImagesAsync(
@@ -265,6 +237,20 @@ public sealed class NanoBanana2AttachmentsViewModelTests
         viewModel.HasPendingAttachments.Should().BeFalse();
     }
 
+    private static NanoBanana2AttachmentsViewModel CreateViewModel()
+    {
+        return CreateViewModel(new PassThroughAttachedImagePreparationService());
+    }
+
+    private static NanoBanana2AttachmentsViewModel CreateViewModel(
+        IAttachedImagePreparationService preparationService)
+    {
+        return new NanoBanana2AttachmentsViewModel(
+            new PassThroughAttachmentValidator(),
+            preparationService,
+            new InMemoryPanelAttachmentStore());
+    }
+
     private static ImageModelOption CreateModel()
     {
         return new ImageModelOption(
@@ -284,6 +270,42 @@ public sealed class NanoBanana2AttachmentsViewModelTests
             8L * 1024L * 1024L,
             new List<string> { GenerationImageContentTypes.Png },
             GenerationModelPricingMetadataTestFactory.CreateFreePricing());
+    }
+
+    private static Task AttachImagesAsync(
+        NanoBanana2AttachmentsViewModel viewModel,
+        ImageModelOption selectedModel,
+        IReadOnlyList<AttachedImageDto> images)
+    {
+        List<ImageAttachmentInput> inputs = images
+            .Select(ImageAttachmentInput.FromImage)
+            .ToList();
+
+        return viewModel.AttachInputsAsync(
+            PanelId,
+            selectedModel,
+            inputs,
+            CancellationToken.None);
+    }
+
+    private sealed class PendingAttachmentScenario
+    {
+        public NanoBanana2AttachmentsViewModel ViewModel { get; }
+        public Task Attaching { get; }
+
+        private readonly BlockingAttachedImagePreparationService _preparationService;
+
+        public PendingAttachmentScenario(IReadOnlyList<AttachedImageDto> images)
+        {
+            _preparationService = new BlockingAttachedImagePreparationService();
+            ViewModel = CreateViewModel(_preparationService);
+            Attaching = AttachImagesAsync(ViewModel, CreateModel(), images);
+        }
+
+        public Task WaitUntilStartedAsync()
+        {
+            return _preparationService.WaitUntilStartedAsync();
+        }
     }
 
     private sealed class PassThroughAttachmentValidator : INanoBanana2AttachmentValidator
@@ -358,21 +380,4 @@ public sealed class NanoBanana2AttachmentsViewModelTests
             return Task.CompletedTask;
         }
     }
-
-    private static Task AttachImagesAsync(
-        NanoBanana2AttachmentsViewModel viewModel,
-        ImageModelOption selectedModel,
-        IReadOnlyList<AttachedImageDto> images)
-    {
-        List<ImageAttachmentInput> inputs = images
-            .Select(ImageAttachmentInput.FromImage)
-            .ToList();
-
-        return viewModel.AttachInputsAsync(
-            PanelId,
-            selectedModel,
-            inputs,
-            CancellationToken.None);
-    }
-
 }
