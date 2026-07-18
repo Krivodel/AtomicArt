@@ -13,32 +13,13 @@ public sealed class GenerationModelRules
         _modelRules = CreateRulesSnapshot(modelRules);
     }
 
-    public GenerationValidationResult Validate(
-        GenerationModelConstraints constraints,
-        string? prompt,
-        string aspectRatio,
-        string resolution,
-        double temperature,
-        int generationCount,
-        IReadOnlyList<GenerationAttachedImage> attachedImages,
-        string? thinkingLevel = null)
+    public GenerationValidationResult Validate(GenerationValidationRequest request)
     {
-        ArgumentNullException.ThrowIfNull(constraints);
-        ArgumentNullException.ThrowIfNull(aspectRatio);
-        ArgumentNullException.ThrowIfNull(resolution);
-        ArgumentNullException.ThrowIfNull(attachedImages);
+        ArgumentNullException.ThrowIfNull(request);
 
-        IGenerationModelRules modelRules = GetRules(constraints);
+        IGenerationModelRules modelRules = GetRules(request.Constraints);
 
-        return modelRules.Validate(
-            constraints,
-            prompt,
-            aspectRatio,
-            resolution,
-            temperature,
-            generationCount,
-            attachedImages,
-            thinkingLevel);
+        return modelRules.Validate(request);
     }
 
     private static IReadOnlyList<IGenerationModelRules> CreateRulesSnapshot(

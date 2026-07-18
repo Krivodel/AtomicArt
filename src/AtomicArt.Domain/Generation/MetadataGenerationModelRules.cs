@@ -11,78 +11,59 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
         return true;
     }
 
-    public GenerationValidationResult Validate(
-        GenerationModelConstraints constraints,
-        string? prompt,
-        string aspectRatio,
-        string resolution,
-        double temperature,
-        int generationCount,
-        IReadOnlyList<GenerationAttachedImage> attachedImages,
-        string? thinkingLevel = null)
+    public GenerationValidationResult Validate(GenerationValidationRequest request)
     {
-        ArgumentNullException.ThrowIfNull(constraints);
-        ArgumentNullException.ThrowIfNull(aspectRatio);
-        ArgumentNullException.ThrowIfNull(resolution);
-        ArgumentNullException.ThrowIfNull(attachedImages);
+        ArgumentNullException.ThrowIfNull(request);
 
-        GenerationValidationResult? parameterResult = ValidateParameters(
-            constraints,
-            prompt,
-            aspectRatio,
-            resolution,
-            temperature,
-            generationCount,
-            thinkingLevel);
+        GenerationValidationResult? parameterResult = ValidateParameters(request);
 
         if (parameterResult is not null)
         {
             return parameterResult;
         }
 
-        return ValidateAttachedImages(constraints, attachedImages);
+        return ValidateAttachedImages(request);
     }
 
     private static GenerationValidationResult? ValidateParameters(
-        GenerationModelConstraints constraints,
-        string? prompt,
-        string aspectRatio,
-        string resolution,
-        double temperature,
-        int generationCount,
-        string? thinkingLevel)
+        GenerationValidationRequest request)
     {
-        if (prompt is not null && prompt.Length > constraints.MaxPromptLength)
+        if (request.Prompt is not null
+            && request.Prompt.Length > request.Constraints.MaxPromptLength)
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
                 "Промпт превышает допустимую длину для выбранной модели.");
         }
 
-        if (!constraints.Resolutions.Contains(resolution, StringComparer.Ordinal))
+        if (!request.Constraints.Resolutions.Contains(
+            request.Resolution,
+            StringComparer.Ordinal))
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.UnsupportedResolution,
                 "Выбранное разрешение не поддерживается моделью.");
         }
 
-        if (!constraints.AspectRatios.Contains(aspectRatio, StringComparer.Ordinal))
+        if (!request.Constraints.AspectRatios.Contains(
+            request.AspectRatio,
+            StringComparer.Ordinal))
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.UnsupportedAspectRatio,
                 "Выбранное соотношение сторон не поддерживается моделью.");
         }
 
-        if (!constraints.Temperature.IsSupported(temperature))
+        if (!request.Constraints.Temperature.IsSupported(request.Temperature))
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
                 "Выбранная температура не поддерживается моделью.");
         }
 
-        bool isThinkingLevelSupported = constraints.Thinking is null
-            ? string.IsNullOrWhiteSpace(thinkingLevel)
-            : constraints.Thinking.IsSupported(thinkingLevel);
+        bool isThinkingLevelSupported = request.Constraints.Thinking is null
+            ? string.IsNullOrWhiteSpace(request.ThinkingLevel)
+            : request.Constraints.Thinking.IsSupported(request.ThinkingLevel);
 
         if (!isThinkingLevelSupported)
         {
@@ -91,14 +72,13 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
                 "Выбранный уровень рассуждения не поддерживается моделью.");
         }
 
-        return ValidateGenerationCount(constraints, generationCount);
+        return ValidateGenerationCount(request);
     }
 
     private static GenerationValidationResult? ValidateGenerationCount(
-        GenerationModelConstraints constraints,
-        int generationCount)
+        GenerationValidationRequest request)
     {
-        if (!constraints.GenerationCounts.Contains(generationCount))
+        if (!request.Constraints.GenerationCounts.Contains(request.GenerationCount))
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
@@ -109,28 +89,28 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
     }
 
     private static GenerationValidationResult ValidateAttachedImages(
-        GenerationModelConstraints constraints,
-        IReadOnlyList<GenerationAttachedImage> attachedImages)
+        GenerationValidationRequest request)
     {
-        if (attachedImages.Count > constraints.MaxAttachedImages)
+        if (request.AttachedImages.Count > request.Constraints.MaxAttachedImages)
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
                 "К запросу прикреплено слишком много изображений.");
         }
 
-        return ValidateAttachedImageSizes(constraints, attachedImages);
+        return ValidateAttachedImageSizes(request);
     }
 
     private static GenerationValidationResult ValidateAttachedImageSizes(
-        GenerationModelConstraints constraints,
-        IReadOnlyList<GenerationAttachedImage> attachedImages)
+        GenerationValidationRequest request)
     {
         long totalAttachedImageBytes = 0;
 
-        foreach (GenerationAttachedImage attachedImage in attachedImages)
+        foreach (GenerationAttachedImage attachedImage in request.AttachedImages)
         {
-            GenerationValidationResult? itemResult = ValidateAttachedImage(constraints, attachedImage);
+            GenerationValidationResult? itemResult = ValidateAttachedImage(
+                request.Constraints,
+                attachedImage);
 
             if (itemResult is not null)
             {
@@ -139,7 +119,7 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
 
             totalAttachedImageBytes += attachedImage.SizeInBytes;
 
-            if (totalAttachedImageBytes > constraints.MaxTotalAttachedImageBytes)
+            if (totalAttachedImageBytes > request.Constraints.MaxTotalAttachedImageBytes)
             {
                 return GenerationValidationResult.Invalid(
                     GenerationErrorCodes.ModelRequestValidation,

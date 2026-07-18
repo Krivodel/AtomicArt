@@ -6,13 +6,5 @@ public interface IGenerationModelRules
 
     bool CanValidate(GenerationModelConstraints constraints);
 
-    GenerationValidationResult Validate(
-        GenerationModelConstraints constraints,
-        string? prompt,
-        string aspectRatio,
-        string resolution,
-        double temperature,
-        int generationCount,
-        IReadOnlyList<GenerationAttachedImage> attachedImages,
-        string? thinkingLevel = null);
+    GenerationValidationResult Validate(GenerationValidationRequest request);
 }

@@ -124,7 +124,7 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
             .Select(CreateGenerationAttachedImage)
             .ToList();
 
-        return _rules.Validate(
+        GenerationValidationRequest validationRequest = new(
             _constraints,
             request.Prompt,
             request.AspectRatio,
@@ -133,6 +133,8 @@ public sealed class MetadataImageModelDefinition : IImageModelDefinition
             request.GenerationCount,
             attachedImages,
             request.ThinkingLevel);
+
+        return _rules.Validate(validationRequest);
     }
 
     private ImageGenerationRequestDto ApplyModelDefaults(ImageGenerationRequestDto request)

@@ -16,15 +16,11 @@ public sealed class GenerationModelRulesTests
         GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
         IReadOnlyList<GenerationAttachedImage> attachedImages = CreateAttachedImages(1_024L);
-
-        GenerationValidationResult result = rules.Validate(
+        GenerationValidationRequest request = CreateRequest(
             constraints,
-            "Prompt",
-            constraints.AspectRatios.First(),
-            constraints.Resolutions.First(),
-            constraints.Temperature.Default,
-            1,
-            attachedImages);
+            attachedImages: attachedImages);
+
+        GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeTrue();
         result.ErrorCode.Should().BeNull();
@@ -36,16 +32,11 @@ public sealed class GenerationModelRulesTests
     {
         GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
-        IReadOnlyList<GenerationAttachedImage> attachedImages = [];
-
-        GenerationValidationResult result = rules.Validate(
+        GenerationValidationRequest request = CreateRequest(
             constraints,
-            "Prompt",
-            constraints.AspectRatios.First(),
-            "1x1",
-            constraints.Temperature.Default,
-            1,
-            attachedImages);
+            resolution: "1x1");
+
+        GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
         result.ErrorCode.Should().Be("ERR-GEN-002");
@@ -56,16 +47,11 @@ public sealed class GenerationModelRulesTests
     {
         GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
-        IReadOnlyList<GenerationAttachedImage> attachedImages = [];
-
-        GenerationValidationResult result = rules.Validate(
+        GenerationValidationRequest request = CreateRequest(
             constraints,
-            "Prompt",
-            "2:1",
-            constraints.Resolutions.First(),
-            constraints.Temperature.Default,
-            1,
-            attachedImages);
+            aspectRatio: "2:1");
+
+        GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
         result.ErrorCode.Should().Be("ERR-GEN-003");
@@ -76,16 +62,11 @@ public sealed class GenerationModelRulesTests
     {
         GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
-        IReadOnlyList<GenerationAttachedImage> attachedImages = [];
-
-        GenerationValidationResult result = rules.Validate(
+        GenerationValidationRequest request = CreateRequest(
             constraints,
-            "Prompt",
-            constraints.AspectRatios.First(),
-            constraints.Resolutions.First(),
-            constraints.Temperature.Default,
-            5,
-            attachedImages);
+            generationCount: 5);
+
+        GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
         result.ErrorCode.Should().Be("ERR-GEN-004");
@@ -96,15 +77,11 @@ public sealed class GenerationModelRulesTests
     {
         GenerationModelRules rules = CreateRules();
         GenerationModelConstraints constraints = CreateConstraints();
-
-        GenerationValidationResult result = rules.Validate(
+        GenerationValidationRequest request = CreateRequest(
             constraints,
-            "Prompt",
-            constraints.AspectRatios.First(),
-            constraints.Resolutions.First(),
-            0.15d,
-            1,
-            []);
+            temperature: 0.15d);
+
+        GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
         result.ErrorCode.Should().Be("ERR-GEN-004");
@@ -119,15 +96,11 @@ public sealed class GenerationModelRulesTests
             .Range(0, constraints.MaxAttachedImages + 1)
             .Select(_ => CreateAttachedImage(1_024L))
             .ToList();
-
-        GenerationValidationResult result = rules.Validate(
+        GenerationValidationRequest request = CreateRequest(
             constraints,
-            "Prompt",
-            constraints.AspectRatios.First(),
-            constraints.Resolutions.First(),
-            constraints.Temperature.Default,
-            1,
-            attachedImages);
+            attachedImages: attachedImages);
+
+        GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
         result.ErrorCode.Should().Be("ERR-GEN-004");
@@ -143,15 +116,11 @@ public sealed class GenerationModelRulesTests
             CreateAttachedImage(constraints.MaxTotalAttachedImageBytes),
             CreateAttachedImage(1L)
         ];
-
-        GenerationValidationResult result = rules.Validate(
+        GenerationValidationRequest request = CreateRequest(
             constraints,
-            "Prompt",
-            constraints.AspectRatios.First(),
-            constraints.Resolutions.First(),
-            constraints.Temperature.Default,
-            1,
-            attachedImages);
+            attachedImages: attachedImages);
+
+        GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
         result.ErrorCode.Should().Be("ERR-GEN-004");
@@ -166,15 +135,11 @@ public sealed class GenerationModelRulesTests
         [
             new("image/gif", 1_024L)
         ];
-
-        GenerationValidationResult result = rules.Validate(
+        GenerationValidationRequest request = CreateRequest(
             constraints,
-            "Prompt",
-            constraints.AspectRatios.First(),
-            constraints.Resolutions.First(),
-            constraints.Temperature.Default,
-            1,
-            attachedImages);
+            attachedImages: attachedImages);
+
+        GenerationValidationResult result = rules.Validate(request);
 
         result.IsValid.Should().BeFalse();
         result.ErrorCode.Should().Be("ERR-GEN-004");
@@ -280,14 +245,28 @@ public sealed class GenerationModelRulesTests
         GenerationModelRules rules,
         GenerationModelConstraints constraints)
     {
-        return rules.Validate(
+        return rules.Validate(CreateRequest(constraints));
+    }
+
+    private static GenerationValidationRequest CreateRequest(
+        GenerationModelConstraints constraints,
+        string? prompt = "Prompt",
+        string? aspectRatio = null,
+        string? resolution = null,
+        double? temperature = null,
+        int generationCount = 1,
+        IReadOnlyList<GenerationAttachedImage>? attachedImages = null,
+        string? thinkingLevel = null)
+    {
+        return new GenerationValidationRequest(
             constraints,
-            "Prompt",
-            constraints.AspectRatios.First(),
-            constraints.Resolutions.First(),
-            constraints.Temperature.Default,
-            1,
-            Array.Empty<GenerationAttachedImage>());
+            prompt,
+            aspectRatio ?? constraints.AspectRatios.First(),
+            resolution ?? constraints.Resolutions.First(),
+            temperature ?? constraints.Temperature.Default,
+            generationCount,
+            attachedImages ?? Array.Empty<GenerationAttachedImage>(),
+            thinkingLevel);
     }
 
     private static IReadOnlyList<GenerationAttachedImage> CreateAttachedImages(long sizeInBytes)
@@ -327,20 +306,9 @@ public sealed class GenerationModelRulesTests
             return _canValidate(constraints);
         }
 
-        public GenerationValidationResult Validate(
-            GenerationModelConstraints constraints,
-            string? prompt,
-            string aspectRatio,
-            string resolution,
-            double temperature,
-            int generationCount,
-            IReadOnlyList<GenerationAttachedImage> attachedImages,
-            string? thinkingLevel = null)
+        public GenerationValidationResult Validate(GenerationValidationRequest request)
         {
-            ArgumentNullException.ThrowIfNull(constraints);
-            ArgumentNullException.ThrowIfNull(aspectRatio);
-            ArgumentNullException.ThrowIfNull(resolution);
-            ArgumentNullException.ThrowIfNull(attachedImages);
+            ArgumentNullException.ThrowIfNull(request);
 
             return _result;
         }
