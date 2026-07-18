@@ -56,11 +56,11 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                     context.Window.MouseMove(previewCenter, RawInputModifiers.Shift);
                     context.Window.CaptureRenderedFrame();
 
-                    context.PreviewHost.Parent.Should().BeSameAs(originalParent);
-                    GetOverlayCanvas(context.Gallery).Children.Should().NotContain(context.PreviewHost);
-                    context.PreviewHost.Width.Should().Be(748d);
-                    context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
-                    context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
+                    AssertExpandedPreviewAttachedToCard(
+                        context,
+                        originalParent,
+                        originalScrollViewerClipToBounds,
+                        originalScrollViewerClip);
                     scrollPresenter.ClipToBounds.Should().BeFalse();
                     context.Card.ZIndex.Should().Be(1001);
 
@@ -73,11 +73,11 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                     context.ScrollViewer.Offset = new Vector(0d, 40d);
                     context.Window.CaptureRenderedFrame();
 
-                    context.PreviewHost.Parent.Should().BeSameAs(originalParent);
-                    GetOverlayCanvas(context.Gallery).Children.Should().NotContain(context.PreviewHost);
-                    context.PreviewHost.Width.Should().Be(748d);
-                    context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
-                    context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
+                    AssertExpandedPreviewAttachedToCard(
+                        context,
+                        originalParent,
+                        originalScrollViewerClipToBounds,
+                        originalScrollViewerClip);
 
                     Point? viewportPosition = context.ScrollViewer.TranslatePoint(
                         new Point(0d, 0d),
@@ -193,6 +193,19 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             card,
             previewHost,
             scrollViewer);
+    }
+
+    private static void AssertExpandedPreviewAttachedToCard(
+        PreviewTestContext context,
+        Panel originalParent,
+        bool originalScrollViewerClipToBounds,
+        object? originalScrollViewerClip)
+    {
+        context.PreviewHost.Parent.Should().BeSameAs(originalParent);
+        GetOverlayCanvas(context.Gallery).Children.Should().NotContain(context.PreviewHost);
+        context.PreviewHost.Width.Should().Be(748d);
+        context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
+        context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
     }
 
     private sealed record PreviewTestContext(
