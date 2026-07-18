@@ -9,6 +9,7 @@ using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.TestDoubles;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery.State;
 
@@ -51,7 +52,7 @@ public sealed class GalleryStateServiceTests
         }
         finally
         {
-            DeleteDirectoryIfExists(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -210,11 +211,4 @@ public sealed class GalleryStateServiceTests
             Guid.NewGuid().ToString("N"));
     }
 
-    private static void DeleteDirectoryIfExists(string directory)
-    {
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-    }
 }

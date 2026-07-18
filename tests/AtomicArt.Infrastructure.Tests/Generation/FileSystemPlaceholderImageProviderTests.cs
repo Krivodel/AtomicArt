@@ -6,6 +6,7 @@ using Xunit;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Infrastructure.Tests.Generation;
 
@@ -29,7 +30,7 @@ public sealed class FileSystemPlaceholderImageProviderTests
         }
         finally
         {
-            DeleteDirectoryIfExists(directory);
+            TestDirectories.DeleteIfExists(directory);
         }
     }
 
@@ -50,7 +51,7 @@ public sealed class FileSystemPlaceholderImageProviderTests
         }
         finally
         {
-            DeleteDirectoryIfExists(directory);
+            TestDirectories.DeleteIfExists(directory);
         }
     }
 
@@ -70,7 +71,7 @@ public sealed class FileSystemPlaceholderImageProviderTests
         }
         finally
         {
-            DeleteDirectoryIfExists(directory);
+            TestDirectories.DeleteIfExists(directory);
         }
     }
 
@@ -92,7 +93,7 @@ public sealed class FileSystemPlaceholderImageProviderTests
         }
         finally
         {
-            DeleteDirectoryIfExists(directory);
+            TestDirectories.DeleteIfExists(directory);
         }
     }
 
@@ -125,17 +126,10 @@ public sealed class FileSystemPlaceholderImageProviderTests
             testName,
             Guid.NewGuid().ToString("N"));
 
-        DeleteDirectoryIfExists(directory);
+        TestDirectories.DeleteIfExists(directory);
         Directory.CreateDirectory(directory);
 
         return directory;
     }
 
-    private static void DeleteDirectoryIfExists(string directory)
-    {
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, true);
-        }
-    }
 }

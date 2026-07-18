@@ -7,6 +7,7 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Infrastructure.Generation;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Api.Tests.ModelMetadata;
 
@@ -29,7 +30,7 @@ public sealed class ModelMetadataStartupTests
         }
         finally
         {
-            DeleteDirectoryIfExists(contentRoot);
+            TestDirectories.DeleteIfExists(contentRoot);
         }
     }
 
@@ -55,11 +56,4 @@ public sealed class ModelMetadataStartupTests
         return contentRoot;
     }
 
-    private static void DeleteDirectoryIfExists(string directoryPath)
-    {
-        if (Directory.Exists(directoryPath))
-        {
-            Directory.Delete(directoryPath, true);
-        }
-    }
 }

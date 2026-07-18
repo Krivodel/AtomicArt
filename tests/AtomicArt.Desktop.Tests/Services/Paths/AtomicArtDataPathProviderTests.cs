@@ -2,6 +2,7 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Paths;
 
@@ -40,7 +41,7 @@ public sealed class AtomicArtDataPathProviderTests
         }
         finally
         {
-            DeleteDirectoryIfExists(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -65,11 +66,4 @@ public sealed class AtomicArtDataPathProviderTests
             Guid.NewGuid().ToString("N"));
     }
 
-    private static void DeleteDirectoryIfExists(string directory)
-    {
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-    }
 }

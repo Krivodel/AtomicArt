@@ -30,7 +30,7 @@ public sealed class AppStateStoreTests
         }
         finally
         {
-            DeleteDirectoryIfExists(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -58,7 +58,7 @@ public sealed class AppStateStoreTests
         }
         finally
         {
-            DeleteDirectoryIfExists(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -88,7 +88,7 @@ public sealed class AppStateStoreTests
         }
         finally
         {
-            DeleteDirectoryIfExists(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -121,7 +121,7 @@ public sealed class AppStateStoreTests
         }
         finally
         {
-            DeleteDirectoryIfExists(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -147,7 +147,7 @@ public sealed class AppStateStoreTests
         }
         finally
         {
-            DeleteDirectoryIfExists(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -182,7 +182,7 @@ public sealed class AppStateStoreTests
         }
         finally
         {
-            DeleteDirectoryIfExists(rootDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -206,14 +206,6 @@ public sealed class AppStateStoreTests
             Path.GetTempPath(),
             "AtomicArt.AppStateStoreTests",
             Guid.NewGuid().ToString("N"));
-    }
-
-    private static void DeleteDirectoryIfExists(string directory)
-    {
-        if (Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
     }
 
     private sealed class TestStateSection : TestStateSectionTestDouble

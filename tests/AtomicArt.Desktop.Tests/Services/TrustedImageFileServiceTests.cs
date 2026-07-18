@@ -8,6 +8,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services;
 
@@ -53,8 +54,8 @@ public sealed class TrustedImageFileServiceTests
         finally
         {
             DeleteFileIfExists(imagePath);
-            DeleteDirectoryIfExists(testDirectory);
-            DeleteDirectoryIfExists(rootDirectory);
+            TestDirectories.DeleteIfExists(testDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 
@@ -73,11 +74,4 @@ public sealed class TrustedImageFileServiceTests
         }
     }
 
-    private static void DeleteDirectoryIfExists(string path)
-    {
-        if (Directory.Exists(path))
-        {
-            Directory.Delete(path, recursive: true);
-        }
-    }
 }

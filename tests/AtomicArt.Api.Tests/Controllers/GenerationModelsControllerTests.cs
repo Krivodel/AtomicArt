@@ -16,6 +16,7 @@ using AtomicArt.Api.Tests.ModelMetadata;
 using AtomicArt.Application.Features.Generation.Queries.GetGenerationModels;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
+using AtomicArt.Tests.Common;
 using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Api.Tests.Controllers;
@@ -53,7 +54,7 @@ public sealed class GenerationModelsControllerTests
         }
         finally
         {
-            DeleteDirectoryIfExists(contentRoot);
+            TestDirectories.DeleteIfExists(contentRoot);
         }
     }
 
@@ -83,7 +84,7 @@ public sealed class GenerationModelsControllerTests
         }
         finally
         {
-            DeleteDirectoryIfExists(contentRoot);
+            TestDirectories.DeleteIfExists(contentRoot);
         }
     }
 
@@ -155,14 +156,6 @@ public sealed class GenerationModelsControllerTests
             Encoding.UTF8);
 
         return contentRoot;
-    }
-
-    private static void DeleteDirectoryIfExists(string directoryPath)
-    {
-        if (Directory.Exists(directoryPath))
-        {
-            Directory.Delete(directoryPath, true);
-        }
     }
 
     private static GenerationModelCatalogDto CreateMinimalCatalog()
