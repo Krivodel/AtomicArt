@@ -183,17 +183,6 @@ public sealed class GenerationPanelStateService : IGenerationPanelStateService
         string panelId,
         GenerationPanelState state)
     {
-        return new GenerationPanelState
-        {
-            PanelId = panelId,
-            SelectedModelId = state.SelectedModelId ?? string.Empty,
-            AspectRatio = state.AspectRatio ?? string.Empty,
-            Resolution = state.Resolution ?? string.Empty,
-            Temperature = state.Temperature,
-            ThinkingLevel = state.ThinkingLevel,
-            GenerationCount = state.GenerationCount,
-            Prompt = state.Prompt ?? string.Empty,
-            Attachments = PanelAttachmentStateSanitizer.Sanitize(state.Attachments)
-        };
+        return GenerationPanelStateSanitizer.CreateSanitizedCopy(panelId, state);
     }
 }

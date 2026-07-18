@@ -42,31 +42,17 @@ public sealed class GenerationPanelStateSection : IStateSection
                 continue;
             }
 
-            GenerationPanelState panelState = SanitizePanelState(pair.Key, pair.Value);
+            string panelId = string.IsNullOrWhiteSpace(pair.Value.PanelId)
+                ? pair.Key
+                : pair.Value.PanelId;
+            GenerationPanelState panelState = GenerationPanelStateSanitizer
+                .CreateSanitizedCopy(panelId, pair.Value);
             panels[pair.Key] = panelState;
         }
 
         return new GenerationPanelsState
         {
             Panels = panels
-        };
-    }
-
-    private static GenerationPanelState SanitizePanelState(
-        string panelId,
-        GenerationPanelState state)
-    {
-        return new GenerationPanelState
-        {
-            PanelId = string.IsNullOrWhiteSpace(state.PanelId) ? panelId : state.PanelId,
-            SelectedModelId = state.SelectedModelId ?? string.Empty,
-            AspectRatio = state.AspectRatio ?? string.Empty,
-            Resolution = state.Resolution ?? string.Empty,
-            Temperature = state.Temperature,
-            ThinkingLevel = state.ThinkingLevel,
-            GenerationCount = state.GenerationCount,
-            Prompt = state.Prompt ?? string.Empty,
-            Attachments = PanelAttachmentStateSanitizer.Sanitize(state.Attachments)
         };
     }
 }
