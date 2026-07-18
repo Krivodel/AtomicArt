@@ -1,11 +1,9 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
 using Moq;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
-using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
 
@@ -26,36 +24,21 @@ public sealed class PicaViewerSessionTests
         const string thumbnailPath = "images/thumbnail.webp";
         const string trustedImagePath = "trusted/source.png";
         const string trustedThumbnailPath = "trusted/thumbnail.webp";
-        Mock<IClipboardImageWriter> clipboardImageWriterMock = new();
-        Mock<ITrustedImageFileService> trustedImageFileServiceMock = new();
-        Mock<IGenerationImageFormatRegistry> formatRegistryMock = new();
-        Mock<IUiThreadDispatcher> uiThreadDispatcherMock = new();
-        trustedImageFileServiceMock
+        PicaViewerSessionTestDependencies dependencies = new();
+        dependencies.TrustedImageFileService
             .Setup(service => service.GetTrustedImagePath(imagePath, modelId))
             .Returns(trustedImagePath);
-        trustedImageFileServiceMock
+        dependencies.TrustedImageFileService
             .Setup(service => service.GetTrustedImagePathOrDefault(thumbnailPath, modelId))
             .Returns(trustedThumbnailPath);
-        GalleryImageViewerRequest request = new(
-            new GalleryStaticImageViewerItemsSource(
-                new List<GalleryImageViewerItem>
-                {
-                    new(
-                        ItemId,
-                        new GalleryFileImageViewerSource(modelId, imagePath, thumbnailPath))
-                }),
-            ItemId,
+        GalleryImageViewerRequest request = CreateRequest(
+            new GalleryFileImageViewerSource(modelId, imagePath, thumbnailPath),
             null);
 
-        await using PicaViewerSession session = CreateSession(
-            clipboardImageWriterMock.Object,
-            trustedImageFileServiceMock.Object,
-            formatRegistryMock.Object,
-            uiThreadDispatcherMock.Object);
+        await using PicaViewerSession session = dependencies.CreateSession();
         await session.PrepareAsync(request, CancellationToken.None);
 
-        PicaViewerRequest preparedRequest = session.Request
-            ?? throw new InvalidOperationException("The Pica request was not prepared.");
+        PicaViewerRequest preparedRequest = GetPreparedRequest(session);
         preparedRequest.Items.Should().ContainSingle();
         preparedRequest.Items[0].FilePath.Should().Be(trustedImagePath);
         preparedRequest.Items[0].PreviewFilePath.Should().Be(trustedThumbnailPath);
@@ -64,20 +47,16 @@ public sealed class PicaViewerSessionTests
     [Fact]
     public async Task PrepareAsync_WithAttachedImage_MaterializesFileAndAttachAction()
     {
-        Mock<IClipboardImageWriter> clipboardImageWriterMock = new();
-        Mock<ITrustedImageFileService> trustedImageFileServiceMock = new();
-        Mock<IGenerationImageFormatRegistry> formatRegistryMock = new();
+        PicaViewerSessionTestDependencies dependencies = new();
         Mock<IGenerationImageFormat> formatMock = new();
-        Mock<IUiThreadDispatcher> uiThreadDispatcherMock = new();
         formatMock.SetupGet(format => format.Extension).Returns(".png");
-        formatRegistryMock
+        dependencies.FormatRegistry
             .Setup(registry => registry.TryGetByContentType(
                 GenerationImageContentTypes.Png,
                 out It.Ref<IGenerationImageFormat?>.IsAny))
             .Returns((string? _, out IGenerationImageFormat? format) =>
             {
-                format = formatMock.Object;
-                return true;
+                return ReturnFormat(formatMock.Object, out format);
             });
         AsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachCommand = new(
             _ => Task.CompletedTask);
@@ -85,26 +64,16 @@ public sealed class PicaViewerSessionTests
             "reference.png",
             GenerationImageContentTypes.Png,
             [1, 2, 3]);
-        GalleryImageViewerRequest request = new(
-            new GalleryStaticImageViewerItemsSource(
-                new List<GalleryImageViewerItem>
-                {
-                    new(ItemId, new GalleryAttachedImageViewerSource(image))
-                }),
-            ItemId,
+        GalleryImageViewerRequest request = CreateRequest(
+            new GalleryAttachedImageViewerSource(image),
             attachCommand);
         string materializedPath;
 
-        await using (PicaViewerSession session = CreateSession(
-                         clipboardImageWriterMock.Object,
-                         trustedImageFileServiceMock.Object,
-                         formatRegistryMock.Object,
-                         uiThreadDispatcherMock.Object))
+        await using (PicaViewerSession session = dependencies.CreateSession())
         {
             await session.PrepareAsync(request, CancellationToken.None);
 
-            PicaViewerRequest preparedRequest = session.Request
-                ?? throw new InvalidOperationException("The Pica request was not prepared.");
+            PicaViewerRequest preparedRequest = GetPreparedRequest(session);
             preparedRequest.Items.Should().ContainSingle();
             preparedRequest.Items[0].FileName.Should().Be("reference.png");
             preparedRequest.Actions.Should().ContainSingle(action =>
@@ -129,25 +98,21 @@ public sealed class PicaViewerSessionTests
         byte[] imageContent = [1, 2, 3, 4];
         Directory.CreateDirectory(directoryPath);
         await File.WriteAllBytesAsync(trustedImagePath, imageContent);
-        Mock<IClipboardImageWriter> clipboardImageWriterMock = new();
-        Mock<ITrustedImageFileService> trustedImageFileServiceMock = new();
-        Mock<IGenerationImageFormatRegistry> formatRegistryMock = new();
+        PicaViewerSessionTestDependencies dependencies = new();
         Mock<IGenerationImageFormat> formatMock = new();
-        Mock<IUiThreadDispatcher> uiThreadDispatcherMock = new();
-        trustedImageFileServiceMock
+        dependencies.TrustedImageFileService
             .Setup(service => service.GetTrustedImagePath(sourceImagePath, modelId))
             .Returns(trustedImagePath);
         formatMock.SetupGet(format => format.ContentType).Returns(GenerationImageContentTypes.Png);
-        formatRegistryMock
+        dependencies.FormatRegistry
             .Setup(registry => registry.TryGetByFileName(
                 "source.png",
                 out It.Ref<IGenerationImageFormat?>.IsAny))
             .Returns((string? _, out IGenerationImageFormat? format) =>
             {
-                format = formatMock.Object;
-                return true;
+                return ReturnFormat(formatMock.Object, out format);
             });
-        uiThreadDispatcherMock
+        dependencies.UiThreadDispatcher
             .Setup(dispatcher => dispatcher.InvokeAsync(
                 It.IsAny<Func<Task>>(),
                 It.IsAny<CancellationToken>()))
@@ -158,27 +123,15 @@ public sealed class PicaViewerSessionTests
             attachedImages = images;
             return Task.CompletedTask;
         });
-        GalleryImageViewerRequest request = new(
-            new GalleryStaticImageViewerItemsSource(
-                new List<GalleryImageViewerItem>
-                {
-                    new(
-                        ItemId,
-                        new GalleryFileImageViewerSource(modelId, sourceImagePath, null))
-                }),
-            ItemId,
+        GalleryImageViewerRequest request = CreateRequest(
+            new GalleryFileImageViewerSource(modelId, sourceImagePath, null),
             attachCommand);
 
         try
         {
-            await using PicaViewerSession session = CreateSession(
-                clipboardImageWriterMock.Object,
-                trustedImageFileServiceMock.Object,
-                formatRegistryMock.Object,
-                uiThreadDispatcherMock.Object);
+            await using PicaViewerSession session = dependencies.CreateSession();
             await session.PrepareAsync(request, CancellationToken.None);
-            PicaViewerRequest preparedRequest = session.Request
-                ?? throw new InvalidOperationException("The Pica request was not prepared.");
+            PicaViewerRequest preparedRequest = GetPreparedRequest(session);
 
             await session.DispatchCurrentImageAsync(
                 AtomicArtPicaActions.Attach,
@@ -196,19 +149,32 @@ public sealed class PicaViewerSessionTests
         }
     }
 
-    private static PicaViewerSession CreateSession(
-        IClipboardImageWriter clipboardImageWriter,
-        ITrustedImageFileService trustedImageFileService,
-        IGenerationImageFormatRegistry formatRegistry,
-        IUiThreadDispatcher uiThreadDispatcher)
+    private static GalleryImageViewerRequest CreateRequest(
+        GalleryImageViewerSource source,
+        IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? attachCommand)
     {
-        PicaViewerSessionDependencies dependencies = new(
-            clipboardImageWriter,
-            trustedImageFileService,
-            formatRegistry,
-            uiThreadDispatcher,
-            NullLoggerFactory.Instance);
+        List<GalleryImageViewerItem> items =
+        [
+            new GalleryImageViewerItem(ItemId, source)
+        ];
 
-        return new PicaViewerSession(dependencies);
+        return new GalleryImageViewerRequest(
+            new GalleryStaticImageViewerItemsSource(items),
+            ItemId,
+            attachCommand);
+    }
+
+    private static PicaViewerRequest GetPreparedRequest(PicaViewerSession session)
+    {
+        return session.Request
+            ?? throw new InvalidOperationException("The Pica request was not prepared.");
+    }
+
+    private static bool ReturnFormat(
+        IGenerationImageFormat value,
+        out IGenerationImageFormat? format)
+    {
+        format = value;
+        return true;
     }
 }
