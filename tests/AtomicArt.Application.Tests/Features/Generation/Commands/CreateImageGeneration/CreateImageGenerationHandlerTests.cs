@@ -28,15 +28,12 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithValidCommand_ReturnsBatchWithImageContent()
     {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Guid plannedBatchId = Guid.Empty;
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock(captureBatchId: batchId => plannedBatchId = batchId);
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = new(
-            registry,
+        CreateImageGenerationHandler handler = CreateHandler(
             outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+            contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand();
 
         Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
@@ -80,14 +77,11 @@ public sealed class CreateImageGenerationHandlerTests
             new GenerationPriceDto(0.0678m, "USD", "ActualProviderUsage"),
             completedAtUtc,
             generationDuration);
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(content: content);
-        CreateImageGenerationHandler handler = new(
-            registry,
+        CreateImageGenerationHandler handler = CreateHandler(
             outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+            contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand();
 
         Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
@@ -108,14 +102,11 @@ public sealed class CreateImageGenerationHandlerTests
             "image/png",
             "iVBORw0KGgo=",
             GenerationDuration: TimeSpan.FromSeconds(-1));
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(content: content);
-        CreateImageGenerationHandler handler = new(
-            registry,
+        CreateImageGenerationHandler handler = CreateHandler(
             outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+            contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand();
 
         Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
@@ -129,15 +120,12 @@ public sealed class CreateImageGenerationHandlerTests
     public async Task Handle_WithProviderCredential_PassesProviderContextToContentProvider()
     {
         ImageGenerationContentProviderContext? capturedContext = null;
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(
             captureContext: context => capturedContext = context);
-        CreateImageGenerationHandler handler = new(
-            registry,
+        CreateImageGenerationHandler handler = CreateHandler(
             outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+            contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand(
             providerCredential: TestGenerationCredentials.ProviderCredential);
 
@@ -156,18 +144,15 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithNormalizableAttachment_PassesValidatedRequestToPlannerAndWriter()
     {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         ImageGenerationRequestDto? plannedRequest = null;
         ImageGenerationRequestDto? contentRequest = null;
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock(
             captureRequest: request => plannedRequest = request);
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(
             captureRequest: request => contentRequest = request);
-        CreateImageGenerationHandler handler = new(
-            registry,
+        CreateImageGenerationHandler handler = CreateHandler(
             outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+            contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand(
             attachedImages:
             [
@@ -195,14 +180,11 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithGenerationCountTwo_ReturnsTwoContentItems()
     {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMockForRequestCount();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = new(
-            registry,
+        CreateImageGenerationHandler handler = CreateHandler(
             outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+            contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand(generationCount: 2);
 
         Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
@@ -234,14 +216,11 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithMultipleGenerationItems_StartsContentRequestsInParallel()
     {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMockForRequestCount();
         ParallelTrackingContentProvider contentProvider = new(expectedRequestCount: 2);
-        CreateImageGenerationHandler handler = new(
-            registry,
+        CreateImageGenerationHandler handler = CreateHandler(
             outputPlanner.Object,
-            contentProvider,
-            new TestDateTimeProvider());
+            contentProvider);
         CreateImageGenerationCommand command = CreateCommand(generationCount: 2);
 
         Task<Result<GenerationBatchDto>> handleTask = handler.Handle(command, CancellationToken.None);
@@ -362,14 +341,11 @@ public sealed class CreateImageGenerationHandlerTests
         using TemporaryCurrentDirectory outputDirectory = new(
             typeof(CreateImageGenerationHandlerTests),
             nameof(Handle_WithValidRequest_DoesNotMutateServerState));
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = new(
-            registry,
+        CreateImageGenerationHandler handler = CreateHandler(
             outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+            contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand();
 
         Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
@@ -417,7 +393,6 @@ public sealed class CreateImageGenerationHandlerTests
         ImageGenerationProviderFailureKind failureKind,
         string expectedErrorCode)
     {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
         Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
         Mock<IImageGenerationContentProvider> contentProvider = new();
         ImageGenerationProviderException exception = new(
@@ -428,11 +403,9 @@ public sealed class CreateImageGenerationHandlerTests
                 It.IsAny<ImageGenerationContentProviderContext>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
-        CreateImageGenerationHandler handler = new(
-            registry,
+        CreateImageGenerationHandler handler = CreateHandler(
             outputPlanner.Object,
-            contentProvider.Object,
-            new TestDateTimeProvider());
+            contentProvider.Object);
         CreateImageGenerationCommand command = CreateCommand();
 
         Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
@@ -440,6 +413,21 @@ public sealed class CreateImageGenerationHandlerTests
         result.IsUnavailable.Should().BeTrue();
         result.ErrorCode.Should().Be(expectedErrorCode);
         result.ErrorMessage.Should().Be("Провайдер генерации временно недоступен.");
+    }
+
+    private static CreateImageGenerationHandler CreateHandler(
+        IImageGenerationOutputPlanner outputPlanner,
+        IImageGenerationContentProvider contentProvider,
+        ImageModelRegistry? registry = null)
+    {
+        ImageModelRegistry modelRegistry =
+            registry ?? MetadataImageModelTestFactory.CreateRegistry();
+
+        return new CreateImageGenerationHandler(
+            modelRegistry,
+            outputPlanner,
+            contentProvider,
+            new TestDateTimeProvider());
     }
 
     private static Mock<IImageGenerationOutputPlanner> CreatePlannerMock(
@@ -596,11 +584,10 @@ public sealed class CreateImageGenerationHandlerTests
         {
             _outputPlanner = CreatePlannerMock();
             _contentProvider = CreateContentProviderMock();
-            Handler = new CreateImageGenerationHandler(
-                registry,
+            Handler = CreateHandler(
                 _outputPlanner.Object,
                 _contentProvider.Object,
-                new TestDateTimeProvider());
+                registry);
         }
 
         public void AssertValidationRejected(Result<GenerationBatchDto> result)
