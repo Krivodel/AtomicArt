@@ -2,6 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
              x:Class="AtomicArt.Desktop.Controls.Gallery.AnimatedGalleryControl">
+    <UserControl.Resources>
+        <Color x:Key="GalleryOpacityMaskOpaqueColor">#FFFFFFFF</Color>
+    </UserControl.Resources>
+
     <Grid>
         <ScrollViewer x:Name="GalleryScrollViewer"
                       behaviors:SmoothScrollBehavior.WheelMultiplier="192"
@@ -10,9 +14,9 @@
             <ScrollViewer.OpacityMask>
                 <LinearGradientBrush StartPoint="0%,0%"
                                      EndPoint="0%,100%">
-                    <GradientStop Color="#FFFFFFFF"
+                    <GradientStop Color="{StaticResource GalleryOpacityMaskOpaqueColor}"
                                   Offset="0" />
-                    <GradientStop Color="#FFFFFFFF"
+                    <GradientStop Color="{StaticResource GalleryOpacityMaskOpaqueColor}"
                                   Offset="1" />
                     <GradientStop Color="#00FFFFFF"
                                   Offset="1" />
