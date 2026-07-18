@@ -245,45 +245,15 @@ public sealed partial class ImageViewerWindow : SukiWindow
         bool isRightOfRect = position.X > rect.Right;
         bool isAboveRect = position.Y < rect.Top;
         bool isBelowRect = position.Y > rect.Bottom;
+        SelectionResizeMode outsideResizeMode = GetSelectionResizeMode(
+            isLeftOfRect,
+            isRightOfRect,
+            isAboveRect,
+            isBelowRect);
 
-        if (isLeftOfRect && isAboveRect)
+        if (outsideResizeMode != SelectionResizeMode.None)
         {
-            return SelectionResizeMode.TopLeft;
-        }
-
-        if (isRightOfRect && isAboveRect)
-        {
-            return SelectionResizeMode.TopRight;
-        }
-
-        if (isRightOfRect && isBelowRect)
-        {
-            return SelectionResizeMode.BottomRight;
-        }
-
-        if (isLeftOfRect && isBelowRect)
-        {
-            return SelectionResizeMode.BottomLeft;
-        }
-
-        if (isLeftOfRect)
-        {
-            return SelectionResizeMode.Left;
-        }
-
-        if (isRightOfRect)
-        {
-            return SelectionResizeMode.Right;
-        }
-
-        if (isAboveRect)
-        {
-            return SelectionResizeMode.Top;
-        }
-
-        if (isBelowRect)
-        {
-            return SelectionResizeMode.Bottom;
+            return outsideResizeMode;
         }
 
         bool nearLeft = Math.Abs(position.X - rect.Left) <= SelectionHandleSize;
@@ -291,47 +261,31 @@ public sealed partial class ImageViewerWindow : SukiWindow
         bool nearTop = Math.Abs(position.Y - rect.Top) <= SelectionHandleSize;
         bool nearBottom = Math.Abs(position.Y - rect.Bottom) <= SelectionHandleSize;
 
-        if (nearLeft && nearTop)
-        {
-            return SelectionResizeMode.TopLeft;
-        }
+        return GetSelectionResizeMode(
+            nearLeft,
+            nearRight,
+            nearTop,
+            nearBottom);
+    }
 
-        if (nearRight && nearTop)
+    private static SelectionResizeMode GetSelectionResizeMode(
+        bool isLeft,
+        bool isRight,
+        bool isTop,
+        bool isBottom)
+    {
+        return (isLeft, isRight, isTop, isBottom) switch
         {
-            return SelectionResizeMode.TopRight;
-        }
-
-        if (nearRight && nearBottom)
-        {
-            return SelectionResizeMode.BottomRight;
-        }
-
-        if (nearLeft && nearBottom)
-        {
-            return SelectionResizeMode.BottomLeft;
-        }
-
-        if (nearLeft)
-        {
-            return SelectionResizeMode.Left;
-        }
-
-        if (nearRight)
-        {
-            return SelectionResizeMode.Right;
-        }
-
-        if (nearTop)
-        {
-            return SelectionResizeMode.Top;
-        }
-
-        if (nearBottom)
-        {
-            return SelectionResizeMode.Bottom;
-        }
-
-        return SelectionResizeMode.None;
+            (true, _, true, _) => SelectionResizeMode.TopLeft,
+            (_, true, true, _) => SelectionResizeMode.TopRight,
+            (_, true, _, true) => SelectionResizeMode.BottomRight,
+            (true, _, _, true) => SelectionResizeMode.BottomLeft,
+            (true, _, _, _) => SelectionResizeMode.Left,
+            (_, true, _, _) => SelectionResizeMode.Right,
+            (_, _, true, _) => SelectionResizeMode.Top,
+            (_, _, _, true) => SelectionResizeMode.Bottom,
+            _ => SelectionResizeMode.None
+        };
     }
 
     private void UpdateSelectionCursor(Point position)
@@ -435,30 +389,22 @@ public sealed partial class ImageViewerWindow : SukiWindow
         int bottom = _selectionStartPixelRect.Y + _selectionStartPixelRect.Height;
         int minimumPixelSize = GetMinimumSelectionPixelSize();
 
-        if ((_selectionResizeMode == SelectionResizeMode.Left)
-            || (_selectionResizeMode == SelectionResizeMode.TopLeft)
-            || (_selectionResizeMode == SelectionResizeMode.BottomLeft))
+        if (_selectionResizeMode.HasFlag(SelectionResizeMode.Left))
         {
             left = Math.Clamp(ScreenXToPixelBoundary(position.X), 0, right - minimumPixelSize);
         }
 
-        if ((_selectionResizeMode == SelectionResizeMode.Right)
-            || (_selectionResizeMode == SelectionResizeMode.TopRight)
-            || (_selectionResizeMode == SelectionResizeMode.BottomRight))
+        if (_selectionResizeMode.HasFlag(SelectionResizeMode.Right))
         {
             right = Math.Clamp(ScreenXToPixelBoundary(position.X), left + minimumPixelSize, _bitmap.PixelSize.Width);
         }
 
-        if ((_selectionResizeMode == SelectionResizeMode.Top)
-            || (_selectionResizeMode == SelectionResizeMode.TopLeft)
-            || (_selectionResizeMode == SelectionResizeMode.TopRight))
+        if (_selectionResizeMode.HasFlag(SelectionResizeMode.Top))
         {
             top = Math.Clamp(ScreenYToPixelBoundary(position.Y), 0, bottom - minimumPixelSize);
         }
 
-        if ((_selectionResizeMode == SelectionResizeMode.Bottom)
-            || (_selectionResizeMode == SelectionResizeMode.BottomLeft)
-            || (_selectionResizeMode == SelectionResizeMode.BottomRight))
+        if (_selectionResizeMode.HasFlag(SelectionResizeMode.Bottom))
         {
             bottom = Math.Clamp(ScreenYToPixelBoundary(position.Y), top + minimumPixelSize, _bitmap.PixelSize.Height);
         }
