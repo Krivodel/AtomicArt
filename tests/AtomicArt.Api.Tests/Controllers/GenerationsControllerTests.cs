@@ -170,8 +170,8 @@ public sealed class GenerationsControllerTests
         }
         finally
         {
-            DeleteDirectoryIfExists(imagesDirectory);
-            DeleteDirectoryIfExists(contentRoot);
+            TestDirectories.DeleteIfExists(imagesDirectory);
+            TestDirectories.DeleteIfExists(contentRoot);
         }
     }
 
@@ -261,53 +261,41 @@ public sealed class GenerationsControllerTests
     [Fact]
     public async Task CreateAsync_WithValidRequest_DoesNotWriteGenerationFiles()
     {
-        string outputRoot = CreateCleanDirectory(nameof(CreateAsync_WithValidRequest_DoesNotWriteGenerationFiles));
-        string currentDirectory = Directory.GetCurrentDirectory();
+        using TemporaryCurrentDirectory outputDirectory = new(
+            typeof(GenerationsControllerTests),
+            nameof(CreateAsync_WithValidRequest_DoesNotWriteGenerationFiles));
+        ServiceCollection services = [];
+        IConfiguration configuration = CreateConfiguration();
+        services.AddLogging();
+        services.AddDomainServices();
+        services.AddSingleton(ApiModelMetadataStartupTestCatalog.LoadCatalog());
+        services.AddApplicationServices();
+        services.AddInfrastructureServices(configuration);
+        services.AddScoped<Application.Features.Generation.Interfaces.IImageGenerationContentProvider>(
+            _ => new TestImageGenerationContentProvider());
+        await using ServiceProvider serviceProvider = services.BuildServiceProvider(
+            new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true
+            });
+        using IServiceScope scope = serviceProvider.CreateScope();
+        IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        GenerationsController controller = CreateController(
+            mediator,
+            TestGenerationCredentials.ProviderCredential);
+        ImageGenerationRequestDto request = CreateRequest();
 
-        try
-        {
-            Directory.SetCurrentDirectory(outputRoot);
-            ServiceCollection services = [];
-            IConfiguration configuration = CreateConfiguration();
-            services.AddLogging();
-            services.AddDomainServices();
-            services.AddSingleton(ApiModelMetadataStartupTestCatalog.LoadCatalog());
-            services.AddApplicationServices();
-            services.AddInfrastructureServices(configuration);
-            services.AddScoped<Application.Features.Generation.Interfaces.IImageGenerationContentProvider>(
-                _ => new TestImageGenerationContentProvider());
-            await using ServiceProvider serviceProvider = services.BuildServiceProvider(
-                new ServiceProviderOptions
-                {
-                    ValidateOnBuild = true,
-                    ValidateScopes = true
-                });
-            using IServiceScope scope = serviceProvider.CreateScope();
-            IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            GenerationsController controller = CreateController(
-                mediator,
-                TestGenerationCredentials.ProviderCredential);
-            ImageGenerationRequestDto request = CreateRequest();
+        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
 
-            IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
-
-            OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
-            GenerationBatchDto batch = okResult.Value.Should().BeOfType<GenerationBatchDto>().Subject;
-            batch.Items.Should().ContainSingle();
-            GenerationItemDto item = batch.Items.Single();
-            item.ImagePath.Should().BeNull();
-            item.ImageContent.Should().NotBeNull();
-            Directory.Exists(Path.Combine(outputRoot, "generations")).Should().BeFalse();
-            Directory
-                .EnumerateFileSystemEntries(outputRoot, "*", SearchOption.AllDirectories)
-                .Should()
-                .BeEmpty();
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(currentDirectory);
-            DeleteDirectoryIfExists(outputRoot);
-        }
+        OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        GenerationBatchDto batch = okResult.Value.Should().BeOfType<GenerationBatchDto>().Subject;
+        batch.Items.Should().ContainSingle();
+        GenerationItemDto item = batch.Items.Single();
+        item.ImagePath.Should().BeNull();
+        item.ImageContent.Should().NotBeNull();
+        Directory.Exists(Path.Combine(outputDirectory.DirectoryPath, "generations")).Should().BeFalse();
+        outputDirectory.GetEntries().Should().BeEmpty();
     }
 
     [Fact]
@@ -627,27 +615,6 @@ public sealed class GenerationsControllerTests
                 }
             }
         };
-    }
-
-    private static string CreateCleanDirectory(string testName)
-    {
-        string directoryPath = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.Api.Tests",
-            testName);
-
-        DeleteDirectoryIfExists(directoryPath);
-        Directory.CreateDirectory(directoryPath);
-
-        return directoryPath;
-    }
-
-    private static void DeleteDirectoryIfExists(string directoryPath)
-    {
-        if (Directory.Exists(directoryPath))
-        {
-            Directory.Delete(directoryPath, true);
-        }
     }
 
     private sealed class TestImageGenerationContentProvider

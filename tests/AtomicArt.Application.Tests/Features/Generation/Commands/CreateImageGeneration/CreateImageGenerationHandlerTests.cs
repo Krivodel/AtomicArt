@@ -11,6 +11,7 @@ using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Application.Tests.Generation;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Domain.Generation;
+using AtomicArt.Tests.Common;
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Application.Tests.Features.Generation.Commands.CreateImageGeneration;
@@ -478,39 +479,27 @@ public sealed class CreateImageGenerationHandlerTests
     [Fact]
     public async Task Handle_WithValidRequest_DoesNotMutateServerState()
     {
-        string outputRoot = CreateCleanDirectory(nameof(Handle_WithValidRequest_DoesNotMutateServerState));
-        string currentDirectory = Directory.GetCurrentDirectory();
-
-        try
-        {
-            Directory.SetCurrentDirectory(outputRoot);
-            ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
-            Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-            Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-            CreateImageGenerationHandler handler = new(
+        using TemporaryCurrentDirectory outputDirectory = new(
+            typeof(CreateImageGenerationHandlerTests),
+            nameof(Handle_WithValidRequest_DoesNotMutateServerState));
+        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
+        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
+        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
+        CreateImageGenerationHandler handler = new(
             registry,
             outputPlanner.Object,
             contentProvider.Object,
             new TestDateTimeProvider());
-            CreateImageGenerationCommand command = CreateCommand();
+        CreateImageGenerationCommand command = CreateCommand();
 
-            Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
+        Result<GenerationBatchDto> result = await handler.Handle(command, CancellationToken.None);
 
-            result.IsSuccess.Should().BeTrue();
-            GenerationBatchDto batch = result.Value ?? throw new InvalidOperationException("Generation batch result is missing.");
-            GenerationItemDto item = batch.Items.Single();
-            item.ImagePath.Should().BeNull();
-            Directory.Exists(Path.Combine(outputRoot, "generations")).Should().BeFalse();
-            Directory
-                .EnumerateFileSystemEntries(outputRoot, "*", SearchOption.AllDirectories)
-                .Should()
-                .BeEmpty();
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(currentDirectory);
-            DeleteDirectoryIfExists(outputRoot);
-        }
+        result.IsSuccess.Should().BeTrue();
+        GenerationBatchDto batch = result.Value ?? throw new InvalidOperationException("Generation batch result is missing.");
+        GenerationItemDto item = batch.Items.Single();
+        item.ImagePath.Should().BeNull();
+        Directory.Exists(Path.Combine(outputDirectory.DirectoryPath, "generations")).Should().BeFalse();
+        outputDirectory.GetEntries().Should().BeEmpty();
     }
 
     [Theory]
@@ -705,27 +694,6 @@ public sealed class CreateImageGenerationHandlerTests
                 maxTotalBytes,
                 metadata.Attachments.SupportedContentTypes)
         };
-    }
-
-    private static string CreateCleanDirectory(string testName)
-    {
-        string directoryPath = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.Application.Tests",
-            testName);
-
-        DeleteDirectoryIfExists(directoryPath);
-        Directory.CreateDirectory(directoryPath);
-
-        return directoryPath;
-    }
-
-    private static void DeleteDirectoryIfExists(string directoryPath)
-    {
-        if (Directory.Exists(directoryPath))
-        {
-            Directory.Delete(directoryPath, true);
-        }
     }
 
     private sealed class TestDateTimeProvider : IDateTimeProvider

@@ -4,6 +4,7 @@ using Xunit;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
+using AtomicArt.Tests.Common;
 using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Infrastructure.Tests.Generation;
@@ -55,31 +56,19 @@ public sealed class FakeImageGenerationContentProviderTests
     [Fact]
     public async Task GetContentAsync_WithOutputRootConfigured_DoesNotCreateFiles()
     {
-        string outputRoot = CreateCleanDirectory(nameof(GetContentAsync_WithOutputRootConfigured_DoesNotCreateFiles));
-        string currentDirectory = Directory.GetCurrentDirectory();
+        using TemporaryCurrentDirectory outputDirectory = new(
+            typeof(FakeImageGenerationContentProviderTests),
+            nameof(GetContentAsync_WithOutputRootConfigured_DoesNotCreateFiles));
+        TestPlaceholderImageProvider placeholderImageProvider = new();
+        FakeImageGenerationContentProvider provider = new(placeholderImageProvider);
+        ImageGenerationRequestDto request = CreateRequest([]);
 
-        try
-        {
-            Directory.SetCurrentDirectory(outputRoot);
-            TestPlaceholderImageProvider placeholderImageProvider = new();
-            FakeImageGenerationContentProvider provider = new(placeholderImageProvider);
-            ImageGenerationRequestDto request = CreateRequest([]);
+        ImageGenerationContentResult result = await provider.GetContentAsync(
+            CreateContext(request, 0),
+            CancellationToken.None);
 
-            ImageGenerationContentResult result = await provider.GetContentAsync(
-                CreateContext(request, 0),
-                CancellationToken.None);
-
-            result.Base64Data.Should().NotBeNullOrWhiteSpace();
-            Directory
-                .EnumerateFileSystemEntries(outputRoot, "*", SearchOption.AllDirectories)
-                .Should()
-                .BeEmpty();
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(currentDirectory);
-            DeleteDirectoryIfExists(outputRoot);
-        }
+        result.Base64Data.Should().NotBeNullOrWhiteSpace();
+        outputDirectory.GetEntries().Should().BeEmpty();
     }
 
     private static ImageGenerationRequestDto CreateRequest(byte[] attachedContent)
@@ -129,27 +118,6 @@ public sealed class FakeImageGenerationContentProviderTests
     private static byte[] CreatePlaceholderContent()
     {
         return GenerationImageFileSignatures.Png.ToArray();
-    }
-
-    private static string CreateCleanDirectory(string testName)
-    {
-        string directoryPath = Path.Combine(
-            Path.GetTempPath(),
-            "AtomicArt.Infrastructure.Tests",
-            testName);
-
-        DeleteDirectoryIfExists(directoryPath);
-        Directory.CreateDirectory(directoryPath);
-
-        return directoryPath;
-    }
-
-    private static void DeleteDirectoryIfExists(string directoryPath)
-    {
-        if (Directory.Exists(directoryPath))
-        {
-            Directory.Delete(directoryPath, true);
-        }
     }
 
     private sealed class TestPlaceholderImageProvider : IPlaceholderImageProvider
