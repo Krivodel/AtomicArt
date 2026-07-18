@@ -1,11 +1,15 @@
+using Microsoft.Extensions.Logging.Abstractions;
+
 using AtomicArt.Desktop.Services;
-using AtomicArt.Desktop.Resources;
 
 namespace AtomicArt.Desktop.Tests.ViewModels;
 
 internal sealed class TestViewModelErrorHandler : IViewModelErrorHandler
 {
     public int LogCallCount { get; private set; }
+
+    private static readonly ViewModelErrorHandler MessageResolver =
+        new(NullLogger<ViewModelErrorHandler>.Instance);
 
     public void Log(Exception exception, string operationName)
     {
@@ -19,14 +23,6 @@ internal sealed class TestViewModelErrorHandler : IViewModelErrorHandler
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        return exception switch
-        {
-            FileRevealException => UiStrings.FileRevealFailed,
-            HttpRequestException => UiStrings.GenerationApiUnavailable,
-            TaskCanceledException => UiStrings.GenerationApiUnavailable,
-            ArgumentException => UiStrings.GenerationFailed,
-            InvalidOperationException => UiStrings.GenerationFailed,
-            _ => UiStrings.UnhandledExceptionMessage
-        };
+        return MessageResolver.GetUserMessage(exception);
     }
 }
