@@ -39,37 +39,31 @@ public sealed class GenerationCardControlTests
     [Fact]
     public void Calculate_WithWideSource_ScalesFullAspectRatioAndFitsRightViewportEdge()
     {
-        Size sourceSize = new(440d, 220d);
-        Rect previewBounds = new(780d, 40d, 220d, 220d);
-
-        (Size size, Vector translation) = Calculate(sourceSize, previewBounds);
-
-        size.Should().Be(new Size(748d, 374d));
-        translation.Should().Be(new Vector(-528d, -40d));
+        AssertExpansion(
+            new Size(440d, 220d),
+            new Rect(780d, 40d, 220d, 220d),
+            new Size(748d, 374d),
+            new Vector(-528d, -40d));
     }
 
     [Fact]
     public void Calculate_WithTallSource_ScalesFullAspectRatioAndFitsViewportStart()
     {
-        Size sourceSize = new(220d, 440d);
-        Rect previewBounds = new(40d, 380d, 220d, 220d);
-
-        (Size size, Vector translation) = Calculate(sourceSize, previewBounds);
-
-        size.Should().Be(new Size(374d, 748d));
-        translation.Should().Be(new Vector(-40d, -380d));
+        AssertExpansion(
+            new Size(220d, 440d),
+            new Rect(40d, 380d, 220d, 220d),
+            new Size(374d, 748d),
+            new Vector(-40d, -380d));
     }
 
     [Fact]
     public void Calculate_WithCenteredWideSource_ExpandsEvenlyAroundPreview()
     {
-        Size sourceSize = new(330d, 220d);
-        Rect previewBounds = new(390d, 40d, 220d, 220d);
-
-        (Size size, Vector translation) = Calculate(sourceSize, previewBounds);
-
-        size.Should().Be(new Size(561d, 374d));
-        translation.Should().Be(new Vector(-170.5d, -40d));
+        AssertExpansion(
+            new Size(330d, 220d),
+            new Rect(390d, 40d, 220d, 220d),
+            new Size(561d, 374d),
+            new Vector(-170.5d, -40d));
     }
 
     [Fact]
@@ -93,10 +87,8 @@ public sealed class GenerationCardControlTests
     public void GetImageDragPathOrDefault_WithExistingFullImageAndThumbnail_ReturnsFullImagePath()
     {
         using ExistingImagePaths paths = new();
-        GenerationItemViewModel item = CreateItem(paths.ImagePath);
-        item.ThumbnailPath = paths.ThumbnailPath;
 
-        string? dragPath = GenerationCardControl.GetImageDragPathOrDefault(item);
+        string? dragPath = GenerationCardControl.GetImageDragPathOrDefault(paths.Item);
 
         dragPath.Should().Be(paths.ImagePath);
     }
@@ -110,8 +102,7 @@ public sealed class GenerationCardControlTests
         try
         {
             File.Delete(imagePath);
-            GenerationItemViewModel item = CreateItem(imagePath);
-            item.ThumbnailPath = thumbnailPath;
+            GenerationItemViewModel item = CreateItem(imagePath, thumbnailPath);
 
             string? dragPath = GenerationCardControl.GetImageDragPathOrDefault(item);
 
@@ -127,10 +118,8 @@ public sealed class GenerationCardControlTests
     public void GetImageDragPreviewPathOrDefault_WithExistingThumbnail_ReturnsThumbnailPath()
     {
         using ExistingImagePaths paths = new();
-        GenerationItemViewModel item = CreateItem(paths.ImagePath);
-        item.ThumbnailPath = paths.ThumbnailPath;
 
-        string? previewPath = GenerationCardControl.GetImageDragPreviewPathOrDefault(item);
+        string? previewPath = GenerationCardControl.GetImageDragPreviewPathOrDefault(paths.Item);
 
         previewPath.Should().Be(paths.ThumbnailPath);
     }
@@ -144,8 +133,7 @@ public sealed class GenerationCardControlTests
         try
         {
             File.Delete(thumbnailPath);
-            GenerationItemViewModel item = CreateItem(imagePath);
-            item.ThumbnailPath = thumbnailPath;
+            GenerationItemViewModel item = CreateItem(imagePath, thumbnailPath);
 
             string? previewPath = GenerationCardControl.GetImageDragPreviewPathOrDefault(item);
 
@@ -157,7 +145,9 @@ public sealed class GenerationCardControlTests
         }
     }
 
-    private static GenerationItemViewModel CreateItem(string imagePath)
+    private static GenerationItemViewModel CreateItem(
+        string imagePath,
+        string thumbnailPath)
     {
         GenerationItemDto item = GenerationItemDtoTestFactory.Create(
             id: ItemId,
@@ -165,12 +155,16 @@ public sealed class GenerationCardControlTests
             aspectRatio: AspectRatio,
             createdAtUtc: CreatedAtUtc,
             imagePath: imagePath);
-
-        return new GenerationItemViewModel(
+        GenerationItemViewModel viewModel = new(
             item,
             0,
             imagePath,
-            GenerationItemStatusDescriptorRegistryTestFactory.Create());
+            GenerationItemStatusDescriptorRegistryTestFactory.Create())
+        {
+            ThumbnailPath = thumbnailPath
+        };
+
+        return viewModel;
     }
 
     private static (Size Size, Vector Translation) Calculate(
@@ -185,8 +179,21 @@ public sealed class GenerationCardControlTests
             viewportBounds ?? DefaultViewportBounds);
     }
 
+    private static void AssertExpansion(
+        Size sourceSize,
+        Rect previewBounds,
+        Size expectedSize,
+        Vector expectedTranslation)
+    {
+        (Size size, Vector translation) = Calculate(sourceSize, previewBounds);
+
+        size.Should().Be(expectedSize);
+        translation.Should().Be(expectedTranslation);
+    }
+
     private sealed class ExistingImagePaths : IDisposable
     {
+        public GenerationItemViewModel Item { get; }
         public string ImagePath { get; }
         public string ThumbnailPath { get; }
 
@@ -194,6 +201,7 @@ public sealed class GenerationCardControlTests
         {
             ImagePath = Path.GetTempFileName();
             ThumbnailPath = Path.GetTempFileName();
+            Item = CreateItem(ImagePath, ThumbnailPath);
         }
 
         public void Dispose()
