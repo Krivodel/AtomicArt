@@ -1903,11 +1903,64 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         }
     }
 
-    private sealed class InMemoryPanelAttachmentStore : IPanelAttachmentStore
+    private abstract class PanelAttachmentStoreBase : IPanelAttachmentStore
     {
         private readonly Dictionary<string, AttachedImageDto> _images = new(StringComparer.Ordinal);
 
-        public PanelAttachmentState CreateState(AttachedImageDto image)
+        public abstract PanelAttachmentState CreateState(AttachedImageDto image);
+
+        public Task SaveAsync(
+            string panelId,
+            PanelAttachmentState attachment,
+            AttachedImageDto image,
+            CancellationToken ct)
+        {
+            OnSaving();
+            _images[attachment.InternalFileName] = CreateStoredImage(attachment, image);
+
+            return Task.CompletedTask;
+        }
+
+        public Task<AttachedImageDto?> LoadAsync(
+            string panelId,
+            PanelAttachmentState attachment,
+            CancellationToken ct)
+        {
+            _images.TryGetValue(attachment.InternalFileName, out AttachedImageDto? image);
+
+            return Task.FromResult(image);
+        }
+
+        public Task DeleteAsync(
+            string panelId,
+            PanelAttachmentState attachment,
+            CancellationToken ct)
+        {
+            OnDeleting();
+            _images.Remove(attachment.InternalFileName);
+
+            return Task.CompletedTask;
+        }
+
+        protected virtual AttachedImageDto CreateStoredImage(
+            PanelAttachmentState attachment,
+            AttachedImageDto image)
+        {
+            return image;
+        }
+
+        protected virtual void OnSaving()
+        {
+        }
+
+        protected virtual void OnDeleting()
+        {
+        }
+    }
+
+    private sealed class InMemoryPanelAttachmentStore : PanelAttachmentStoreBase
+    {
+        public override PanelAttachmentState CreateState(AttachedImageDto image)
         {
             string id = Guid.NewGuid().ToString("N");
             string internalFileName = string.Concat(id, ".managed");
@@ -1926,50 +1979,25 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             };
         }
 
-        public Task SaveAsync(
-            string panelId,
+        protected override AttachedImageDto CreateStoredImage(
             PanelAttachmentState attachment,
-            AttachedImageDto image,
-            CancellationToken ct)
+            AttachedImageDto image)
         {
-            _images[attachment.InternalFileName] = new AttachedImageDto(
+            return new AttachedImageDto(
                 attachment.FileName,
                 attachment.ContentType,
                 image.Content);
-
-            return Task.CompletedTask;
-        }
-
-        public Task<AttachedImageDto?> LoadAsync(
-            string panelId,
-            PanelAttachmentState attachment,
-            CancellationToken ct)
-        {
-            _images.TryGetValue(attachment.InternalFileName, out AttachedImageDto? image);
-
-            return Task.FromResult(image);
-        }
-
-        public Task DeleteAsync(
-            string panelId,
-            PanelAttachmentState attachment,
-            CancellationToken ct)
-        {
-            _images.Remove(attachment.InternalFileName);
-
-            return Task.CompletedTask;
         }
     }
 
-    private sealed class RecordingPanelAttachmentStore : IPanelAttachmentStore
+    private sealed class RecordingPanelAttachmentStore : PanelAttachmentStoreBase
     {
-        private readonly Dictionary<string, AttachedImageDto> _images = new(StringComparer.Ordinal);
-        private int _nextId;
-
         public int SaveCallCount { get; private set; }
         public int DeleteCallCount { get; private set; }
 
-        public PanelAttachmentState CreateState(AttachedImageDto image)
+        private int _nextId;
+
+        public override PanelAttachmentState CreateState(AttachedImageDto image)
         {
             _nextId++;
             string id = string.Concat("attachment-", _nextId.ToString("D2"));
@@ -1985,37 +2013,14 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             };
         }
 
-        public Task SaveAsync(
-            string panelId,
-            PanelAttachmentState attachment,
-            AttachedImageDto image,
-            CancellationToken ct)
+        protected override void OnSaving()
         {
             SaveCallCount++;
-            _images[attachment.InternalFileName] = image;
-
-            return Task.CompletedTask;
         }
 
-        public Task<AttachedImageDto?> LoadAsync(
-            string panelId,
-            PanelAttachmentState attachment,
-            CancellationToken ct)
-        {
-            _images.TryGetValue(attachment.InternalFileName, out AttachedImageDto? image);
-
-            return Task.FromResult(image);
-        }
-
-        public Task DeleteAsync(
-            string panelId,
-            PanelAttachmentState attachment,
-            CancellationToken ct)
+        protected override void OnDeleting()
         {
             DeleteCallCount++;
-            _images.Remove(attachment.InternalFileName);
-
-            return Task.CompletedTask;
         }
     }
 
