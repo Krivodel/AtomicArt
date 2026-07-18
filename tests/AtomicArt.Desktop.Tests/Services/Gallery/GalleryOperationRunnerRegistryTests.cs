@@ -3,6 +3,7 @@ using Xunit;
 
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Tests.TestDoubles;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -31,30 +32,14 @@ public sealed class GalleryOperationRunnerRegistryTests
         act.Should().Throw<InvalidOperationException>();
     }
 
-    private sealed class RecordingRunner : IGalleryOperationRunner
+    private sealed class RecordingRunner : GalleryOperationRunnerTestDouble
     {
-        public Type OperationType { get; }
-        public bool SupportsBatching => OperationType == typeof(AppendBatchGalleryOperation)
-                                        || OperationType == typeof(GenerateFrontGalleryOperation);
-
         public RecordingRunner(Type operationType)
+            : base(operationType)
         {
-            OperationType = operationType;
         }
 
-        public bool CanRun(IReadOnlyList<GalleryOperation> operations)
-        {
-            return operations.Any(operation => operation.GetType() == OperationType);
-        }
-
-        public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)
-        {
-            return operations
-                .Where(operation => operation.GetType() == OperationType)
-                .ToList();
-        }
-
-        public Task RunAsync(
+        public override Task RunAsync(
             IReadOnlyList<GalleryOperation> operations,
             GalleryOperationCoordinator context,
             CancellationToken ct)

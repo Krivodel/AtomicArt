@@ -6,6 +6,7 @@ using Xunit;
 
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Services.GalleryAnimation;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
@@ -218,47 +219,22 @@ public sealed class GalleryOperationCoordinatorTests
         return scrollViewer;
     }
 
-    private sealed class RecordingRunner : IGalleryOperationRunner
+    private sealed class RecordingRunner : GalleryOperationRunnerTestDouble
     {
-        public Type OperationType { get; }
-        public bool SupportsBatching => OperationType == typeof(AppendBatchGalleryOperation)
-                                        || OperationType == typeof(GenerateFrontGalleryOperation);
         public List<List<GalleryOperation>> Batches { get; } = [];
 
         public RecordingRunner(Type operationType)
+            : base(operationType)
         {
-            OperationType = operationType;
         }
 
-        public bool CanRun(IReadOnlyList<GalleryOperation> operations)
-        {
-            if (OperationType == typeof(RemoveGalleryOperation))
-            {
-                return operations.All(operation => operation.GetType() == OperationType);
-            }
-
-            return operations.Any(operation => operation.GetType() == OperationType);
-        }
-
-        public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)
-        {
-            if ((OperationType == typeof(RemoveGalleryOperation))
-                || (OperationType == typeof(MixedMutationGalleryOperation)))
-            {
-                return operations;
-            }
-
-            return operations
-                .Where(operation => operation.GetType() == OperationType)
-                .ToList();
-        }
-
-        public Task RunAsync(
+        public override Task RunAsync(
             IReadOnlyList<GalleryOperation> operations,
             GalleryOperationCoordinator context,
             CancellationToken ct)
         {
             Batches.Add(operations.ToList());
+
             foreach (GalleryOperation operation in operations)
             {
                 operation.Completion.TrySetResult();
@@ -266,32 +242,38 @@ public sealed class GalleryOperationCoordinatorTests
 
             return Task.CompletedTask;
         }
+
+        protected override bool CanRunCore(IReadOnlyList<GalleryOperation> operations)
+        {
+            if (OperationType == typeof(RemoveGalleryOperation))
+            {
+                return operations.All(operation => operation.GetType() == OperationType);
+            }
+
+            return base.CanRunCore(operations);
+        }
+
+        protected override IReadOnlyList<GalleryOperation> SelectOperationsCore(
+            IReadOnlyList<GalleryOperation> operations)
+        {
+            if ((OperationType == typeof(RemoveGalleryOperation))
+                || (OperationType == typeof(MixedMutationGalleryOperation)))
+            {
+                return operations;
+            }
+
+            return base.SelectOperationsCore(operations);
+        }
     }
 
-    private sealed class ThrowingRunner : IGalleryOperationRunner
+    private sealed class ThrowingRunner : GalleryOperationRunnerTestDouble
     {
-        public Type OperationType { get; }
-        public bool SupportsBatching => OperationType == typeof(AppendBatchGalleryOperation)
-                                        || OperationType == typeof(GenerateFrontGalleryOperation);
-
         public ThrowingRunner(Type operationType)
+            : base(operationType)
         {
-            OperationType = operationType;
         }
 
-        public bool CanRun(IReadOnlyList<GalleryOperation> operations)
-        {
-            return operations.Any(operation => operation.GetType() == OperationType);
-        }
-
-        public IReadOnlyList<GalleryOperation> SelectOperations(IReadOnlyList<GalleryOperation> operations)
-        {
-            return operations
-                .Where(operation => operation.GetType() == OperationType)
-                .ToList();
-        }
-
-        public Task RunAsync(
+        public override Task RunAsync(
             IReadOnlyList<GalleryOperation> operations,
             GalleryOperationCoordinator context,
             CancellationToken ct)
