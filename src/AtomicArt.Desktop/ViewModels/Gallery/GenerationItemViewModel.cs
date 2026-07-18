@@ -90,18 +90,7 @@ public sealed partial class GenerationItemViewModel :
 
         _statusDescriptorRegistry = statusDescriptorRegistry;
 
-        Id = item.Id;
-        ModelId = item.ModelId;
-        ModelDisplayName = item.ModelDisplayName;
-        Prompt = item.Prompt;
-        Resolution = item.Resolution;
-        AspectRatio = item.AspectRatio;
-        CreatedAtUtc = item.CreatedAtUtc;
-        CompletedAtUtc = item.CompletedAtUtc;
-        GenerationDuration = item.GenerationDuration;
-        Price = item.Price;
-        Usage = item.Usage;
-        StatusKind = item.Status;
+        ApplyItem(item);
         ImagePath = imagePath;
         AttachedImagesCount = attachedImagesCount;
         RefreshElapsedText(DateTime.UtcNow);
@@ -190,18 +179,7 @@ public sealed partial class GenerationItemViewModel :
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        Id = item.Id;
-        ModelId = item.ModelId;
-        ModelDisplayName = item.ModelDisplayName;
-        Prompt = item.Prompt;
-        Resolution = item.Resolution;
-        AspectRatio = item.AspectRatio;
-        CreatedAtUtc = item.CreatedAtUtc;
-        CompletedAtUtc = item.CompletedAtUtc;
-        GenerationDuration = item.GenerationDuration;
-        Price = item.Price;
-        Usage = item.Usage;
-        StatusKind = item.Status;
+        ApplyItem(item);
         ImagePath = imagePath;
         ThumbnailPath = thumbnailPath;
         CorrelationId = null;
@@ -276,6 +254,22 @@ public sealed partial class GenerationItemViewModel :
         ElapsedText = $"{fullYears}г";
     }
 
+    private void ApplyItem(GenerationItemDto item)
+    {
+        Id = item.Id;
+        ModelId = item.ModelId;
+        ModelDisplayName = item.ModelDisplayName;
+        Prompt = item.Prompt;
+        Resolution = item.Resolution;
+        AspectRatio = item.AspectRatio;
+        CreatedAtUtc = item.CreatedAtUtc;
+        CompletedAtUtc = item.CompletedAtUtc;
+        GenerationDuration = item.GenerationDuration;
+        Price = item.Price;
+        Usage = item.Usage;
+        StatusKind = item.Status;
+    }
+
     private void RefreshComputedState()
     {
         OnPropertyChanged(nameof(DisplayImagePath));
@@ -290,5 +284,4 @@ public sealed partial class GenerationItemViewModel :
         OnPropertyChanged(nameof(ShowsEmptyPreview));
         OnPropertyChanged(nameof(DeleteOrCancelGlyph));
     }
-
 }
