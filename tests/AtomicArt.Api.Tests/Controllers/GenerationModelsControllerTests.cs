@@ -172,8 +172,7 @@ public sealed class GenerationModelsControllerTests
           },
           "TestGeneration": {
             "Enabled": {{testGenerationEnabled.ToString().ToLowerInvariant()}},
-            "ImagesDirectory": "TestGenerationImages",
-            "MaxImageBytes": 524288000
+            "ImagesDirectory": "TestGenerationImages"
           },
           "AllowedHosts": "*"
         }

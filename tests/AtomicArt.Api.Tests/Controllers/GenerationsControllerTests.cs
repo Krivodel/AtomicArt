@@ -547,8 +547,7 @@ public sealed class GenerationsControllerTests
           },
           "TestGeneration": {
             "Enabled": true,
-            "ImagesDirectory": {{JsonSerializer.Serialize(imagesDirectory)}},
-            "MaxImageBytes": 524288000
+            "ImagesDirectory": {{JsonSerializer.Serialize(imagesDirectory)}}
           },
           "AllowedHosts": "*"
         }
