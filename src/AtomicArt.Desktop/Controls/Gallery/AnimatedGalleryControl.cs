@@ -321,8 +321,8 @@ public partial class AnimatedGalleryControl : UserControl
         }
 
         _sceneController.EnsureScene();
-        AnimatedGalleryScene scene = _sceneController.Scene
-                                     ?? throw new InvalidOperationException("Animated gallery scene was not created.");
+        AnimatedGalleryScene scene = AnimatedGallerySceneController.RequireScene(
+            _sceneController.Scene);
         _resizeController = new AnimatedGalleryResizeController(
             this,
             GalleryScrollViewer,

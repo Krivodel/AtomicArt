@@ -128,7 +128,7 @@ internal sealed class AnimatedGalleryResizeController
             return;
         }
 
-        scene = scene ?? throw new InvalidOperationException("Animated gallery scene was not created.");
+        scene = AnimatedGallerySceneController.RequireScene(scene);
         Dictionary<Guid, Rect> firstSnapshot = TakeResizeSnapshot(scene);
         if (firstSnapshot.Count == 0)
         {

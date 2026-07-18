@@ -39,6 +39,12 @@ internal sealed class AnimatedGallerySceneController
         _cancelResizeAnimation = cancelResizeAnimation ?? throw new ArgumentNullException(nameof(cancelResizeAnimation));
     }
 
+    internal static AnimatedGalleryScene RequireScene(AnimatedGalleryScene? scene)
+    {
+        return scene
+            ?? throw new InvalidOperationException("Animated gallery scene was not created.");
+    }
+
     internal void EnsureScene()
     {
         if (_scene is not null)
@@ -216,12 +222,9 @@ internal sealed class AnimatedGallerySceneController
 
     private Control CreateCard(object item)
     {
-        if (_scene is null)
-        {
-            throw new InvalidOperationException("Animated gallery scene was not created.");
-        }
+        AnimatedGalleryScene scene = AnimatedGallerySceneController.RequireScene(_scene);
 
-        return _scene.CardControlFactory.Create(item, CreateCardCommands());
+        return scene.CardControlFactory.Create(item, CreateCardCommands());
     }
 
     private GalleryCardCommands CreateCardCommands()
