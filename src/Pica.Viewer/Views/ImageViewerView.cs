@@ -786,11 +786,7 @@ internal sealed class ImageViewerView : IDisposable
         Bitmap? icon,
         EventHandler<RoutedEventArgs> clickHandler)
     {
-        StackPanel content = new()
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8d
-        };
+        StackPanel content = CreateMenuButtonPanel();
 
         if (icon is not null)
         {
@@ -830,27 +826,27 @@ internal sealed class ImageViewerView : IDisposable
         };
     }
 
+    private static StackPanel CreateMenuButtonPanel()
+    {
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8d
+        };
+    }
+
     private static StackPanel CreateMenuButtonContent(
         string text,
         string geometry,
         double iconRotationDegrees)
     {
-        StackPanel content = new()
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8d
-        };
+        StackPanel content = CreateMenuButtonPanel();
         content.Children.Add(CreatePathIcon(
             geometry,
             18d,
             iconRotationDegrees,
             Brushes.White));
-        content.Children.Add(new TextBlock
-        {
-            Foreground = Brushes.White,
-            Text = text,
-            VerticalAlignment = VerticalAlignment.Center
-        });
+        content.Children.Add(CreateMenuTextBlock(text));
 
         return content;
     }
