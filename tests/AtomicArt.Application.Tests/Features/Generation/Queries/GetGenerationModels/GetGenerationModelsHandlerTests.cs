@@ -3,7 +3,6 @@ using Moq;
 using Xunit;
 
 using AtomicArt.Application.Features.Generation.Interfaces;
-using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Application.Features.Generation.Queries.GetGenerationModels;
 using AtomicArt.Contracts.Generation;
 
@@ -14,7 +13,7 @@ public sealed class GetGenerationModelsHandlerTests
     [Fact]
     public async Task Handle_WithRegistryModels_ReturnsCatalog()
     {
-        IReadOnlyList<ImageModelOption> models =
+        IReadOnlyList<GenerationModelMetadataDto> models =
         [
             new(
                 "test-model",
@@ -24,15 +23,16 @@ public sealed class GetGenerationModelsHandlerTests
                 GenerationPanelIds.NanoBanana,
                 1000,
                 500,
+                100,
                 ["Auto"],
                 ["1k"],
                 [1],
                 new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),
-                1,
-                100,
-                1024,
-                2048,
-                ["image/png"],
+                new GenerationModelAttachmentMetadataDto(
+                    1,
+                    1024,
+                    2048,
+                    ["image/png"]),
                 new GenerationModelPricingMetadataDto(
                     "USD",
                     0.25m,

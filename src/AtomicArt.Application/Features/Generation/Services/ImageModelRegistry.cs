@@ -38,10 +38,10 @@ public sealed class ImageModelRegistry : IImageModelRegistry
         }
     }
 
-    public IReadOnlyList<ImageModelOption> GetModels()
+    public IReadOnlyList<GenerationModelMetadataDto> GetModels()
     {
-        List<ImageModelOption> models = _definitions
-            .Select(CreateModelOption)
+        List<GenerationModelMetadataDto> models = _definitions
+            .Select(CreateMetadata)
             .ToList();
 
         return models;
@@ -59,11 +59,11 @@ public sealed class ImageModelRegistry : IImageModelRegistry
         return null;
     }
 
-    private static ImageModelOption CreateModelOption(IImageModelDefinition definition)
+    private static GenerationModelMetadataDto CreateMetadata(IImageModelDefinition definition)
     {
         GenerationModelConstraints constraints = definition.Constraints;
 
-        return new ImageModelOption(
+        return new GenerationModelMetadataDto(
             constraints.ModelId,
             definition.DisplayName,
             definition.Provider,
@@ -71,15 +71,16 @@ public sealed class ImageModelRegistry : IImageModelRegistry
             definition.PanelId,
             definition.ContextWindowTokens,
             definition.MaxOutputTokens,
+            constraints.MaxPromptLength,
             constraints.AspectRatios,
             constraints.Resolutions,
             constraints.GenerationCounts,
             definition.Temperature,
-            constraints.MaxAttachedImages,
-            constraints.MaxPromptLength,
-            constraints.MaxAttachedImageBytes,
-            constraints.MaxTotalAttachedImageBytes,
-            constraints.SupportedContentTypes,
+            new GenerationModelAttachmentMetadataDto(
+                constraints.MaxAttachedImages,
+                constraints.MaxAttachedImageBytes,
+                constraints.MaxTotalAttachedImageBytes,
+                constraints.SupportedContentTypes),
             definition.Pricing,
             definition.Thinking);
     }

@@ -19,7 +19,7 @@ public sealed class ImageModelRegistryTests
     {
         ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
 
-        IReadOnlyList<ImageModelOption> models = registry.GetModels();
+        IReadOnlyList<GenerationModelMetadataDto> models = registry.GetModels();
 
         models.Should().HaveCount(3);
         GenerationModelMetadataDto nanoBanana2Metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
