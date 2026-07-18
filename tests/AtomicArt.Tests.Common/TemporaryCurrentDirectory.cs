@@ -2,23 +2,17 @@ namespace AtomicArt.Tests.Common;
 
 public sealed class TemporaryCurrentDirectory : IDisposable
 {
-    public string DirectoryPath { get; }
+    public string DirectoryPath => _temporaryDirectory.DirectoryPath;
 
+    private readonly TemporaryDirectory _temporaryDirectory;
     private readonly string _previousDirectory;
     private bool _disposed;
 
     public TemporaryCurrentDirectory(Type testType, string testName)
     {
-        ArgumentNullException.ThrowIfNull(testType);
-        ArgumentException.ThrowIfNullOrWhiteSpace(testName);
-
-        string rootDirectoryName = testType.Assembly.GetName().Name
-            ?? throw new InvalidOperationException("Test assembly name is missing.");
         _previousDirectory = Directory.GetCurrentDirectory();
-        DirectoryPath = Path.Combine(Path.GetTempPath(), rootDirectoryName, testName);
-
-        TestDirectories.DeleteIfExists(DirectoryPath);
-        Directory.CreateDirectory(DirectoryPath);
+        string directoryPath = TestDirectories.GetAssemblyTestDirectoryPath(testType, testName);
+        _temporaryDirectory = new TemporaryDirectory(directoryPath);
 
         try
         {
@@ -26,16 +20,14 @@ public sealed class TemporaryCurrentDirectory : IDisposable
         }
         catch
         {
-            TestDirectories.DeleteIfExists(DirectoryPath);
+            _temporaryDirectory.Dispose();
             throw;
         }
     }
 
     public IReadOnlyList<string> GetEntries()
     {
-        return Directory
-            .EnumerateFileSystemEntries(DirectoryPath, "*", SearchOption.AllDirectories)
-            .ToList();
+        return _temporaryDirectory.GetEntries();
     }
 
     public void Dispose()
@@ -46,7 +38,7 @@ public sealed class TemporaryCurrentDirectory : IDisposable
         }
 
         Directory.SetCurrentDirectory(_previousDirectory);
-        TestDirectories.DeleteIfExists(DirectoryPath);
+        _temporaryDirectory.Dispose();
         _disposed = true;
     }
 }
