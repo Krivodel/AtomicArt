@@ -71,18 +71,12 @@ internal static class GoogleInteractionsErrorResponseReader
 
     private static int? GetErrorCode(JsonElement errorElement)
     {
-        if (errorElement.ValueKind != JsonValueKind.Object
-            || !GoogleInteractionsJsonElementReader.TryGetProperty(
-                errorElement,
-                "code",
-                out JsonElement codeElement)
-            || codeElement.ValueKind != JsonValueKind.Number
-            || !codeElement.TryGetInt32(out int errorCode))
-        {
-            return null;
-        }
-
-        return errorCode;
+        return GoogleInteractionsJsonElementReader.TryGetInt32Property(
+            errorElement,
+            "code",
+            out int errorCode)
+            ? errorCode
+            : null;
     }
 
     private static string? GetErrorMessage(JsonElement errorElement)
@@ -97,17 +91,12 @@ internal static class GoogleInteractionsErrorResponseReader
 
     private static string? GetStringProperty(JsonElement element, string propertyName)
     {
-        if (element.ValueKind != JsonValueKind.Object
-            || !GoogleInteractionsJsonElementReader.TryGetProperty(
-                element,
-                propertyName,
-                out JsonElement propertyElement)
-            || propertyElement.ValueKind != JsonValueKind.String)
-        {
-            return null;
-        }
-
-        return propertyElement.GetString();
+        return GoogleInteractionsJsonElementReader.TryGetStringProperty(
+            element,
+            propertyName,
+            out string? value)
+            ? value
+            : null;
     }
 
     private static string? NormalizeAndLimit(string? value)

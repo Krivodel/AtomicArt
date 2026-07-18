@@ -1,9 +1,9 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
+using static AtomicArt.Infrastructure.Generation.GoogleInteractions.GoogleInteractionsJsonElementReader;
 
 namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
@@ -577,83 +577,6 @@ internal sealed class GoogleInteractionsResponseParser
         return new GoogleInteractionsException(
             ImageGenerationProviderFailureKind.InvalidResponse,
             "The generation provider returned invalid usage data.");
-    }
-
-    private static bool TryGetInt32Property(
-        JsonElement element,
-        string firstName,
-        string secondName,
-        out int value)
-    {
-        value = 0;
-
-        if (!TryGetProperty(element, firstName, secondName, out JsonElement propertyElement))
-        {
-            return false;
-        }
-
-        return propertyElement.ValueKind == JsonValueKind.Number
-            && propertyElement.TryGetInt32(out value);
-    }
-
-    private static bool TryGetStringProperty(
-        JsonElement element,
-        string name,
-        [NotNullWhen(true)] out string? value)
-    {
-        value = null;
-
-        if (!GoogleInteractionsJsonElementReader.TryGetProperty(
-            element,
-            name,
-            out JsonElement propertyElement)
-            || propertyElement.ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        value = propertyElement.GetString();
-
-        return value is not null;
-    }
-
-    private static bool TryGetStringProperty(
-        JsonElement element,
-        string firstName,
-        string secondName,
-        [NotNullWhen(true)] out string? value)
-    {
-        value = null;
-
-        if (!TryGetProperty(element, firstName, secondName, out JsonElement propertyElement)
-            || propertyElement.ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        value = propertyElement.GetString();
-
-        return value is not null;
-    }
-
-    private static bool TryGetProperty(
-        JsonElement element,
-        string firstName,
-        string secondName,
-        out JsonElement propertyElement)
-    {
-        if (GoogleInteractionsJsonElementReader.TryGetProperty(
-            element,
-            firstName,
-            out propertyElement))
-        {
-            return true;
-        }
-
-        return GoogleInteractionsJsonElementReader.TryGetProperty(
-            element,
-            secondName,
-            out propertyElement);
     }
 
     private static bool IsPropertyName(JsonProperty property, string name)
