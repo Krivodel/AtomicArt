@@ -25,11 +25,7 @@ public sealed class GenerationResultStorageTests
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
         byte[] validPngBytes = GenerationImageTestData.ValidPngBytes;
         GenerationImageContentValidationResult content = ValidateContent(GenerationImageContentTypes.Png, validPngBytes);
-        GenerationResultStorage storage = new(
-            pathProvider,
-            GenerationImageFormatRegistryTestFactory.Create(),
-            new GenerationImageFileNamePolicy(),
-            NullLogger<GenerationResultStorage>.Instance);
+        GenerationResultStorage storage = CreateStorage(pathProvider);
 
         string? resultPath = storage.GetExpectedResultPathOrDefault(
             BatchId,
@@ -61,22 +57,14 @@ public sealed class GenerationResultStorageTests
         GenerationImageContentValidationResult content = ValidateContent(
             GenerationImageContentTypes.Png,
             GenerationImageTestData.ValidPngBytes);
-        GenerationResultStorage storage = new(
-            pathProvider,
-            GenerationImageFormatRegistryTestFactory.Create(),
-            new GenerationImageFileNamePolicy(),
-            NullLogger<GenerationResultStorage>.Instance);
+        GenerationResultStorage storage = CreateStorage(pathProvider);
 
         string? resultPath = storage.GetExpectedResultPathOrDefault(
             BatchId,
             ItemId,
             content.ContentType);
 
-        Func<Task> act = () => storage.SaveAsync(
-            BatchId,
-            ItemId,
-            content,
-            CancellationToken.None);
+        Func<Task> act = CreateSaveAction(storage, content);
 
         await act.Should().ThrowAsync<IOException>();
         resultPath.Should().NotBeNull();
@@ -93,11 +81,7 @@ public sealed class GenerationResultStorageTests
             GenerationImageContentTypes.Gif,
             Convert.ToBase64String(GenerationImageTestData.ValidPngBytes));
 
-        bool result = validator.TryValidate(content, out GenerationImageContentValidationResult? validationResult);
-
-        result.Should().BeFalse();
-        validationResult.Should().BeNull();
-        Directory.GetFiles(resultsDirectory).Should().BeEmpty();
+        AssertContentRejected(resultsDirectory, validator, content);
     }
 
     [Fact]
@@ -111,11 +95,7 @@ public sealed class GenerationResultStorageTests
             GenerationImageContentTypes.Png,
             new string('A', GenerationImageTestData.TestOversizedBase64Length));
 
-        bool result = validator.TryValidate(content, out GenerationImageContentValidationResult? validationResult);
-
-        result.Should().BeFalse();
-        validationResult.Should().BeNull();
-        Directory.GetFiles(resultsDirectory).Should().BeEmpty();
+        AssertContentRejected(resultsDirectory, validator, content);
     }
 
     [Fact]
@@ -128,11 +108,7 @@ public sealed class GenerationResultStorageTests
             GenerationImageContentTypes.Png,
             Convert.ToBase64String(new byte[] { 0x01, 0x02, 0x03 }));
 
-        bool result = validator.TryValidate(content, out GenerationImageContentValidationResult? validationResult);
-
-        result.Should().BeFalse();
-        validationResult.Should().BeNull();
-        Directory.GetFiles(resultsDirectory).Should().BeEmpty();
+        AssertContentRejected(resultsDirectory, validator, content);
     }
 
     [Fact]
@@ -148,17 +124,9 @@ public sealed class GenerationResultStorageTests
         GenerationImageContentValidationResult content = ValidateContent(
             GenerationImageContentTypes.Png,
             GenerationImageTestData.ValidPngBytes);
-        GenerationResultStorage storage = new(
-            pathProvider,
-            GenerationImageFormatRegistryTestFactory.Create(),
-            new GenerationImageFileNamePolicy(),
-            NullLogger<GenerationResultStorage>.Instance);
+        GenerationResultStorage storage = CreateStorage(pathProvider);
 
-        Func<Task> act = () => storage.SaveAsync(
-            BatchId,
-            ItemId,
-            content,
-            CancellationToken.None);
+        Func<Task> act = CreateSaveAction(storage, content);
 
         await act.Should().ThrowAsync<IOException>();
         Directory.Exists(Path.Combine(redirectedDirectory, "Art")).Should().BeFalse();
@@ -171,11 +139,7 @@ public sealed class GenerationResultStorageTests
             nameof(GetExpectedResultPathOrDefault_WithSupportedContentType_UsesFileNamePolicy));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
         GenerationImageFileNamePolicy fileNamePolicy = new();
-        GenerationResultStorage storage = new(
-            pathProvider,
-            GenerationImageFormatRegistryTestFactory.Create(),
-            fileNamePolicy,
-            NullLogger<GenerationResultStorage>.Instance);
+        GenerationResultStorage storage = CreateStorage(pathProvider, fileNamePolicy);
         string expectedFileName = fileNamePolicy.BuildFileName(BatchId, ItemId, ".png");
 
         string? resultPath = storage.GetExpectedResultPathOrDefault(
@@ -185,6 +149,44 @@ public sealed class GenerationResultStorageTests
 
         resultPath.Should().NotBeNull();
         Path.GetFileName(resultPath).Should().Be(expectedFileName);
+    }
+
+    private static GenerationResultStorage CreateStorage(
+        AtomicArtDataPathProvider pathProvider,
+        GenerationImageFileNamePolicy? fileNamePolicy = null)
+    {
+        fileNamePolicy ??= new GenerationImageFileNamePolicy();
+
+        return new GenerationResultStorage(
+            pathProvider,
+            GenerationImageFormatRegistryTestFactory.Create(),
+            fileNamePolicy,
+            NullLogger<GenerationResultStorage>.Instance);
+    }
+
+    private static void AssertContentRejected(
+        string resultsDirectory,
+        GenerationImageContentValidator validator,
+        GenerationImageContentDto content)
+    {
+        bool result = validator.TryValidate(
+            content,
+            out GenerationImageContentValidationResult? validationResult);
+
+        result.Should().BeFalse();
+        validationResult.Should().BeNull();
+        Directory.GetFiles(resultsDirectory).Should().BeEmpty();
+    }
+
+    private static Func<Task> CreateSaveAction(
+        GenerationResultStorage storage,
+        GenerationImageContentValidationResult content)
+    {
+        return () => storage.SaveAsync(
+            BatchId,
+            ItemId,
+            content,
+            CancellationToken.None);
     }
 
     private static GenerationImageContentValidationResult ValidateContent(string contentType, byte[] bytes)
