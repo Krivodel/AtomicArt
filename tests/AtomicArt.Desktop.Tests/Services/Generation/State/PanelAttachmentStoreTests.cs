@@ -23,29 +23,22 @@ public sealed class PanelAttachmentStoreTests
     [Fact]
     public async Task SaveAsync_WithPanelId_WritesUnderEncodedStateAttachmentsDirectory()
     {
-        using PanelAttachmentTestContext context = new();
-
-        PanelAttachmentState state = await SaveImageAsync(context, RawPanelId);
-
-        string attachmentPath = context.GetAttachmentPath(state);
-        File.Exists(attachmentPath).Should().BeTrue();
-        attachmentPath.Should().Contain(EncodedPanelId);
-        attachmentPath.Should().NotContain(RawPanelId);
+        await AssertSavedPathAsync(
+            RawPanelId,
+            attachmentPath => attachmentPath.Should().NotContain(RawPanelId));
     }
 
     [Fact]
     public async Task SaveAsync_WithUnsafePanelId_UsesEncodedPathSegment()
     {
-        using PanelAttachmentTestContext context = new();
-
-        PanelAttachmentState state = await SaveImageAsync(context, UnsafePanelId);
-
-        string attachmentPath = context.GetAttachmentPath(state);
-        File.Exists(attachmentPath).Should().BeTrue();
-        attachmentPath.Should().Contain(EncodedPanelId);
-        attachmentPath.Should().NotContain("unsafe");
-        attachmentPath.Should().NotContain("panel:id");
-        attachmentPath.Should().NotContain("..");
+        await AssertSavedPathAsync(
+            UnsafePanelId,
+            attachmentPath =>
+            {
+                attachmentPath.Should().NotContain("unsafe");
+                attachmentPath.Should().NotContain("panel:id");
+                attachmentPath.Should().NotContain("..");
+            });
     }
 
     [Fact]
@@ -89,14 +82,10 @@ public sealed class PanelAttachmentStoreTests
     public async Task SaveAsync_WithUnsafeInternalFileName_RejectsAndDoesNotWriteOutsidePanelDirectory()
     {
         using PanelAttachmentTestContext context = new();
-        PanelAttachmentState state = new()
-        {
-            Id = "unsafe-attachment",
-            FileName = "unsafe.png",
-            ContentType = GenerationImageContentTypes.Png,
-            SizeBytes = ImageBytes.LongLength,
-            InternalFileName = @"..\x.png"
-        };
+        PanelAttachmentState state = CreateState(
+            "unsafe-attachment",
+            "unsafe.png",
+            @"..\x.png");
 
         Func<Task> act = async () => await context.Store.SaveAsync(
             RawPanelId,
@@ -117,46 +106,23 @@ public sealed class PanelAttachmentStoreTests
     [Fact]
     public async Task LoadAsync_WithMissingManagedFile_LogsWarningAndReturnsNull()
     {
-        RecordingLogger<PanelAttachmentStore> logger = new RecordingLogger<PanelAttachmentStore>();
-        using PanelAttachmentTestContext context = new(logger: logger);
-        PanelAttachmentState state = new()
-        {
-            Id = "missing-attachment",
-            FileName = "missing.png",
-            ContentType = GenerationImageContentTypes.Png,
-            SizeBytes = ImageBytes.LongLength,
-            InternalFileName = "missing.png"
-        };
-
-        await AssertLoadRejectedAsync(context, logger, state);
-
-        logger.WarningMessages.Should().NotContain(message => message.Contains(
+        PanelAttachmentState state = CreateState(
+            "missing-attachment",
             "missing.png",
-            StringComparison.Ordinal));
+            "missing.png");
+
+        await AssertLoadRejectedAsync(state, "missing.png");
     }
 
     [Fact]
     public async Task LoadAsync_WithUnsafeInternalFileName_LogsWarningAndReturnsNull()
     {
-        RecordingLogger<PanelAttachmentStore> logger = new RecordingLogger<PanelAttachmentStore>();
-        using PanelAttachmentTestContext context = new(logger: logger);
-        PanelAttachmentState state = new()
-        {
-            Id = "unsafe-attachment",
-            FileName = "unsafe.png",
-            ContentType = GenerationImageContentTypes.Png,
-            SizeBytes = ImageBytes.LongLength,
-            InternalFileName = @"..\x.png"
-        };
+        PanelAttachmentState state = CreateState(
+            "unsafe-attachment",
+            "unsafe.png",
+            @"..\x.png");
 
-        await AssertLoadRejectedAsync(context, logger, state);
-
-        logger.WarningMessages.Should().NotContain(message => message.Contains(
-            "..",
-            StringComparison.Ordinal));
-        logger.WarningMessages.Should().NotContain(message => message.Contains(
-            "x.png",
-            StringComparison.Ordinal));
+        await AssertLoadRejectedAsync(state, "..", "x.png");
     }
 
     [Fact]
@@ -190,11 +156,42 @@ public sealed class PanelAttachmentStoreTests
             ImageBytes);
     }
 
-    private static async Task AssertLoadRejectedAsync(
-        PanelAttachmentTestContext context,
-        RecordingLogger<PanelAttachmentStore> logger,
-        PanelAttachmentState state)
+    private static PanelAttachmentState CreateState(
+        string id,
+        string fileName,
+        string internalFileName)
     {
+        return new PanelAttachmentState
+        {
+            Id = id,
+            FileName = fileName,
+            ContentType = GenerationImageContentTypes.Png,
+            SizeBytes = ImageBytes.LongLength,
+            InternalFileName = internalFileName
+        };
+    }
+
+    private static async Task AssertSavedPathAsync(
+        string panelId,
+        Action<string> assertPath)
+    {
+        using PanelAttachmentTestContext context = new();
+
+        PanelAttachmentState state = await SaveImageAsync(context, panelId);
+
+        string attachmentPath = context.GetAttachmentPath(state);
+        File.Exists(attachmentPath).Should().BeTrue();
+        attachmentPath.Should().Contain(EncodedPanelId);
+        assertPath(attachmentPath);
+    }
+
+    private static async Task AssertLoadRejectedAsync(
+        PanelAttachmentState state,
+        params string[] sensitiveValues)
+    {
+        RecordingLogger<PanelAttachmentStore> logger = new RecordingLogger<PanelAttachmentStore>();
+        using PanelAttachmentTestContext context = new(logger: logger);
+
         AttachedImageDto? image = await context.Store.LoadAsync(
             RawPanelId,
             state,
@@ -205,6 +202,13 @@ public sealed class PanelAttachmentStoreTests
         logger.WarningMessages.Should().Contain(message => message.Contains(
             state.Id,
             StringComparison.Ordinal));
+
+        foreach (string sensitiveValue in sensitiveValues)
+        {
+            logger.WarningMessages.Should().NotContain(message => message.Contains(
+                sensitiveValue,
+                StringComparison.Ordinal));
+        }
     }
 
     private static async Task<PanelAttachmentState> SaveImageAsync(
