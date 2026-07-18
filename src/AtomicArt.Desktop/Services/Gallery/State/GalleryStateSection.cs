@@ -6,11 +6,12 @@ namespace AtomicArt.Desktop.Services.Gallery.State;
 
 public sealed class GalleryStateSection : IStateSection
 {
-    private const string SectionKey = "gallery";
+    public const string KeyValue = "gallery";
+
     private const string SectionFileName = "gallery.json";
     private const int CurrentSchemaVersion = 1;
 
-    public string Key => SectionKey;
+    public string Key => KeyValue;
     public string FileName => SectionFileName;
     public int SchemaVersion => CurrentSchemaVersion;
     public Type PayloadType => typeof(GalleryState);

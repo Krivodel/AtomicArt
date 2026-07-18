@@ -7,9 +7,7 @@ namespace AtomicArt.Desktop.Services.State;
 
 public sealed class AppStateBootstrapper : IAppStateBootstrapper
 {
-    private const string SettingsSectionName = "settings";
     private const string GenerationPanelsSectionName = "generation panels";
-    private const string GallerySectionName = "gallery";
 
     private readonly ISettingsStateService _settingsStateService;
     private readonly IGalleryStateService _galleryStateService;
@@ -36,7 +34,7 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
         _logger.LogInformation("Atomic Art state restore started.");
 
         await RestoreSectionAsync(
-            SettingsSectionName,
+            SettingsStateSection.KeyValue,
             () => _settingsStateService.ApplySavedSettingsAsync(ct),
             ct).ConfigureAwait(false);
         await RestoreSectionAsync(
@@ -44,7 +42,7 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
             () => target.RestoreGenerationPanelsAsync(ct),
             ct).ConfigureAwait(false);
         await RestoreSectionAsync(
-            GallerySectionName,
+            GalleryStateSection.KeyValue,
             () => RestoreGalleryAsync(target, ct),
             ct).ConfigureAwait(false);
         _logger.LogInformation("Atomic Art state restore completed.");

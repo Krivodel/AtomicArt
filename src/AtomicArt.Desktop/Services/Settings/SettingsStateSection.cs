@@ -6,11 +6,12 @@ namespace AtomicArt.Desktop.Services.Settings;
 
 public sealed class SettingsStateSection : IStateSection
 {
-    private const string SectionKey = "settings";
-    private const int CurrentSchemaVersion = 1;
+    public const string KeyValue = "settings";
     public const string SectionFileName = "settings.json";
 
-    public string Key => SectionKey;
+    private const int CurrentSchemaVersion = 1;
+
+    public string Key => KeyValue;
     public string FileName => SectionFileName;
     public int SchemaVersion => CurrentSchemaVersion;
     public Type PayloadType => typeof(SettingsState);
