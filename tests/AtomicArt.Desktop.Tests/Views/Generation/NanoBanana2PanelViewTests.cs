@@ -57,11 +57,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             string unsupportedResolution = GetSelectedModel(viewModel).Resolutions.Last();
             ImageModelOption modelWithoutResolution = viewModel.AvailableModels.Single(model =>
                 !model.Resolutions.Contains(unsupportedResolution, StringComparer.Ordinal));
@@ -135,11 +132,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             Window window = Show(view, ExpandedPanelWidth, ExpandedPanelHeight);
 
             try
@@ -171,10 +165,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
                 catalogApiClient,
                 imageModelOptionCatalog);
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(viewModel);
             Window window = Show(view);
 
             try
@@ -194,11 +185,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             Window window = Show(view);
 
             try
@@ -228,11 +216,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             Window window = Show(view);
 
             try
@@ -272,11 +257,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             Window window = Show(view);
 
             try
@@ -358,11 +340,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             Window window = Show(view);
 
             try
@@ -390,11 +369,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             Window window = Show(view);
 
             try
@@ -454,11 +430,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             LayoutTransformControl scaleHost = new()
             {
                 Child = view,
@@ -517,11 +490,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             Window window = Show(view);
 
             try
@@ -589,11 +559,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             Window window = Show(view);
 
             try
@@ -651,11 +618,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-            NanoBanana2PanelView view = new()
-            {
-                DataContext = viewModel
-            };
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel viewModel);
             Window window = Show(view);
 
             try
@@ -677,6 +641,67 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 window.Close();
             }
         });
+    }
+
+    private static NanoBanana2PanelView CreateView(
+        out UniversalNanoBananaPanelViewModel viewModel)
+    {
+        viewModel = CreateViewModel();
+
+        return CreateView(viewModel);
+    }
+
+    private static NanoBanana2PanelView CreateView(
+        UniversalNanoBananaPanelViewModel viewModel)
+    {
+        return new NanoBanana2PanelView
+        {
+            DataContext = viewModel
+        };
+    }
+
+    private static UniversalNanoBananaPanelViewModel CreateViewModel(
+        IGenerationModelCatalogApiClient? catalogApiClient = null,
+        IImageModelOptionCatalog? imageModelOptionCatalog = null)
+    {
+        IImageGenerationApiClient generationApiClient = new SuccessfulImageGenerationApiClient();
+        IGenerationLifecycleEventHub generationLifecycleEventHub = new TestGenerationLifecycleEventHub();
+        IGenerationRunDispatcher generationRunDispatcher =
+            GenerationRunDispatcherTestFactory.Create(
+                generationApiClient,
+                generationLifecycleEventHub);
+        IImageModelOptionCatalog modelOptionCatalog =
+            imageModelOptionCatalog ?? CreateLoadedImageModelOptionCatalog();
+
+        return new UniversalNanoBananaPanelViewModel(
+            new EmptyFilePickerService(),
+            new FixedSecretStore(TestGenerationCredentials.ProviderCredential),
+            catalogApiClient
+                ?? new FixedGenerationModelCatalogApiClient(
+                    ApiModelMetadataTestCatalog.LoadCatalog()),
+            modelOptionCatalog,
+            TestApiEndpointServiceFactory.Create(),
+            new ImmediateUiThreadDispatcher(),
+            new UniversalNanoBananaPanelModelScope(),
+            new NanoBanana2AttachmentsViewModel(
+                new NanoBanana2AttachmentValidator(new AttachedImageSignatureValidator()),
+                new PassThroughAttachedImagePreparationService(),
+                new NoOpPanelAttachmentStore()),
+            new NanoBanana2GenerationRunner(
+                new NanoBanana2GenerationRequestBuilder(),
+                generationRunDispatcher),
+            new NoOpGenerationPanelStateService(),
+            new NullImageViewerService(),
+            new NanoBanana2QuoteViewModel(new GenerationPricePreviewEstimator()),
+            new TestViewModelErrorHandler());
+    }
+
+    private static IImageModelOptionCatalog CreateLoadedImageModelOptionCatalog()
+    {
+        ImageModelOptionCatalog catalog = new();
+        catalog.Initialize(ApiModelMetadataTestCatalog.LoadCatalog());
+
+        return catalog;
     }
 
     private static ComboBox GetComboBox(NanoBanana2PanelView view, string name)
@@ -764,50 +789,6 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         }
 
         throw new InvalidOperationException($"Brush resource '{resourceKey}' was not found.");
-    }
-
-    private static UniversalNanoBananaPanelViewModel CreateViewModel(
-        IGenerationModelCatalogApiClient? catalogApiClient = null,
-        IImageModelOptionCatalog? imageModelOptionCatalog = null)
-    {
-        IImageGenerationApiClient generationApiClient = new SuccessfulImageGenerationApiClient();
-        IGenerationLifecycleEventHub generationLifecycleEventHub = new TestGenerationLifecycleEventHub();
-        IGenerationRunDispatcher generationRunDispatcher =
-            GenerationRunDispatcherTestFactory.Create(
-                generationApiClient,
-                generationLifecycleEventHub);
-        IImageModelOptionCatalog modelOptionCatalog =
-            imageModelOptionCatalog ?? CreateLoadedImageModelOptionCatalog();
-
-        return new UniversalNanoBananaPanelViewModel(
-            new EmptyFilePickerService(),
-            new FixedSecretStore(TestGenerationCredentials.ProviderCredential),
-            catalogApiClient
-                ?? new FixedGenerationModelCatalogApiClient(
-                    ApiModelMetadataTestCatalog.LoadCatalog()),
-            modelOptionCatalog,
-            TestApiEndpointServiceFactory.Create(),
-            new ImmediateUiThreadDispatcher(),
-            new UniversalNanoBananaPanelModelScope(),
-            new NanoBanana2AttachmentsViewModel(
-                new NanoBanana2AttachmentValidator(new AttachedImageSignatureValidator()),
-                new PassThroughAttachedImagePreparationService(),
-                new NoOpPanelAttachmentStore()),
-            new NanoBanana2GenerationRunner(
-                new NanoBanana2GenerationRequestBuilder(),
-                generationRunDispatcher),
-            new NoOpGenerationPanelStateService(),
-            new NullImageViewerService(),
-            new NanoBanana2QuoteViewModel(new GenerationPricePreviewEstimator()),
-            new TestViewModelErrorHandler());
-    }
-
-    private static IImageModelOptionCatalog CreateLoadedImageModelOptionCatalog()
-    {
-        ImageModelOptionCatalog catalog = new();
-        catalog.Initialize(ApiModelMetadataTestCatalog.LoadCatalog());
-
-        return catalog;
     }
 
     private sealed class FixedSecretStore : ISecretStore
