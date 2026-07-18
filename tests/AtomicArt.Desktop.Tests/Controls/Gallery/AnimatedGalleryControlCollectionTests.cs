@@ -16,41 +16,15 @@ public sealed class AnimatedGalleryControlCollectionTests : AnimatedGalleryContr
     [Fact]
     public void CollectionChanged_WhenAttached_RefreshesVisibleCards()
     {
-        Dispatch(() =>
-        {
-            ShowCollection((items, control, window) =>
-            {
-                items.Add(CreateItem());
-                window.CaptureRenderedFrame();
-
-                GetGalleryPanel(control)
-                    .Children
-                    .OfType<GenerationCardControl>()
-                    .Should()
-                    .HaveCount(2);
-            });
-        });
+        AssertCardCountAfterCollectionChange(2);
     }
 
     [Fact]
     public void CollectionChanged_WhenOperationsProvided_DoesNotRefreshVisibleCardsDirectly()
     {
-        Dispatch(() =>
-        {
-            RecordingGalleryOperations operations = new();
+        RecordingGalleryOperations operations = new();
 
-            ShowCollection(operations, (items, control, window) =>
-            {
-                items.Add(CreateItem());
-                window.CaptureRenderedFrame();
-
-                GetGalleryPanel(control)
-                    .Children
-                    .OfType<GenerationCardControl>()
-                    .Should()
-                    .ContainSingle();
-            });
-        });
+        AssertCardCountAfterCollectionChange(1, operations);
     }
 
     [Fact]
@@ -121,5 +95,25 @@ public sealed class AnimatedGalleryControlCollectionTests : AnimatedGalleryContr
         control.Operations = operations;
 
         Show(control, window => action(items, control, window));
+    }
+
+    private static void AssertCardCountAfterCollectionChange(
+        int expectedCount,
+        RecordingGalleryOperations? operations = null)
+    {
+        Dispatch(() =>
+        {
+            ShowCollection(operations, (items, control, window) =>
+            {
+                items.Add(CreateItem());
+                window.CaptureRenderedFrame();
+
+                GetGalleryPanel(control)
+                    .Children
+                    .OfType<GenerationCardControl>()
+                    .Should()
+                    .HaveCount(expectedCount);
+            });
+        });
     }
 }
