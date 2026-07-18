@@ -7,6 +7,7 @@ using Xunit;
 
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.State;
@@ -215,30 +216,16 @@ public sealed class AppStateStoreTests
         }
     }
 
-    private sealed class TestStateSection : IStateSection
+    private sealed class TestStateSection : TestStateSectionTestDouble
     {
-        public const string DefaultValue = "default";
-
-        public string Key => "test";
-        public string FileName => OwnedFileName;
-        public int SchemaVersion => 1;
-        public Type PayloadType => typeof(TestState);
-        public string OwnedFileName { get; init; } = "test.json";
-
-        public object CreateDefaultPayload()
-        {
-            return new TestState(DefaultValue);
-        }
-
-        public object DeserializePayload(
+        public override object DeserializePayload(
             int schemaVersion,
             JsonElement payload,
             JsonSerializerOptions options)
         {
             TestState? state = payload.Deserialize<TestState>(options);
 
-            return state ?? new TestState(DefaultValue);
+            return state ?? CreateDefaultState();
         }
     }
-    private sealed record TestState(string Value);
 }

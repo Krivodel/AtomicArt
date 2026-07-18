@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -11,6 +9,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.State;
@@ -81,7 +80,7 @@ public sealed class AppStateBootstrapperTests
             stateStore,
             NullLogger<StateWriteScheduler>.Instance,
             TimeSpan.FromHours(1));
-        TestStateSection section = new();
+        NonDeserializingTestStateSection section = new();
         AppStateBootstrapper bootstrapper = new(
             new RecordingSettingsStateService([]),
             new RecordingGalleryStateService([]),
@@ -103,7 +102,7 @@ public sealed class AppStateBootstrapperTests
             stateStore,
             NullLogger<StateWriteScheduler>.Instance,
             TimeSpan.FromHours(1));
-        TestStateSection section = new();
+        NonDeserializingTestStateSection section = new();
         RecordingFlushTarget target = new(
             () => scheduler.ScheduleWrite(section, new TestState("prompt")));
         AppStateBootstrapper bootstrapper = new(
@@ -301,25 +300,4 @@ public sealed class AppStateBootstrapperTests
         }
     }
 
-    private sealed class TestStateSection : IStateSection
-    {
-        public string Key => "test";
-        public string FileName => "test.json";
-        public int SchemaVersion => 1;
-        public Type PayloadType => typeof(TestState);
-
-        public object CreateDefaultPayload()
-        {
-            return new TestState("default");
-        }
-
-        public object DeserializePayload(
-            int schemaVersion,
-            JsonElement payload,
-            JsonSerializerOptions options)
-        {
-            throw new NotSupportedException("State deserialization is not used by this test.");
-        }
-    }
-    private sealed record TestState(string Value);
 }

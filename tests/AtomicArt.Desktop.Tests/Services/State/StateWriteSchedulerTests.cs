@@ -6,6 +6,7 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.Tests.TestDoubles;
 
 namespace AtomicArt.Desktop.Tests.Services.State;
 
@@ -15,7 +16,7 @@ public sealed class StateWriteSchedulerTests
     public async Task ScheduleWrite_WithImmediateWriteAfterDeferredWrite_SavesOnlyImmediateState()
     {
         RecordingAppStateStore stateStore = new();
-        TestStateSection section = new();
+        NonDeserializingTestStateSection section = new();
         IStateWriteScheduler scheduler = new StateWriteScheduler(
             stateStore,
             NullLogger<StateWriteScheduler>.Instance,
@@ -34,7 +35,7 @@ public sealed class StateWriteSchedulerTests
     public async Task FlushAsync_WithPendingWrites_WritesAllSections()
     {
         RecordingAppStateStore stateStore = new();
-        TestStateSection firstSection = new();
+        NonDeserializingTestStateSection firstSection = new();
         OtherTestStateSection secondSection = new();
         IStateWriteScheduler scheduler = new StateWriteScheduler(
             stateStore,
@@ -111,27 +112,6 @@ public sealed class StateWriteSchedulerTests
         }
     }
 
-    private sealed class TestStateSection : IStateSection
-    {
-        public string Key => "test";
-        public string FileName => "test.json";
-        public int SchemaVersion => 1;
-        public Type PayloadType => typeof(TestState);
-
-        public object CreateDefaultPayload()
-        {
-            return new TestState("default");
-        }
-
-        public object DeserializePayload(
-            int schemaVersion,
-            JsonElement payload,
-            JsonSerializerOptions options)
-        {
-            throw new NotSupportedException("State deserialization is not used by this test.");
-        }
-    }
-
     private sealed class OtherTestStateSection : IStateSection
     {
         public string Key => "other-test";
@@ -152,8 +132,6 @@ public sealed class StateWriteSchedulerTests
             throw new NotSupportedException("State deserialization is not used by this test.");
         }
     }
-
-    private sealed record TestState(string Value);
 
     private sealed record OtherTestState(string Value);
 }
