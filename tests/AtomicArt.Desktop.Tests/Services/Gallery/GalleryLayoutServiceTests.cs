@@ -111,7 +111,7 @@ public sealed class GalleryLayoutServiceTests
         ScrollViewer scrollViewer,
         IList<object> items)
     {
-        TestUiFrameScheduler frameScheduler = new();
+        DiscardingUiFrameScheduler frameScheduler = new();
         GalleryOperationCoordinator context = GalleryOperationCoordinatorTestFactory.Create(
             frameScheduler,
             new GalleryOperationRunnerRegistry(new List<IGalleryOperationRunner>()));
@@ -126,13 +126,5 @@ public sealed class GalleryLayoutServiceTests
             () => Task.CompletedTask);
 
         return context;
-    }
-
-    private sealed class TestUiFrameScheduler : IUiFrameScheduler
-    {
-        public void RequestAnimationFrame(Action<TimeSpan> frameAction)
-        {
-            ArgumentNullException.ThrowIfNull(frameAction);
-        }
     }
 }

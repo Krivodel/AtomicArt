@@ -115,23 +115,4 @@ public sealed class GalleryRemoveRunnerTests
 
         return context;
     }
-
-    private sealed class TestUiFrameScheduler : IUiFrameScheduler
-    {
-        private readonly Queue<Action<TimeSpan>> _frameActions = [];
-
-        public void RequestAnimationFrame(Action<TimeSpan> frameAction)
-        {
-            ArgumentNullException.ThrowIfNull(frameAction);
-
-            _frameActions.Enqueue(frameAction);
-        }
-
-        public void RunNextFrame(TimeSpan frameTime)
-        {
-            Action<TimeSpan> frameAction = _frameActions.Dequeue();
-
-            frameAction(frameTime);
-        }
-    }
 }

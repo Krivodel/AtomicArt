@@ -299,27 +299,4 @@ public sealed class GalleryOperationCoordinatorTests
             throw new InvalidOperationException("Runner failed.");
         }
     }
-
-    private sealed class TestUiFrameScheduler : IUiFrameScheduler
-    {
-        public int RequestedFrameCount => _requestedFrameCount;
-
-        private readonly Queue<Action<TimeSpan>> _frameActions = [];
-        private int _requestedFrameCount;
-
-        public void RequestAnimationFrame(Action<TimeSpan> frameAction)
-        {
-            ArgumentNullException.ThrowIfNull(frameAction);
-
-            _requestedFrameCount++;
-            _frameActions.Enqueue(frameAction);
-        }
-
-        public void RunNextFrame(TimeSpan frameTime)
-        {
-            Action<TimeSpan> frameAction = _frameActions.Dequeue();
-
-            frameAction(frameTime);
-        }
-    }
 }

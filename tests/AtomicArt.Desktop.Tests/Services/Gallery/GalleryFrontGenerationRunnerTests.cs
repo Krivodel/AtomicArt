@@ -276,25 +276,4 @@ public sealed class GalleryFrontGenerationRunnerTests
     }
 
     private sealed record AppliedFrame(Control Control, MotionFrame Frame);
-
-    private sealed class TestUiFrameScheduler : IUiFrameScheduler
-    {
-        public bool HasQueuedFrame => _frameActions.Count > 0;
-
-        private readonly Queue<Action<TimeSpan>> _frameActions = [];
-
-        public void RequestAnimationFrame(Action<TimeSpan> frameAction)
-        {
-            ArgumentNullException.ThrowIfNull(frameAction);
-
-            _frameActions.Enqueue(frameAction);
-        }
-
-        public void RunNextFrame(TimeSpan frameTime)
-        {
-            Action<TimeSpan> frameAction = _frameActions.Dequeue();
-
-            frameAction(frameTime);
-        }
-    }
 }

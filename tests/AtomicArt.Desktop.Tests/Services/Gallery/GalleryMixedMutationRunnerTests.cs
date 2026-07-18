@@ -15,7 +15,7 @@ public sealed class GalleryMixedMutationRunnerTests
     [Fact]
     public async Task RunAsync_WhenMultipleMixedMutationsAreBatched_UsesLastFinalItems()
     {
-        TestUiFrameScheduler frameScheduler = new();
+        DiscardingUiFrameScheduler frameScheduler = new();
         GalleryAnimationScheduler animationScheduler = new(frameScheduler);
         GalleryLayoutService layout = new();
         GalleryMotionAnimator animator = GalleryMotionAnimatorTestFactory.Create(
@@ -42,7 +42,7 @@ public sealed class GalleryMixedMutationRunnerTests
     }
 
     private static GalleryOperationCoordinator CreateContext(
-        TestUiFrameScheduler frameScheduler,
+        IUiFrameScheduler frameScheduler,
         IList<object> items)
     {
         GalleryOperationCoordinator context = GalleryOperationCoordinatorTestFactory.Create(
@@ -58,13 +58,5 @@ public sealed class GalleryMixedMutationRunnerTests
             () => Task.CompletedTask);
 
         return context;
-    }
-
-    private sealed class TestUiFrameScheduler : IUiFrameScheduler
-    {
-        public void RequestAnimationFrame(Action<TimeSpan> frameAction)
-        {
-            ArgumentNullException.ThrowIfNull(frameAction);
-        }
     }
 }

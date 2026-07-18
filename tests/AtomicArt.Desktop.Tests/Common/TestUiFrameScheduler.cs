@@ -1,6 +1,6 @@
 using AtomicArt.Desktop.Services.GalleryAnimation;
 
-namespace AtomicArt.Desktop.Tests.Controls.Gallery;
+namespace AtomicArt.Desktop.Tests;
 
 internal sealed class TestUiFrameScheduler : IUiFrameScheduler
 {

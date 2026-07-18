@@ -161,26 +161,4 @@ public sealed class GalleryAnimationSchedulerTests
     }
 
     private sealed record AppliedFrame(Control Control, MotionFrame Frame);
-
-    private sealed class TestUiFrameScheduler : IUiFrameScheduler
-    {
-        private readonly Queue<Action<TimeSpan>> _frameActions = [];
-
-        public int RequestedFrameCount { get; private set; }
-
-        public void RequestAnimationFrame(Action<TimeSpan> frameAction)
-        {
-            ArgumentNullException.ThrowIfNull(frameAction);
-
-            RequestedFrameCount++;
-            _frameActions.Enqueue(frameAction);
-        }
-
-        public void RunNextFrame(TimeSpan frameTime)
-        {
-            Action<TimeSpan> frameAction = _frameActions.Dequeue();
-
-            frameAction(frameTime);
-        }
-    }
 }
