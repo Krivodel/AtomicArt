@@ -116,19 +116,8 @@ public sealed class JsonModelMetadataStartupLoaderTests
         (JsonObject catalogJson, JsonObject modelJson) = CreateValidModelJson();
         modelJson["profiles"] = new JsonArray("missing");
         catalogJson["profiles"] = new JsonObject();
-        string path = CreateTempFile(catalogJson.ToJsonString());
 
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*unknown profile*");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
+        AssertLoadFails(catalogJson.ToJsonString(), "*unknown profile*");
     }
 
     [Fact]
@@ -148,78 +137,32 @@ public sealed class JsonModelMetadataStartupLoaderTests
     [Fact]
     public void Load_WithEmptyJson_ThrowsInvalidOperationException()
     {
-        string path = CreateTempFile(string.Empty);
-
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*empty*");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
+        AssertLoadFails(string.Empty, "*empty*");
     }
 
     [Fact]
     public void Load_WithInvalidJson_ThrowsInvalidOperationException()
     {
-        string path = CreateTempFile("{");
-
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*malformed JSON*");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
+        AssertLoadFails("{", "*malformed JSON*");
     }
 
     [Fact]
     public void Load_WithEmptyCatalog_ThrowsInvalidOperationException()
     {
-        string path = CreateTempFile(
+        const string Json =
             """
             {
               "models": []
             }
-            """);
+            """;
 
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*empty catalog*");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
+        AssertLoadFails(Json, "*empty catalog*");
     }
 
     [Fact]
     public void Load_WithDuplicateModelIds_ThrowsInvalidOperationException()
     {
-        string path = CreateTempFile(CreateJsonWithDuplicateModelId());
-
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage("*duplicate model identifier*");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
+        AssertLoadFails(CreateJsonWithDuplicateModelId(), "*duplicate model identifier*");
     }
 
     [Theory]
@@ -228,38 +171,19 @@ public sealed class JsonModelMetadataStartupLoaderTests
     public void Load_WithMissingRequiredProperty_ThrowsInvalidOperationException(
         string propertyName)
     {
-        string path = CreateTempFile(CreateJsonWithoutModelProperty(propertyName));
-
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage($"*{propertyName}*");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
+        AssertLoadFails(
+            CreateJsonWithoutModelProperty(propertyName),
+            $"*{propertyName}*");
     }
 
     [Fact]
     public void Load_WithEmptyResolutions_ThrowsInvalidOperationException()
     {
         const string PropertyName = "resolutions";
-        string path = CreateTempFile(CreateJsonWithEmptyModelArray(PropertyName));
 
-        try
-        {
-            Action action = () => Load(path);
-
-            action.Should().Throw<InvalidOperationException>()
-                .WithMessage($"*{PropertyName}*");
-        }
-        finally
-        {
-            DeleteFileDirectory(path);
-        }
+        AssertLoadFails(
+            CreateJsonWithEmptyModelArray(PropertyName),
+            $"*{PropertyName}*");
     }
 
     [Theory]
@@ -362,6 +286,23 @@ public sealed class JsonModelMetadataStartupLoaderTests
         return JsonModelMetadataStartupLoader.Load(
             path,
             new FixedGenerationModelCatalogJsonSource(json));
+    }
+
+    private static void AssertLoadFails(string content, string messageWildcard)
+    {
+        string path = CreateTempFile(content);
+
+        try
+        {
+            Action action = () => Load(path);
+
+            action.Should().Throw<InvalidOperationException>()
+                .WithMessage(messageWildcard);
+        }
+        finally
+        {
+            DeleteFileDirectory(path);
+        }
     }
 
     private static void DeleteFileDirectory(string path)
