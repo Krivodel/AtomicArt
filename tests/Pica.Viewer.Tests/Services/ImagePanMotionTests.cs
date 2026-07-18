@@ -21,14 +21,10 @@ public sealed class ImagePanMotionTests
     [Fact]
     public void Move_WithImmediateMode_AppliesOffsetImmediately()
     {
-        ImagePanMotion motion = new();
-        motion.Begin(new Point(-50d, -50d), StartedAt);
-
-        motion.Move(
+        ImagePanMotion motion = CreateMotion(
+            new Point(-50d, -50d),
             new Vector(20d, 10d),
-            ImagePanMotionMode.Immediate,
-            PanBounds,
-            StartedAt.AddMilliseconds(16d));
+            ImagePanMotionMode.Immediate);
 
         motion.CurrentOffset.Should().Be(new Point(-30d, -40d));
         motion.IsActive.Should().BeFalse();
@@ -105,29 +101,35 @@ public sealed class ImagePanMotionTests
         motion.CurrentOffset.Y.Should().Be(-50d);
     }
 
-    private static ImagePanMotion CreateSmoothMotion()
+    private static ImagePanMotion CreateMotion(
+        Point initialOffset,
+        Vector movement,
+        ImagePanMotionMode mode)
     {
         ImagePanMotion motion = new();
-        motion.Begin(new Point(-50d, -50d), StartedAt);
+        motion.Begin(initialOffset, StartedAt);
         motion.Move(
-            new Vector(20d, 0d),
-            ImagePanMotionMode.Smooth,
+            movement,
+            mode,
             PanBounds,
             StartedAt.AddMilliseconds(16d));
 
         return motion;
     }
 
+    private static ImagePanMotion CreateSmoothMotion()
+    {
+        return CreateMotion(
+            new Point(-50d, -50d),
+            new Vector(20d, 0d),
+            ImagePanMotionMode.Smooth);
+    }
+
     private static ImagePanMotion CreateInertiaMotion()
     {
-        ImagePanMotion motion = new();
-        motion.Begin(new Point(-80d, -50d), StartedAt);
-        motion.Move(
+        return CreateMotion(
+            new Point(-80d, -50d),
             new Vector(20d, 0d),
-            ImagePanMotionMode.SmoothWithInertia,
-            PanBounds,
-            StartedAt.AddMilliseconds(16d));
-
-        return motion;
+            ImagePanMotionMode.SmoothWithInertia);
     }
 }
