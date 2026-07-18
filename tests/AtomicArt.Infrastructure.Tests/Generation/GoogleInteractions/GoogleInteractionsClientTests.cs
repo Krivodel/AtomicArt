@@ -26,10 +26,7 @@ public sealed class GoogleInteractionsClientTests
             HttpStatusCode.OK,
             """{"status":"completed"}""");
 
-        string responseJson = await context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        string responseJson = await context.CreateInteractionAsync();
 
         responseJson.Should().Be("""{"status":"completed"}""");
         HttpRequestMessage request = context.Handler.Requests.Single();
@@ -61,10 +58,7 @@ public sealed class GoogleInteractionsClientTests
             statusCode,
             """{"error":"secret detail"}""");
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        Func<Task> act = () => context.CreateInteractionAsync();
 
         FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
             await act.Should()
@@ -79,19 +73,14 @@ public sealed class GoogleInteractionsClientTests
     {
         const string responseJson =
             """{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Requested model is unavailable in this region."}}""";
-        RecordingClientLogger logger = new();
-        using ClientTestContext context = CreateClient(
+        using ClientTestContext context = CreateRecordingClient(
             HttpStatusCode.Forbidden,
-            responseJson,
-            logger);
+            responseJson);
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        Func<Task> act = () => context.CreateInteractionAsync();
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = string.Join(Environment.NewLine, logger.Messages);
+        string logText = string.Join(Environment.NewLine, context.LogMessages);
         logText.Should().Contain("provider code 403");
         logText.Should().Contain("provider status PERMISSION_DENIED");
         logText.Should().Contain("Requested model is unavailable in this region.");
@@ -103,23 +92,18 @@ public sealed class GoogleInteractionsClientTests
     {
         const string responseJson =
             """{"error":{"code":"INVALID_ARGUMENT","status":"INVALID_ARGUMENT","message":"Request format is invalid."}}""";
-        RecordingClientLogger logger = new();
-        using ClientTestContext context = CreateClient(
+        using ClientTestContext context = CreateRecordingClient(
             HttpStatusCode.BadRequest,
-            responseJson,
-            logger);
+            responseJson);
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        Func<Task> act = () => context.CreateInteractionAsync();
 
         FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
             await act.Should()
             .ThrowAsync<ImageGenerationProviderException>()
             .WithMessage("The generation provider returned an error.");
         assertions.Which.FailureKind.Should().Be(ImageGenerationProviderFailureKind.RequestRejected);
-        string logText = logger.Messages.Last();
+        string logText = context.LogMessages.Last();
         logText.Should().Contain("provider status INVALID_ARGUMENT");
         logText.Should().Contain("provider message Request format is invalid.");
     }
@@ -131,19 +115,14 @@ public sealed class GoogleInteractionsClientTests
         string responseJson =
             """{"error":{"code":400,"status":"INVALID_ARGUMENT","message":"Encoded value __BASE64__ was rejected."}}"""
                 .Replace("__BASE64__", base64Fragment, StringComparison.Ordinal);
-        RecordingClientLogger logger = new();
-        using ClientTestContext context = CreateClient(
+        using ClientTestContext context = CreateRecordingClient(
             HttpStatusCode.BadRequest,
-            responseJson,
-            logger);
+            responseJson);
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        Func<Task> act = () => context.CreateInteractionAsync();
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = string.Join(Environment.NewLine, logger.Messages);
+        string logText = string.Join(Environment.NewLine, context.LogMessages);
         logText.Should().Contain(base64Fragment);
         logText.Should().NotContain("[REDACTED");
     }
@@ -164,19 +143,16 @@ public sealed class GoogleInteractionsClientTests
               }
             }
             """;
-        RecordingClientLogger logger = new();
-        using ClientTestContext context = CreateClient(
+        using ClientTestContext context = CreateRecordingClient(
             HttpStatusCode.BadRequest,
-            responseJson,
-            logger);
+            responseJson);
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
+        Func<Task> act = () => context.CreateInteractionAsync(
             requestJson,
-            providerCredential,
-            CancellationToken.None);
+            providerCredential);
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = string.Join(Environment.NewLine, logger.Messages);
+        string logText = string.Join(Environment.NewLine, context.LogMessages);
         logText.Should().Contain("PRIVATE-PROMPT");
         logText.Should().Contain("KEY-SECRET");
         logText.Should().Contain("iVBORw0KGgo");
@@ -193,19 +169,14 @@ public sealed class GoogleInteractionsClientTests
     {
         const string responseJson =
             """{"error":{"code":400,"status":"INVALID_ARGUMENT","message":"Potentially echoed private input."}}""";
-        RecordingClientLogger logger = new();
-        using ClientTestContext context = CreateClient(
+        using ClientTestContext context = CreateRecordingClient(
             HttpStatusCode.BadRequest,
-            responseJson,
-            logger);
+            responseJson);
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
-            "{malformed request",
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        Func<Task> act = () => context.CreateInteractionAsync("{malformed request");
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = string.Join(Environment.NewLine, logger.Messages);
+        string logText = string.Join(Environment.NewLine, context.LogMessages);
         logText.Should().Contain("Potentially echoed private input.");
         logText.Should().NotContain("[REDACTED");
     }
@@ -223,19 +194,14 @@ public sealed class GoogleInteractionsClientTests
                 message = providerMessage
             }
         });
-        RecordingClientLogger logger = new();
-        using ClientTestContext context = CreateClient(
+        using ClientTestContext context = CreateRecordingClient(
             HttpStatusCode.TooManyRequests,
-            responseJson,
-            logger);
+            responseJson);
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        Func<Task> act = () => context.CreateInteractionAsync();
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = logger.Messages.Last();
+        string logText = context.LogMessages.Last();
         logText.Should().Contain("provider code 429");
         logText.Should().Contain("provider status RESOURCE_EXHAUSTED");
         logText.Should().Contain(new string('x', 512));
@@ -255,19 +221,14 @@ public sealed class GoogleInteractionsClientTests
                 message = providerMessage
             }
         });
-        RecordingClientLogger logger = new();
-        using ClientTestContext context = CreateClient(
+        using ClientTestContext context = CreateRecordingClient(
             HttpStatusCode.BadRequest,
-            responseJson,
-            logger);
+            responseJson);
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        Func<Task> act = () => context.CreateInteractionAsync();
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>();
-        string logText = logger.Messages.Last();
+        string logText = context.LogMessages.Last();
         logText.Should().Contain("provider message First line Second segment done.");
         logText.Should().NotContain("\r");
         logText.Should().NotContain("\n");
@@ -282,20 +243,15 @@ public sealed class GoogleInteractionsClientTests
         string responseJson,
         string expectedBodyKind)
     {
-        RecordingClientLogger logger = new();
-        using ClientTestContext context = CreateClient(
+        using ClientTestContext context = CreateRecordingClient(
             HttpStatusCode.BadRequest,
-            responseJson,
-            logger);
+            responseJson);
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        Func<Task> act = () => context.CreateInteractionAsync();
 
         await act.Should().ThrowAsync<ImageGenerationProviderException>()
             .WithMessage("The generation provider returned an error.");
-        string logText = logger.Messages.Last();
+        string logText = context.LogMessages.Last();
         logText.Should().Contain($"Error body {expectedBodyKind}");
     }
 
@@ -307,10 +263,7 @@ public sealed class GoogleInteractionsClientTests
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
             (HttpStatusCode.OK, """{"status":"completed"}"""));
 
-        string responseJson = await context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        string responseJson = await context.CreateInteractionAsync();
 
         responseJson.Should().Be("""{"status":"completed"}""");
         context.Handler.Requests.Should().HaveCount(3);
@@ -326,10 +279,7 @@ public sealed class GoogleInteractionsClientTests
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""),
             (HttpStatusCode.InternalServerError, """{"error":"flex unavailable"}"""));
 
-        Func<Task> act = () => context.Client.CreateInteractionAsync(
-            CreateRequestJson(),
-            TestGenerationCredentials.ProviderCredential,
-            CancellationToken.None);
+        Func<Task> act = () => context.CreateInteractionAsync();
 
         FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
             await act.Should()
@@ -346,17 +296,32 @@ public sealed class GoogleInteractionsClientTests
         return CreateClient(
             statusCode,
             responseJson,
-            NullLogger<GoogleInteractionsClient>.Instance);
+            NullLogger<GoogleInteractionsClient>.Instance,
+            null);
+    }
+
+    private static ClientTestContext CreateRecordingClient(
+        HttpStatusCode statusCode,
+        string responseJson)
+    {
+        RecordingClientLogger logger = new();
+
+        return CreateClient(
+            statusCode,
+            responseJson,
+            logger,
+            logger);
     }
 
     private static ClientTestContext CreateClient(
         HttpStatusCode statusCode,
         string responseJson,
-        ILogger<GoogleInteractionsClient> logger)
+        ILogger<GoogleInteractionsClient> logger,
+        RecordingClientLogger? recordingLogger)
     {
         TestHttpMessageHandler handler = new(statusCode, responseJson);
 
-        return CreateClient(handler, logger);
+        return CreateClient(handler, logger, recordingLogger);
     }
 
     private static ClientTestContext CreateClient(
@@ -366,14 +331,16 @@ public sealed class GoogleInteractionsClientTests
 
         return CreateClient(
             handler,
-            NullLogger<GoogleInteractionsClient>.Instance);
+            NullLogger<GoogleInteractionsClient>.Instance,
+            null);
     }
 
     private static ClientTestContext CreateClient(
         TestHttpMessageHandler handler,
-        ILogger<GoogleInteractionsClient> logger)
+        ILogger<GoogleInteractionsClient> logger,
+        RecordingClientLogger? recordingLogger)
     {
-        return new ClientTestContext(handler, logger);
+        return new ClientTestContext(handler, logger, recordingLogger);
     }
 
     private static string CreateRequestJson()
@@ -385,19 +352,39 @@ public sealed class GoogleInteractionsClientTests
     {
         public GoogleInteractionsClient Client { get; }
         public TestHttpMessageHandler Handler { get; }
+        public IReadOnlyList<string> LogMessages =>
+            _recordingLogger?.Messages ?? Array.Empty<string>();
 
         private readonly HttpClient _httpClient;
+        private readonly RecordingClientLogger? _recordingLogger;
 
         public ClientTestContext(
             TestHttpMessageHandler handler,
-            ILogger<GoogleInteractionsClient> logger)
+            ILogger<GoogleInteractionsClient> logger,
+            RecordingClientLogger? recordingLogger)
         {
+            ArgumentNullException.ThrowIfNull(handler);
+            ArgumentNullException.ThrowIfNull(logger);
+
             Handler = handler;
+            _recordingLogger = recordingLogger;
             _httpClient = new HttpClient(handler)
             {
                 BaseAddress = new Uri("https://example.invalid")
             };
             Client = new GoogleInteractionsClient(_httpClient, logger);
+        }
+
+        public Task<string> CreateInteractionAsync(
+            string? requestJson = null,
+            string providerCredential = TestGenerationCredentials.ProviderCredential)
+        {
+            string request = requestJson ?? CreateRequestJson();
+
+            return Client.CreateInteractionAsync(
+                request,
+                providerCredential,
+                CancellationToken.None);
         }
 
         public void Dispose()
