@@ -520,10 +520,10 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 panel.BorderThickness.Left.Should().BeGreaterThan(0d);
                 panel.CornerRadius.TopLeft.Should().BeGreaterThan(0d);
                 opacityTransition.Duration.Should().Be(TimeSpan.FromMilliseconds(150d));
-                panel.Opacity.Should().BeGreaterThan(0d).And.BeLessThan(1d);
-                motionScale.ScaleX.Should().BeGreaterThan(0.94d).And.BeLessThan(1d);
-                motionScale.ScaleY.Should().BeGreaterThan(0.94d).And.BeLessThan(1d);
-                motionTranslate.Y.Should().BeGreaterThan(-10d).And.BeLessThan(0d);
+                AssertTemperaturePanelAnimating(
+                    panel,
+                    motionScale,
+                    motionTranslate);
 
                 await Task.Delay(TimeSpan.FromMilliseconds(100d));
 
@@ -538,10 +538,10 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
                 await Task.Delay(TimeSpan.FromMilliseconds(75d));
 
-                panel.Opacity.Should().BeGreaterThan(0d).And.BeLessThan(1d);
-                motionScale.ScaleX.Should().BeGreaterThan(0.94d).And.BeLessThan(1d);
-                motionScale.ScaleY.Should().BeGreaterThan(0.94d).And.BeLessThan(1d);
-                motionTranslate.Y.Should().BeGreaterThan(-10d).And.BeLessThan(0d);
+                AssertTemperaturePanelAnimating(
+                    panel,
+                    motionScale,
+                    motionTranslate);
 
                 await Task.Delay(TimeSpan.FromMilliseconds(105d));
 
@@ -756,6 +756,17 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
         panelBounds.Contains(transformedBounds.TopLeft).Should().BeTrue();
         panelBounds.Contains(transformedBounds.BottomRight).Should().BeTrue();
+    }
+
+    private static void AssertTemperaturePanelAnimating(
+        Border panel,
+        ScaleTransform motionScale,
+        TranslateTransform motionTranslate)
+    {
+        panel.Opacity.Should().BeGreaterThan(0d).And.BeLessThan(1d);
+        motionScale.ScaleX.Should().BeGreaterThan(0.94d).And.BeLessThan(1d);
+        motionScale.ScaleY.Should().BeGreaterThan(0.94d).And.BeLessThan(1d);
+        motionTranslate.Y.Should().BeGreaterThan(-10d).And.BeLessThan(0d);
     }
 
     private static double GetPromptMinimumHeight(NanoBanana2PanelView view)
