@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using AtomicArt.Infrastructure.Generation.GoogleInteractions;
+
 namespace AtomicArt.Api.Tests.Controllers;
 
 internal static class ApiTestAppSettingsJson
@@ -15,7 +17,7 @@ internal static class ApiTestAppSettingsJson
             }
           },
           "GoogleInteractions": {
-            "BaseUrl": "https://generativelanguage.googleapis.com",
+            "BaseUrl": {{JsonSerializer.Serialize(GoogleInteractionsOptions.DefaultBaseUrl)}},
             "TimeoutSeconds": 100
           },
           "TestGeneration": {

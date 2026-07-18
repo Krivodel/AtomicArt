@@ -436,21 +436,12 @@ public sealed class GenerationsControllerTests
 
     private static IConfiguration CreateConfiguration()
     {
-        Dictionary<string, string?> values = new(StringComparer.Ordinal)
-        {
-            [CreateGoogleInteractionsKey(nameof(GoogleInteractionsOptions.BaseUrl))] =
-                "https://generativelanguage.googleapis.com",
-            [CreateGoogleInteractionsKey(nameof(GoogleInteractionsOptions.TimeoutSeconds))] = "30"
-        };
+        Dictionary<string, string?> values =
+            GoogleInteractionsTestConfiguration.CreateWithDefaultBaseUrl();
 
         return new ConfigurationBuilder()
             .AddInMemoryCollection(values)
             .Build();
-    }
-
-    private static string CreateGoogleInteractionsKey(string key)
-    {
-        return $"{GoogleInteractionsOptions.SectionName}:{key}";
     }
 
     private static bool CommandHasSingleNullAttachedImage(CreateImageGenerationCommand command)

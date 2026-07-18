@@ -9,6 +9,7 @@ using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Infrastructure.Generation.GoogleInteractions;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Infrastructure.Tests;
 
@@ -118,10 +119,7 @@ public sealed class DependencyInjectionTests
     private static IConfiguration CreateConfiguration(
         IDictionary<string, string?>? additionalValues = null)
     {
-        Dictionary<string, string?> values = new(StringComparer.Ordinal)
-        {
-            [CreateGoogleInteractionsKey(nameof(GoogleInteractionsOptions.TimeoutSeconds))] = "30"
-        };
+        Dictionary<string, string?> values = GoogleInteractionsTestConfiguration.Create();
 
         if (additionalValues is not null)
         {
@@ -134,11 +132,6 @@ public sealed class DependencyInjectionTests
         return new ConfigurationBuilder()
             .AddInMemoryCollection(values)
             .Build();
-    }
-
-    private static string CreateGoogleInteractionsKey(string key)
-    {
-        return $"{GoogleInteractionsOptions.SectionName}:{key}";
     }
 
     private static string CreateTestGenerationKey(string key)
