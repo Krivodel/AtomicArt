@@ -27,14 +27,13 @@ public sealed class CreateImageGenerationHandlerTests
     public async Task Handle_WithValidCommand_ReturnsBatchWithImageContent()
     {
         Guid plannedBatchId = Guid.Empty;
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock(captureBatchId: batchId => plannedBatchId = batchId);
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = CreateHandler(
-            outputPlanner.Object,
-            contentProvider.Object);
-        CreateImageGenerationCommand command = CreateCommand();
 
-        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
+        (
+            GenerationBatchDto batch,
+            Mock<IImageGenerationOutputPlanner> outputPlanner,
+            Mock<IImageGenerationContentProvider> contentProvider) =
+            await HandleDefaultRequestSuccessfullyAsync(
+                captureBatchId: batchId => plannedBatchId = batchId);
 
         batch.BatchId.Should().Be(plannedBatchId);
         plannedBatchId.Should().NotBe(Guid.Empty);
@@ -76,14 +75,8 @@ public sealed class CreateImageGenerationHandlerTests
                 GenerationPriceSources.ActualProviderUsage),
             completedAtUtc,
             generationDuration);
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(content: content);
-        CreateImageGenerationHandler handler = CreateHandler(
-            outputPlanner.Object,
-            contentProvider.Object);
-        CreateImageGenerationCommand command = CreateCommand();
-
-        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
+        (GenerationBatchDto batch, _, _) =
+            await HandleDefaultRequestSuccessfullyAsync(content);
 
         GenerationItemDto item = batch.Items.Single();
         item.CompletedAtUtc.Should().Be(completedAtUtc);
@@ -102,14 +95,8 @@ public sealed class CreateImageGenerationHandlerTests
             "image/png",
             "iVBORw0KGgo=",
             GenerationDuration: TimeSpan.FromSeconds(-1));
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock(content: content);
-        CreateImageGenerationHandler handler = CreateHandler(
-            outputPlanner.Object,
-            contentProvider.Object);
-        CreateImageGenerationCommand command = CreateCommand();
-
-        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
+        (GenerationBatchDto batch, _, _) =
+            await HandleDefaultRequestSuccessfullyAsync(content);
 
         batch.Items.Single().GenerationDuration.Should().Be(TimeSpan.Zero);
     }
@@ -346,14 +333,9 @@ public sealed class CreateImageGenerationHandlerTests
         using TemporaryCurrentDirectory outputDirectory = new(
             typeof(CreateImageGenerationHandlerTests),
             nameof(Handle_WithValidRequest_DoesNotMutateServerState));
-        Mock<IImageGenerationOutputPlanner> outputPlanner = CreatePlannerMock();
-        Mock<IImageGenerationContentProvider> contentProvider = CreateContentProviderMock();
-        CreateImageGenerationHandler handler = CreateHandler(
-            outputPlanner.Object,
-            contentProvider.Object);
-        CreateImageGenerationCommand command = CreateCommand();
 
-        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
+        (GenerationBatchDto batch, _, _) =
+            await HandleDefaultRequestSuccessfullyAsync();
 
         GenerationItemDto item = batch.Items.Single();
         item.ImagePath.Should().BeNull();
@@ -445,6 +427,28 @@ public sealed class CreateImageGenerationHandlerTests
 
         return result.Value
             ?? throw new InvalidOperationException("Generation batch result is missing.");
+    }
+
+    private static async Task<(
+        GenerationBatchDto Batch,
+        Mock<IImageGenerationOutputPlanner> OutputPlanner,
+        Mock<IImageGenerationContentProvider> ContentProvider)>
+        HandleDefaultRequestSuccessfullyAsync(
+            ImageGenerationContentResult? content = null,
+            Action<Guid>? captureBatchId = null)
+    {
+        Mock<IImageGenerationOutputPlanner> outputPlanner =
+            CreatePlannerMock(captureBatchId: captureBatchId);
+        Mock<IImageGenerationContentProvider> contentProvider =
+            CreateContentProviderMock(content: content);
+        CreateImageGenerationHandler handler = CreateHandler(
+            outputPlanner.Object,
+            contentProvider.Object);
+        CreateImageGenerationCommand command = CreateCommand();
+
+        GenerationBatchDto batch = await HandleSuccessfullyAsync(handler, command);
+
+        return (batch, outputPlanner, contentProvider);
     }
 
     private static Mock<IImageGenerationOutputPlanner> CreatePlannerMock(
