@@ -16,10 +16,7 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
     {
         Dispatch(() =>
         {
-            TestUiFrameScheduler frameScheduler = new();
-            ResizeScenario scenario = ShowResizeScenario(frameScheduler);
-
-            try
+            RunResizeScenario((_, scenario) =>
             {
                 GenerationCardControl thirdCard = GetThirdCard(scenario.Control, scenario.Items);
 
@@ -31,60 +28,26 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
                 thirdCard = GetThirdCard(scenario.Control, scenario.Items);
                 AssertThirdCardMovedToWideLayout(thirdCard);
                 AssertAllCardsRendered(scenario);
-            }
-            finally
-            {
-                scenario.Window.Close();
-            }
+            });
         });
     }
 
     [Fact]
     public void ScrollViewerViewportChanged_WhenAttached_AnimatesExistingCardsToNewPositions()
     {
-        Dispatch(() =>
+        AssertScrollViewerResize((scrollViewer, scenario) =>
         {
-            TestUiFrameScheduler frameScheduler = new();
-            ResizeScenario scenario = ShowResizeScenario(frameScheduler);
-
-            try
-            {
-                GenerationCardControl thirdCard = GetThirdCard(scenario.Control, scenario.Items);
-                ScrollViewer scrollViewer = GetGalleryScrollViewer(scenario.Control);
-
-                scrollViewer.SetCurrentValue(ScrollViewer.ViewportProperty, new Size(980d, 640d));
-                scenario.Window.CaptureRenderedFrame();
-
-                AssertThirdCardMovedToWideLayout(thirdCard);
-            }
-            finally
-            {
-                scenario.Window.Close();
-            }
+            scrollViewer.SetCurrentValue(ScrollViewer.ViewportProperty, new Size(980d, 640d));
+            scenario.Window.CaptureRenderedFrame();
         });
     }
 
     [Fact]
     public void ScrollViewerBoundsChanged_WhenAttached_AnimatesExistingCardsToNewPositions()
     {
-        Dispatch(() =>
+        AssertScrollViewerResize((scrollViewer, _) =>
         {
-            TestUiFrameScheduler frameScheduler = new();
-            ResizeScenario scenario = ShowResizeScenario(frameScheduler);
-
-            try
-            {
-                GenerationCardControl thirdCard = GetThirdCard(scenario.Control, scenario.Items);
-                ScrollViewer scrollViewer = GetGalleryScrollViewer(scenario.Control);
-
-                scrollViewer.Arrange(new Rect(0d, 0d, 980d, 640d));
-
-                AssertThirdCardMovedToWideLayout(thirdCard);
-            }
-            finally
-            {
-                scenario.Window.Close();
-            }
+            scrollViewer.Arrange(new Rect(0d, 0d, 980d, 640d));
         });
     }
 
@@ -93,10 +56,7 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
     {
         Dispatch(() =>
         {
-            TestUiFrameScheduler frameScheduler = new();
-            DetachScenario scenario = ShowDetachScenario(frameScheduler);
-
-            try
+            RunDetachScenario((frameScheduler, scenario) =>
             {
                 Canvas galleryPanel = GetGalleryPanel(scenario.Control);
                 Canvas overlayCanvas = GetOverlayCanvas(scenario.Control);
@@ -107,11 +67,7 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
 
                 ChangeDetachedScene(scenario);
                 AssertDetachedSceneIgnoredChanges(frameScheduler, requestedFrameCount, galleryPanel, overlayCanvas);
-            }
-            finally
-            {
-                scenario.Window.Close();
-            }
+            });
         });
     }
 
@@ -120,10 +76,7 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
     {
         Dispatch(() =>
         {
-            TestUiFrameScheduler frameScheduler = new();
-            ResizeScenario scenario = ShowResizeScenario(frameScheduler);
-
-            try
+            RunResizeScenario((frameScheduler, scenario) =>
             {
                 scenario.Window.Width = 980d;
                 scenario.Window.CaptureRenderedFrame();
@@ -133,11 +86,7 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
 
                 AssertThirdCardAtWideLayout(thirdCard);
                 AssertIdentityTransform(thirdCard);
-            }
-            finally
-            {
-                scenario.Window.Close();
-            }
+            });
         });
     }
 
@@ -146,10 +95,7 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
     {
         Dispatch(() =>
         {
-            TestUiFrameScheduler frameScheduler = new();
-            ResizeScenario scenario = ShowResizeScenario(frameScheduler);
-
-            try
+            RunResizeScenario((frameScheduler, scenario) =>
             {
                 BeginWideResizeAnimation(scenario);
                 GenerationCardControl thirdCard = GetThirdCard(scenario.Control, scenario.Items);
@@ -165,11 +111,24 @@ public sealed class AnimatedGalleryControlResizeTests : AnimatedGalleryControlRe
 
                 AssertThirdCardAtNarrowLayout(thirdCard);
                 AssertIdentityTransform(thirdCard);
-            }
-            finally
+            });
+        });
+    }
+
+    private static void AssertScrollViewerResize(
+        Action<ScrollViewer, ResizeScenario> resize)
+    {
+        Dispatch(() =>
+        {
+            RunResizeScenario((_, scenario) =>
             {
-                scenario.Window.Close();
-            }
+                GenerationCardControl thirdCard = GetThirdCard(scenario.Control, scenario.Items);
+                ScrollViewer scrollViewer = GetGalleryScrollViewer(scenario.Control);
+
+                resize(scrollViewer, scenario);
+
+                AssertThirdCardMovedToWideLayout(thirdCard);
+            });
         });
     }
 }

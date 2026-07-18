@@ -27,6 +27,42 @@ public abstract class AnimatedGalleryControlResizeTestBase : AnimatedGalleryCont
         frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(2400d));
     }
 
+    private protected static void RunResizeScenario(
+        Action<TestUiFrameScheduler, ResizeScenario> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        TestUiFrameScheduler frameScheduler = new();
+        ResizeScenario scenario = ShowResizeScenario(frameScheduler);
+
+        try
+        {
+            action(frameScheduler, scenario);
+        }
+        finally
+        {
+            scenario.Window.Close();
+        }
+    }
+
+    private protected static void RunDetachScenario(
+        Action<TestUiFrameScheduler, DetachScenario> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        TestUiFrameScheduler frameScheduler = new();
+        DetachScenario scenario = ShowDetachScenario(frameScheduler);
+
+        try
+        {
+            action(frameScheduler, scenario);
+        }
+        finally
+        {
+            scenario.Window.Close();
+        }
+    }
+
     private protected static ResizeScenario ShowResizeScenario(TestUiFrameScheduler frameScheduler)
     {
         List<GenerationItemViewModel> items = CreateResizeItems();
