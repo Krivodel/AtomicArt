@@ -8,9 +8,10 @@ namespace AtomicArt.Desktop.Services.Generation.State;
 
 public sealed class PanelAttachmentStore : IPanelAttachmentStore
 {
-    private const string TrustedPathFailureMessage =
-        "Panel attachment path must stay inside State/Attachments and must not contain reparse points.";
-
+    private static readonly string TrustedPathFailureMessage =
+        TrustedPathGuard.CreateFailureMessage(
+            "Panel attachment path",
+            "State/Attachments");
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly IStatePathKeyEncoder _keyEncoder;
     private readonly IGenerationImageFormatRegistry _formatRegistry;

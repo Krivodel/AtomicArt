@@ -11,10 +11,10 @@ namespace AtomicArt.Desktop.Services;
 
 public sealed class ProtectedDesktopSecretStore : ISecretStore
 {
-    private const string TrustedPathFailureMessage =
-        "Secret path must stay inside Secrets and must not contain reparse points.";
     private const int MaxProtectedSecretFileBytes = 64 * 1024;
 
+    private static readonly string TrustedPathFailureMessage =
+        TrustedPathGuard.CreateFailureMessage("Secret path", "Secrets");
     private readonly ConcurrentDictionary<string, string> _temporarySecrets = new();
     private readonly IAtomicArtDataPathProvider? _pathProvider;
     private readonly string _secretsDirectory;

@@ -8,11 +8,13 @@ namespace AtomicArt.Desktop.Services;
 public sealed class TrustedImageFileService : ITrustedImageFileService
 {
     private const string InvalidImagePathMessage = "Image file path is not trusted.";
-    private const string TrustedPathFailureMessage =
-        "Trusted image directories must stay inside AtomicArt data root and must not contain reparse points.";
     private const long MaxTrustedImageBytes = GenerationImageContentValidator.DefaultMaxImageBytes;
     private const int SignatureReadBytes = 64;
 
+    private static readonly string TrustedPathFailureMessage =
+        TrustedPathGuard.CreateFailureMessage(
+            "Trusted image directories",
+            "AtomicArt data root");
     private readonly ILogger<TrustedImageFileService> _logger;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly IAtomicArtDataPathProvider _pathProvider;

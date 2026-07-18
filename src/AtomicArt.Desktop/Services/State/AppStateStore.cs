@@ -9,13 +9,12 @@ namespace AtomicArt.Desktop.Services.State;
 
 public sealed class AppStateStore : IAppStateStore
 {
-    private const string TrustedPathFailureMessage =
-        "State path must stay inside State and must not contain reparse points.";
-
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         WriteIndented = true
     };
+    private static readonly string TrustedPathFailureMessage =
+        TrustedPathGuard.CreateFailureMessage("State path", "State");
 
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly ILogger<AppStateStore> _logger;

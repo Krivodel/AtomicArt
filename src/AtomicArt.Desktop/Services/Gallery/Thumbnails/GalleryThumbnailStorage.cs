@@ -7,11 +7,11 @@ namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
 public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
 {
-    private const string TrustedPathFailureMessage =
-        "Gallery thumbnail path must stay inside Thumbnails and must not contain reparse points.";
     private const string TemporaryThumbnailDeleteFailureMessage =
         "Failed to delete temporary gallery thumbnail file.";
 
+    private static readonly string TrustedPathFailureMessage =
+        TrustedPathGuard.CreateFailureMessage("Gallery thumbnail path", "Thumbnails");
     private readonly ILogger<GalleryThumbnailStorage> _logger;
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly ITrustedImageFileService _trustedImageFileService;

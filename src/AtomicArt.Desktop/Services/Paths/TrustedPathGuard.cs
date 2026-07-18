@@ -9,6 +9,8 @@ namespace AtomicArt.Desktop.Services.Paths;
 
 internal static class TrustedPathGuard
 {
+    private const string FailureMessageFormat =
+        "{0} must stay inside {1} and must not contain reparse points.";
     private const int WindowsErrorFileNotFound = 2;
     private const int WindowsErrorPathNotFound = 3;
     private const int WindowsErrorNotFound = 1168;
@@ -23,6 +25,19 @@ internal static class TrustedPathGuard
     private const uint WindowsFileShareWrite = 0x00000002;
     private const uint WindowsFileFlagBackupSemantics = 0x02000000;
     private const uint WindowsOpenExisting = 3;
+
+    public static string CreateFailureMessage(
+        string pathDescription,
+        string trustedDirectoryDescription)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(pathDescription);
+        ArgumentException.ThrowIfNullOrWhiteSpace(trustedDirectoryDescription);
+
+        return string.Format(
+            FailureMessageFormat,
+            pathDescription,
+            trustedDirectoryDescription);
+    }
 
     public static bool IsInsideDirectory(string trustedDirectory, string path)
     {

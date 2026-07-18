@@ -6,9 +6,8 @@ namespace AtomicArt.Desktop.Services.Generation;
 
 public sealed class GenerationResultStorage : IGenerationResultStorage
 {
-    private const string TrustedPathFailureMessage =
-        "Generation result path must stay inside Art and must not contain reparse points.";
-
+    private static readonly string TrustedPathFailureMessage =
+        TrustedPathGuard.CreateFailureMessage("Generation result path", "Art");
     private readonly ILogger<GenerationResultStorage> _logger;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly GenerationImageFileNamePolicy _fileNamePolicy;
