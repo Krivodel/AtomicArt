@@ -575,18 +575,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         ErrorMessage = null;
 
-        try
-        {
-            await operation(ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, operationName);
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
+        await ViewModelOperationExecutor.ExecuteAsync(
+            _errorHandler,
+            errorMessage => ErrorMessage = errorMessage,
+            operation,
+            operationName,
+            ct);
     }
 
     private NanoBanana2GenerationParameters CreateGenerationParameters()

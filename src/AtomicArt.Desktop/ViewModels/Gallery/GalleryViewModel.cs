@@ -321,22 +321,16 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task ExecuteUserOperationAsync(
+    private Task ExecuteUserOperationAsync(
         Func<CancellationToken, Task> operation,
         string operationName,
         CancellationToken ct)
     {
-        try
-        {
-            await operation(ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, operationName);
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
+        return ViewModelOperationExecutor.ExecuteAsync(
+            _errorHandler,
+            errorMessage => ErrorMessage = errorMessage,
+            operation,
+            operationName,
+            ct);
     }
 }
