@@ -13,41 +13,27 @@ internal sealed class RecordingGalleryOperations : IAnimatedGalleryOperations, I
 
     public Task AppendBatchAsync(IReadOnlyList<object> items, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(items);
-        ct.ThrowIfCancellationRequested();
-
-        return Task.CompletedTask;
+        return CompleteCollectionOperation(items, ct);
     }
 
     public Task GenerateFrontAsync(IReadOnlyList<object> items, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(items);
-        ct.ThrowIfCancellationRequested();
-
-        return Task.CompletedTask;
+        return CompleteCollectionOperation(items, ct);
     }
 
     public Task RemoveAsync(Guid itemId, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
-
-        return Task.CompletedTask;
+        return CompleteOperation(ct);
     }
 
     public Task ApplyMixedMutationAsync(IReadOnlyList<object> finalItems, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(finalItems);
-        ct.ThrowIfCancellationRequested();
-
-        return Task.CompletedTask;
+        return CompleteCollectionOperation(finalItems, ct);
     }
 
     public Task RestoreSnapshotAsync(IReadOnlyList<object> finalItems, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(finalItems);
-        ct.ThrowIfCancellationRequested();
-
-        return Task.CompletedTask;
+        return CompleteCollectionOperation(finalItems, ct);
     }
 
     void IAnimatedGalleryOperationsRegistration.Attach(IAnimatedGalleryOperations operations)
@@ -58,5 +44,21 @@ internal sealed class RecordingGalleryOperations : IAnimatedGalleryOperations, I
     void IAnimatedGalleryOperationsRegistration.Detach(IAnimatedGalleryOperations operations)
     {
         _detachedOperations = operations;
+    }
+
+    private static Task CompleteCollectionOperation(
+        IReadOnlyList<object> items,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        return CompleteOperation(ct);
+    }
+
+    private static Task CompleteOperation(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        return Task.CompletedTask;
     }
 }
