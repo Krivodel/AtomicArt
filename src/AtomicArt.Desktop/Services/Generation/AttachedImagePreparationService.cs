@@ -403,12 +403,14 @@ public sealed class AttachedImagePreparationService :
             return null;
         }
 
-        if (pngBytes.LongLength <= selectedModel.MaxAttachedImageBytes)
+        AttachedImageDto? preparedImage = CreatePreparedPngIfFits(
+            fileName,
+            pngBytes,
+            selectedModel.MaxAttachedImageBytes);
+
+        if (preparedImage is not null)
         {
-            return CreatePreparedImage(
-                fileName,
-                AttachedImageEncodingFormat.Png,
-                pngBytes);
+            return preparedImage;
         }
 
         return TryResizeToFit(
@@ -657,9 +659,14 @@ public sealed class AttachedImagePreparationService :
                         return null;
                     }
 
-                    if (pngBytes.LongLength <= selectedModel.MaxAttachedImageBytes)
+                    AttachedImageDto? preparedImage = CreatePreparedPngIfFits(
+                        fileName,
+                        pngBytes,
+                        selectedModel.MaxAttachedImageBytes);
+
+                    if (preparedImage is not null)
                     {
-                        return CreatePreparedImage(fileName, format, pngBytes);
+                        return preparedImage;
                     }
 
                     minimumBytes = pngBytes;
@@ -753,6 +760,16 @@ public sealed class AttachedImagePreparationService :
         return selectedModel.SupportedAttachmentContentTypes.Contains(
             contentType,
             StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static AttachedImageDto? CreatePreparedPngIfFits(
+        string fileName,
+        byte[] content,
+        long maxAttachedImageBytes)
+    {
+        return content.LongLength <= maxAttachedImageBytes
+            ? CreatePreparedImage(fileName, AttachedImageEncodingFormat.Png, content)
+            : null;
     }
 
     private static AttachedImageDto CreatePreparedImage(
