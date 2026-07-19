@@ -212,12 +212,7 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
 
         _availableUpdate = update;
         IsGenerationActive = _generationActivityTracker.IsActive;
-        Message = string.Format(
-            CultureInfo.CurrentCulture,
-            UiStrings.UpdateAvailableFormat,
-            update.Version);
-        State = ApplicationUpdateState.Available;
-        IsNotificationOpen = true;
+        ShowAvailableUpdate(update);
     }
 
     private async Task MonitorForUpdatesAsync(CancellationToken ct)
@@ -253,6 +248,11 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
     }
 
     private void RestoreAvailableState(ApplicationUpdate update)
+    {
+        ShowAvailableUpdate(update);
+    }
+
+    private void ShowAvailableUpdate(ApplicationUpdate update)
     {
         Message = string.Format(
             CultureInfo.CurrentCulture,
