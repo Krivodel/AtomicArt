@@ -21,6 +21,27 @@ internal static class ServiceCollectionImplementationRegistrationExtensions
         return services;
     }
 
+    internal static IServiceCollection AddSharedSingletonAliases<TImplementation>(
+        this IServiceCollection services,
+        params Type[] serviceTypes)
+        where TImplementation : class
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(serviceTypes);
+
+        services.AddSingleton<TImplementation>();
+
+        foreach (Type serviceType in serviceTypes)
+        {
+            ArgumentNullException.ThrowIfNull(serviceType);
+            services.AddSingleton(
+                serviceType,
+                provider => provider.GetRequiredService<TImplementation>());
+        }
+
+        return services;
+    }
+
     internal static IServiceCollection AddSingletonImplementations(
         this IServiceCollection services,
         Type serviceType,

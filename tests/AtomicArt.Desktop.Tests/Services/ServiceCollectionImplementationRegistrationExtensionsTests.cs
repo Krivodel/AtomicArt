@@ -23,6 +23,21 @@ public sealed class ServiceCollectionImplementationRegistrationExtensionsTests
     }
 
     [Fact]
+    public void AddSharedSingletonAliases_WithConcreteType_ResolvesSameInstanceForEveryAlias()
+    {
+        ServiceCollection services = new();
+        services.AddSharedSingletonAliases<MemoryStream>(typeof(Stream), typeof(IDisposable));
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        MemoryStream concreteInstance = serviceProvider.GetRequiredService<MemoryStream>();
+        Stream streamInstance = serviceProvider.GetRequiredService<Stream>();
+        IDisposable disposableInstance = serviceProvider.GetRequiredService<IDisposable>();
+
+        streamInstance.Should().BeSameAs(concreteInstance);
+        disposableInstance.Should().BeSameAs(concreteInstance);
+    }
+
+    [Fact]
     public void AddSingletonImplementations_WithConcreteTypes_ResolvesSingletonCollection()
     {
         ServiceCollection services = new();

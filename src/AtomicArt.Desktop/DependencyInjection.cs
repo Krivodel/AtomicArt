@@ -113,12 +113,12 @@ public static class DependencyInjection
 
     private static IServiceCollection AddPlatformServices(this IServiceCollection services)
     {
-        services.AddSingleton<WindowStateService>();
-        services.AddSingleton<IWindowStateService>(provider => provider.GetRequiredService<WindowStateService>());
-        services.AddSingleton<IWindowAttachmentService>(provider => provider.GetRequiredService<WindowStateService>());
-        services.AddSingleton<TrayService>();
-        services.AddSingleton<ITrayService>(provider => provider.GetRequiredService<TrayService>());
-        services.AddSingleton<ITrayAttachmentService>(provider => provider.GetRequiredService<TrayService>());
+        services.AddSharedSingletonAliases<WindowStateService>(
+            typeof(IWindowStateService),
+            typeof(IWindowAttachmentService));
+        services.AddSharedSingletonAliases<TrayService>(
+            typeof(ITrayService),
+            typeof(ITrayAttachmentService));
         services.AddSingleton<IUiScaleService, UiScaleService>();
         services.AddSettingsDefinitionsByConvention();
         services.AddSettingsItemViewModelFactoriesByConvention();
@@ -130,12 +130,12 @@ public static class DependencyInjection
         services.AddSingleton<ISecretStore, ProtectedDesktopSecretStore>();
         services.AddSingleton<IAttachedImageSignatureValidator, AttachedImageSignatureValidator>();
         services.AddSingleton<AttachedImageFileReader>();
-        services.AddSingleton<ClipboardImageService>();
-        services.AddSingleton<IClipboardImageService>(provider => provider.GetRequiredService<ClipboardImageService>());
-        services.AddSingleton<IClipboardAttachmentService>(provider => provider.GetRequiredService<ClipboardImageService>());
-        services.AddSingleton<FilePickerService>();
-        services.AddSingleton<IFilePickerService>(provider => provider.GetRequiredService<FilePickerService>());
-        services.AddSingleton<IFilePickerAttachmentService>(provider => provider.GetRequiredService<FilePickerService>());
+        services.AddSharedSingletonAliases<ClipboardImageService>(
+            typeof(IClipboardImageService),
+            typeof(IClipboardAttachmentService));
+        services.AddSharedSingletonAliases<FilePickerService>(
+            typeof(IFilePickerService),
+            typeof(IFilePickerAttachmentService));
         services.AddSingleton<IDragDropImageService, DragDropImageService>();
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
         services.AddSingleton<IFileRevealService, FileRevealService>();
@@ -150,9 +150,9 @@ public static class DependencyInjection
 
     private static IServiceCollection AddDialogServices(this IServiceCollection services)
     {
-        services.AddSingleton<DialogService>();
-        services.AddSingleton<IDialogService>(provider => provider.GetRequiredService<DialogService>());
-        services.AddSingleton<IDialogWindowAttachmentService>(provider => provider.GetRequiredService<DialogService>());
+        services.AddSharedSingletonAliases<DialogService>(
+            typeof(IDialogService),
+            typeof(IDialogWindowAttachmentService));
         services.AddSingleton<GlobalExceptionService>();
 
         return services;
@@ -170,9 +170,8 @@ public static class DependencyInjection
         services.AddSingleton<GenerationDurationFormatter>();
         services.AddSingleton<GenerationPriceFormatter>();
         services.AddSingleton<GenerationPricePreviewEstimator>();
-        services.AddSingleton<GenerationImageContentValidator>();
-        services.AddSingleton<IGenerationImageContentValidator>(provider =>
-            provider.GetRequiredService<GenerationImageContentValidator>());
+        services.AddSharedSingletonAliases<GenerationImageContentValidator>(
+            typeof(IGenerationImageContentValidator));
         services.AddSingleton<GenerationImageFileNamePolicy>();
         services.AddSingleton<GalleryThumbnailSpecification>();
         services.AddSingleton<GalleryThumbnailImageFormat>();
@@ -197,11 +196,9 @@ public static class DependencyInjection
     {
         services.AddSingleton<ISukiToastManager, SukiToastManager>();
         services.AddSingleton<IApplicationUpdateService, VelopackApplicationUpdateService>();
-        services.AddSingleton<ApplicationUpdateRestartCoordinator>();
-        services.AddSingleton<IApplicationUpdateRestartCoordinator>(provider =>
-            provider.GetRequiredService<ApplicationUpdateRestartCoordinator>());
-        services.AddSingleton<IApplicationUpdateRestartAttachmentService>(provider =>
-            provider.GetRequiredService<ApplicationUpdateRestartCoordinator>());
+        services.AddSharedSingletonAliases<ApplicationUpdateRestartCoordinator>(
+            typeof(IApplicationUpdateRestartCoordinator),
+            typeof(IApplicationUpdateRestartAttachmentService));
 
         return services;
     }
