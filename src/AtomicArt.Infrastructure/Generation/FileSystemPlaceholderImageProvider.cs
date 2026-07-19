@@ -144,18 +144,8 @@ internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvi
         try
         {
             await using FileStream stream = OpenRead(path);
-
-            if (stream.Length <= 0)
-            {
-                return false;
-            }
-
-            if (stream.Length > maxImageBytes)
-            {
-                return false;
-            }
-
-            return await DetectContentTypeAsync(stream, ct).ConfigureAwait(false) is not null;
+            return await GetSupportedContentTypeAsync(stream, maxImageBytes, ct)
+                .ConfigureAwait(false) is not null;
         }
         catch (IOException exception)
         {
@@ -184,12 +174,8 @@ internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvi
         {
             await using FileStream stream = OpenRead(path);
 
-            if (stream.Length <= 0 || stream.Length > maxImageBytes)
-            {
-                return null;
-            }
-
-            string? contentType = await DetectContentTypeAsync(stream, ct).ConfigureAwait(false);
+            string? contentType = await GetSupportedContentTypeAsync(stream, maxImageBytes, ct)
+                .ConfigureAwait(false);
 
             if (contentType is null)
             {
@@ -223,6 +209,19 @@ internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvi
 
             return null;
         }
+    }
+
+    private static async Task<string?> GetSupportedContentTypeAsync(
+        FileStream stream,
+        long maxImageBytes,
+        CancellationToken ct)
+    {
+        if (stream.Length <= 0 || stream.Length > maxImageBytes)
+        {
+            return null;
+        }
+
+        return await DetectContentTypeAsync(stream, ct).ConfigureAwait(false);
     }
 
     private static FileStream OpenRead(string path)
