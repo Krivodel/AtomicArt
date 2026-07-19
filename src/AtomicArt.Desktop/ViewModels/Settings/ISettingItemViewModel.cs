@@ -1,9 +1,11 @@
+using CommunityToolkit.Mvvm.Input;
+
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public interface ISettingItemViewModel
 {
     string ActionText { get; }
-    System.Windows.Input.ICommand ActionCommand { get; }
+    IRelayCommand ActionCommand { get; }
     string DisplayName { get; }
     string? ErrorMessage { get; }
     bool HasErrorMessage { get; }

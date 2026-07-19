@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Services;
 
@@ -7,7 +8,7 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 public abstract class SettingItemViewModel : ObservableValidator, ISettingItemViewModel
 {
     public abstract string ActionText { get; }
-    public abstract System.Windows.Input.ICommand ActionCommand { get; }
+    public abstract IRelayCommand ActionCommand { get; }
     public string Key { get; }
     public int Order { get; }
     public string DisplayName { get; }
@@ -71,5 +72,8 @@ public abstract class SettingItemViewModel : ObservableValidator, ISettingItemVi
             value => ErrorMessage = value);
     }
 
-    protected abstract void NotifyActionCanExecuteChanged();
+    protected void NotifyActionCanExecuteChanged()
+    {
+        ActionCommand.NotifyCanExecuteChanged();
+    }
 }

@@ -13,7 +13,7 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewModel, IDisposable
 {
     public override string ActionText => SaveButtonText;
-    public override System.Windows.Input.ICommand ActionCommand => SaveCommand;
+    public override IRelayCommand ActionCommand => SaveCommand;
     public string Placeholder { get; }
     public string SaveButtonText { get; }
 
@@ -73,11 +73,6 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         _apiEndpointService.BaseAddressChanged -= OnApiBaseAddressChanged;
         _disposeCancellationSource.Cancel();
         _disposeCancellationSource.Dispose();
-    }
-
-    protected override void NotifyActionCanExecuteChanged()
-    {
-        SaveCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanSave))]

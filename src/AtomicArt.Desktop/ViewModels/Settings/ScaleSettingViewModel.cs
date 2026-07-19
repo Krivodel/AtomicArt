@@ -9,7 +9,7 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 public sealed partial class ScaleSettingViewModel : SelectableSettingItemViewModel<UiScaleOption>
 {
     public override string ActionText => ApplyButtonText;
-    public override System.Windows.Input.ICommand ActionCommand => ApplyCommand;
+    public override IRelayCommand ActionCommand => ApplyCommand;
     public string ApplyButtonText { get; }
 
     private readonly IScaleSettingDefinition _definition;
@@ -32,11 +32,6 @@ public sealed partial class ScaleSettingViewModel : SelectableSettingItemViewMod
         ApplyButtonText = definition.ApplyButtonText;
         _settingsStateService = settingsStateService;
         _valueConverter = valueConverter;
-    }
-
-    protected override void NotifyActionCanExecuteChanged()
-    {
-        ApplyCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanApply))]

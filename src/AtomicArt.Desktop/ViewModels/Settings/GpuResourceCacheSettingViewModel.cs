@@ -10,7 +10,7 @@ public sealed partial class GpuResourceCacheSettingViewModel :
     SelectableSettingItemViewModel<GpuResourceCacheOption>
 {
     public override string ActionText => SaveButtonText;
-    public override System.Windows.Input.ICommand ActionCommand => SaveCommand;
+    public override IRelayCommand ActionCommand => SaveCommand;
     public string SaveButtonText { get; }
     public string RestartNotice { get; }
 
@@ -32,11 +32,6 @@ public sealed partial class GpuResourceCacheSettingViewModel :
         _settingsStateService = settingsStateService;
         SaveButtonText = definition.SaveButtonText;
         RestartNotice = definition.RestartNotice;
-    }
-
-    protected override void NotifyActionCanExecuteChanged()
-    {
-        SaveCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanSave))]

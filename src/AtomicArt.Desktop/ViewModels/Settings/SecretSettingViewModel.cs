@@ -8,7 +8,7 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 public sealed partial class SecretSettingViewModel : SettingItemViewModel
 {
     public override string ActionText => SaveButtonText;
-    public override System.Windows.Input.ICommand ActionCommand => SaveCommand;
+    public override IRelayCommand ActionCommand => SaveCommand;
     public string SecretName { get; }
     public string Placeholder { get; }
     public string SaveButtonText { get; }
@@ -30,11 +30,6 @@ public sealed partial class SecretSettingViewModel : SettingItemViewModel
         Placeholder = definition.Placeholder;
         SaveButtonText = definition.SaveButtonText;
         _secretStore = secretStore;
-    }
-
-    protected override void NotifyActionCanExecuteChanged()
-    {
-        SaveCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanSave))]
