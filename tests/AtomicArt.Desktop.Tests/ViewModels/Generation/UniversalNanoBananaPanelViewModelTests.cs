@@ -485,42 +485,30 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public async Task AttachImages_WithInvalidImageSignature_SetsSafeErrorMessage()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
         AttachedImageDto invalidImage = new(
             "image.png",
             GenerationImageContentTypes.Png,
             [0x00, 0x01, 0x02]);
         List<AttachedImageDto> images = [invalidImage];
 
-        await viewModel.AttachImagesCommand.ExecuteAsync(images);
-
-        viewModel.AttachedImages.Should().BeEmpty();
-        viewModel.ErrorMessage.Should().Be(UiStrings.ImageAttachmentFailed);
+        await AssertImageAttachmentRejectedAsync(images);
     }
 
     [Fact]
     public async Task AttachImages_WithNullImage_SetsSafeErrorMessage()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
         IReadOnlyList<AttachedImageDto> images = CreateAttachedImagesWithNull();
 
-        await viewModel.AttachImagesCommand.ExecuteAsync(images);
-
-        viewModel.AttachedImages.Should().BeEmpty();
-        viewModel.ErrorMessage.Should().Be(UiStrings.ImageAttachmentFailed);
+        await AssertImageAttachmentRejectedAsync(images);
     }
 
     [Fact]
     public async Task AttachImages_WithUnsupportedContentType_SetsSafeErrorMessage()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
         AttachedImageDto invalidImage = new("image.gif", "image/gif", PngBytes);
         List<AttachedImageDto> images = [invalidImage];
 
-        await viewModel.AttachImagesCommand.ExecuteAsync(images);
-
-        viewModel.AttachedImages.Should().BeEmpty();
-        viewModel.ErrorMessage.Should().Be(UiStrings.ImageAttachmentFailed);
+        await AssertImageAttachmentRejectedAsync(images);
     }
 
     [Fact]
@@ -1816,6 +1804,16 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             .ToList();
 
         await viewModel.AttachImagesCommand.ExecuteAsync(images);
+    }
+
+    private static async Task AssertImageAttachmentRejectedAsync(IReadOnlyList<AttachedImageDto> images)
+    {
+        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+
+        await viewModel.AttachImagesCommand.ExecuteAsync(images);
+
+        viewModel.AttachedImages.Should().BeEmpty();
+        viewModel.ErrorMessage.Should().Be(UiStrings.ImageAttachmentFailed);
     }
 
     private sealed class SelectionValueResetRecorder
