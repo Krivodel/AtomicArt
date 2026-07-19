@@ -3,6 +3,8 @@ using System.Text;
 
 using Microsoft.Win32.SafeHandles;
 
+using Pica.Viewer.Services;
+
 using AtomicArt.Desktop.Services;
 
 namespace AtomicArt.Desktop.Services.Paths;

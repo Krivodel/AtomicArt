@@ -7,6 +7,8 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using Pica.Viewer.Services;
+
 using AtomicArt.Desktop.Services;
 
 namespace AtomicArt.Desktop.Views.Gallery;

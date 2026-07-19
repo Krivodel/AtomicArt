@@ -6,6 +6,8 @@ using Avalonia.Interactivity;
 using Avalonia.Platform;
 using SukiUI.Controls;
 
+using Pica.Viewer.Services;
+
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.ViewModels;
