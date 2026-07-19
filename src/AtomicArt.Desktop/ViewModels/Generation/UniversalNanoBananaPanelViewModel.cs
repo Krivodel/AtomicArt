@@ -575,7 +575,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         ErrorMessage = null;
 
-        await ViewModelOperationExecutor.ExecuteAsync(
+        await ViewModelAsyncOperation.ExecuteAsync(
             _errorHandler,
             errorMessage => ErrorMessage = errorMessage,
             operation,

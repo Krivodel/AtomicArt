@@ -22,20 +22,42 @@ internal static class ViewModelAsyncOperation
         {
             setIsLoading(true);
             setErrorMessage(null);
-            await operation();
+            await ExecuteAsync(
+                errorHandler,
+                setErrorMessage,
+                _ => operation(),
+                operationName,
+                ct);
+        }
+        finally
+        {
+            setIsLoading(false);
+        }
+    }
+
+    internal static async Task ExecuteAsync(
+        IViewModelErrorHandler errorHandler,
+        Action<string?> setErrorMessage,
+        Func<CancellationToken, Task> operation,
+        string operationName,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(errorHandler);
+        ArgumentNullException.ThrowIfNull(setErrorMessage);
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
+
+        try
+        {
+            await operation(ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            setErrorMessage(null);
         }
         catch (Exception ex)
         {
             errorHandler.Log(ex, operationName);
             setErrorMessage(errorHandler.GetUserMessage(ex));
-        }
-        finally
-        {
-            setIsLoading(false);
         }
     }
 }

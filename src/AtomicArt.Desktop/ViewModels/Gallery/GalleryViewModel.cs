@@ -311,7 +311,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         string operationName,
         CancellationToken ct)
     {
-        return ViewModelOperationExecutor.ExecuteAsync(
+        return ViewModelAsyncOperation.ExecuteAsync(
             _errorHandler,
             errorMessage => ErrorMessage = errorMessage,
             operation,
