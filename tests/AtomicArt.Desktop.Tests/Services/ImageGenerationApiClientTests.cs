@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using FluentAssertions;
@@ -28,10 +29,7 @@ public sealed class ImageGenerationApiClientTests
         ImageGenerationRequestDto request = CreateRequest();
         CapturingHttpMessageHandler handler = new(CreateBatchJson());
         using HttpClient httpClient = new(handler);
-        ImageGenerationApiClient apiClient = new(
-            httpClient,
-            TestApiEndpointServiceFactory.Create(),
-            NullLogger<ImageGenerationApiClient>.Instance);
+        ImageGenerationApiClient apiClient = CreateApiClient(httpClient);
 
         GenerationBatchDto batch = await apiClient.CreateGenerationAsync(
             request,
@@ -67,10 +65,9 @@ public sealed class ImageGenerationApiClientTests
     {
         CapturingHttpMessageHandler handler = new(CreateBatchJson());
         using HttpClient httpClient = new(handler);
-        ImageGenerationApiClient apiClient = new(
+        ImageGenerationApiClient apiClient = CreateApiClient(
             httpClient,
-            TestApiEndpointServiceFactory.Create(baseAddress),
-            NullLogger<ImageGenerationApiClient>.Instance);
+            TestApiEndpointServiceFactory.Create(baseAddress));
 
         await apiClient.CreateGenerationAsync(
             CreateRequest(),
@@ -85,10 +82,9 @@ public sealed class ImageGenerationApiClientTests
     {
         CapturingHttpMessageHandler handler = new(CreateBatchJson());
         using HttpClient httpClient = new(handler);
-        ImageGenerationApiClient apiClient = new(
+        ImageGenerationApiClient apiClient = CreateApiClient(
             httpClient,
-            TestApiEndpointServiceFactory.Create("http://atomicart.test/"),
-            NullLogger<ImageGenerationApiClient>.Instance);
+            TestApiEndpointServiceFactory.Create("http://atomicart.test/"));
 
         await apiClient.CreateGenerationAsync(
             CreateRequest(),
@@ -106,10 +102,7 @@ public sealed class ImageGenerationApiClientTests
         using HttpClient httpClient = new(handler);
         IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create(
             "https://first.atomicart.test/");
-        ImageGenerationApiClient apiClient = new(
-            httpClient,
-            endpointService,
-            NullLogger<ImageGenerationApiClient>.Instance);
+        ImageGenerationApiClient apiClient = CreateApiClient(httpClient, endpointService);
 
         await apiClient.CreateGenerationAsync(
             CreateRequest(),
@@ -150,10 +143,7 @@ public sealed class ImageGenerationApiClientTests
             HttpStatusCode.ServiceUnavailable);
         using HttpClient httpClient = new(handler);
         RecordingLogger<ImageGenerationApiClient> logger = new();
-        ImageGenerationApiClient apiClient = new(
-            httpClient,
-            TestApiEndpointServiceFactory.Create(),
-            logger);
+        ImageGenerationApiClient apiClient = CreateApiClient(httpClient, logger: logger);
 
         Func<Task> act = () => apiClient.CreateGenerationAsync(
             CreateRequest(),
@@ -170,6 +160,17 @@ public sealed class ImageGenerationApiClientTests
             && !message.Contains("Create a studio product shot", StringComparison.Ordinal));
     }
 
+
+    private static ImageGenerationApiClient CreateApiClient(
+        HttpClient httpClient,
+        IApiEndpointService? endpointService = null,
+        ILogger<ImageGenerationApiClient>? logger = null)
+    {
+        return new ImageGenerationApiClient(
+            httpClient,
+            endpointService ?? TestApiEndpointServiceFactory.Create(),
+            logger ?? NullLogger<ImageGenerationApiClient>.Instance);
+    }
 
     private static ImageGenerationRequestDto CreateRequest()
     {
