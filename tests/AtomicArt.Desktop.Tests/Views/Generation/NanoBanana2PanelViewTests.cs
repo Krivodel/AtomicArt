@@ -502,57 +502,47 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            NanoBanana2PanelView view = CreateView(
-                out UniversalNanoBananaPanelViewModel viewModel);
-            Window window = Show(view);
+            using ShownPanelContext context = new();
+            Popup settingsPopup = GetTemperaturePopup(context.View);
+            Button settingsButton = GetTemperatureButton(context.View);
 
-            try
-            {
-                Popup settingsPopup = GetTemperaturePopup(view);
-                Button settingsButton = GetTemperatureButton(view);
+            ToggleTemperaturePopup(settingsButton);
 
-                ToggleTemperaturePopup(settingsButton);
+            Border settingsPanel = GetTemperaturePopupContent(settingsPopup);
+            ComboBox thinkingComboBox = settingsPanel
+                .GetLogicalDescendants()
+                .OfType<ComboBox>()
+                .Single(comboBox => string.Equals(
+                    comboBox.Name,
+                    "ThinkingLevelComboBox",
+                    StringComparison.Ordinal));
+            thinkingComboBox.IsDropDownOpen = true;
 
-                Border settingsPanel = GetTemperaturePopupContent(settingsPopup);
-                ComboBox thinkingComboBox = settingsPanel
-                    .GetLogicalDescendants()
-                    .OfType<ComboBox>()
-                    .Single(comboBox => string.Equals(
-                        comboBox.Name,
-                        "ThinkingLevelComboBox",
-                        StringComparison.Ordinal));
-                thinkingComboBox.IsDropDownOpen = true;
+            Popup dropDownPopup = thinkingComboBox
+                .GetVisualDescendants()
+                .OfType<Popup>()
+                .Single(popup => string.Equals(
+                    popup.Name,
+                    "PART_Popup",
+                    StringComparison.Ordinal));
+            Control dropDownContent = dropDownPopup.Child
+                ?? throw new InvalidOperationException("Thinking level popup content was not found.");
+            TopLevel dropDownRoot = TopLevel.GetTopLevel(dropDownContent)
+                ?? throw new InvalidOperationException("Thinking level popup root was not found.");
+            ComboBoxItem item = dropDownContent
+                .GetVisualDescendants()
+                .OfType<ComboBoxItem>()
+                .Last();
+            Point itemCenter = item.TranslatePoint(
+                    new Point(item.Bounds.Width / 2d, item.Bounds.Height / 2d),
+                    dropDownRoot)
+                ?? throw new InvalidOperationException("Thinking level item position was not found.");
 
-                Popup dropDownPopup = thinkingComboBox
-                    .GetVisualDescendants()
-                    .OfType<Popup>()
-                    .Single(popup => string.Equals(
-                        popup.Name,
-                        "PART_Popup",
-                        StringComparison.Ordinal));
-                Control dropDownContent = dropDownPopup.Child
-                    ?? throw new InvalidOperationException("Thinking level popup content was not found.");
-                TopLevel dropDownRoot = TopLevel.GetTopLevel(dropDownContent)
-                    ?? throw new InvalidOperationException("Thinking level popup root was not found.");
-                ComboBoxItem item = dropDownContent
-                    .GetVisualDescendants()
-                    .OfType<ComboBoxItem>()
-                    .Last();
-                Point itemCenter = item.TranslatePoint(
-                        new Point(item.Bounds.Width / 2d, item.Bounds.Height / 2d),
-                        dropDownRoot)
-                    ?? throw new InvalidOperationException("Thinking level item position was not found.");
+            dropDownRoot.MouseDown(itemCenter, MouseButton.Left);
+            dropDownRoot.MouseUp(itemCenter, MouseButton.Left);
+            await Task.Delay(TimeSpan.FromMilliseconds(200d));
 
-                dropDownRoot.MouseDown(itemCenter, MouseButton.Left);
-                dropDownRoot.MouseUp(itemCenter, MouseButton.Left);
-                await Task.Delay(TimeSpan.FromMilliseconds(200d));
-
-                settingsPopup.IsOpen.Should().BeTrue();
-            }
-            finally
-            {
-                window.Close();
-            }
+            settingsPopup.IsOpen.Should().BeTrue();
         });
     }
 
@@ -561,28 +551,20 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            NanoBanana2PanelView view = CreateView(
-                out UniversalNanoBananaPanelViewModel viewModel);
-            Window window = Show(view);
+            using ShownPanelContext context = new();
+            Popup settingsPopup = GetTemperaturePopup(context.View);
+            Button settingsButton = GetTemperatureButton(context.View);
 
-            try
-            {
-                Popup settingsPopup = GetTemperaturePopup(view);
-                Button settingsButton = GetTemperatureButton(view);
+            ToggleTemperaturePopup(settingsButton);
 
-                ToggleTemperaturePopup(settingsButton);
+            Point outsidePoint = new(
+                context.Window.Bounds.Width - 1d,
+                context.Window.Bounds.Height - 1d);
+            context.Window.MouseDown(outsidePoint, MouseButton.Left);
+            context.Window.MouseUp(outsidePoint, MouseButton.Left);
+            await Task.Delay(TimeSpan.FromMilliseconds(200d));
 
-                Point outsidePoint = new(window.Bounds.Width - 1d, window.Bounds.Height - 1d);
-                window.MouseDown(outsidePoint, MouseButton.Left);
-                window.MouseUp(outsidePoint, MouseButton.Left);
-                await Task.Delay(TimeSpan.FromMilliseconds(200d));
-
-                settingsPopup.IsOpen.Should().BeFalse();
-            }
-            finally
-            {
-                window.Close();
-            }
+            settingsPopup.IsOpen.Should().BeFalse();
         });
     }
 
