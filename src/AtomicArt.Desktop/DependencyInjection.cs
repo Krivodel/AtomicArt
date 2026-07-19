@@ -205,42 +205,41 @@ public static class DependencyInjection
 
     private static IServiceCollection AddStateSectionsByConvention(this IServiceCollection services)
     {
-        Type markerType = typeof(IStateSection);
-        IReadOnlyList<Type> implementationTypes =
-            DesktopTypeDiscovery.FindPublicImplementations(markerType);
-
-        foreach (Type implementationType in implementationTypes)
-        {
-            services.AddSharedSingletonImplementation(markerType, implementationType);
-        }
-
-        return services;
+        return services.AddSharedSingletonImplementationsByConvention(
+            typeof(IStateSection),
+            typeof(IStateSection),
+            type => DesktopTypeDiscovery.FindPublicImplementations(type));
     }
 
     private static IServiceCollection AddGenerationImageFormatsByConvention(this IServiceCollection services)
     {
-        Type markerType = typeof(IGenerationImageFormat);
-        IReadOnlyList<Type> implementationTypes =
-            DesktopTypeDiscovery.FindAllImplementations(markerType);
-
-        foreach (Type implementationType in implementationTypes)
-        {
-            services.AddSharedSingletonImplementation(markerType, implementationType);
-        }
-
-        return services;
+        return services.AddSharedSingletonImplementationsByConvention(
+            typeof(IGenerationImageFormat),
+            typeof(IGenerationImageFormat),
+            type => DesktopTypeDiscovery.FindAllImplementations(type));
     }
 
     private static IServiceCollection AddGenerationItemStatusDescriptorsByConvention(this IServiceCollection services)
     {
-        Type markerType = typeof(IRegisteredGenerationItemStatusDescriptor);
-        Type descriptorType = typeof(IGenerationItemStatusDescriptor);
-        IReadOnlyList<Type> implementationTypes =
-            DesktopTypeDiscovery.FindAllImplementations(markerType);
+        return services.AddSharedSingletonImplementationsByConvention(
+            typeof(IGenerationItemStatusDescriptor),
+            typeof(IRegisteredGenerationItemStatusDescriptor),
+            type => DesktopTypeDiscovery.FindAllImplementations(type));
+    }
+
+    private static IServiceCollection AddSharedSingletonImplementationsByConvention(
+        this IServiceCollection services,
+        Type serviceType,
+        Type markerType,
+        Func<Type, IEnumerable<Type>> findImplementationTypes)
+    {
+        ArgumentNullException.ThrowIfNull(findImplementationTypes);
+
+        IReadOnlyList<Type> implementationTypes = findImplementationTypes(markerType).ToList();
 
         foreach (Type implementationType in implementationTypes)
         {
-            services.AddSharedSingletonImplementation(descriptorType, implementationType);
+            services.AddSharedSingletonImplementation(serviceType, implementationType);
         }
 
         return services;
