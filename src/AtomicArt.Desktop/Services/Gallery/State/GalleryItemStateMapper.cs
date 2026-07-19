@@ -148,8 +148,8 @@ internal static class GalleryItemStateMapper
             Price = item.Price,
             Usage = item.Usage,
             AttachedImagesCount = Math.Max(0, item.AttachedImagesCount),
-            CorrelationId = ResolveCorrelationId(item, status),
-            GenerationOrdinal = ResolveGenerationOrdinal(item, status)
+            CorrelationId = ResolveGeneratingValue(item, status, item => item.CorrelationId),
+            GenerationOrdinal = ResolveGeneratingValue(item, status, item => item.GenerationOrdinal)
         };
     }
 
@@ -171,25 +171,17 @@ internal static class GalleryItemStateMapper
         return status;
     }
 
-    private static Guid? ResolveCorrelationId(
+    private static T? ResolveGeneratingValue<T>(
         GalleryItemState item,
-        GenerationItemStatus status)
+        GenerationItemStatus status,
+        Func<GalleryItemState, T?> resolveValue)
+        where T : struct
     {
+        ArgumentNullException.ThrowIfNull(resolveValue);
+
         if (status == GenerationItemStatus.Generating)
         {
-            return item.CorrelationId;
-        }
-
-        return null;
-    }
-
-    private static int? ResolveGenerationOrdinal(
-        GalleryItemState item,
-        GenerationItemStatus status)
-    {
-        if (status == GenerationItemStatus.Generating)
-        {
-            return item.GenerationOrdinal;
+            return resolveValue(item);
         }
 
         return null;
