@@ -21,28 +21,11 @@ internal static class GalleryItemStateMapper
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        GalleryItemState state = new()
-        {
-            Id = source.Id,
-            ModelId = source.ModelId,
-            ModelDisplayName = source.ModelDisplayName,
-            Prompt = source.Prompt,
-            AspectRatio = source.AspectRatio,
-            Resolution = source.Resolution,
-            CreatedAtUtc = source.CreatedAtUtc,
-            Status = source.StatusKind,
-            ImagePath = source.ImagePath,
-            ThumbnailPath = source.ThumbnailPath,
-            CompletedAtUtc = source.CompletedAtUtc,
-            GenerationDuration = source.GenerationDuration,
-            Price = source.Price,
-            Usage = source.Usage,
-            AttachedImagesCount = source.AttachedImagesCount,
-            CorrelationId = source.CorrelationId,
-            GenerationOrdinal = source.GenerationOrdinal
-        };
-
-        return NormalizeForStorage(state, ResolveOriginalImagePath, ResolveOriginalThumbnailPath);
+        return NormalizeSource(
+            source,
+            source => source.ImagePath,
+            source => source.ThumbnailPath,
+            GalleryItemStateStatusPolicy.PreserveStatus);
     }
 
     public static GalleryItemState NormalizeForDeserialization(GalleryItemState item)
@@ -127,29 +110,46 @@ internal static class GalleryItemStateMapper
         ArgumentNullException.ThrowIfNull(resolveImagePath);
         ArgumentNullException.ThrowIfNull(resolveThumbnailPath);
 
-        GenerationItemStatus status = ResolveStatus(item.Status, statusPolicy);
-        string? imagePath = resolveImagePath(item);
-        string? thumbnailPath = resolveThumbnailPath(item);
+        return NormalizeSource(
+            item,
+            source => resolveImagePath((GalleryItemState)source),
+            source => resolveThumbnailPath((GalleryItemState)source),
+            statusPolicy);
+    }
+
+    private static GalleryItemState NormalizeSource(
+        IGalleryItemStateSource source,
+        Func<IGalleryItemStateSource, string?> resolveImagePath,
+        Func<IGalleryItemStateSource, string?> resolveThumbnailPath,
+        GalleryItemStateStatusPolicy statusPolicy)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(resolveImagePath);
+        ArgumentNullException.ThrowIfNull(resolveThumbnailPath);
+
+        GenerationItemStatus status = ResolveStatus(source.StatusKind, statusPolicy);
+        string? imagePath = resolveImagePath(source);
+        string? thumbnailPath = resolveThumbnailPath(source);
 
         return new GalleryItemState
         {
-            Id = item.Id,
-            ModelId = item.ModelId ?? string.Empty,
-            ModelDisplayName = item.ModelDisplayName ?? string.Empty,
-            Prompt = item.Prompt ?? string.Empty,
-            AspectRatio = item.AspectRatio ?? string.Empty,
-            Resolution = item.Resolution ?? string.Empty,
-            CreatedAtUtc = item.CreatedAtUtc,
+            Id = source.Id,
+            ModelId = source.ModelId ?? string.Empty,
+            ModelDisplayName = source.ModelDisplayName ?? string.Empty,
+            Prompt = source.Prompt ?? string.Empty,
+            AspectRatio = source.AspectRatio ?? string.Empty,
+            Resolution = source.Resolution ?? string.Empty,
+            CreatedAtUtc = source.CreatedAtUtc,
             Status = status,
             ImagePath = string.IsNullOrWhiteSpace(imagePath) ? null : imagePath,
             ThumbnailPath = string.IsNullOrWhiteSpace(thumbnailPath) ? null : thumbnailPath,
-            CompletedAtUtc = item.CompletedAtUtc,
-            GenerationDuration = item.GenerationDuration,
-            Price = item.Price,
-            Usage = item.Usage,
-            AttachedImagesCount = Math.Max(0, item.AttachedImagesCount),
-            CorrelationId = ResolveGeneratingValue(item, status, item => item.CorrelationId),
-            GenerationOrdinal = ResolveGeneratingValue(item, status, item => item.GenerationOrdinal)
+            CompletedAtUtc = source.CompletedAtUtc,
+            GenerationDuration = source.GenerationDuration,
+            Price = source.Price,
+            Usage = source.Usage,
+            AttachedImagesCount = Math.Max(0, source.AttachedImagesCount),
+            CorrelationId = ResolveGeneratingValue(source, status, source => source.CorrelationId),
+            GenerationOrdinal = ResolveGeneratingValue(source, status, source => source.GenerationOrdinal)
         };
     }
 
@@ -172,9 +172,9 @@ internal static class GalleryItemStateMapper
     }
 
     private static T? ResolveGeneratingValue<T>(
-        GalleryItemState item,
+        IGalleryItemStateSource item,
         GenerationItemStatus status,
-        Func<GalleryItemState, T?> resolveValue)
+        Func<IGalleryItemStateSource, T?> resolveValue)
         where T : struct
     {
         ArgumentNullException.ThrowIfNull(resolveValue);
