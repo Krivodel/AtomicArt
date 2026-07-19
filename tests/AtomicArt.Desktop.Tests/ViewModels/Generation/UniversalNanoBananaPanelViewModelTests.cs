@@ -935,7 +935,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             [GenerationAspectRatios.Auto, "16:9"],
             ["1K"],
             [1]);
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.SelectedAspectRatio = "16:9";
 
@@ -955,7 +955,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             [GenerationAspectRatios.Auto, "1:1"],
             ["1K"],
             [1]);
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.SelectedAspectRatio = "16:9";
 
@@ -975,7 +975,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["512", "2K"],
             [1]);
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.SelectedResolution = "2K";
 
@@ -995,7 +995,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["512", "1K"],
             [1]);
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.SelectedResolution = "2K";
 
@@ -1015,7 +1015,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["1K"],
             [2, 4]);
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.GenerationCount = 4;
 
@@ -1035,7 +1035,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["1K"],
             [2, 3]);
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.GenerationCount = 4;
 
@@ -1056,7 +1056,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1K"],
             [1]);
         ImageModelOption firstModel = GetModel(viewModel, "compat-model-a");
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         viewModel.SelectedAspectRatio = "16:9";
         viewModel.SelectedResolution = "2K";
         viewModel.GenerationCount = 4;
@@ -1081,7 +1081,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1K"],
             [1],
             stateService);
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         stateService.SavedStates.Clear();
 
         viewModel.SelectedModel = secondModel;
@@ -1105,7 +1105,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["1K"],
             [1]);
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(viewModel);
 
@@ -1127,7 +1127,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["16:9", "1:1"],
             ["2K", "1K"],
             [4, 1]);
-        ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
+        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(viewModel);
 
@@ -1783,6 +1783,11 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     {
         return viewModel.AvailableModels.Single(model =>
             string.Equals(model.Id, modelId, StringComparison.Ordinal));
+    }
+
+    private static ImageModelOption GetSecondCompatibilityModel(UniversalNanoBananaPanelViewModel viewModel)
+    {
+        return GetModel(viewModel, "compat-model-b");
     }
 
     private static async Task AttachValidImagesAsync(UniversalNanoBananaPanelViewModel viewModel, int count)
