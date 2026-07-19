@@ -6,6 +6,8 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryExistingCardAnimator : GalleryLayoutAnimator
 {
+    private static readonly IReadOnlySet<Guid> EmptyIds = new HashSet<Guid>();
+
     public GalleryExistingCardAnimator(
         GalleryAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects,
@@ -49,7 +51,7 @@ internal sealed class GalleryExistingCardAnimator : GalleryLayoutAnimator
         return AnimateAsync(
             context,
             firstSnapshot,
-            new HashSet<Guid>(),
+            EmptyIds,
             GalleryExistingAnimationMode.ResetBeforeMeasure,
             tracker);
     }
@@ -62,7 +64,7 @@ internal sealed class GalleryExistingCardAnimator : GalleryLayoutAnimator
         return AnimateAsync(
             context,
             firstSnapshot,
-            new HashSet<Guid>(),
+            EmptyIds,
             GalleryExistingAnimationMode.ImmediateRetarget,
             tracker);
     }
