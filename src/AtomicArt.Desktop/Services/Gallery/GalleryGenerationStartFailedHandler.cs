@@ -1,20 +1,16 @@
 namespace AtomicArt.Desktop.Services.Gallery;
 
-public sealed class GalleryGenerationStartFailedHandler : IGalleryLifecycleEventHandler
+public sealed class GalleryGenerationStartFailedHandler : GalleryLifecycleViewStateHandler
 {
-    public GenerationLifecycleStatus Status => GenerationLifecycleStatus.StartFailed;
-
-    private readonly IGalleryLifecycleViewState _viewState;
-
     public GalleryGenerationStartFailedHandler(IGalleryLifecycleViewState viewState)
+        : base(viewState)
     {
-        ArgumentNullException.ThrowIfNull(viewState);
-
-        _viewState = viewState;
     }
 
-    public Task HandleAsync(GenerationLifecycleEvent lifecycleEvent, CancellationToken ct)
+    public override GenerationLifecycleStatus Status => GenerationLifecycleStatus.StartFailed;
+
+    protected override Task ApplyAsync(Guid correlationId, CancellationToken ct)
     {
-        return _viewState.ApplyStartFailedAsync(lifecycleEvent.CorrelationId, ct);
+        return ViewState.ApplyStartFailedAsync(correlationId, ct);
     }
 }
