@@ -235,26 +235,12 @@ internal static class TrustedPathGuard
         string trustedRootDirectory,
         out string? trustedPath)
     {
-        string fullPath = ValidateAndGetFullPath(path, trustedDirectories, trustedRootDirectory);
-        trustedPath = null;
-
-        if (!File.Exists(fullPath)
-            || !TryGetContainingDirectory(trustedDirectories, fullPath, out string? _))
-        {
-            return false;
-        }
-
-        FileInfo fileInfo = new(fullPath);
-
-        if ((fileInfo.Attributes & FileAttributes.Directory) == FileAttributes.Directory
-            || IsReparsePoint(fileInfo)
-            || HasReparsePointBetween(trustedRootDirectory, fullPath))
-        {
-            return false;
-        }
-
-        trustedPath = fullPath;
-        return true;
+        return TryResolveTrustedPath(
+            path,
+            trustedDirectories,
+            trustedRootDirectory,
+            TrustedPathResolutionMode.ExistingFile,
+            out trustedPath);
     }
 
     public static bool TryResolveTrustedPathForDeletion(
@@ -263,32 +249,12 @@ internal static class TrustedPathGuard
         string trustedRootDirectory,
         out string? trustedPath)
     {
-        string fullPath = ValidateAndGetFullPath(path, trustedDirectories, trustedRootDirectory);
-        trustedPath = null;
-
-        if (!TryGetContainingDirectory(trustedDirectories, fullPath, out string? _)
-            || HasReparsePointBetween(trustedRootDirectory, fullPath))
-        {
-            return false;
-        }
-
-        if (Directory.Exists(fullPath))
-        {
-            return false;
-        }
-
-        if (File.Exists(fullPath))
-        {
-            FileInfo fileInfo = new(fullPath);
-
-            if (IsReparsePoint(fileInfo))
-            {
-                return false;
-            }
-        }
-
-        trustedPath = fullPath;
-        return true;
+        return TryResolveTrustedPath(
+            path,
+            trustedDirectories,
+            trustedRootDirectory,
+            TrustedPathResolutionMode.Deletion,
+            out trustedPath);
     }
 
     public static void DeleteTrustedFileIfExists(
@@ -329,6 +295,56 @@ internal static class TrustedPathGuard
         ArgumentException.ThrowIfNullOrWhiteSpace(trustedRootDirectory);
 
         return Path.GetFullPath(path);
+    }
+
+    private static bool TryResolveTrustedPath(
+        string path,
+        IReadOnlyCollection<string> trustedDirectories,
+        string trustedRootDirectory,
+        TrustedPathResolutionMode mode,
+        out string? trustedPath)
+    {
+        string fullPath = ValidateAndGetFullPath(path, trustedDirectories, trustedRootDirectory);
+        trustedPath = null;
+
+        if (mode is TrustedPathResolutionMode.ExistingFile)
+        {
+            if (!File.Exists(fullPath)
+                || !TryGetContainingDirectory(trustedDirectories, fullPath, out string? _))
+            {
+                return false;
+            }
+
+            FileInfo fileInfo = new(fullPath);
+
+            if ((fileInfo.Attributes & FileAttributes.Directory) == FileAttributes.Directory
+                || IsReparsePoint(fileInfo)
+                || HasReparsePointBetween(trustedRootDirectory, fullPath))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            if (!TryGetContainingDirectory(trustedDirectories, fullPath, out string? _)
+                || HasReparsePointBetween(trustedRootDirectory, fullPath))
+            {
+                return false;
+            }
+
+            if (Directory.Exists(fullPath))
+            {
+                return false;
+            }
+
+            if (File.Exists(fullPath) && IsReparsePoint(new FileInfo(fullPath)))
+            {
+                return false;
+            }
+        }
+
+        trustedPath = fullPath;
+        return true;
     }
 
     private static bool IsReparsePoint(FileInfo fileInfo)
@@ -811,6 +827,12 @@ internal static class TrustedPathGuard
     {
         FileRenameInfo = 3,
         FileDispositionInfo = 4
+    }
+
+    private enum TrustedPathResolutionMode
+    {
+        ExistingFile,
+        Deletion
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
