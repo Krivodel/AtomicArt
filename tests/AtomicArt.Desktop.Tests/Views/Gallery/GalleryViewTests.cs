@@ -286,17 +286,9 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         }
     }
 
-    private static AnimatedGalleryControl GetGalleryControl(GalleryView view)
+    private static AnimatedGalleryControl GetGalleryControl(Avalonia.Visual visual)
     {
-        return view
-            .GetVisualDescendants()
-            .OfType<AnimatedGalleryControl>()
-            .Single();
-    }
-
-    private static AnimatedGalleryControl GetGalleryControl(Window window)
-    {
-        return window
+        return visual
             .GetVisualDescendants()
             .OfType<AnimatedGalleryControl>()
             .Single();
