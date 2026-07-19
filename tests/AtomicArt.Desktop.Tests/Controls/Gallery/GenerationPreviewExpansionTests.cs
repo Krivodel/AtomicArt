@@ -21,37 +21,22 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
     [Fact]
     public void ModifierHoverAndScroll_WithGeneratedImage_KeepsPreviewAttachedToCard()
     {
-        string imagePath = Path.Combine(
-            Path.GetTempPath(),
-            $"atomic-art-preview-expansion-{Guid.NewGuid():N}.png");
-        File.WriteAllBytes(
-            imagePath,
-            GalleryThumbnailTestImages.CreatePngBytes(440, 220));
-
-        try
+        Dispatch(() =>
         {
-            Dispatch(() =>
-            {
-                PreviewTestContext context = CreateScenario(imagePath);
+            using PreviewTestContext context = CreateScenarioWithImage("atomic-art-preview-expansion");
 
-                try
-                {
-                    Panel originalParent = context.PreviewHost.Parent as Panel
-                        ?? throw new InvalidOperationException("Generation preview parent was not found.");
-                    ScrollContentPresenter scrollPresenter = context.ScrollViewer
-                        .GetVisualDescendants()
-                        .OfType<ScrollContentPresenter>()
-                        .Single();
-                    bool originalScrollViewerClipToBounds = context.ScrollViewer.ClipToBounds;
-                    object? originalScrollViewerClip = context.ScrollViewer.Clip;
-                    bool originalPresenterClipToBounds = scrollPresenter.ClipToBounds;
-                    Point? cardPosition = context.Card.TranslatePoint(
-                        new Point(0d, 0d),
-                        context.Window);
-                    cardPosition.Should().NotBeNull();
-                    Point previewCenter = cardPosition.Value + new Vector(110d, 110d);
-                    originalScrollViewerClipToBounds.Should().BeFalse();
-                    originalScrollViewerClip.Should().BeNull();
+            Panel originalParent = context.PreviewHost.Parent as Panel
+                ?? throw new InvalidOperationException("Generation preview parent was not found.");
+            ScrollContentPresenter scrollPresenter = context.ScrollViewer
+                .GetVisualDescendants()
+                .OfType<ScrollContentPresenter>()
+                .Single();
+            bool originalScrollViewerClipToBounds = context.ScrollViewer.ClipToBounds;
+            object? originalScrollViewerClip = context.ScrollViewer.Clip;
+            bool originalPresenterClipToBounds = scrollPresenter.ClipToBounds;
+            Point previewCenter = GetPointerPosition(context, 110d);
+            originalScrollViewerClipToBounds.Should().BeFalse();
+            originalScrollViewerClip.Should().BeNull();
 
                     context.Window.MouseMove(previewCenter, RawInputModifiers.Shift);
                     context.Window.CaptureRenderedFrame();
@@ -105,42 +90,17 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                     context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
                     context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
                     scrollPresenter.ClipToBounds.Should().Be(originalPresenterClipToBounds);
-                }
-                finally
-                {
-                    context.Window.Close();
-                }
-            });
-        }
-        finally
-        {
-            File.Delete(imagePath);
-        }
+        });
     }
 
     [Fact]
     public void ModifierPressedAfterScroll_WithPointerOverPreview_ExpandsWithoutPointerMovement()
     {
-        string imagePath = Path.Combine(
-            Path.GetTempPath(),
-            $"atomic-art-preview-modifier-after-scroll-{Guid.NewGuid():N}.png");
-        File.WriteAllBytes(
-            imagePath,
-            GalleryThumbnailTestImages.CreatePngBytes(440, 220));
-
-        try
+        Dispatch(() =>
         {
-            Dispatch(() =>
-            {
-                PreviewTestContext context = CreateScenario(imagePath);
+            using PreviewTestContext context = CreateScenarioWithImage("atomic-art-preview-modifier-after-scroll");
 
-                try
-                {
-                    Point? cardPosition = context.Card.TranslatePoint(
-                        new Point(0d, 0d),
-                        context.Window);
-                    cardPosition.Should().NotBeNull();
-                    Point pointerPosition = cardPosition.Value + new Vector(110d, 150d);
+            Point pointerPosition = GetPointerPosition(context, 150d);
 
                     context.Window.MouseMove(pointerPosition, RawInputModifiers.None);
                     context.ScrollViewer.Offset = new Vector(0d, 40d);
@@ -156,17 +116,19 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                     context.Window.CaptureRenderedFrame();
 
                     context.PreviewHost.Width.Should().Be(748d);
-                }
-                finally
-                {
-                    context.Window.Close();
-                }
-            });
-        }
-        finally
-        {
-            File.Delete(imagePath);
-        }
+        });
+    }
+
+    private static PreviewTestContext CreateScenarioWithImage(string fileNamePrefix)
+    {
+        string imagePath = Path.Combine(
+            Path.GetTempPath(),
+            $"{fileNamePrefix}-{Guid.NewGuid():N}.png");
+        File.WriteAllBytes(
+            imagePath,
+            GalleryThumbnailTestImages.CreatePngBytes(440, 220));
+
+        return CreateScenario(imagePath);
     }
 
     private static PreviewTestContext CreateScenario(string imagePath)
@@ -192,7 +154,8 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             window,
             card,
             previewHost,
-            scrollViewer);
+            scrollViewer,
+            imagePath);
     }
 
     private static void AssertExpandedPreviewAttachedToCard(
@@ -208,11 +171,47 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
     }
 
-    private sealed record PreviewTestContext(
-        AnimatedGalleryControl Gallery,
-        Window Window,
-        GenerationCardControl Card,
-        Grid PreviewHost,
-        ScrollViewer ScrollViewer);
+    private static Point GetPointerPosition(PreviewTestContext context, double verticalOffset)
+    {
+        Point? cardPosition = context.Card.TranslatePoint(
+            new Point(0d, 0d),
+            context.Window);
+        cardPosition.Should().NotBeNull();
+
+        return cardPosition.Value + new Vector(110d, verticalOffset);
+    }
+
+    private sealed class PreviewTestContext : IDisposable
+    {
+        public AnimatedGalleryControl Gallery { get; }
+        public Window Window { get; }
+        public GenerationCardControl Card { get; }
+        public Grid PreviewHost { get; }
+        public ScrollViewer ScrollViewer { get; }
+
+        private readonly string _imagePath;
+
+        public PreviewTestContext(
+            AnimatedGalleryControl gallery,
+            Window window,
+            GenerationCardControl card,
+            Grid previewHost,
+            ScrollViewer scrollViewer,
+            string imagePath)
+        {
+            Gallery = gallery;
+            Window = window;
+            Card = card;
+            PreviewHost = previewHost;
+            ScrollViewer = scrollViewer;
+            _imagePath = imagePath ?? throw new ArgumentNullException(nameof(imagePath));
+        }
+
+        public void Dispose()
+        {
+            Window.Close();
+            File.Delete(_imagePath);
+        }
+    }
 
 }
