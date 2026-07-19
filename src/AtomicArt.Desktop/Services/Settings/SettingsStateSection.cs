@@ -9,9 +9,10 @@ public sealed class SettingsStateSection : StateSection<SettingsState>
 
     private const int CurrentSchemaVersion = 1;
 
-    public override string Key => KeyValue;
-    public override string FileName => SectionFileName;
-    public override int SchemaVersion => CurrentSchemaVersion;
+    public SettingsStateSection()
+        : base(KeyValue, SectionFileName, CurrentSchemaVersion)
+    {
+    }
 
     protected override SettingsState NormalizePayload(SettingsState? state)
     {

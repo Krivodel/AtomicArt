@@ -9,9 +9,10 @@ public sealed class GalleryStateSection : StateSection<GalleryState>
     private const string SectionFileName = "gallery.json";
     private const int CurrentSchemaVersion = 1;
 
-    public override string Key => KeyValue;
-    public override string FileName => SectionFileName;
-    public override int SchemaVersion => CurrentSchemaVersion;
+    public GalleryStateSection()
+        : base(KeyValue, SectionFileName, CurrentSchemaVersion)
+    {
+    }
 
     protected override GalleryState NormalizePayload(GalleryState? state)
     {

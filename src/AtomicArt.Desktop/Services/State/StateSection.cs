@@ -5,10 +5,25 @@ namespace AtomicArt.Desktop.Services.State;
 public abstract class StateSection<TPayload> : IStateSection
     where TPayload : class, new()
 {
-    public abstract string Key { get; }
-    public abstract string FileName { get; }
-    public abstract int SchemaVersion { get; }
+    public string Key => _key;
+    public string FileName => _fileName;
+    public int SchemaVersion => _schemaVersion;
     public Type PayloadType => typeof(TPayload);
+
+    private readonly string _key;
+    private readonly string _fileName;
+    private readonly int _schemaVersion;
+
+    protected StateSection(string key, string fileName, int schemaVersion)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(schemaVersion);
+
+        _key = key;
+        _fileName = fileName;
+        _schemaVersion = schemaVersion;
+    }
 
     public object CreateDefaultPayload()
     {

@@ -8,9 +8,10 @@ public sealed class GenerationPanelStateSection : StateSection<GenerationPanelsS
     private const string SectionFileName = "generation-panels.json";
     private const int CurrentSchemaVersion = 1;
 
-    public override string Key => SectionKey;
-    public override string FileName => SectionFileName;
-    public override int SchemaVersion => CurrentSchemaVersion;
+    public GenerationPanelStateSection()
+        : base(SectionKey, SectionFileName, CurrentSchemaVersion)
+    {
+    }
 
     protected override GenerationPanelsState NormalizePayload(GenerationPanelsState? state)
     {
