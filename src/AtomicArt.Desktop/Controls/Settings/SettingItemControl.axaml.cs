@@ -2,6 +2,9 @@ using System.Windows.Input;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
+
+using AtomicArt.Desktop.ViewModels.Settings;
 
 namespace AtomicArt.Desktop.Controls.Settings;
 
@@ -53,6 +56,12 @@ public partial class SettingItemControl : UserControl
 
     public SettingItemControl()
     {
+        Bind(ActionTextProperty, new Binding(nameof(ISettingItemViewModel.ActionText)));
+        Bind(ActionCommandProperty, new Binding(nameof(ISettingItemViewModel.ActionCommand)));
+        Bind(DisplayNameProperty, new Binding(nameof(ISettingItemViewModel.DisplayName)));
+        Bind(ErrorMessageProperty, new Binding(nameof(ISettingItemViewModel.ErrorMessage)));
+        Bind(HasErrorMessageProperty, new Binding(nameof(ISettingItemViewModel.HasErrorMessage)));
+
         InitializeComponent();
     }
 }

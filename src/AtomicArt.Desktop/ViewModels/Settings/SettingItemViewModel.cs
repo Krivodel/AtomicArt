@@ -6,6 +6,8 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public abstract class SettingItemViewModel : ObservableValidator, ISettingItemViewModel
 {
+    public abstract string ActionText { get; }
+    public abstract System.Windows.Input.ICommand ActionCommand { get; }
     public string Key { get; }
     public int Order { get; }
     public string DisplayName { get; }

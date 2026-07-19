@@ -4,11 +4,7 @@
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.ApiBaseAddressSettingView"
              x:DataType="settings:ApiBaseAddressSettingViewModel">
-    <controls:SettingItemControl ActionText="{Binding SaveButtonText}"
-                                 DisplayName="{Binding DisplayName}"
-                                 ErrorMessage="{Binding ErrorMessage}"
-                                 HasErrorMessage="{Binding HasErrorMessage}"
-                                 ActionCommand="{Binding SaveCommand}">
+    <controls:SettingItemControl>
         <controls:SettingItemControl.Editor>
             <TextBox PlaceholderText="{Binding Placeholder}"
                      Text="{Binding Value, Mode=TwoWay}" />

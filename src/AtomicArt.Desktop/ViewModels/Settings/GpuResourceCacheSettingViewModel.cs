@@ -9,6 +9,8 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 public sealed partial class GpuResourceCacheSettingViewModel :
     SelectableSettingItemViewModel<GpuResourceCacheOption>
 {
+    public override string ActionText => SaveButtonText;
+    public override System.Windows.Input.ICommand ActionCommand => SaveCommand;
     public string SaveButtonText { get; }
     public string RestartNotice { get; }
 

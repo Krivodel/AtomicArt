@@ -5,11 +5,7 @@
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.GpuResourceCacheSettingView"
              x:DataType="settings:GpuResourceCacheSettingViewModel">
-    <controls:SettingItemControl ActionText="{Binding SaveButtonText}"
-                                 DisplayName="{Binding DisplayName}"
-                                 ErrorMessage="{Binding ErrorMessage}"
-                                 HasErrorMessage="{Binding HasErrorMessage}"
-                                 ActionCommand="{Binding SaveCommand}">
+    <controls:SettingItemControl>
         <controls:SettingItemControl.Editor>
             <StackPanel>
                 <ComboBox ItemsSource="{Binding Options}"

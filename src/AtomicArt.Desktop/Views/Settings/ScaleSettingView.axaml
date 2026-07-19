@@ -5,11 +5,7 @@
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.ScaleSettingView"
              x:DataType="settings:ScaleSettingViewModel">
-    <controls:SettingItemControl ActionText="{Binding ApplyButtonText}"
-                                 DisplayName="{Binding DisplayName}"
-                                 ErrorMessage="{Binding ErrorMessage}"
-                                 HasErrorMessage="{Binding HasErrorMessage}"
-                                 ActionCommand="{Binding ApplyCommand}">
+    <controls:SettingItemControl>
         <controls:SettingItemControl.Editor>
             <ComboBox ItemsSource="{Binding Options}"
                       SelectedItem="{Binding SelectedOption, Mode=TwoWay}">

@@ -7,6 +7,8 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class SecretSettingViewModel : SettingItemViewModel
 {
+    public override string ActionText => SaveButtonText;
+    public override System.Windows.Input.ICommand ActionCommand => SaveCommand;
     public string SecretName { get; }
     public string Placeholder { get; }
     public string SaveButtonText { get; }

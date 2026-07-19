@@ -12,6 +12,8 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewModel, IDisposable
 {
+    public override string ActionText => SaveButtonText;
+    public override System.Windows.Input.ICommand ActionCommand => SaveCommand;
     public string Placeholder { get; }
     public string SaveButtonText { get; }
 
