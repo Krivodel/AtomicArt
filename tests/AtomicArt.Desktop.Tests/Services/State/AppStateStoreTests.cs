@@ -17,9 +17,7 @@ public sealed class AppStateStoreTests
     [Fact]
     public async Task LoadAsync_WhenFileDoesNotExist_ReturnsDefaultState()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
-
-        try
+        await RunWithTemporaryRootDirectoryAsync(async rootDirectory =>
         {
             AppStateStore store = CreateStore(rootDirectory);
             TestStateSection section = new();
@@ -27,19 +25,13 @@ public sealed class AppStateStoreTests
             TestState state = await store.LoadAsync<TestState>(section, CancellationToken.None);
 
             state.Value.Should().Be(TestStateSection.DefaultValue);
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        });
     }
 
     [Fact]
     public async Task LoadAsync_WithInvalidJson_ReturnsDefaultStateAndLogsWarning()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
-
-        try
+        await RunWithTemporaryRootDirectoryAsync(async rootDirectory =>
         {
             LoadFailureTestContext context = CreateLoadFailureContext(rootDirectory);
             await File.WriteAllTextAsync(
@@ -50,111 +42,83 @@ public sealed class AppStateStoreTests
                 CancellationToken.None);
 
             await AssertLoadFailureAsync(context);
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        });
     }
 
     [Fact]
     public async Task SaveAsync_WithValidState_WritesUtf8JsonEnvelope()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
-
-        try
+        await RunWithTemporaryRootDirectoryAsync(async rootDirectory =>
         {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            AppStateStore store = CreateStore(pathProvider);
-            TestStateSection section = new();
+            StateStoreTestContext context = CreateStateStoreContext(rootDirectory);
             TestState state = new("saved");
 
-            await store.SaveAsync(section, state, CancellationToken.None);
+            await context.Store.SaveAsync(context.Section, state, CancellationToken.None);
 
-            string statePath = Path.Combine(pathProvider.StateDirectory, section.FileName);
+            string statePath = Path.Combine(context.PathProvider.StateDirectory, context.Section.FileName);
             byte[] bytes = await File.ReadAllBytesAsync(statePath, CancellationToken.None);
             bytes.Take(3).Should().NotEqual([0xEF, 0xBB, 0xBF]);
             using JsonDocument document = JsonDocument.Parse(bytes);
             JsonElement root = document.RootElement;
-            root.GetProperty("schemaVersion").GetInt32().Should().Be(section.SchemaVersion);
+            root.GetProperty("schemaVersion").GetInt32().Should().Be(context.Section.SchemaVersion);
             root.GetProperty("savedAtUtc").GetDateTimeOffset().Offset.Should().Be(TimeSpan.Zero);
             root.GetProperty("payload").GetProperty("value").GetString().Should().Be(state.Value);
-            Directory.GetFiles(pathProvider.StateDirectory, "*.tmp").Should().BeEmpty();
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+            Directory.GetFiles(context.PathProvider.StateDirectory, "*.tmp").Should().BeEmpty();
+        });
     }
 
     [Fact]
     public async Task SaveAsync_WhenWriteFails_KeepsPreviousStateFile()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
-
-        try
+        await RunWithTemporaryRootDirectoryAsync(async rootDirectory =>
         {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            AppStateStore store = CreateStore(pathProvider);
-            TestStateSection section = new();
-            string statePath = Path.Combine(pathProvider.StateDirectory, section.FileName);
-            await store.SaveAsync(section, new TestState("previous"), CancellationToken.None);
-            
+            StateStoreTestContext context = CreateStateStoreContext(rootDirectory);
+            string statePath = Path.Combine(context.PathProvider.StateDirectory, context.Section.FileName);
+            await context.Store.SaveAsync(context.Section, new TestState("previous"), CancellationToken.None);
+
             await using FileStream lockedStateFile = new(
                 statePath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read);
 
-            Func<Task> act = () => store.SaveAsync(section, new TestState("partial"), CancellationToken.None);
+            Func<Task> act = () => context.Store.SaveAsync(
+                context.Section,
+                new TestState("partial"),
+                CancellationToken.None);
 
             await act.Should().ThrowAsync<IOException>();
             lockedStateFile.Dispose();
-            TestState state = await store.LoadAsync<TestState>(section, CancellationToken.None);
+            TestState state = await context.Store.LoadAsync<TestState>(context.Section, CancellationToken.None);
             state.Value.Should().Be("previous");
-            Directory.GetFiles(pathProvider.StateDirectory, "*.tmp").Should().BeEmpty();
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+            Directory.GetFiles(context.PathProvider.StateDirectory, "*.tmp").Should().BeEmpty();
+        });
     }
 
     [Fact]
     public async Task SaveAsync_WithSectionFileName_WritesSectionOwnedFileName()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
-
-        try
+        await RunWithTemporaryRootDirectoryAsync(async rootDirectory =>
         {
-            AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-            AppStateStore store = CreateStore(pathProvider);
-            TestStateSection section = new()
-            {
-                OwnedFileName = "owned-section-name.json"
-            };
+            StateStoreTestContext context = CreateStateStoreContext(
+                rootDirectory,
+                "owned-section-name.json");
 
-            await store.SaveAsync(section, new TestState("saved"), CancellationToken.None);
+            await context.Store.SaveAsync(context.Section, new TestState("saved"), CancellationToken.None);
 
-            File.Exists(Path.Combine(pathProvider.StateDirectory, section.FileName)).Should().BeTrue();
-            File.Exists(Path.Combine(pathProvider.StateDirectory, string.Concat(section.Key, ".json")))
+            File.Exists(Path.Combine(context.PathProvider.StateDirectory, context.Section.FileName)).Should().BeTrue();
+            File.Exists(Path.Combine(context.PathProvider.StateDirectory, string.Concat(context.Section.Key, ".json")))
                 .Should().BeFalse();
-        }
-        finally
-        {
-            TestDirectories.DeleteIfExists(rootDirectory);
-        }
+        });
     }
 
     [Fact]
     public async Task LoadAsync_WithUnsupportedSchemaVersion_ReturnsDefaultStateAndLogsWarning()
     {
-        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
-
-        try
+        await RunWithTemporaryRootDirectoryAsync(async rootDirectory =>
         {
             LoadFailureTestContext context = CreateLoadFailureContext(rootDirectory);
-            StateEnvelope<TestState> envelope = new StateEnvelope<TestState>
+            StateEnvelope<TestState> envelope = new()
             {
                 SchemaVersion = context.Section.SchemaVersion + 1,
                 SavedAtUtc = new DateTimeOffset(2026, 7, 6, 8, 0, 0, TimeSpan.Zero),
@@ -169,6 +133,16 @@ public sealed class AppStateStoreTests
             }
 
             await AssertLoadFailureAsync(context);
+        });
+    }
+
+    private static async Task RunWithTemporaryRootDirectoryAsync(Func<string, Task> action)
+    {
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AppStateStoreTests));
+
+        try
+        {
+            await action(rootDirectory);
         }
         finally
         {
@@ -195,6 +169,24 @@ public sealed class AppStateStoreTests
     private static AppStateStore CreateStore(string rootDirectory)
     {
         return CreateStore(new AtomicArtDataPathProvider(rootDirectory));
+    }
+
+    private static StateStoreTestContext CreateStateStoreContext(
+        string rootDirectory,
+        string? ownedFileName = null)
+    {
+        AtomicArtDataPathProvider pathProvider = new(rootDirectory);
+        TestStateSection section = ownedFileName is null
+            ? new TestStateSection()
+            : new TestStateSection
+            {
+                OwnedFileName = ownedFileName
+            };
+
+        return new StateStoreTestContext(
+            pathProvider,
+            CreateStore(pathProvider),
+            section);
     }
 
     private static AppStateStore CreateStore(
@@ -241,6 +233,11 @@ public sealed class AppStateStoreTests
             Section = section;
         }
     }
+
+    private sealed record StateStoreTestContext(
+        AtomicArtDataPathProvider PathProvider,
+        AppStateStore Store,
+        TestStateSection Section);
 
     private sealed class TestStateSection : TestStateSectionTestDouble
     {
