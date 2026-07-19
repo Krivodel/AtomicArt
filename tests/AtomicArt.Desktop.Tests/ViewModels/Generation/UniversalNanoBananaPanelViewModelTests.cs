@@ -1242,12 +1242,8 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             generationPanelStateService: stateService,
             attachmentStore: attachmentStore);
-        IReadOnlyList<AttachedImageDto> images =
-        [
-            CreateAttachedImage("attachment.png")
-        ];
 
-        await viewModel.AttachImagesCommand.ExecuteAsync(images);
+        await AttachImageAsync(viewModel, "attachment.png");
 
         attachmentStore.SaveCallCount.Should().Be(1);
         GenerationPanelState savedState = stateService.SavedStates.Should()
@@ -1265,12 +1261,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             generationPanelStateService: stateService,
             attachmentStore: attachmentStore);
-        IReadOnlyList<AttachedImageDto> images =
-        [
-            CreateAttachedImage("attachment.png")
-        ];
-        await viewModel.AttachImagesCommand.ExecuteAsync(images);
-        AttachedImageViewModel attachedImage = viewModel.AttachedImages.Single();
+        AttachedImageViewModel attachedImage = await AttachImageAsync(viewModel, "attachment.png");
 
         await viewModel.RemoveAttachmentCommand.ExecuteAsync(attachedImage);
 
@@ -1285,12 +1276,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         RecordingImageViewerService imageViewerService = new();
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             imageViewerService: imageViewerService);
-        IReadOnlyList<AttachedImageDto> images =
-        [
-            CreateAttachedImage("attachment.png")
-        ];
-        await viewModel.AttachImagesCommand.ExecuteAsync(images);
-        AttachedImageViewModel attachedImage = viewModel.AttachedImages.Single();
+        AttachedImageViewModel attachedImage = await AttachImageAsync(viewModel, "attachment.png");
 
         await viewModel.OpenAttachmentCommand.ExecuteAsync(attachedImage);
 
@@ -1314,21 +1300,12 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         RecordingImageViewerService imageViewerService = new();
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             imageViewerService: imageViewerService);
-        IReadOnlyList<AttachedImageDto> firstImages =
-        [
-            CreateAttachedImage("first.png")
-        ];
-        IReadOnlyList<AttachedImageDto> secondImages =
-        [
-            CreateAttachedImage("second.png")
-        ];
-        await viewModel.AttachImagesCommand.ExecuteAsync(firstImages);
-        AttachedImageViewModel attachedImage = viewModel.AttachedImages.Single();
+        AttachedImageViewModel attachedImage = await AttachImageAsync(viewModel, "first.png");
         await viewModel.OpenAttachmentCommand.ExecuteAsync(attachedImage);
         GalleryImageViewerRequest request = imageViewerService.LastRequest
             ?? throw new InvalidOperationException("Image viewer request should be captured.");
 
-        await viewModel.AttachImagesCommand.ExecuteAsync(secondImages);
+        await AttachImageAsync(viewModel, "second.png");
 
         IReadOnlyList<string> expectedFileNames = viewModel.AttachedImages
             .Select(image => image.FileName)
@@ -1804,6 +1781,18 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             .ToList();
 
         await viewModel.AttachImagesCommand.ExecuteAsync(images);
+    }
+
+    private static async Task<AttachedImageViewModel> AttachImageAsync(
+        UniversalNanoBananaPanelViewModel viewModel,
+        string fileName)
+    {
+        IReadOnlyList<AttachedImageDto> images = [CreateAttachedImage(fileName)];
+
+        await viewModel.AttachImagesCommand.ExecuteAsync(images);
+
+        return viewModel.AttachedImages.Single(image =>
+            string.Equals(image.FileName, fileName, StringComparison.Ordinal));
     }
 
     private static async Task AssertImageAttachmentRejectedAsync(IReadOnlyList<AttachedImageDto> images)
