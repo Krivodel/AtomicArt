@@ -51,8 +51,7 @@ public sealed class GenerationsControllerTests
 
         IActionResult actionResult = await CreateAsync(context);
 
-        OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().Be(batch);
+        OkObjectResult okResult = VerifyOkResponse(actionResult, batch);
         string responseJson = JsonSerializer.Serialize(okResult.Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         responseJson.Should().Contain("\"imageContent\"");
         responseJson.Should().NotContain("previewContent");
@@ -84,8 +83,7 @@ public sealed class GenerationsControllerTests
 
         IActionResult actionResult = await CreateAsync(context);
 
-        OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().Be(batch);
+        VerifyOkResponse(actionResult, batch);
         context.Mediator.Verify(
             currentMediator => currentMediator.Send(
                 It.IsAny<CreateImageGenerationCommand>(),
@@ -457,6 +455,16 @@ public sealed class GenerationsControllerTests
     private static ImageGenerationRequestDto CreateRequest()
     {
         return CreateRequest(ModelId, ApiModelMetadataStartupTestCatalog.LoadCatalog());
+    }
+
+    private static OkObjectResult VerifyOkResponse(
+        IActionResult actionResult,
+        GenerationBatchDto expectedBatch)
+    {
+        OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().Be(expectedBatch);
+
+        return okResult;
     }
 
     private static ImageGenerationRequestDto CreateTestRequest()
