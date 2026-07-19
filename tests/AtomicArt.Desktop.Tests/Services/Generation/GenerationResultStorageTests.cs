@@ -24,7 +24,7 @@ public sealed class GenerationResultStorageTests
             nameof(SaveAsync_WithValidImageContent_WritesFileInsideResults));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
         byte[] validPngBytes = GenerationImageTestData.ValidPngBytes;
-        GenerationImageContentValidationResult content = ValidateContent(GenerationImageContentTypes.Png, validPngBytes);
+        GenerationImageContentValidationResult content = CreateValidPngContent();
         GenerationResultStorage storage = CreateStorage(pathProvider);
 
         string? resultPath = storage.GetExpectedResultPathOrDefault(
@@ -54,9 +54,7 @@ public sealed class GenerationResultStorageTests
             nameof(SaveAsync_WhenResultsDirectoryIsFile_ThrowsAndDoesNotWriteFile));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
         File.WriteAllText(pathProvider.ArtDirectory, "occupied");
-        GenerationImageContentValidationResult content = ValidateContent(
-            GenerationImageContentTypes.Png,
-            GenerationImageTestData.ValidPngBytes);
+        GenerationImageContentValidationResult content = CreateValidPngContent();
         GenerationResultStorage storage = CreateStorage(pathProvider);
 
         string? resultPath = storage.GetExpectedResultPathOrDefault(
@@ -121,9 +119,7 @@ public sealed class GenerationResultStorageTests
         AtomicArtDataPathProvider pathProvider = new(atomicArtDirectory);
         Directory.CreateDirectory(redirectedDirectory);
         await CreateJunctionAsync(atomicArtDirectory, redirectedDirectory);
-        GenerationImageContentValidationResult content = ValidateContent(
-            GenerationImageContentTypes.Png,
-            GenerationImageTestData.ValidPngBytes);
+        GenerationImageContentValidationResult content = CreateValidPngContent();
         GenerationResultStorage storage = CreateStorage(pathProvider);
 
         Func<Task> act = CreateSaveAction(storage, content);
@@ -201,6 +197,13 @@ public sealed class GenerationResultStorageTests
         }
 
         return validationResult;
+    }
+
+    private static GenerationImageContentValidationResult CreateValidPngContent()
+    {
+        return ValidateContent(
+            GenerationImageContentTypes.Png,
+            GenerationImageTestData.ValidPngBytes);
     }
 
     private static async Task CreateJunctionAsync(string junctionPath, string targetPath)
