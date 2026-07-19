@@ -30,12 +30,9 @@ public sealed class GalleryViewModelTests
         GenerationItemStatus status)
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
-        List<GenerationItemDto> items =
-        [
-            GalleryViewModelTestFactory.CreateItem(status: status)
-        ];
-        viewModel.AddGeneratedItems(items, 0);
-        GenerationItemViewModel item = viewModel.Items[0];
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(status: status));
 
         await viewModel.DeleteOrCancelCommand.ExecuteAsync(item);
 
@@ -49,14 +46,11 @@ public sealed class GalleryViewModelTests
         RecordingGalleryItemDeletionService deletionService = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             galleryItemDeletionService: deletionService);
-        List<GenerationItemDto> items =
-        [
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
             GalleryViewModelTestFactory.CreateItem(
                 status: GenerationItemStatus.Generated,
-                imagePath: "image.png")
-        ];
-        viewModel.AddGeneratedItems(items, 0);
-        GenerationItemViewModel item = viewModel.Items[0];
+                imagePath: "image.png"));
         item.ThumbnailPath = "thumbnail.png";
 
         await viewModel.DeleteOrCancelCommand.ExecuteAsync(item);
@@ -160,12 +154,9 @@ public sealed class GalleryViewModelTests
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             galleryStateService: galleryStateService,
             galleryItemDeletionService: deletionService);
-        List<GenerationItemDto> items =
-        [
-            GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generating)
-        ];
-        viewModel.AddGeneratedItems(items, 0);
-        GenerationItemViewModel item = viewModel.Items[0];
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generating));
 
         await viewModel.DeleteOrCancelCommand.ExecuteAsync(item);
 
@@ -198,13 +189,13 @@ public sealed class GalleryViewModelTests
         RecordingAnimatedGalleryOperations operations = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             animatedGalleryOperations: operations);
-        List<GenerationItemDto> items = [GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generated)];
-
-        viewModel.AddGeneratedItems(items, 0);
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generated));
 
         operations.GenerateFrontCallCount.Should().Be(1);
         operations.LastGenerateFrontItems.Should().ContainSingle();
-        operations.LastGenerateFrontItems[0].Should().BeSameAs(viewModel.Items[0]);
+        operations.LastGenerateFrontItems[0].Should().BeSameAs(item);
     }
 
     [Fact]
@@ -229,9 +220,9 @@ public sealed class GalleryViewModelTests
         RecordingAnimatedGalleryOperations operations = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             animatedGalleryOperations: operations);
-        List<GenerationItemDto> items = [GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generated)];
-        viewModel.AddGeneratedItems(items, 0);
-        GenerationItemViewModel item = viewModel.Items[0];
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generated));
 
         await viewModel.DeleteOrCancelCommand.ExecuteAsync(item);
 
@@ -567,6 +558,17 @@ public sealed class GalleryViewModelTests
             request,
             startSnapshot,
             TestGenerationCredentials.ProviderCredential);
+    }
+
+    private static GenerationItemViewModel AddGeneratedItem(
+        GalleryViewModel viewModel,
+        GenerationItemDto item)
+    {
+        IReadOnlyList<GenerationItemDto> items = [item];
+
+        viewModel.AddGeneratedItems(items, 0);
+
+        return viewModel.Items.Single();
     }
 
     private static string GetFileSourcePath(GalleryImageViewerItem item)
