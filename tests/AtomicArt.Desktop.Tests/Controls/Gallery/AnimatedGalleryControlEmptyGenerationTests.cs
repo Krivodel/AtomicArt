@@ -35,99 +35,92 @@ public sealed class AnimatedGalleryControlEmptyGenerationTests : AnimatedGallery
     [Fact]
     public async Task GenerateFrontAsync_WhenEmptyGalleryCreatesOneCard_FirstRemoveCreatesDeleteOverlay()
     {
-        await DispatchAsync(async () =>
+        await DispatchAsync(() => RunEmptyGenerationScenarioAsync(async (scenario, frameScheduler) =>
         {
-            TestUiFrameScheduler frameScheduler = new();
-            EmptyGenerationScenario scenario = ShowEmptyGenerationScenario(frameScheduler);
             GenerationItemViewModel item = CreateItem(FirstItemId, FirstItemIndex);
 
-            try
-            {
-                await GenerateFrontAsync(
-                    scenario,
-                    new List<GenerationItemViewModel> { item },
-                    frameScheduler);
-                UpdateItemFromResult(item, FinalFirstItemId, FirstItemIndex);
+            await GenerateFrontAsync(
+                scenario,
+                new List<GenerationItemViewModel> { item },
+                frameScheduler);
+            UpdateItemFromResult(item, FinalFirstItemId, FirstItemIndex);
 
-                await RemoveGeneratedItemAsync(scenario, item, frameScheduler);
+            await RemoveGeneratedItemAsync(scenario, item, frameScheduler);
 
-                GetOverlayCards(scenario.Control)
-                    .Should()
-                    .ContainSingle(card => ReferenceEquals(card.DataContext, item));
-            }
-            finally
-            {
-                await DrainQueuedFramesAsync(frameScheduler);
-                scenario.Window.Close();
-            }
-        });
+            AssertOverlayCard(scenario.Control, item);
+        }));
     }
 
     [Fact]
     public async Task GenerateFrontAsync_WhenEmptyGalleryCreatesMultipleCards_FirstRemoveCreatesDeleteOverlayAndMovesRemainingCards()
     {
-        await DispatchAsync(async () =>
+        await DispatchAsync(() => RunMultipleGenerationScenarioAsync(async (scenario, items, frameScheduler) =>
         {
-            TestUiFrameScheduler frameScheduler = new();
-            EmptyGenerationScenario scenario = ShowEmptyGenerationScenario(frameScheduler);
+            await RemoveGeneratedItemAsync(scenario, items[FirstItemIndex], frameScheduler);
 
-            try
-            {
-                List<GenerationItemViewModel> items =
-                    await GenerateMultipleItemsAsync(scenario, frameScheduler);
-
-                await RemoveGeneratedItemAsync(scenario, items[FirstItemIndex], frameScheduler);
-
-                GetOverlayCards(scenario.Control)
-                    .Should()
-                    .ContainSingle(card => ReferenceEquals(card.DataContext, items[FirstItemIndex]));
-                AssertCardsStartedMove(
-                    scenario.Control,
-                    new List<GenerationItemViewModel>
-                    {
-                        items[MiddleItemIndex],
-                        items[LastItemIndex]
-                    });
-            }
-            finally
-            {
-                await DrainQueuedFramesAsync(frameScheduler);
-                scenario.Window.Close();
-            }
-        });
+            AssertOverlayCard(scenario.Control, items[FirstItemIndex]);
+            AssertCardsMoveState(
+                scenario.Control,
+                new List<GenerationItemViewModel>
+                {
+                    items[MiddleItemIndex],
+                    items[LastItemIndex]
+                },
+                true);
+        }));
     }
 
     [Fact]
     public async Task GenerateFrontAsync_WhenEmptyGalleryCreatesMultipleCards_RemovingNonFirstCardCreatesDeleteOverlayAndMovesRemainingCards()
     {
-        await DispatchAsync(async () =>
+        await DispatchAsync(() => RunMultipleGenerationScenarioAsync(async (scenario, items, frameScheduler) =>
         {
-            TestUiFrameScheduler frameScheduler = new();
-            EmptyGenerationScenario scenario = ShowEmptyGenerationScenario(frameScheduler);
+            GenerationItemViewModel removedItem = items[MiddleItemIndex];
 
-            try
-            {
-                List<GenerationItemViewModel> items =
-                    await GenerateMultipleItemsAsync(scenario, frameScheduler);
-                GenerationItemViewModel removedItem = items[MiddleItemIndex];
+            await RemoveGeneratedItemAsync(scenario, removedItem, frameScheduler);
 
-                await RemoveGeneratedItemAsync(scenario, removedItem, frameScheduler);
+            AssertOverlayCard(scenario.Control, removedItem);
+            AssertCardsMoveState(
+                scenario.Control,
+                new List<GenerationItemViewModel> { items[LastItemIndex] },
+                true);
+            AssertCardsMoveState(
+                scenario.Control,
+                new List<GenerationItemViewModel> { items[FirstItemIndex] },
+                false);
+        }));
+    }
 
-                GetOverlayCards(scenario.Control)
-                    .Should()
-                    .ContainSingle(card => ReferenceEquals(card.DataContext, removedItem));
-                AssertCardsStartedMove(
-                    scenario.Control,
-                    new List<GenerationItemViewModel> { items[LastItemIndex] });
-                AssertCardsNotStartedMove(
-                    scenario.Control,
-                    new List<GenerationItemViewModel> { items[FirstItemIndex] });
-            }
-            finally
-            {
-                await DrainQueuedFramesAsync(frameScheduler);
-                scenario.Window.Close();
-            }
+    private static async Task RunEmptyGenerationScenarioAsync(
+        Func<EmptyGenerationScenario, TestUiFrameScheduler, Task> action)
+    {
+        TestUiFrameScheduler frameScheduler = new();
+        EmptyGenerationScenario scenario = ShowEmptyGenerationScenario(frameScheduler);
+
+        try
+        {
+            await action(scenario, frameScheduler);
+        }
+        finally
+        {
+            await DrainQueuedFramesAsync(frameScheduler);
+            scenario.Window.Close();
+        }
+    }
+
+    private static async Task RunMultipleGenerationScenarioAsync(
+        Func<
+            EmptyGenerationScenario,
+            IReadOnlyList<GenerationItemViewModel>,
+            TestUiFrameScheduler,
+            Task> action)
+    {
+        await RunEmptyGenerationScenarioAsync(async (scenario, frameScheduler) =>
+        {
+            List<GenerationItemViewModel> items =
+                await GenerateMultipleItemsAsync(scenario, frameScheduler);
+
+            await action(scenario, items, frameScheduler);
         });
     }
 
@@ -227,18 +220,29 @@ public sealed class AnimatedGalleryControlEmptyGenerationTests : AnimatedGallery
 
     private static List<GenerationCardControl> GetVisibleCards(AnimatedGalleryControl control)
     {
-        return GetGalleryPanel(control)
+        return GetCards(GetGalleryPanel(control));
+    }
+
+    private static List<GenerationCardControl> GetOverlayCards(AnimatedGalleryControl control)
+    {
+        return GetCards(GetOverlayCanvas(control));
+    }
+
+    private static List<GenerationCardControl> GetCards(Panel panel)
+    {
+        return panel
             .Children
             .OfType<GenerationCardControl>()
             .ToList();
     }
 
-    private static List<GenerationCardControl> GetOverlayCards(AnimatedGalleryControl control)
+    private static void AssertOverlayCard(
+        AnimatedGalleryControl control,
+        GenerationItemViewModel item)
     {
-        return GetOverlayCanvas(control)
-            .Children
-            .OfType<GenerationCardControl>()
-            .ToList();
+        GetOverlayCards(control)
+            .Should()
+            .ContainSingle(card => ReferenceEquals(card.DataContext, item));
     }
 
     private static bool HasStartedMove(GenerationCardControl card)
@@ -249,27 +253,16 @@ public sealed class AnimatedGalleryControlEmptyGenerationTests : AnimatedGallery
                || (Math.Abs(transform.Y) > MovementTolerance);
     }
 
-    private static void AssertCardsStartedMove(
+    private static void AssertCardsMoveState(
         AnimatedGalleryControl control,
-        IReadOnlyList<GenerationItemViewModel> items)
+        IReadOnlyList<GenerationItemViewModel> items,
+        bool expectedToHaveStarted)
     {
         foreach (GenerationItemViewModel item in items)
         {
             GenerationCardControl card = GetVisibleCard(control, item);
 
-            HasStartedMove(card).Should().BeTrue();
-        }
-    }
-
-    private static void AssertCardsNotStartedMove(
-        AnimatedGalleryControl control,
-        IReadOnlyList<GenerationItemViewModel> items)
-    {
-        foreach (GenerationItemViewModel item in items)
-        {
-            GenerationCardControl card = GetVisibleCard(control, item);
-
-            HasStartedMove(card).Should().BeFalse();
+            HasStartedMove(card).Should().Be(expectedToHaveStarted);
         }
     }
 
