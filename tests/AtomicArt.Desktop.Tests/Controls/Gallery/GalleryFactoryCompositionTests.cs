@@ -5,6 +5,32 @@ namespace AtomicArt.Desktop.Tests.Controls.Gallery;
 
 public sealed class GalleryFactoryCompositionTests
 {
+    private static readonly string[] ForbiddenFactorySourceFragments =
+    [
+        "IServiceProvider",
+        "GetRequiredService",
+        "ActivatorUtilities",
+        "BuildServiceProvider",
+        "CreateStandalone",
+        "new GalleryLayoutService",
+        "new GalleryAnimationScheduler",
+        "new GalleryOverlayEffects",
+        "new GalleryMotionAnimator",
+        "new GalleryAppendRunner",
+        "new GalleryFrontGenerationRunner",
+        "new GalleryRemoveRunner",
+        "new GalleryMixedMutationRunner",
+        "new GalleryOperationRunnerRegistry",
+        "new GalleryOperationCoordinator",
+        "GalleryLayoutFactory",
+        "AnimationSchedulerFactory",
+        "OverlayEffectsFactory",
+        "MotionAnimatorFactory",
+        "OperationRunnersFactory",
+        "RunnerRegistryFactory",
+        "OperationCoordinatorFactory"
+    ];
+
     [Fact]
     public void FactorySources_WithProductionComposition_DoNotUseServiceLocator()
     {
@@ -21,28 +47,10 @@ public sealed class GalleryFactoryCompositionTests
             .ToList();
         string allFactorySources = string.Join(Environment.NewLine, factorySources);
 
-        allFactorySources.Should().NotContain("IServiceProvider");
-        allFactorySources.Should().NotContain("GetRequiredService");
-        allFactorySources.Should().NotContain("ActivatorUtilities");
-        allFactorySources.Should().NotContain("BuildServiceProvider");
-        allFactorySources.Should().NotContain("CreateStandalone");
-        allFactorySources.Should().NotContain("new GalleryLayoutService");
-        allFactorySources.Should().NotContain("new GalleryAnimationScheduler");
-        allFactorySources.Should().NotContain("new GalleryOverlayEffects");
-        allFactorySources.Should().NotContain("new GalleryMotionAnimator");
-        allFactorySources.Should().NotContain("new GalleryAppendRunner");
-        allFactorySources.Should().NotContain("new GalleryFrontGenerationRunner");
-        allFactorySources.Should().NotContain("new GalleryRemoveRunner");
-        allFactorySources.Should().NotContain("new GalleryMixedMutationRunner");
-        allFactorySources.Should().NotContain("new GalleryOperationRunnerRegistry");
-        allFactorySources.Should().NotContain("new GalleryOperationCoordinator");
-        allFactorySources.Should().NotContain("GalleryLayoutFactory");
-        allFactorySources.Should().NotContain("AnimationSchedulerFactory");
-        allFactorySources.Should().NotContain("OverlayEffectsFactory");
-        allFactorySources.Should().NotContain("MotionAnimatorFactory");
-        allFactorySources.Should().NotContain("OperationRunnersFactory");
-        allFactorySources.Should().NotContain("RunnerRegistryFactory");
-        allFactorySources.Should().NotContain("OperationCoordinatorFactory");
+        foreach (string forbiddenFragment in ForbiddenFactorySourceFragments)
+        {
+            allFactorySources.Should().NotContain(forbiddenFragment);
+        }
     }
 
     private static string FindWorkspaceRoot()
