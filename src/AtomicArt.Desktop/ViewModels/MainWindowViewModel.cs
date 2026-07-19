@@ -154,25 +154,13 @@ public sealed partial class MainWindowViewModel :
     [RelayCommand(CanExecute = nameof(CanRestoreAppState))]
     private async Task RestoreAppStateAsync(CancellationToken ct)
     {
-        try
-        {
-            IsLoading = true;
-            ErrorMessage = null;
-            await _appStateBootstrapper.RestoreAsync(this, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            ErrorMessage = null;
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(RestoreAppStateAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        await ViewModelAsyncOperation.RunAsync(
+            () => _appStateBootstrapper.RestoreAsync(this, ct),
+            ct,
+            _errorHandler,
+            nameof(RestoreAppStateAsync),
+            value => IsLoading = value,
+            value => ErrorMessage = value);
     }
 
     private void SubscribeToEvents()
