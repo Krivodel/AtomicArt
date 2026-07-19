@@ -928,14 +928,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public void SelectedModel_WhenAspectRatioSupportedByNewModel_KeepsAspectRatioWithoutSelectionResetNotification()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["1:1", "16:9"],
-                ["1K"],
-                [1],
-                [GenerationAspectRatios.Auto, "16:9"],
-                ["1K"],
-                [1])));
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["1:1", "16:9"],
+            ["1K"],
+            [1],
+            [GenerationAspectRatios.Auto, "16:9"],
+            ["1K"],
+            [1]);
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.SelectedAspectRatio = "16:9";
@@ -949,14 +948,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public void SelectedModel_WhenAspectRatioUnsupportedByNewModel_ResetsToDefaultAndRaisesSelectionResetNotification()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["1:1", "16:9"],
-                ["1K"],
-                [1],
-                [GenerationAspectRatios.Auto, "1:1"],
-                ["1K"],
-                [1])));
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["1:1", "16:9"],
+            ["1K"],
+            [1],
+            [GenerationAspectRatios.Auto, "1:1"],
+            ["1K"],
+            [1]);
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.SelectedAspectRatio = "16:9";
@@ -970,14 +968,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public void SelectedModel_WhenResolutionSupportedByNewModel_KeepsResolutionWithoutSelectionResetNotification()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["1:1"],
-                ["1K", "2K"],
-                [1],
-                ["1:1"],
-                ["512", "2K"],
-                [1])));
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["1:1"],
+            ["1K", "2K"],
+            [1],
+            ["1:1"],
+            ["512", "2K"],
+            [1]);
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.SelectedResolution = "2K";
@@ -991,14 +988,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public void SelectedModel_WhenResolutionUnsupportedByNewModel_ResetsToDefaultAndRaisesSelectionResetNotification()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["1:1"],
-                ["1K", "2K"],
-                [1],
-                ["1:1"],
-                ["512", "1K"],
-                [1])));
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["1:1"],
+            ["1K", "2K"],
+            [1],
+            ["1:1"],
+            ["512", "1K"],
+            [1]);
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.SelectedResolution = "2K";
@@ -1012,14 +1008,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public void SelectedModel_WhenGenerationCountSupportedByNewModel_KeepsGenerationCountWithoutSelectionResetNotification()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["1:1"],
-                ["1K"],
-                [1, 4],
-                ["1:1"],
-                ["1K"],
-                [2, 4])));
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["1:1"],
+            ["1K"],
+            [1, 4],
+            ["1:1"],
+            ["1K"],
+            [2, 4]);
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.GenerationCount = 4;
@@ -1033,14 +1028,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public void SelectedModel_WhenGenerationCountUnsupportedByNewModel_ResetsToDefaultAndRaisesSelectionResetNotification()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["1:1"],
-                ["1K"],
-                [1, 4],
-                ["1:1"],
-                ["1K"],
-                [2, 3])));
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["1:1"],
+            ["1K"],
+            [1, 4],
+            ["1:1"],
+            ["1K"],
+            [2, 3]);
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         viewModel.GenerationCount = 4;
@@ -1054,14 +1048,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public void SelectedModel_WhenSwitchedBack_DoesNotRestorePreviousModelValues()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["16:9", "1:1"],
-                ["2K", "1K"],
-                [4, 1],
-                ["1:1"],
-                ["1K"],
-                [1])));
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["16:9", "1:1"],
+            ["2K", "1K"],
+            [4, 1],
+            ["1:1"],
+            ["1K"],
+            [1]);
         ImageModelOption firstModel = GetModel(viewModel, "compat-model-a");
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         viewModel.SelectedAspectRatio = "16:9";
@@ -1080,15 +1073,14 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     public void SelectedModel_WhenChangedAfterCompatibilityReset_SavesActualPanelState()
     {
         RecordingGenerationPanelStateService stateService = new();
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["16:9"],
-                ["2K"],
-                [4],
-                ["1:1"],
-                ["1K"],
-                [1])),
-            generationPanelStateService: stateService);
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["16:9"],
+            ["2K"],
+            [4],
+            ["1:1"],
+            ["1K"],
+            [1],
+            stateService);
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         stateService.SavedStates.Clear();
 
@@ -1106,14 +1098,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public void SelectedModel_WhenBindingsClearUnsupportedValuesAfterItemsSourceRefresh_ResetsFromPreviousValuesAndRaisesSelectionResetNotifications()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["16:9"],
-                ["2K"],
-                [4],
-                ["1:1"],
-                ["1K"],
-                [1])));
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["16:9"],
+            ["2K"],
+            [4],
+            ["1:1"],
+            ["1K"],
+            [1]);
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(viewModel);
@@ -1129,14 +1120,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public void SelectedModel_WhenBindingsClearSupportedValuesAfterItemsSourceRefresh_RestoresPreviousValuesWithoutSelectionResetNotifications()
     {
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateCompatibilityCatalog(
-                ["16:9"],
-                ["2K"],
-                [4],
-                ["16:9", "1:1"],
-                ["2K", "1K"],
-                [4, 1])));
+        UniversalNanoBananaPanelViewModel viewModel = CreateCompatibilityViewModel(
+            ["16:9"],
+            ["2K"],
+            [4],
+            ["16:9", "1:1"],
+            ["2K", "1K"],
+            [4, 1]);
         ImageModelOption secondModel = GetModel(viewModel, "compat-model-b");
         SelectionValueResetRecorder resetRecorder = new(viewModel);
         SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(viewModel);
@@ -1547,6 +1537,28 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             viewModelErrorHandler);
 
         return viewModel;
+    }
+
+    private static UniversalNanoBananaPanelViewModel CreateCompatibilityViewModel(
+        IReadOnlyList<string> firstAspectRatios,
+        IReadOnlyList<string> firstResolutions,
+        IReadOnlyList<int> firstGenerationCounts,
+        IReadOnlyList<string> secondAspectRatios,
+        IReadOnlyList<string> secondResolutions,
+        IReadOnlyList<int> secondGenerationCounts,
+        IGenerationPanelStateService? generationPanelStateService = null)
+    {
+        GenerationModelCatalogDto catalog = CreateCompatibilityCatalog(
+            firstAspectRatios,
+            firstResolutions,
+            firstGenerationCounts,
+            secondAspectRatios,
+            secondResolutions,
+            secondGenerationCounts);
+
+        return CreateViewModel(
+            imageModelOptionCatalog: CreateImageModelOptionCatalog(catalog),
+            generationPanelStateService: generationPanelStateService);
     }
 
     private static RecordingGenerationPanelStateService CreateStateService(
