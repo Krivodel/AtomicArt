@@ -1211,16 +1211,12 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public async Task AttachImagesCommand_WithValidImage_SavesAttachmentAndPanelState()
     {
-        RecordingGenerationPanelStateService stateService = new();
-        RecordingPanelAttachmentStore attachmentStore = new();
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            generationPanelStateService: stateService,
-            attachmentStore: attachmentStore);
+        AttachmentPersistenceTestContext context = CreateAttachmentPersistenceTestContext();
 
-        await AttachImageAsync(viewModel, "attachment.png");
+        await AttachImageAsync(context.ViewModel, "attachment.png");
 
-        attachmentStore.SaveCallCount.Should().Be(1);
-        GenerationPanelState savedState = stateService.SavedStates.Should()
+        context.AttachmentStore.SaveCallCount.Should().Be(1);
+        GenerationPanelState savedState = context.StateService.SavedStates.Should()
             .ContainSingle()
             .Subject;
         savedState.Attachments.Should().ContainSingle()
@@ -1230,18 +1226,14 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Fact]
     public async Task RemoveAttachmentCommand_WithExistingAttachment_SavesPanelState()
     {
-        RecordingGenerationPanelStateService stateService = new();
-        RecordingPanelAttachmentStore attachmentStore = new();
-        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
-            generationPanelStateService: stateService,
-            attachmentStore: attachmentStore);
-        AttachedImageViewModel attachedImage = await AttachImageAsync(viewModel, "attachment.png");
+        AttachmentPersistenceTestContext context = CreateAttachmentPersistenceTestContext();
+        AttachedImageViewModel attachedImage = await AttachImageAsync(context.ViewModel, "attachment.png");
 
-        await viewModel.RemoveAttachmentCommand.ExecuteAsync(attachedImage);
+        await context.ViewModel.RemoveAttachmentCommand.ExecuteAsync(attachedImage);
 
-        attachmentStore.DeleteCallCount.Should().Be(1);
-        stateService.SavedStates.Should().HaveCount(2);
-        stateService.SavedStates.Last().Attachments.Should().BeEmpty();
+        context.AttachmentStore.DeleteCallCount.Should().Be(1);
+        context.StateService.SavedStates.Should().HaveCount(2);
+        context.StateService.SavedStates.Last().Attachments.Should().BeEmpty();
     }
 
     [Fact]
@@ -1543,6 +1535,17 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         return CreateViewModel(
             imageModelOptionCatalog: CreateImageModelOptionCatalog(catalog),
             generationPanelStateService: generationPanelStateService);
+    }
+
+    private static AttachmentPersistenceTestContext CreateAttachmentPersistenceTestContext()
+    {
+        RecordingGenerationPanelStateService stateService = new();
+        RecordingPanelAttachmentStore attachmentStore = new();
+        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            generationPanelStateService: stateService,
+            attachmentStore: attachmentStore);
+
+        return new AttachmentPersistenceTestContext(viewModel, stateService, attachmentStore);
     }
 
     private static RecordingGenerationPanelStateService CreateStateService(
@@ -2043,6 +2046,23 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         public Task SetSecretAsync(string key, string value, CancellationToken ct)
         {
             throw new NotSupportedException("Panel tests do not write secrets.");
+        }
+    }
+
+    private sealed class AttachmentPersistenceTestContext
+    {
+        public UniversalNanoBananaPanelViewModel ViewModel { get; }
+        public RecordingGenerationPanelStateService StateService { get; }
+        public RecordingPanelAttachmentStore AttachmentStore { get; }
+
+        public AttachmentPersistenceTestContext(
+            UniversalNanoBananaPanelViewModel viewModel,
+            RecordingGenerationPanelStateService stateService,
+            RecordingPanelAttachmentStore attachmentStore)
+        {
+            ViewModel = viewModel;
+            StateService = stateService;
+            AttachmentStore = attachmentStore;
         }
     }
 
