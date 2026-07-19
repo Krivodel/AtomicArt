@@ -80,13 +80,7 @@ internal sealed class AnimatedGalleryResizeController
 
     internal void CancelResizeAnimation()
     {
-        _resizeVersion++;
-        AnimatedGalleryScene? scene = _sceneController.Scene;
-        if (scene is not null)
-        {
-            scene.AnimationScheduler.Cancel(_animatedControls);
-        }
-
+        CancelRunningResizeAnimation();
         ResetAnimatedControls();
         _animatedControls.Clear();
     }
@@ -216,14 +210,18 @@ internal sealed class AnimatedGalleryResizeController
 
     private void RetargetResizeAnimation()
     {
+        CancelRunningResizeAnimation();
+        _animatedControls.Clear();
+    }
+
+    private void CancelRunningResizeAnimation()
+    {
         _resizeVersion++;
         AnimatedGalleryScene? scene = _sceneController.Scene;
         if (scene is not null)
         {
             scene.AnimationScheduler.Cancel(_animatedControls);
         }
-
-        _animatedControls.Clear();
     }
 
     private Size GetAvailableAreaSize()
