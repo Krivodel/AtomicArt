@@ -308,26 +308,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     [RelayCommand(CanExecute = nameof(CanPickImage))]
     private async Task PickImageAsync(CancellationToken ct)
     {
-        try
-        {
-            ErrorMessage = null;
-            IReadOnlyList<ImageAttachmentInput> inputs = await _filePickerService.PickImagesAsync(
-                AttachmentInputByteLimit,
-                ct);
-            await AttachImageInputsCoreAsync(inputs, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(PickImageAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        finally
-        {
-            RefreshAttachmentState();
-        }
+        await ExecuteAttachmentOperationAsync(PickImageAndAttachAsync, nameof(PickImageAsync), ct);
     }
 
     [RelayCommand(CanExecute = nameof(CanAttachImages), AllowConcurrentExecutions = true)]
@@ -362,23 +343,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             return;
         }
 
-        try
-        {
-            ErrorMessage = null;
-            await _attachmentsViewModel.RemoveAttachmentAsync(PanelId, attachedImage, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(RemoveAttachmentAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        finally
-        {
-            RefreshAttachmentState();
-        }
+        await ExecuteAttachmentOperationAsync(
+            operationCt => _attachmentsViewModel.RemoveAttachmentAsync(PanelId, attachedImage, operationCt),
+            nameof(RemoveAttachmentAsync),
+            ct);
     }
 
     [RelayCommand]
@@ -391,20 +359,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             return;
         }
 
-        try
-        {
-            ErrorMessage = null;
-            _attachmentsViewModel.MoveAttachment(request.AttachedImage, request.TargetIndex);
-            await SavePanelStateAsync(nameof(ReorderAttachmentAsync), ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(ReorderAttachmentAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
+        await ExecuteOperationAsync(
+            operationCt => ReorderAttachmentCoreAsync(request, operationCt),
+            nameof(ReorderAttachmentAsync),
+            ct);
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]
@@ -427,24 +385,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             return;
         }
 
-        try
-        {
-            ErrorMessage = null;
-            GalleryImageViewerRequest request = new(
-                new GalleryDelegateImageViewerItemsSource(CreateAttachedImageViewerItems),
-                attachedImage.Id,
-                AttachImagesCommand);
-
-            await _imageViewerService.OpenAsync(request, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(OpenAttachmentAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
+        await ExecuteOperationAsync(
+            operationCt => OpenAttachmentCoreAsync(attachedImage, operationCt),
+            nameof(OpenAttachmentAsync),
+            ct);
     }
 
     private IReadOnlyList<GalleryImageViewerItem> CreateAttachedImageViewerItems()
@@ -579,7 +523,52 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         await _attachmentsViewModel.AttachInputsAsync(PanelId, SelectedModel, inputs, ct);
     }
 
+    private async Task PickImageAndAttachAsync(CancellationToken ct)
+    {
+        IReadOnlyList<ImageAttachmentInput> inputs = await _filePickerService.PickImagesAsync(
+            AttachmentInputByteLimit,
+            ct);
+
+        await AttachImageInputsCoreAsync(inputs, ct);
+    }
+
+    private async Task ReorderAttachmentCoreAsync(
+        AttachedImageReorderRequest request,
+        CancellationToken ct)
+    {
+        _attachmentsViewModel.MoveAttachment(request.AttachedImage, request.TargetIndex);
+
+        await SavePanelStateAsync(nameof(ReorderAttachmentAsync), ct);
+    }
+
+    private async Task OpenAttachmentCoreAsync(
+        AttachedImageViewModel attachedImage,
+        CancellationToken ct)
+    {
+        GalleryImageViewerRequest request = new(
+            new GalleryDelegateImageViewerItemsSource(CreateAttachedImageViewerItems),
+            attachedImage.Id,
+            AttachImagesCommand);
+
+        await _imageViewerService.OpenAsync(request, ct);
+    }
+
     private async Task ExecuteAttachmentOperationAsync(
+        Func<CancellationToken, Task> operation,
+        string operationName,
+        CancellationToken ct)
+    {
+        try
+        {
+            await ExecuteOperationAsync(operation, operationName, ct);
+        }
+        finally
+        {
+            RefreshAttachmentState();
+        }
+    }
+
+    private async Task ExecuteOperationAsync(
         Func<CancellationToken, Task> operation,
         string operationName,
         CancellationToken ct)
@@ -597,10 +586,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         {
             _errorHandler.Log(ex, operationName);
             ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        finally
-        {
-            RefreshAttachmentState();
         }
     }
 
