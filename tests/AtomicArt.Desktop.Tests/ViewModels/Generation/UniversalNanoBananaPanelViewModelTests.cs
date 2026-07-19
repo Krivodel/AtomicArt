@@ -935,11 +935,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             [GenerationAspectRatios.Auto, "16:9"],
             ["1K"],
             [1]);
-        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
-        SelectionValueResetRecorder resetRecorder = new(viewModel);
-        viewModel.SelectedAspectRatio = "16:9";
-
-        viewModel.SelectedModel = secondModel;
+        SelectionValueResetRecorder resetRecorder = SwitchToSecondCompatibilityModel(
+            viewModel,
+            model => model.SelectedAspectRatio = "16:9");
 
         viewModel.SelectedAspectRatio.Should().Be("16:9");
         resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedAspectRatio)).Should().Be(0);
@@ -955,11 +953,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             [GenerationAspectRatios.Auto, "1:1"],
             ["1K"],
             [1]);
-        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
-        SelectionValueResetRecorder resetRecorder = new(viewModel);
-        viewModel.SelectedAspectRatio = "16:9";
-
-        viewModel.SelectedModel = secondModel;
+        SelectionValueResetRecorder resetRecorder = SwitchToSecondCompatibilityModel(
+            viewModel,
+            model => model.SelectedAspectRatio = "16:9");
 
         viewModel.SelectedAspectRatio.Should().Be(GenerationAspectRatios.Auto);
         resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedAspectRatio)).Should().Be(1);
@@ -975,11 +971,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["512", "2K"],
             [1]);
-        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
-        SelectionValueResetRecorder resetRecorder = new(viewModel);
-        viewModel.SelectedResolution = "2K";
-
-        viewModel.SelectedModel = secondModel;
+        SelectionValueResetRecorder resetRecorder = SwitchToSecondCompatibilityModel(
+            viewModel,
+            model => model.SelectedResolution = "2K");
 
         viewModel.SelectedResolution.Should().Be("2K");
         resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedResolution)).Should().Be(0);
@@ -995,11 +989,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["512", "1K"],
             [1]);
-        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
-        SelectionValueResetRecorder resetRecorder = new(viewModel);
-        viewModel.SelectedResolution = "2K";
-
-        viewModel.SelectedModel = secondModel;
+        SelectionValueResetRecorder resetRecorder = SwitchToSecondCompatibilityModel(
+            viewModel,
+            model => model.SelectedResolution = "2K");
 
         viewModel.SelectedResolution.Should().Be("512");
         resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.SelectedResolution)).Should().Be(1);
@@ -1015,11 +1007,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["1K"],
             [2, 4]);
-        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
-        SelectionValueResetRecorder resetRecorder = new(viewModel);
-        viewModel.GenerationCount = 4;
-
-        viewModel.SelectedModel = secondModel;
+        SelectionValueResetRecorder resetRecorder = SwitchToSecondCompatibilityModel(
+            viewModel,
+            model => model.GenerationCount = 4);
 
         viewModel.GenerationCount.Should().Be(4);
         resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.GenerationCount)).Should().Be(0);
@@ -1035,11 +1025,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["1K"],
             [2, 3]);
-        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
-        SelectionValueResetRecorder resetRecorder = new(viewModel);
-        viewModel.GenerationCount = 4;
-
-        viewModel.SelectedModel = secondModel;
+        SelectionValueResetRecorder resetRecorder = SwitchToSecondCompatibilityModel(
+            viewModel,
+            model => model.GenerationCount = 4);
 
         viewModel.GenerationCount.Should().Be(2);
         resetRecorder.CountFor(nameof(UniversalNanoBananaPanelViewModel.GenerationCount)).Should().Be(1);
@@ -1105,11 +1093,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["1:1"],
             ["1K"],
             [1]);
-        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
-        SelectionValueResetRecorder resetRecorder = new(viewModel);
-        SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(viewModel);
-
-        viewModel.SelectedModel = secondModel;
+        SelectionValueResetRecorder resetRecorder = SwitchToSecondCompatibilityModel(
+            viewModel,
+            SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh);
 
         viewModel.SelectedAspectRatio.Should().Be("1:1");
         viewModel.SelectedResolution.Should().Be("1K");
@@ -1127,11 +1113,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ["16:9", "1:1"],
             ["2K", "1K"],
             [4, 1]);
-        ImageModelOption secondModel = GetSecondCompatibilityModel(viewModel);
-        SelectionValueResetRecorder resetRecorder = new(viewModel);
-        SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(viewModel);
-
-        viewModel.SelectedModel = secondModel;
+        SelectionValueResetRecorder resetRecorder = SwitchToSecondCompatibilityModel(
+            viewModel,
+            SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh);
 
         viewModel.SelectedAspectRatio.Should().Be("16:9");
         viewModel.SelectedResolution.Should().Be("2K");
@@ -1788,6 +1772,17 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     private static ImageModelOption GetSecondCompatibilityModel(UniversalNanoBananaPanelViewModel viewModel)
     {
         return GetModel(viewModel, "compat-model-b");
+    }
+
+    private static SelectionValueResetRecorder SwitchToSecondCompatibilityModel(
+        UniversalNanoBananaPanelViewModel viewModel,
+        Action<UniversalNanoBananaPanelViewModel> configureFirstModel)
+    {
+        SelectionValueResetRecorder resetRecorder = new(viewModel);
+        configureFirstModel(viewModel);
+        viewModel.SelectedModel = GetSecondCompatibilityModel(viewModel);
+
+        return resetRecorder;
     }
 
     private static async Task AttachValidImagesAsync(UniversalNanoBananaPanelViewModel viewModel, int count)
