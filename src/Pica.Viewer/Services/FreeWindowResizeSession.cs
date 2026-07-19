@@ -2,29 +2,21 @@ using Avalonia;
 
 namespace Pica.Viewer.Services;
 
-internal sealed class FreeWindowResizeSession : IWindowResizeSession
+internal sealed class FreeWindowResizeSession : WindowResizeSession
 {
     private const int MinimumWindowExtent = 64;
-
-    private readonly WindowRectangle _initialRectangle;
-    private readonly PixelPoint _initialPointerPosition;
-    private readonly WindowSizingEdges _sizingEdges;
 
     public FreeWindowResizeSession(
         WindowRectangle initialRectangle,
         PixelPoint initialPointerPosition,
         WindowSizingEdges sizingEdges)
+        : base(initialRectangle, initialPointerPosition, sizingEdges)
     {
-        _initialRectangle = initialRectangle;
-        _initialPointerPosition = initialPointerPosition;
-        _sizingEdges = sizingEdges;
     }
 
-    public WindowRectangle Calculate(PixelPoint pointerPosition)
+    protected override WindowRectangle CalculateCore(int horizontalDelta, int verticalDelta)
     {
-        int horizontalDelta = pointerPosition.X - _initialPointerPosition.X;
-        int verticalDelta = pointerPosition.Y - _initialPointerPosition.Y;
-        WindowRectangle rectangle = _initialRectangle;
+        WindowRectangle rectangle = InitialRectangle;
         ApplyHorizontalDelta(ref rectangle, horizontalDelta);
         ApplyVerticalDelta(ref rectangle, verticalDelta);
 
@@ -33,13 +25,13 @@ internal sealed class FreeWindowResizeSession : IWindowResizeSession
 
     private void ApplyHorizontalDelta(ref WindowRectangle rectangle, int delta)
     {
-        if (_sizingEdges.HasFlag(WindowSizingEdges.Left))
+        if (SizingEdges.HasFlag(WindowSizingEdges.Left))
         {
             rectangle.Left = Math.Min(
                 rectangle.Left + delta,
                 rectangle.Right - MinimumWindowExtent);
         }
-        else if (_sizingEdges.HasFlag(WindowSizingEdges.Right))
+        else if (SizingEdges.HasFlag(WindowSizingEdges.Right))
         {
             rectangle.Right = Math.Max(
                 rectangle.Right + delta,
@@ -49,13 +41,13 @@ internal sealed class FreeWindowResizeSession : IWindowResizeSession
 
     private void ApplyVerticalDelta(ref WindowRectangle rectangle, int delta)
     {
-        if (_sizingEdges.HasFlag(WindowSizingEdges.Top))
+        if (SizingEdges.HasFlag(WindowSizingEdges.Top))
         {
             rectangle.Top = Math.Min(
                 rectangle.Top + delta,
                 rectangle.Bottom - MinimumWindowExtent);
         }
-        else if (_sizingEdges.HasFlag(WindowSizingEdges.Bottom))
+        else if (SizingEdges.HasFlag(WindowSizingEdges.Bottom))
         {
             rectangle.Bottom = Math.Max(
                 rectangle.Bottom + delta,

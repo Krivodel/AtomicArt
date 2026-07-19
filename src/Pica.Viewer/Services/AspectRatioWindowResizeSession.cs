@@ -2,13 +2,10 @@ using Avalonia;
 
 namespace Pica.Viewer.Services;
 
-internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
+internal sealed class AspectRatioWindowResizeSession : WindowResizeSession
 {
     private const int SizingDirectionLockThreshold = 3;
 
-    private readonly WindowRectangle _initialRectangle;
-    private readonly PixelPoint _initialPointerPosition;
-    private readonly WindowSizingEdges _sizingEdges;
     private readonly int _frameWidth;
     private readonly int _frameHeight;
     private readonly double _aspectRatio;
@@ -21,19 +18,15 @@ internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
         int frameWidth,
         int frameHeight,
         double aspectRatio)
+        : base(initialRectangle, initialPointerPosition, sizingEdges)
     {
-        _initialRectangle = initialRectangle;
-        _initialPointerPosition = initialPointerPosition;
-        _sizingEdges = sizingEdges;
         _frameWidth = frameWidth;
         _frameHeight = frameHeight;
         _aspectRatio = aspectRatio;
     }
 
-    public WindowRectangle Calculate(PixelPoint pointerPosition)
+    protected override WindowRectangle CalculateCore(int horizontalDelta, int verticalDelta)
     {
-        int horizontalDelta = pointerPosition.X - _initialPointerPosition.X;
-        int verticalDelta = pointerPosition.Y - _initialPointerPosition.Y;
         WindowRectangle requestedRectangle = CreateRequestedRectangle(
             horizontalDelta,
             verticalDelta);
@@ -41,7 +34,7 @@ internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
 
         return AspectRatioWindowSizing.Constrain(
             requestedRectangle,
-            _sizingEdges,
+            SizingEdges,
             sizingBasis,
             _frameWidth,
             _frameHeight,
@@ -52,22 +45,22 @@ internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
         int horizontalDelta,
         int verticalDelta)
     {
-        WindowRectangle rectangle = _initialRectangle;
+        WindowRectangle rectangle = InitialRectangle;
 
-        if (_sizingEdges.HasFlag(WindowSizingEdges.Left))
+        if (SizingEdges.HasFlag(WindowSizingEdges.Left))
         {
             rectangle.Left += horizontalDelta;
         }
-        else if (_sizingEdges.HasFlag(WindowSizingEdges.Right))
+        else if (SizingEdges.HasFlag(WindowSizingEdges.Right))
         {
             rectangle.Right += horizontalDelta;
         }
 
-        if (_sizingEdges.HasFlag(WindowSizingEdges.Top))
+        if (SizingEdges.HasFlag(WindowSizingEdges.Top))
         {
             rectangle.Top += verticalDelta;
         }
-        else if (_sizingEdges.HasFlag(WindowSizingEdges.Bottom))
+        else if (SizingEdges.HasFlag(WindowSizingEdges.Bottom))
         {
             rectangle.Bottom += verticalDelta;
         }
@@ -77,8 +70,8 @@ internal sealed class AspectRatioWindowResizeSession : IWindowResizeSession
 
     private WindowSizingBasis GetSizingBasis(int horizontalDelta, int verticalDelta)
     {
-        bool includesHorizontalEdge = _sizingEdges.IncludesHorizontalEdge();
-        bool includesVerticalEdge = _sizingEdges.IncludesVerticalEdge();
+        bool includesHorizontalEdge = SizingEdges.IncludesHorizontalEdge();
+        bool includesVerticalEdge = SizingEdges.IncludesVerticalEdge();
 
         if (includesHorizontalEdge && !includesVerticalEdge)
         {
