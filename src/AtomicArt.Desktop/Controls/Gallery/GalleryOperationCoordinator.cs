@@ -138,10 +138,7 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         ArgumentNullException.ThrowIfNull(items);
         IList<object> galleryItems = GetMutableItems();
 
-        foreach (object item in items)
-        {
-            galleryItems.Add(item);
-        }
+        InsertItems(galleryItems, galleryItems.Count, items);
     }
 
     internal void InsertItemsAtStart(IReadOnlyList<object> items)
@@ -150,10 +147,7 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         ArgumentNullException.ThrowIfNull(items);
         IList<object> galleryItems = GetMutableItems();
 
-        for (int i = items.Count - 1; i >= 0; i--)
-        {
-            galleryItems.Insert(0, items[i]);
-        }
+        InsertItems(galleryItems, 0, items);
     }
 
     internal void ReplaceItems(IReadOnlyList<object> items)
@@ -163,10 +157,7 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         IList<object> galleryItems = GetMutableItems();
 
         galleryItems.Clear();
-        foreach (object item in items)
-        {
-            galleryItems.Add(item);
-        }
+        InsertItems(galleryItems, 0, items);
     }
 
     internal object? RemoveItem(Guid itemId)
@@ -247,6 +238,17 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
     private IList<object> GetMutableItems()
     {
         return RequireAttached(_items);
+    }
+
+    private static void InsertItems(
+        IList<object> items,
+        int index,
+        IReadOnlyList<object> values)
+    {
+        for (int valueIndex = 0; valueIndex < values.Count; valueIndex++)
+        {
+            items.Insert(index + valueIndex, values[valueIndex]);
+        }
     }
 
     private Task WaitForLayoutCoreAsync()
