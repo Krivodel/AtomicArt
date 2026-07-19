@@ -73,15 +73,6 @@ internal sealed class GalleryFrontGenerationRunner :
             : fallbackOperations;
     }
 
-    private static void ClearOverlays(
-        GalleryOperationCoordinator context,
-        GalleryFrontGenerationRunState state)
-    {
-        GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, state.OverlayControls);
-        state.SpawnClones.Clear();
-        state.OverlayControls.Clear();
-    }
-
     private static void RevealFrontItems(
         GalleryOperationCoordinator context,
         GalleryFrontGenerationRunState state)
@@ -127,9 +118,7 @@ internal sealed class GalleryFrontGenerationRunner :
             _animationScheduler.Cancel(state.RunningControls);
         }
 
-        GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, state.OverlayControls);
-        state.SpawnClones.Clear();
-        state.OverlayControls.Clear();
+        state.RemoveOverlays(context.OverlayCanvas);
         GalleryOperationCompletion.Complete(state.AllOperations);
     }
 
@@ -222,7 +211,7 @@ internal sealed class GalleryFrontGenerationRunner :
     {
         _animationScheduler.Cancel(state.RunningControls);
         RevealFrontItems(context, state);
-        ClearOverlays(context, state);
+        state.RemoveOverlays(context.OverlayCanvas);
         RefreshRevealedFrontItems(context, state);
         _retargetWaiter.Reset();
         _isRunning = false;
@@ -233,7 +222,7 @@ internal sealed class GalleryFrontGenerationRunner :
         GalleryOperationCoordinator context,
         GalleryFrontGenerationRunState state)
     {
-        ClearOverlays(context, state);
+        state.RemoveOverlays(context.OverlayCanvas);
 
         foreach (GalleryOperation operation in state.UnmaterializedOperations)
         {

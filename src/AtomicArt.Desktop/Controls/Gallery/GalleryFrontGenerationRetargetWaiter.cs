@@ -1,5 +1,3 @@
-using Avalonia.Controls;
-
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.GalleryAnimation;
 
@@ -81,19 +79,6 @@ internal sealed class GalleryFrontGenerationRetargetWaiter
         return new FrontGenerationCycleResult(true, retargetOperations);
     }
 
-    private static void ClearOverlays(
-        GalleryOperationCoordinator context,
-        GalleryFrontGenerationRunState state)
-    {
-        foreach (Control overlay in state.OverlayControls)
-        {
-            context.OverlayCanvas.Children.Remove(overlay);
-        }
-
-        state.SpawnClones.Clear();
-        state.OverlayControls.Clear();
-    }
-
     private async Task<FrontGenerationCycleResult> WaitForCycleCompletionAsync(
         GalleryOperationCoordinator context,
         GalleryFrontGenerationRunState state,
@@ -132,7 +117,7 @@ internal sealed class GalleryFrontGenerationRetargetWaiter
         CancellationToken ct)
     {
         _animationScheduler.Cancel(state.RunningControls);
-        ClearOverlays(context, state);
+        state.RemoveOverlays(context.OverlayCanvas);
         ct.ThrowIfCancellationRequested();
     }
 }

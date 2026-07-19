@@ -20,4 +20,13 @@ internal sealed class GalleryFrontGenerationRunState
 
         UnmaterializedOperations.AddRange(operations);
     }
+
+    internal void RemoveOverlays(Canvas overlayCanvas)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        GalleryOverlayCollection.RemoveAll(overlayCanvas, OverlayControls);
+        SpawnClones.Clear();
+        OverlayControls.Clear();
+    }
 }
