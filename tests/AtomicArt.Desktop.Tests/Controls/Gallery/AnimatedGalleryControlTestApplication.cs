@@ -12,6 +12,7 @@ internal sealed class AnimatedGalleryControlTestApplication : Avalonia.Applicati
     private static readonly string[] ResourcePaths =
     [
         "avares://AtomicArt/Resources/Colors.axaml",
+        "avares://AtomicArt/Resources/Brushes.axaml",
         "avares://AtomicArt/Resources/Dimensions.axaml",
         "avares://AtomicArt/Resources/Icons.axaml",
         "avares://AtomicArt/Resources/Converters.axaml"

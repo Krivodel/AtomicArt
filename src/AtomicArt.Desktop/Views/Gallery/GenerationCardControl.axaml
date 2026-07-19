@@ -13,52 +13,9 @@
                 <RowDefinition Height="{StaticResource GenerationCardInfoHeight}" />
             </Grid.RowDefinitions>
 
-            <Grid x:Name="PreviewExpansionHost"
-                  Grid.Row="0"
-                  Width="{StaticResource GenerationCardWidth}"
-                  Height="{StaticResource GenerationCardWidth}"
-                  HorizontalAlignment="Left"
-                  VerticalAlignment="Top"
-                  IsHitTestVisible="False"
-                  ZIndex="10">
-                <Border x:Name="PreviewShadow"
-                        Classes="image-preview-shadow"
-                        Background="{DynamicResource SukiPopupBackground}"
-                        CornerRadius="{StaticResource GenerationCardCornerRadius}"
-                        Opacity="0" />
-                <Border Classes="generation-card-preview"
-                        CornerRadius="{StaticResource GenerationCardCornerRadius}">
-                    <Image x:Name="PreviewImage"
-                           Classes="generation-card-image"
-                           IsVisible="{Binding ShowsGeneratedImage}"
-                           Source="{Binding DisplayThumbnailPath,
-                                            Converter={StaticResource ImagePathToBitmapConverter}}" />
-                </Border>
-            </Grid>
-
-            <Border Grid.Row="0"
-                    Classes="generation-card-loading"
-                    IsVisible="{Binding ShowsGenerationProgress}" />
-
-            <Border Grid.Row="0"
-                    Classes="generation-card-empty"
-                    IsVisible="{Binding ShowsEmptyPreview}" />
-
-            <Border Grid.Row="0"
-                    Classes="generation-card-error"
-                    IsVisible="{Binding IsFailed}">
-                <TextBlock Classes="generation-card-error-text"
-                           Text="{x:Static resources:UiStrings.Error}" />
-            </Border>
-
-            <Border x:Name="PreviewDragSource"
-                    Grid.Row="0"
-                    Background="Transparent"
-                    Cursor="Hand"
-                    PointerCaptureLost="OnPreviewDragSourcePointerCaptureLost"
-                    PointerMoved="OnPreviewDragSourcePointerMoved"
-                    PointerPressed="OnPreviewDragSourcePointerPressed"
-                    PointerReleased="OnPreviewDragSourcePointerReleased" />
+            <controls:GenerationPreviewControl Grid.Row="0"
+                                               PreviewSize="{StaticResource GenerationCardWidth}"
+                                               OpenViewerCommand="{Binding $parent[controls:GenerationCardControl].OpenViewerCommand}" />
 
             <Border Grid.Row="1"
                     Classes="generation-card-info">

@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             x:Class="AtomicArt.Desktop.Views.Gallery.GenerationPreviewControl"
+             x:Name="Root"
+             x:DataType="gallery:GenerationItemViewModel"
+             ClipToBounds="False"
+             ZIndex="10">
+    <Grid Width="{Binding #Root.PreviewSize}"
+          Height="{Binding #Root.PreviewSize}"
+          ClipToBounds="False">
+        <Grid x:Name="PreviewExpansionHost"
+              Width="{Binding #Root.PreviewSize}"
+              Height="{Binding #Root.PreviewSize}"
+              HorizontalAlignment="Left"
+              VerticalAlignment="Top"
+              IsHitTestVisible="False"
+              ZIndex="10">
+            <Border x:Name="PreviewShadow"
+                    Classes="image-preview-shadow"
+                    Background="{DynamicResource SukiPopupBackground}"
+                    CornerRadius="{StaticResource GenerationCardCornerRadius}"
+                    Opacity="0" />
+            <Border Classes="generation-card-preview"
+                    CornerRadius="{StaticResource GenerationCardCornerRadius}">
+                <Image x:Name="PreviewImage"
+                       Classes="generation-card-image"
+                       IsVisible="{Binding ShowsGeneratedImage}"
+                       Source="{Binding DisplayThumbnailPath,
+                                        Converter={StaticResource ImagePathToBitmapConverter}}" />
+            </Border>
+        </Grid>
+
+        <Border Classes="generation-card-loading"
+                IsVisible="{Binding ShowsGenerationProgress}" />
+
+        <Border Classes="generation-card-empty"
+                IsVisible="{Binding ShowsEmptyPreview}" />
+
+        <Border Classes="generation-card-error"
+                IsVisible="{Binding IsFailed}">
+            <TextBlock Classes="generation-card-error-text"
+                       Text="{x:Static resources:UiStrings.Error}" />
+        </Border>
+
+        <Border x:Name="PreviewDragSource"
+                Background="Transparent"
+                Cursor="Hand"
+                PointerCaptureLost="OnPreviewDragSourcePointerCaptureLost"
+                PointerMoved="OnPreviewDragSourcePointerMoved"
+                PointerPressed="OnPreviewDragSourcePointerPressed"
+                PointerReleased="OnPreviewDragSourcePointerReleased" />
+    </Grid>
+</UserControl>

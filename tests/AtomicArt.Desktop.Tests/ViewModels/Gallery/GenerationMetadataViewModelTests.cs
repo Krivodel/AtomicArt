@@ -4,8 +4,10 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
@@ -42,7 +44,52 @@ public sealed class GenerationMetadataViewModelTests
         viewModel.GenerationDuration.Should().Be(UiStrings.MetadataUnavailable);
     }
 
-    private static GenerationMetadataViewModel CreateMetadataViewModel(GenerationItemDto item)
+    [Fact]
+    public async Task CopyCommands_WithPromptAndPath_WriteExactText()
+    {
+        GenerationItemDto item = CreateItem();
+        RecordingTextClipboardService clipboardService = new();
+        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(
+            item,
+            clipboardService);
+
+        await viewModel.CopyPromptCommand.ExecuteAsync(null);
+
+        clipboardService.Text.Should().Be(viewModel.Prompt);
+
+        await viewModel.CopyImagePathCommand.ExecuteAsync(null);
+
+        clipboardService.Text.Should().Be(viewModel.ImagePath);
+    }
+
+    [Fact]
+    public void RequestCommands_RaiseDeferredCloseAndRepeatActions()
+    {
+        GenerationItemDto item = CreateItem();
+        IRelayCommand closeCommand = new RelayCommand(() => { });
+        IRelayCommand repeatCommand = new RelayCommand<GenerationItemViewModel>(_ => { });
+        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(
+            item,
+            closeCommand: closeCommand,
+            repeatCommand: repeatCommand);
+        List<GenerationMetadataActionRequestedEventArgs> requests = [];
+        viewModel.ActionRequested += (_, args) => requests.Add(args);
+
+        viewModel.RequestCloseCommand.Execute(null);
+        viewModel.RequestRepeatCommand.Execute(null);
+
+        requests.Should().HaveCount(2);
+        requests[0].Command.Should().BeSameAs(closeCommand);
+        requests[0].Parameter.Should().BeNull();
+        requests[1].Command.Should().BeSameAs(repeatCommand);
+        requests[1].Parameter.Should().BeSameAs(viewModel.Item);
+    }
+
+    private static GenerationMetadataViewModel CreateMetadataViewModel(
+        GenerationItemDto item,
+        ITextClipboardService? textClipboardService = null,
+        IRelayCommand? closeCommand = null,
+        IRelayCommand? repeatCommand = null)
     {
         GenerationItemViewModel itemViewModel = new(
             item,
@@ -52,7 +99,11 @@ public sealed class GenerationMetadataViewModelTests
 
         return GenerationMetadataViewModel.FromItem(
             itemViewModel,
+            closeCommand ?? new RelayCommand(() => { }),
             new RelayCommand(() => { }),
+            repeatCommand ?? new RelayCommand(() => { }),
+            textClipboardService ?? new RecordingTextClipboardService(),
+            new TestViewModelErrorHandler(),
             new GenerationPriceFormatter(),
             new GenerationDurationFormatter());
     }

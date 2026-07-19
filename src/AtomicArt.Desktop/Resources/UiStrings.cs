@@ -26,7 +26,7 @@ public static class UiStrings
     public static string CancelGlyph => "■";
     public static string MetadataTitle => "Свойства";
     public static string MetadataCreatedAt => "Дата";
-    public static string MetadataPrompt => "Промпт";
+    public static string MetadataPrompt => "ПРОМПТ";
     public static string MetadataModel => "Модель";
     public static string MetadataResolution => "Разрешение";
     public static string MetadataAspectRatio => "Соотношение";
@@ -37,6 +37,7 @@ public static class UiStrings
     public static string MetadataStatus => "Статус";
     public static string MetadataNoFilePath => "Нет файла";
     public static string MetadataUnavailable => "Недоступно";
+    public static string MetadataRepeat => "Повторить";
     public static string FileRevealFailed => "Не удалось открыть файл в папке.";
     public static string SettingsApiBaseAddressLabel => "Адрес сервера";
     public static string SettingsApiBaseAddressPlaceholder => "http://localhost:5000/";

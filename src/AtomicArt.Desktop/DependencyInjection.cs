@@ -132,7 +132,8 @@ public static class DependencyInjection
         services.AddSingleton<AttachedImageFileReader>();
         services.AddSharedSingletonAliases<ClipboardImageService>(
             typeof(IClipboardImageService),
-            typeof(IClipboardAttachmentService));
+            typeof(IClipboardAttachmentService),
+            typeof(ITextClipboardService));
         services.AddSharedSingletonAliases<FilePickerService>(
             typeof(IFilePickerService),
             typeof(IFilePickerAttachmentService));

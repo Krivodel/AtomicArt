@@ -11,7 +11,10 @@ using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.Services;
 
-public sealed class ClipboardImageService : IClipboardImageService, IClipboardAttachmentService
+public sealed class ClipboardImageService :
+    IClipboardImageService,
+    IClipboardAttachmentService,
+    ITextClipboardService
 {
     private const string ClipboardImageFileName = "clipboard.png";
     private const string ClipboardImageTooLargeMessage =
@@ -46,6 +49,18 @@ public sealed class ClipboardImageService : IClipboardImageService, IClipboardAt
         ArgumentNullException.ThrowIfNull(clipboard);
 
         _clipboard = clipboard;
+    }
+
+    public async Task SetTextAsync(string text, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ct.ThrowIfCancellationRequested();
+
+        IClipboard clipboard = _clipboard
+            ?? throw new InvalidOperationException("Clipboard is not attached.");
+
+        await clipboard.SetTextAsync(text).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
     }
 
     public async Task<ImageAttachmentInput?> TryGetImageAsync(

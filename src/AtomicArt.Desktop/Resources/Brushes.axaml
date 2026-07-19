@@ -3,4 +3,10 @@
     <SolidColorBrush x:Key="GlassCardBrush"
                      Color="{DynamicResource SukiGlassCardBackground}"
                      Opacity="{DynamicResource GlassOpacity}" />
+    <SolidColorBrush x:Key="MetadataBorderBrush"
+                     Color="{DynamicResource SukiMenuBorderBrush}"
+                     Opacity="0.5" />
+    <SolidColorBrush x:Key="MetadataMutedTextBrush"
+                     Color="{DynamicResource SukiText}"
+                     Opacity="0.62" />
 </ResourceDictionary>

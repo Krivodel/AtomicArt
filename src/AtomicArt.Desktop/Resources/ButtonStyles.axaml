@@ -171,7 +171,7 @@
                 Value="1" />
     </Style>
 
-    <Style Selector="Border.generation-card.preview-expanded Button.card-action">
+    <Style Selector=".preview-expanded Button.card-action">
         <Setter Property="Opacity"
                 Value="0" />
     </Style>

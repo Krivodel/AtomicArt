@@ -14,6 +14,7 @@ using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
+using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Tests.Common;
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
@@ -256,6 +257,30 @@ public sealed class GalleryViewModelTests
 
         viewModel.CloseOverlayCommand.Execute(null);
 
+        viewModel.IsMetadataOpen.Should().BeFalse();
+    }
+
+    [Fact]
+    public void RepeatCommand_WithOpenMetadata_AppliesPresetAndClosesOverlay()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        RecordingGenerationPanelPresetTarget presetTarget = new();
+        viewModel.ConfigureGenerationPresetTarget(presetTarget);
+        List<GenerationItemDto> items =
+        [
+            GalleryViewModelTestFactory.CreateItem(prompt: "Повтори этот промпт")
+        ];
+        viewModel.AddGeneratedItems(items, 0);
+        GenerationItemViewModel item = viewModel.Items[0];
+        viewModel.OpenMetadataCommand.Execute(item);
+
+        viewModel.SelectedMetadata?.RepeatCommand.Execute(item);
+
+        presetTarget.Preset.Should().Be(new GenerationPanelPreset(
+            item.ModelId,
+            item.Prompt,
+            item.AspectRatio,
+            item.Resolution));
         viewModel.IsMetadataOpen.Should().BeFalse();
     }
 
@@ -653,6 +678,18 @@ public sealed class GalleryViewModelTests
             _requests.Add(request);
 
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingGenerationPanelPresetTarget : IGenerationPanelPresetTarget
+    {
+        public GenerationPanelPreset? Preset { get; private set; }
+
+        public void ApplyPreset(GenerationPanelPreset preset)
+        {
+            ArgumentNullException.ThrowIfNull(preset);
+
+            Preset = preset;
         }
     }
 }

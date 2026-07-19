@@ -110,6 +110,7 @@ internal static class GalleryViewModelTestFactory
             itemsController,
             lifecycleController,
             viewModelErrorHandler,
+            new RecordingTextClipboardService(),
             new GenerationPriceFormatter(),
             new GenerationDurationFormatter());
     }

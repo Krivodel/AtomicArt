@@ -60,6 +60,32 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
+    public void ApplyPreset_WithSupportedGenerationValues_UpdatesPanel()
+    {
+        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        ImageModelOption model = viewModel.AvailableModels
+            .Single(candidate =>
+                string.Equals(
+                    candidate.Id,
+                    ApiModelMetadataTestCatalog.NanoBananaProModelId,
+                    StringComparison.Ordinal));
+        string aspectRatio = model.AspectRatios.Last();
+        string resolution = model.Resolutions.Last();
+        GenerationPanelPreset preset = new(
+            model.Id,
+            "Промпт из галереи",
+            aspectRatio,
+            resolution);
+
+        viewModel.ApplyPreset(preset);
+
+        viewModel.SelectedModel.Should().BeSameAs(model);
+        viewModel.Prompt.Should().Be(preset.Prompt);
+        viewModel.SelectedAspectRatio.Should().Be(aspectRatio);
+        viewModel.SelectedResolution.Should().Be(resolution);
+    }
+
+    [Fact]
     public async Task GenerateCommand_WhenApiReturnsBatch_PublishesCompletedEvent()
     {
         TestGenerationLifecycleEventHub lifecycleEventHub = new();

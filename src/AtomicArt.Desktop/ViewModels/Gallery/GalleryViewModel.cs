@@ -9,6 +9,7 @@ using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.ViewModels.Generation;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -26,9 +27,11 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     private readonly GalleryItemsController _itemsController;
     private readonly GalleryLifecycleController _lifecycleController;
     private readonly IViewModelErrorHandler _errorHandler;
+    private readonly ITextClipboardService _textClipboardService;
     private readonly GenerationPriceFormatter _priceFormatter;
     private readonly GenerationDurationFormatter _durationFormatter;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
+    private IGenerationPanelPresetTarget? _generationPanelPresetTarget;
     [ObservableProperty]
     private GenerationItemViewModel? _selectedItem;
     [ObservableProperty]
@@ -53,6 +56,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         GalleryItemsController itemsController,
         GalleryLifecycleController lifecycleController,
         IViewModelErrorHandler errorHandler,
+        ITextClipboardService textClipboardService,
         GenerationPriceFormatter priceFormatter,
         GenerationDurationFormatter durationFormatter)
     {
@@ -64,6 +68,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         ArgumentNullException.ThrowIfNull(itemsController);
         ArgumentNullException.ThrowIfNull(lifecycleController);
         ArgumentNullException.ThrowIfNull(errorHandler);
+        ArgumentNullException.ThrowIfNull(textClipboardService);
         ArgumentNullException.ThrowIfNull(priceFormatter);
         ArgumentNullException.ThrowIfNull(durationFormatter);
 
@@ -77,6 +82,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         _itemsController.IsEmptyChanged += OnItemsEmptyChanged;
         _lifecycleController = lifecycleController;
         _errorHandler = errorHandler;
+        _textClipboardService = textClipboardService;
         _priceFormatter = priceFormatter;
         _durationFormatter = durationFormatter;
     }
@@ -87,6 +93,13 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         ArgumentNullException.ThrowIfNull(attachImagesCommand);
 
         _attachImagesCommand = attachImagesCommand;
+    }
+
+    public void ConfigureGenerationPresetTarget(IGenerationPanelPresetTarget target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+
+        _generationPanelPresetTarget = target;
     }
 
     public void AddGeneratedItems(IReadOnlyList<GenerationItemDto> items, int attachedImagesCount)
@@ -143,6 +156,10 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         SelectedMetadata = GenerationMetadataViewModel.FromItem(
             item,
             CloseOverlayCommand,
+            OpenViewerCommand,
+            ReuseGenerationCommand,
+            _textClipboardService,
+            _errorHandler,
             _priceFormatter,
             _durationFormatter);
         IsMetadataOpen = true;
@@ -178,6 +195,23 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void CloseOverlay()
     {
+        IsMetadataOpen = false;
+    }
+
+    [RelayCommand]
+    private void ReuseGeneration(GenerationItemViewModel? item)
+    {
+        IGenerationPanelPresetTarget? target = _generationPanelPresetTarget;
+        if (item is null || target is null)
+        {
+            return;
+        }
+
+        target.ApplyPreset(new GenerationPanelPreset(
+            item.ModelId,
+            item.Prompt,
+            item.AspectRatio,
+            item.Resolution));
         IsMetadataOpen = false;
     }
 

@@ -25,6 +25,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         {
             using PreviewTestContext context = CreateScenarioWithImage("atomic-art-preview-expansion");
 
+            AssertPreviewIsOpaque(context);
             Panel originalParent = context.PreviewHost.Parent as Panel
                 ?? throw new InvalidOperationException("Generation preview parent was not found.");
             ScrollContentPresenter scrollPresenter = context.ScrollViewer
@@ -46,6 +47,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                         originalParent,
                         originalScrollViewerClipToBounds,
                         originalScrollViewerClip);
+                    AssertPreviewIsOpaque(context);
                     scrollPresenter.ClipToBounds.Should().BeFalse();
                     context.Card.ZIndex.Should().Be(1001);
 
@@ -76,12 +78,14 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
 
                     context.PreviewHost.Width.Should().Be(220d);
                     context.Card.ZIndex.Should().Be(1000);
+                    AssertPreviewIsOpaque(context);
 
                     context.ScrollViewer.Offset = new Vector(0d, 0d);
                     context.Window.CaptureRenderedFrame();
 
                     context.PreviewHost.Width.Should().Be(748d);
                     context.Card.ZIndex.Should().Be(1001);
+                    AssertPreviewIsOpaque(context);
 
                     context.Window.Content = null;
                     context.Window.CaptureRenderedFrame();
@@ -100,6 +104,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         {
             using PreviewTestContext context = CreateScenarioWithImage("atomic-art-preview-modifier-after-scroll");
 
+            AssertPreviewIsOpaque(context);
             Point pointerPosition = GetPointerPosition(context, 150d);
 
                     context.Window.MouseMove(pointerPosition, RawInputModifiers.None);
@@ -116,6 +121,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                     context.Window.CaptureRenderedFrame();
 
                     context.PreviewHost.Width.Should().Be(748d);
+                    AssertPreviewIsOpaque(context);
         });
     }
 
@@ -145,17 +151,33 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             .Children
             .OfType<GenerationCardControl>()
             .Single();
+        GenerationPreviewControl preview = card
+            .GetVisualDescendants()
+            .OfType<GenerationPreviewControl>()
+            .Single();
         Grid previewHost = card.FindControl<Grid>("PreviewExpansionHost")
             ?? throw new InvalidOperationException("Generation preview host was not found.");
+        Image previewImage = preview.FindControl<Image>("PreviewImage")
+            ?? throw new InvalidOperationException("Generation preview image was not found.");
         ScrollViewer scrollViewer = GetGalleryScrollViewer(gallery);
 
         return new PreviewTestContext(
             gallery,
             window,
             card,
+            preview,
             previewHost,
+            previewImage,
             scrollViewer,
             imagePath);
+    }
+
+    private static void AssertPreviewIsOpaque(PreviewTestContext context)
+    {
+        context.Card.Opacity.Should().Be(1d);
+        context.Preview.ZIndex.Should().Be(10);
+        context.Preview.Opacity.Should().Be(1d);
+        context.PreviewImage.Opacity.Should().Be(1d);
     }
 
     private static void AssertExpandedPreviewAttachedToCard(
@@ -186,7 +208,9 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         public AnimatedGalleryControl Gallery { get; }
         public Window Window { get; }
         public GenerationCardControl Card { get; }
+        public GenerationPreviewControl Preview { get; }
         public Grid PreviewHost { get; }
+        public Image PreviewImage { get; }
         public ScrollViewer ScrollViewer { get; }
 
         private readonly string _imagePath;
@@ -195,14 +219,18 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             AnimatedGalleryControl gallery,
             Window window,
             GenerationCardControl card,
+            GenerationPreviewControl preview,
             Grid previewHost,
+            Image previewImage,
             ScrollViewer scrollViewer,
             string imagePath)
         {
             Gallery = gallery;
             Window = window;
             Card = card;
+            Preview = preview;
             PreviewHost = previewHost;
+            PreviewImage = previewImage;
             ScrollViewer = scrollViewer;
             _imagePath = imagePath ?? throw new ArgumentNullException(nameof(imagePath));
         }

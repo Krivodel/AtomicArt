@@ -17,6 +17,7 @@ namespace AtomicArt.Desktop.ViewModels.Generation;
 public sealed partial class UniversalNanoBananaPanelViewModel :
     ObservableObject,
     IModelPanelViewModel,
+    IGenerationPanelPresetTarget,
     IAppStateGenerationPanelRestoreTarget,
     IAppStateGenerationPanelFlushTarget,
     IDisposable
@@ -177,6 +178,32 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         return AvailableModels.Any(model =>
             string.Equals(model.Id, modelId, StringComparison.Ordinal)
             && _modelScope.SupportsModel(model));
+    }
+
+    public void ApplyPreset(GenerationPanelPreset preset)
+    {
+        ArgumentNullException.ThrowIfNull(preset);
+
+        ImageModelOption? model = AvailableModels.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, preset.ModelId, StringComparison.Ordinal));
+
+        if (model is null)
+        {
+            return;
+        }
+
+        SelectedModel = model;
+        SelectedAspectRatio = GenerationPanelOptionCompatibility.ResolveString(
+            preset.AspectRatio,
+            model.AspectRatios,
+            GenerationPanelOptionDefaults.GetDefaultAspectRatio(model))
+            .Value;
+        SelectedResolution = GenerationPanelOptionCompatibility.ResolveString(
+            preset.Resolution,
+            model.Resolutions,
+            GenerationPanelOptionDefaults.GetDefaultResolution(model))
+            .Value;
+        Prompt = preset.Prompt;
     }
 
     public async Task PrepareStateRestoreAsync(CancellationToken ct)

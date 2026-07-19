@@ -109,7 +109,7 @@
             <Grid ZIndex="11"
                   IsVisible="{Binding Gallery.IsMetadataOpen}">
                 <Button Classes="overlay-backdrop"
-                        Command="{Binding Gallery.CloseOverlayCommand}" />
+                        Command="{Binding Gallery.SelectedMetadata.RequestCloseCommand}" />
                 <ContentControl Content="{Binding Gallery.SelectedMetadata}" />
             </Grid>
 

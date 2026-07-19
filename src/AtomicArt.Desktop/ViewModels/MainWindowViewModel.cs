@@ -69,6 +69,12 @@ public sealed partial class MainWindowViewModel :
         Gallery = gallery;
         ActiveGenerationPanel = desktopModelPanelRegistry.GetDefaultPanel(panels);
         Gallery.ConfigureImageViewerAttachments(ActiveGenerationPanel.AttachImagesCommand);
+
+        if (ActiveGenerationPanel is IGenerationPanelPresetTarget presetTarget)
+        {
+            Gallery.ConfigureGenerationPresetTarget(presetTarget);
+        }
+
         _stateRestorePanels = panels
             .OfType<IAppStateGenerationPanelRestoreTarget>()
             .ToList();
