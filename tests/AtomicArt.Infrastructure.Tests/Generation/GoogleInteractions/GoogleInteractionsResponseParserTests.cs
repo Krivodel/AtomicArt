@@ -172,7 +172,6 @@ public sealed class GoogleInteractionsResponseParserTests
     [Fact]
     public void Parse_WithInlineDataImageResponseAndMissingUsage_ThrowsProviderException()
     {
-        GoogleInteractionsResponseParser parser = new();
         string responseJson = """
             {
               "state": "succeeded",
@@ -191,7 +190,7 @@ public sealed class GoogleInteractionsResponseParserTests
             }
             """;
 
-        Action act = () => parser.Parse(responseJson);
+        Action act = CreateParseAction(responseJson);
 
         AssertInvalidResponseDoesNotExpose(act, "/9j/4AAQSkZJRg==");
     }
@@ -199,14 +198,13 @@ public sealed class GoogleInteractionsResponseParserTests
     [Fact]
     public void Parse_WithIncompleteUsage_ThrowsProviderException()
     {
-        GoogleInteractionsResponseParser parser = new();
         string responseJson = GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponse(
             """
             "total_input_tokens": 1200,
             "total_tokens": 2320
             """);
 
-        Action act = () => parser.Parse(responseJson);
+        Action act = CreateParseAction(responseJson);
 
         AssertInvalidResponseDoesNotExpose(act, "2320");
     }
@@ -214,7 +212,6 @@ public sealed class GoogleInteractionsResponseParserTests
     [Fact]
     public void Parse_WithFailedStatus_ThrowsSafeProviderException()
     {
-        GoogleInteractionsResponseParser parser = new();
         string responseJson = """
             {
               "status": "failed",
@@ -224,7 +221,7 @@ public sealed class GoogleInteractionsResponseParserTests
             }
             """;
 
-        Action act = () => parser.Parse(responseJson);
+        Action act = CreateParseAction(responseJson);
 
         act.Should().Throw<InvalidOperationException>()
             .Which.Message.Should().NotContain("secret");
@@ -233,7 +230,6 @@ public sealed class GoogleInteractionsResponseParserTests
     [Fact]
     public void Parse_WithoutImages_ThrowsSafeProviderException()
     {
-        GoogleInteractionsResponseParser parser = new();
         string responseJson = """
             {
               "status": "completed",
@@ -250,7 +246,7 @@ public sealed class GoogleInteractionsResponseParserTests
             }
             """;
 
-        Action act = () => parser.Parse(responseJson);
+        Action act = CreateParseAction(responseJson);
 
         GoogleInteractionsException exception = AssertInvalidResponseDoesNotExpose(act, "done");
 
@@ -272,7 +268,6 @@ public sealed class GoogleInteractionsResponseParserTests
     [Fact]
     public void Parse_WithInvalidImageBase64_ThrowsSafeProviderException()
     {
-        GoogleInteractionsResponseParser parser = new();
         string responseJson = """
             {
               "status": "completed",
@@ -290,7 +285,7 @@ public sealed class GoogleInteractionsResponseParserTests
             }
             """;
 
-        Action act = () => parser.Parse(responseJson);
+        Action act = CreateParseAction(responseJson);
 
         act.Should().Throw<InvalidOperationException>()
             .Which.Message.Should().NotContain("not-base64");
@@ -299,7 +294,6 @@ public sealed class GoogleInteractionsResponseParserTests
     [Fact]
     public void Parse_WithPngImageOutput_ThrowsSafeProviderException()
     {
-        GoogleInteractionsResponseParser parser = new();
         string responseJson = """
             {
               "status": "completed",
@@ -317,7 +311,7 @@ public sealed class GoogleInteractionsResponseParserTests
             }
             """;
 
-        Action act = () => parser.Parse(responseJson);
+        Action act = CreateParseAction(responseJson);
 
         act.Should().Throw<InvalidOperationException>()
             .Which.Message.Should().NotContain("iVBORw0KGgo=");
@@ -327,7 +321,6 @@ public sealed class GoogleInteractionsResponseParserTests
         string propertyName,
         string valueJson)
     {
-        GoogleInteractionsResponseParser parser = new();
         string responseJson =
             GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithAdditionalUsage(
             $"""
@@ -335,9 +328,16 @@ public sealed class GoogleInteractionsResponseParserTests
                 "{propertyName}": {valueJson}
             """);
 
-        Action act = () => parser.Parse(responseJson);
+        Action act = CreateParseAction(responseJson);
 
         AssertInvalidUsage(act);
+    }
+
+    private static Action CreateParseAction(string responseJson)
+    {
+        GoogleInteractionsResponseParser parser = new();
+
+        return () => parser.Parse(responseJson);
     }
 
     private static void AssertInvalidUsage(Action act)
