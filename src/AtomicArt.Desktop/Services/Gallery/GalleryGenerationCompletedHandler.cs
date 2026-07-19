@@ -154,25 +154,10 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
             await SaveContentAsync(batchId, item.Id, validationResult, ct)
                 .ConfigureAwait(false);
         }
-        catch (ArgumentException ex)
-        {
-            LogStorageFailure(ex, batchId, item.Id);
-
-            return new GalleryCompletedItemUpdate(item, null, null);
-        }
-        catch (IOException ex)
-        {
-            LogStorageFailure(ex, batchId, item.Id);
-
-            return new GalleryCompletedItemUpdate(item, null, null);
-        }
-        catch (NotSupportedException ex)
-        {
-            LogStorageFailure(ex, batchId, item.Id);
-
-            return new GalleryCompletedItemUpdate(item, null, null);
-        }
-        catch (UnauthorizedAccessException ex)
+        catch (Exception ex) when (ex is ArgumentException
+            or IOException
+            or NotSupportedException
+            or UnauthorizedAccessException)
         {
             LogStorageFailure(ex, batchId, item.Id);
 
@@ -252,32 +237,11 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
 
             return _galleryThumbnailStorage.GetThumbnailPathOrDefault(batchId, item.Id, item.ModelId);
         }
-        catch (ArgumentException ex)
-        {
-            LogThumbnailFallback(ex, batchId, item.Id);
-            return null;
-        }
-        catch (InvalidDataException ex)
-        {
-            LogThumbnailFallback(ex, batchId, item.Id);
-            return null;
-        }
-        catch (InvalidOperationException ex)
-        {
-            LogThumbnailFallback(ex, batchId, item.Id);
-            return null;
-        }
-        catch (IOException ex)
-        {
-            LogThumbnailFallback(ex, batchId, item.Id);
-            return null;
-        }
-        catch (NotSupportedException ex)
-        {
-            LogThumbnailFallback(ex, batchId, item.Id);
-            return null;
-        }
-        catch (UnauthorizedAccessException ex)
+        catch (Exception ex) when (ex is ArgumentException
+            or InvalidOperationException
+            or IOException
+            or NotSupportedException
+            or UnauthorizedAccessException)
         {
             LogThumbnailFallback(ex, batchId, item.Id);
             return null;
