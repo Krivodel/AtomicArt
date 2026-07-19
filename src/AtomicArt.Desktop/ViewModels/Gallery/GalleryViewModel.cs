@@ -122,22 +122,13 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        try
-        {
-            IsLoading = true;
-            ErrorMessage = null;
-            await ExecuteUserOperationAsync(
-                operationCt => _fileRevealService.RevealAsync(
-                    item?.ImagePath,
-                    item?.ModelId ?? string.Empty,
-                    operationCt),
-                nameof(RevealInFolderAsync),
-                ct);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        await ExecuteLoadingUserOperationAsync(
+            operationCt => _fileRevealService.RevealAsync(
+                item?.ImagePath,
+                item?.ModelId ?? string.Empty,
+                operationCt),
+            nameof(RevealInFolderAsync),
+            ct);
     }
 
     [RelayCommand]
@@ -170,24 +161,18 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        try
-        {
-            IsLoading = true;
-            ErrorMessage = null;
-            if (!_itemsController.Contains(item))
+        await ExecuteLoadingUserOperationAsync(
+            async operationCt =>
             {
-                return;
-            }
+                if (!_itemsController.Contains(item))
+                {
+                    return;
+                }
 
-            await ExecuteUserOperationAsync(
-                operationCt => DeleteItemAsync(item, operationCt),
-                nameof(DeleteOrCancelAsync),
-                ct);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+                await DeleteItemAsync(item, operationCt);
+            },
+            nameof(DeleteOrCancelAsync),
+            ct);
     }
 
     [RelayCommand]
@@ -332,5 +317,22 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             operation,
             operationName,
             ct);
+    }
+
+    private async Task ExecuteLoadingUserOperationAsync(
+        Func<CancellationToken, Task> operation,
+        string operationName,
+        CancellationToken ct)
+    {
+        try
+        {
+            IsLoading = true;
+            ErrorMessage = null;
+            await ExecuteUserOperationAsync(operation, operationName, ct);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 }
