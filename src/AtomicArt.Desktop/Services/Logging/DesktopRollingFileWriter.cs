@@ -124,18 +124,7 @@ internal sealed class DesktopRollingFileWriter : IDisposable
             }
 
             _isDisposed = true;
-            try
-            {
-                _writer?.Dispose();
-            }
-            catch (IOException)
-            {
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-
-            _writer = null;
+            DisposeWriterSilently();
         }
     }
 
@@ -347,7 +336,11 @@ internal sealed class DesktopRollingFileWriter : IDisposable
     private void Disable()
     {
         _isAvailable = false;
+        DisposeWriterSilently();
+    }
 
+    private void DisposeWriterSilently()
+    {
         try
         {
             _writer?.Dispose();
