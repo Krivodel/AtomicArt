@@ -41,21 +41,8 @@ public sealed class GoogleInteractionsResponseParserTests
     public void Parse_WithUsageModalityBreakdown_ReturnsFullUsage()
     {
         GoogleInteractionsResponseParser parser = new();
-        string responseJson = """
-            {
-              "status": "completed",
-              "steps": [
-                {
-                  "content": [
-                    {
-                      "type": "image",
-                      "mime_type": "image/jpeg",
-                      "data": "/9j/4AAQSkZJRg=="
-                    }
-                  ]
-                }
-              ],
-              "usage": {
+        string responseJson =
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponse("""
                 "total_input_tokens": 1000,
                 "total_output_tokens": 2500,
                 "total_thought_tokens": 250,
@@ -82,9 +69,7 @@ public sealed class GoogleInteractionsResponseParserTests
                     "tokens": 500
                   }
                 ]
-              }
-            }
-            """;
+                """);
 
         GoogleInteractionsResult result = parser.Parse(responseJson);
 
