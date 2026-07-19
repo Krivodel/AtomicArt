@@ -36,10 +36,7 @@ public sealed class GenerationImageContentValidatorTests
             "image/gif",
             Convert.ToBase64String(GenerationImageTestData.ValidPngBytes));
 
-        bool result = _validator.TryValidate(content, out GenerationImageContentValidationResult? validationResult);
-
-        result.Should().BeFalse();
-        validationResult.Should().BeNull();
+        AssertRejected(content);
     }
 
     [Fact]
@@ -51,10 +48,7 @@ public sealed class GenerationImageContentValidatorTests
             "image/png",
             new string('A', GenerationImageTestData.TestOversizedBase64Length));
 
-        bool result = validator.TryValidate(content, out GenerationImageContentValidationResult? validationResult);
-
-        result.Should().BeFalse();
-        validationResult.Should().BeNull();
+        AssertRejected(content, validator);
     }
 
     [Fact]
@@ -69,10 +63,7 @@ public sealed class GenerationImageContentValidatorTests
     {
         GenerationImageContentDto content = new("image/png", "not-base64");
 
-        bool result = _validator.TryValidate(content, out GenerationImageContentValidationResult? validationResult);
-
-        result.Should().BeFalse();
-        validationResult.Should().BeNull();
+        AssertRejected(content);
     }
 
     [Fact]
@@ -80,10 +71,7 @@ public sealed class GenerationImageContentValidatorTests
     {
         GenerationImageContentDto content = new("image/png", Convert.ToBase64String([0x01, 0x02, 0x03]));
 
-        bool result = _validator.TryValidate(content, out GenerationImageContentValidationResult? validationResult);
-
-        result.Should().BeFalse();
-        validationResult.Should().BeNull();
+        AssertRejected(content);
     }
 
     [Fact]
@@ -93,7 +81,16 @@ public sealed class GenerationImageContentValidatorTests
             "image/webp",
             Convert.ToBase64String(GenerationImageFileSignatures.Riff.ToArray()));
 
-        bool result = _validator.TryValidate(content, out GenerationImageContentValidationResult? validationResult);
+        AssertRejected(content);
+    }
+
+    private void AssertRejected(
+        GenerationImageContentDto content,
+        GenerationImageContentValidator? validator = null)
+    {
+        bool result = (validator ?? _validator).TryValidate(
+            content,
+            out GenerationImageContentValidationResult? validationResult);
 
         result.Should().BeFalse();
         validationResult.Should().BeNull();
