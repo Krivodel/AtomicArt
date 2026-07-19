@@ -9,6 +9,7 @@ public sealed class GenerationImageFileNamePolicyTests
 {
     private static readonly Guid BatchId = Guid.Parse("22222222-2222-2222-2222-222222222222");
     private static readonly Guid ItemId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid OtherItemId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
     [Fact]
     public void BuildFileName_WithValidIds_ReturnsGenerationFileName()
@@ -46,11 +47,9 @@ public sealed class GenerationImageFileNamePolicyTests
     public void IsFileNameForItem_WithMatchingGeneratedFileName_ReturnsTrue()
     {
         GenerationImageFileNamePolicy policy = new();
-        Guid batchId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        Guid itemId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-        string fileName = policy.BuildFileName(batchId, itemId, ".png");
+        string fileName = policy.BuildFileName(BatchId, ItemId, ".png");
 
-        bool result = policy.IsFileNameForItem(fileName, itemId);
+        bool result = policy.IsFileNameForItem(fileName, ItemId);
 
         result.Should().BeTrue();
     }
@@ -59,12 +58,9 @@ public sealed class GenerationImageFileNamePolicyTests
     public void IsFileNameForItem_WithDifferentItemId_ReturnsFalse()
     {
         GenerationImageFileNamePolicy policy = new();
-        Guid batchId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        Guid itemId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-        Guid otherItemId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
-        string fileName = policy.BuildFileName(batchId, otherItemId, ".png");
+        string fileName = policy.BuildFileName(BatchId, OtherItemId, ".png");
 
-        bool result = policy.IsFileNameForItem(fileName, itemId);
+        bool result = policy.IsFileNameForItem(fileName, ItemId);
 
         result.Should().BeFalse();
     }
