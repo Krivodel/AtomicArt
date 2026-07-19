@@ -1,3 +1,5 @@
+using System.Numerics;
+
 using AtomicArt.Domain.Exceptions;
 
 namespace AtomicArt.Domain.Generation;
@@ -80,32 +82,23 @@ public sealed record GenerationModelConstraints
 
         hashCode.Add(ModelId, StringComparer.Ordinal);
         hashCode.Add(MaxPromptLength);
-        AddStringValues(hashCode, AspectRatios);
-        AddStringValues(hashCode, Resolutions);
-        AddIntValues(hashCode, GenerationCounts);
+        AddValues(hashCode, AspectRatios, StringComparer.Ordinal);
+        AddValues(hashCode, Resolutions, StringComparer.Ordinal);
+        AddValues(hashCode, GenerationCounts);
         hashCode.Add(Temperature);
         hashCode.Add(Thinking);
         hashCode.Add(MaxAttachedImages);
         hashCode.Add(MaxAttachedImageBytes);
         hashCode.Add(MaxTotalAttachedImageBytes);
-        AddStringValues(hashCode, SupportedContentTypes);
+        AddValues(hashCode, SupportedContentTypes, StringComparer.Ordinal);
 
         return hashCode.ToHashCode();
     }
 
-    private static int RequirePositive(int value, string parameterName)
+    private static TNumber RequirePositive<TNumber>(TNumber value, string parameterName)
+        where TNumber : INumber<TNumber>
     {
-        if (value <= 0)
-        {
-            throw CreateInvalidPositiveLimitException(parameterName);
-        }
-
-        return value;
-    }
-
-    private static long RequirePositive(long value, string parameterName)
-    {
-        if (value <= 0)
+        if (value <= TNumber.Zero)
         {
             throw CreateInvalidPositiveLimitException(parameterName);
         }
@@ -124,12 +117,7 @@ public sealed record GenerationModelConstraints
         IReadOnlyList<string> values,
         string parameterName)
     {
-        if (values is null || values.Count == 0)
-        {
-            throw new DomainException(
-                GenerationErrorCodes.MissingConstraintValues,
-                $"Generation model constraint '{parameterName}' must contain at least one value.");
-        }
+        EnsureHasValues(values, parameterName, "must contain at least one value.");
 
         string[] snapshot = new string[values.Count];
 
@@ -154,12 +142,7 @@ public sealed record GenerationModelConstraints
         IReadOnlyList<int> values,
         string parameterName)
     {
-        if (values is null || values.Count == 0)
-        {
-            throw new DomainException(
-                GenerationErrorCodes.MissingConstraintValues,
-                $"Generation model constraint '{parameterName}' must contain at least one positive value.");
-        }
+        EnsureHasValues(values, parameterName, "must contain at least one positive value.");
 
         int[] snapshot = new int[values.Count];
 
@@ -180,19 +163,27 @@ public sealed record GenerationModelConstraints
         return Array.AsReadOnly(snapshot);
     }
 
-    private static void AddStringValues(HashCode hashCode, IReadOnlyList<string> values)
+    private static void EnsureHasValues<T>(
+        IReadOnlyList<T> values,
+        string parameterName,
+        string requirement)
     {
-        foreach (string value in values)
+        if (values is null || values.Count == 0)
         {
-            hashCode.Add(value, StringComparer.Ordinal);
+            throw new DomainException(
+                GenerationErrorCodes.MissingConstraintValues,
+                $"Generation model constraint '{parameterName}' {requirement}");
         }
     }
 
-    private static void AddIntValues(HashCode hashCode, IReadOnlyList<int> values)
+    private static void AddValues<T>(
+        HashCode hashCode,
+        IReadOnlyList<T> values,
+        IEqualityComparer<T>? comparer = null)
     {
-        foreach (int value in values)
+        foreach (T value in values)
         {
-            hashCode.Add(value);
+            hashCode.Add(value, comparer);
         }
     }
 }
