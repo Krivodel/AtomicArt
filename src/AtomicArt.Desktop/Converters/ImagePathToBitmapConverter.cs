@@ -1,17 +1,12 @@
-using System.Globalization;
-
-using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 
 namespace AtomicArt.Desktop.Converters;
 
-public sealed class ImagePathToBitmapConverter : IValueConverter
+public sealed class ImagePathToBitmapConverter : OneWayImageBitmapConverter
 {
-    public object? Convert(
-        object? value,
-        Type targetType,
-        object? parameter,
-        CultureInfo culture)
+    protected override string ConversionDescription => "Image path conversion";
+
+    protected override Bitmap? ConvertCore(object? value)
     {
         if (value is not string path || string.IsNullOrWhiteSpace(path))
         {
@@ -21,8 +16,7 @@ public sealed class ImagePathToBitmapConverter : IValueConverter
         try
         {
             using FileStream stream = File.OpenRead(path);
-            
-            return new Bitmap(stream);
+            return CreateBitmap(stream);
         }
         catch (ArgumentException)
         {
@@ -40,14 +34,5 @@ public sealed class ImagePathToBitmapConverter : IValueConverter
         {
             return null;
         }
-    }
-
-    public object ConvertBack(
-        object? value,
-        Type targetType,
-        object? parameter,
-        CultureInfo culture)
-    {
-        throw new NotSupportedException("Image path conversion is one-way.");
     }
 }
