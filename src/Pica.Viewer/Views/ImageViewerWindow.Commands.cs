@@ -134,7 +134,9 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         _ = e;
 
-        if (sender is not Button { Tag: PicaActionDefinition action })
+        PicaActionDefinition? action = GetExternalAction(sender);
+
+        if (action is null)
         {
             return;
         }
@@ -275,7 +277,9 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         _ = e;
 
-        if (sender is not Button { Tag: PicaActionDefinition action })
+        PicaActionDefinition? action = GetExternalAction(sender);
+
+        if (action is null)
         {
             return;
         }
@@ -289,5 +293,10 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _ = e;
 
         await SaveSelectionAsAndCloseAsync(CancellationToken.None);
+    }
+
+    private static PicaActionDefinition? GetExternalAction(object? sender)
+    {
+        return sender is Button { Tag: PicaActionDefinition action } ? action : null;
     }
 }
