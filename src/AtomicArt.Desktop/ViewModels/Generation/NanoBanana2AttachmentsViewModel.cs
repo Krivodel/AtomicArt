@@ -378,8 +378,9 @@ public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerat
         AttachedImageViewModel pendingImage,
         CancellationTokenSource cancellation)
     {
-        bool imageWasRemoved = _attachedImages.Remove(pendingImage);
-        bool preparationWasActive = CompletePreparation(pendingImage, cancellation);
+        (bool imageWasRemoved, bool preparationWasActive) = RemovePendingPreparation(
+            pendingImage,
+            cancellation);
 
         if (imageWasRemoved || preparationWasActive)
         {
@@ -392,13 +393,24 @@ public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerat
         CancellationTokenSource cancellation,
         Exception? exception)
     {
-        bool imageWasRemoved = _attachedImages.Remove(pendingImage);
-        bool preparationWasActive = CompletePreparation(pendingImage, cancellation);
+        (bool imageWasRemoved, bool preparationWasActive) = RemovePendingPreparation(
+            pendingImage,
+            cancellation);
 
         if (imageWasRemoved || preparationWasActive || exception is not null)
         {
             NotifyStateChanged(AttachmentStateChangeKind.Failed, exception);
         }
+    }
+
+    private (bool ImageWasRemoved, bool PreparationWasActive) RemovePendingPreparation(
+        AttachedImageViewModel pendingImage,
+        CancellationTokenSource cancellation)
+    {
+        bool imageWasRemoved = _attachedImages.Remove(pendingImage);
+        bool preparationWasActive = CompletePreparation(pendingImage, cancellation);
+
+        return (imageWasRemoved, preparationWasActive);
     }
 
     private bool CompletePreparation(
