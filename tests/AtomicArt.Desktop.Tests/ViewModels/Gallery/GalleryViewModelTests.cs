@@ -427,10 +427,7 @@ public sealed class GalleryViewModelTests
         GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
             imagePath: "unsafe.png");
 
-        context.Complete(correlationId, resultItem);
-
-        context.ViewModel.Items[0].ImagePath.Should().BeNull();
-        context.ViewModel.Items[0].HasDisplayImagePath.Should().BeFalse();
+        AssertCompletedItemHasEmptyImageState(context, correlationId, resultItem);
     }
 
     [Fact]
@@ -441,10 +438,7 @@ public sealed class GalleryViewModelTests
         GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
             imagePath: null);
 
-        context.Complete(correlationId, resultItem);
-
-        context.ViewModel.Items[0].ImagePath.Should().BeNull();
-        context.ViewModel.Items[0].HasDisplayImagePath.Should().BeFalse();
+        AssertCompletedItemHasEmptyImageState(context, correlationId, resultItem);
     }
 
     [Fact]
@@ -569,6 +563,17 @@ public sealed class GalleryViewModelTests
         viewModel.AddGeneratedItems(items, 0);
 
         return viewModel.Items.Single();
+    }
+
+    private static void AssertCompletedItemHasEmptyImageState(
+        GalleryLifecycleTestContext context,
+        Guid correlationId,
+        GenerationItemDto item)
+    {
+        context.Complete(correlationId, item);
+
+        context.ViewModel.Items[0].ImagePath.Should().BeNull();
+        context.ViewModel.Items[0].HasDisplayImagePath.Should().BeFalse();
     }
 
     private static string GetFileSourcePath(GalleryImageViewerItem item)
