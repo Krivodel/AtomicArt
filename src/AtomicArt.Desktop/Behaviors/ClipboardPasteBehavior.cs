@@ -27,30 +27,22 @@ public static class ClipboardPasteBehavior
 
     public static bool GetIsEnabled(Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(IsEnabledProperty);
+        return AttachedPropertyValueAccessor.Get(control, IsEnabledProperty);
     }
 
     public static void SetIsEnabled(Control control, bool value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(IsEnabledProperty, value);
+        AttachedPropertyValueAccessor.Set(control, IsEnabledProperty, value);
     }
 
     public static IClipboardImageService? GetClipboardImageService(Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(ClipboardImageServiceProperty);
+        return AttachedPropertyValueAccessor.Get(control, ClipboardImageServiceProperty);
     }
 
     public static void SetClipboardImageService(Control control, IClipboardImageService? value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(ClipboardImageServiceProperty, value);
+        AttachedPropertyValueAccessor.Set(control, ClipboardImageServiceProperty, value);
     }
 
     private static void OnIsEnabledChanged(Control control, AvaloniaPropertyChangedEventArgs args)

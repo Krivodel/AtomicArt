@@ -42,44 +42,32 @@ public static class SmoothScrollBehavior
 
     public static bool GetIsEnabled(ScrollViewer scrollViewer)
     {
-        ArgumentNullException.ThrowIfNull(scrollViewer);
-
-        return scrollViewer.GetValue(IsEnabledProperty);
+        return AttachedPropertyValueAccessor.Get(scrollViewer, IsEnabledProperty);
     }
 
     public static void SetIsEnabled(ScrollViewer scrollViewer, bool value)
     {
-        ArgumentNullException.ThrowIfNull(scrollViewer);
-
-        scrollViewer.SetValue(IsEnabledProperty, value);
+        AttachedPropertyValueAccessor.Set(scrollViewer, IsEnabledProperty, value);
     }
 
     public static TimeSpan GetDuration(ScrollViewer scrollViewer)
     {
-        ArgumentNullException.ThrowIfNull(scrollViewer);
-
-        return scrollViewer.GetValue(DurationProperty);
+        return AttachedPropertyValueAccessor.Get(scrollViewer, DurationProperty);
     }
 
     public static void SetDuration(ScrollViewer scrollViewer, TimeSpan value)
     {
-        ArgumentNullException.ThrowIfNull(scrollViewer);
-
-        scrollViewer.SetValue(DurationProperty, value);
+        AttachedPropertyValueAccessor.Set(scrollViewer, DurationProperty, value);
     }
 
     public static double GetWheelMultiplier(ScrollViewer scrollViewer)
     {
-        ArgumentNullException.ThrowIfNull(scrollViewer);
-
-        return scrollViewer.GetValue(WheelMultiplierProperty);
+        return AttachedPropertyValueAccessor.Get(scrollViewer, WheelMultiplierProperty);
     }
 
     public static void SetWheelMultiplier(ScrollViewer scrollViewer, double value)
     {
-        ArgumentNullException.ThrowIfNull(scrollViewer);
-
-        scrollViewer.SetValue(WheelMultiplierProperty, value);
+        AttachedPropertyValueAccessor.Set(scrollViewer, WheelMultiplierProperty, value);
     }
 
     public static void ScrollToOffset(ScrollViewer scrollViewer, Vector targetOffset)

@@ -53,72 +53,52 @@ public static class ImageDropBehavior
 
     public static bool GetIsEnabled(Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(IsEnabledProperty);
+        return AttachedPropertyValueAccessor.Get(control, IsEnabledProperty);
     }
 
     public static void SetIsEnabled(Control control, bool value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(IsEnabledProperty, value);
+        AttachedPropertyValueAccessor.Set(control, IsEnabledProperty, value);
     }
 
     public static IDragDropImageService? GetDragDropImageService(Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(DragDropImageServiceProperty);
+        return AttachedPropertyValueAccessor.Get(control, DragDropImageServiceProperty);
     }
 
     public static void SetDragDropImageService(Control control, IDragDropImageService? value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(DragDropImageServiceProperty, value);
+        AttachedPropertyValueAccessor.Set(control, DragDropImageServiceProperty, value);
     }
 
     public static Control? GetDropArea(Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(DropAreaProperty);
+        return AttachedPropertyValueAccessor.Get(control, DropAreaProperty);
     }
 
     public static void SetDropArea(Control control, Control? value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(DropAreaProperty, value);
+        AttachedPropertyValueAccessor.Set(control, DropAreaProperty, value);
     }
 
     public static ImageDropOverlayControl? GetOverlay(Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(OverlayProperty);
+        return AttachedPropertyValueAccessor.Get(control, OverlayProperty);
     }
 
     public static void SetOverlay(Control control, ImageDropOverlayControl? value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(OverlayProperty, value);
+        AttachedPropertyValueAccessor.Set(control, OverlayProperty, value);
     }
 
     public static ImageDropTargetKind GetTargetKind(Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(TargetKindProperty);
+        return AttachedPropertyValueAccessor.Get(control, TargetKindProperty);
     }
 
     public static void SetTargetKind(Control control, ImageDropTargetKind value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(TargetKindProperty, value);
+        AttachedPropertyValueAccessor.Set(control, TargetKindProperty, value);
     }
 
     internal static bool AcceptsData(

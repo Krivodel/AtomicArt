@@ -32,47 +32,35 @@ public static class ImageAttachmentBehavior
 
     public static int GetMaxInputBytes(Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(MaxInputBytesProperty);
+        return AttachedPropertyValueAccessor.Get(control, MaxInputBytesProperty);
     }
 
     public static void SetMaxInputBytes(Control control, int value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(MaxInputBytesProperty, value);
+        AttachedPropertyValueAccessor.Set(control, MaxInputBytesProperty, value);
     }
 
     public static IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? GetAttachImagesCommand(
         Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(AttachImagesCommandProperty);
+        return AttachedPropertyValueAccessor.Get(control, AttachImagesCommandProperty);
     }
 
     public static void SetAttachImagesCommand(
         Control control,
         IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(AttachImagesCommandProperty, value);
+        AttachedPropertyValueAccessor.Set(control, AttachImagesCommandProperty, value);
     }
 
     public static IRelayCommand<Exception?>? GetErrorCommand(Control control)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        return control.GetValue(ErrorCommandProperty);
+        return AttachedPropertyValueAccessor.Get(control, ErrorCommandProperty);
     }
 
     public static void SetErrorCommand(Control control, IRelayCommand<Exception?>? value)
     {
-        ArgumentNullException.ThrowIfNull(control);
-
-        control.SetValue(ErrorCommandProperty, value);
+        AttachedPropertyValueAccessor.Set(control, ErrorCommandProperty, value);
     }
 
     internal static async Task<bool> TryAttachAsync(
