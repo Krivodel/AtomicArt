@@ -126,20 +126,13 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         {
             IsLoading = true;
             ErrorMessage = null;
-            await _fileRevealService.RevealAsync(item?.ImagePath, item?.ModelId ?? string.Empty, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (InvalidOperationException ex)
-        {
-            _errorHandler.Log(ex, nameof(RevealInFolderAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(RevealInFolderAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
+            await ExecuteUserOperationAsync(
+                operationCt => _fileRevealService.RevealAsync(
+                    item?.ImagePath,
+                    item?.ModelId ?? string.Empty,
+                    operationCt),
+                nameof(RevealInFolderAsync),
+                ct);
         }
         finally
         {
@@ -186,26 +179,10 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
                 return;
             }
 
-            GalleryItemDeletionRequest deletionRequest = CreateDeletionRequest(item);
-            Guid removedItemId = item.Id;
-            _itemsController.Delete(item);
-            await _viewStateController.RemoveAsync(removedItemId, ct);
-            await _deletionService.DeleteFilesAsync(deletionRequest, ct);
-            IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
-            await _galleryStateService.SaveAsync(snapshot, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (InvalidOperationException ex)
-        {
-            _errorHandler.Log(ex, nameof(DeleteOrCancelAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(DeleteOrCancelAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
+            await ExecuteUserOperationAsync(
+                operationCt => DeleteItemAsync(item, operationCt),
+                nameof(DeleteOrCancelAsync),
+                ct);
         }
         finally
         {
@@ -247,30 +224,11 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        try
-        {
-            ErrorMessage = null;
-            GalleryImageViewerRequest? request = CreateImageViewerRequestOrDefault(item);
-            if (request is null)
-            {
-                return;
-            }
-
-            await _imageViewerService.OpenAsync(request, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (InvalidOperationException ex)
-        {
-            _errorHandler.Log(ex, nameof(OpenViewerAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
-        catch (Exception ex)
-        {
-            _errorHandler.Log(ex, nameof(OpenViewerAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
-        }
+        ErrorMessage = null;
+        await ExecuteUserOperationAsync(
+            operationCt => OpenViewerCoreAsync(item, operationCt),
+            nameof(OpenViewerAsync),
+            ct);
     }
 
     private static GalleryItemDeletionRequest CreateDeletionRequest(GenerationItemViewModel item)
@@ -280,6 +238,29 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             item.ModelId,
             item.ImagePath,
             item.ThumbnailPath);
+    }
+
+    private async Task DeleteItemAsync(GenerationItemViewModel item, CancellationToken ct)
+    {
+        GalleryItemDeletionRequest deletionRequest = CreateDeletionRequest(item);
+        Guid removedItemId = item.Id;
+        _itemsController.Delete(item);
+        await _viewStateController.RemoveAsync(removedItemId, ct);
+        await _deletionService.DeleteFilesAsync(deletionRequest, ct);
+        IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
+        await _galleryStateService.SaveAsync(snapshot, ct);
+    }
+
+    private async Task OpenViewerCoreAsync(GenerationItemViewModel item, CancellationToken ct)
+    {
+        GalleryImageViewerRequest? request = CreateImageViewerRequestOrDefault(item);
+
+        if (request is null)
+        {
+            return;
+        }
+
+        await _imageViewerService.OpenAsync(request, ct);
     }
 
     private GalleryImageViewerRequest? CreateImageViewerRequestOrDefault(GenerationItemViewModel selectedItem)
@@ -337,6 +318,25 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             _errorHandler.Log(ex, nameof(ObserveGalleryOperationAsync));
+        }
+    }
+
+    private async Task ExecuteUserOperationAsync(
+        Func<CancellationToken, Task> operation,
+        string operationName,
+        CancellationToken ct)
+    {
+        try
+        {
+            await operation(ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.Log(ex, operationName);
+            ErrorMessage = _errorHandler.GetUserMessage(ex);
         }
     }
 }
