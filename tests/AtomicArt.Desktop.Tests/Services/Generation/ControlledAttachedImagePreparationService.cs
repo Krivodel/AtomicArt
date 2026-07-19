@@ -7,7 +7,7 @@ using AtomicArt.Desktop.Services.Generation;
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
 internal sealed class ControlledAttachedImagePreparationService :
-    IAttachedImagePreparationService
+    AttachedImagePreparationServiceTestDouble
 {
     private readonly ConcurrentDictionary<string, TaskCompletionSource> _started = new(
         StringComparer.Ordinal);
@@ -27,14 +27,11 @@ internal sealed class ControlledAttachedImagePreparationService :
         }
     }
 
-    public async Task<AttachedImageDto?> PrepareAsync(
+    protected override async Task<AttachedImageDto?> PrepareCoreAsync(
         AttachedImageDto image,
         ImageModelOption selectedModel,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(image);
-        ArgumentNullException.ThrowIfNull(selectedModel);
-
         TaskCompletionSource started = GetStarted(image.FileName);
         TaskCompletionSource<AttachedImageDto?> completion = GetCompletion(image.FileName);
         started.TrySetResult();

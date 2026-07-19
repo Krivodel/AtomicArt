@@ -1,11 +1,10 @@
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
-using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
 internal sealed class SelectiveAttachedImagePreparationService :
-    IAttachedImagePreparationService
+    AttachedImagePreparationServiceTestDouble
 {
     private readonly string _rejectedFileName;
 
@@ -16,15 +15,11 @@ internal sealed class SelectiveAttachedImagePreparationService :
         _rejectedFileName = rejectedFileName;
     }
 
-    public Task<AttachedImageDto?> PrepareAsync(
+    protected override Task<AttachedImageDto?> PrepareCoreAsync(
         AttachedImageDto image,
         ImageModelOption selectedModel,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(image);
-        ArgumentNullException.ThrowIfNull(selectedModel);
-        ct.ThrowIfCancellationRequested();
-
         AttachedImageDto? result = string.Equals(
             image.FileName,
             _rejectedFileName,

@@ -5,19 +5,16 @@ using AtomicArt.Desktop.Services.Generation;
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
 internal sealed class BlockingAttachedImagePreparationService :
-    IAttachedImagePreparationService
+    AttachedImagePreparationServiceTestDouble
 {
     private readonly TaskCompletionSource _started = new(
         TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public async Task<AttachedImageDto?> PrepareAsync(
+    protected override async Task<AttachedImageDto?> PrepareCoreAsync(
         AttachedImageDto image,
         ImageModelOption selectedModel,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(image);
-        ArgumentNullException.ThrowIfNull(selectedModel);
-
         _started.TrySetResult();
         await Task.Delay(Timeout.InfiniteTimeSpan, ct);
 
