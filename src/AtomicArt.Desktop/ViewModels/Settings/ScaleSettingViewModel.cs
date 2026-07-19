@@ -1,4 +1,3 @@
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Models;
@@ -7,18 +6,13 @@ using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
-public sealed partial class ScaleSettingViewModel : SettingItemViewModel
+public sealed partial class ScaleSettingViewModel : SelectableSettingItemViewModel<UiScaleOption>
 {
     public string ApplyButtonText { get; }
-    public IReadOnlyList<UiScaleOption> Options { get; }
 
     private readonly IScaleSettingDefinition _definition;
     private readonly ISettingsStateService _settingsStateService;
     private readonly IUiScaleSettingValueConverter _valueConverter;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
-    private UiScaleOption? _selectedOption;
 
     public ScaleSettingViewModel(
         IScaleSettingDefinition definition,
@@ -27,16 +21,13 @@ public sealed partial class ScaleSettingViewModel : SettingItemViewModel
         ISettingsStateService settingsStateService,
         IUiScaleSettingValueConverter valueConverter,
         IViewModelErrorHandler errorHandler)
-        : base(definition, errorHandler)
+        : base(definition, options, selectedOption, errorHandler)
     {
-        ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(settingsStateService);
         ArgumentNullException.ThrowIfNull(valueConverter);
 
         _definition = definition;
         ApplyButtonText = definition.ApplyButtonText;
-        Options = options;
-        SelectedOption = selectedOption;
         _settingsStateService = settingsStateService;
         _valueConverter = valueConverter;
     }
@@ -49,7 +40,7 @@ public sealed partial class ScaleSettingViewModel : SettingItemViewModel
     [RelayCommand(CanExecute = nameof(CanApply))]
     private async Task ApplyAsync(CancellationToken ct)
     {
-        if (SelectedOption is null)
+        if (SelectedOption is not { } selectedOption)
         {
             return;
         }
@@ -57,7 +48,7 @@ public sealed partial class ScaleSettingViewModel : SettingItemViewModel
         await RunOperationAsync(
             async () =>
             {
-                string value = _valueConverter.Format(SelectedOption.Value);
+                string value = _valueConverter.Format(selectedOption.Value);
                 _settingsStateService.ApplyValue(_definition, value);
                 await _settingsStateService.SaveValueAsync(_definition, value, ct);
             },
@@ -67,6 +58,6 @@ public sealed partial class ScaleSettingViewModel : SettingItemViewModel
 
     private bool CanApply()
     {
-        return SelectedOption is not null && !IsLoading;
+        return HasSelectedOption && !IsLoading;
     }
 }
