@@ -16,8 +16,7 @@ internal static class GalleryOperationTypeSelector
         IReadOnlyList<GalleryOperation> operations,
         Type operationType)
     {
-        ArgumentNullException.ThrowIfNull(operations);
-        ArgumentNullException.ThrowIfNull(operationType);
+        ValidateSelectionArguments(operations, operationType);
 
         return operations.Any(operation => Matches(operation, operationType));
     }
@@ -26,8 +25,7 @@ internal static class GalleryOperationTypeSelector
         IReadOnlyList<GalleryOperation> operations,
         Type operationType)
     {
-        ArgumentNullException.ThrowIfNull(operations);
-        ArgumentNullException.ThrowIfNull(operationType);
+        ValidateSelectionArguments(operations, operationType);
 
         return (operations.Count > 0)
             && operations.All(operation => Matches(operation, operationType));
@@ -37,8 +35,7 @@ internal static class GalleryOperationTypeSelector
         IReadOnlyList<GalleryOperation> operations,
         Type operationType)
     {
-        ArgumentNullException.ThrowIfNull(operations);
-        ArgumentNullException.ThrowIfNull(operationType);
+        ValidateSelectionArguments(operations, operationType);
 
         return operations
             .Where(operation => Matches(operation, operationType))
@@ -49,8 +46,7 @@ internal static class GalleryOperationTypeSelector
         IReadOnlyList<GalleryOperation> operations,
         Type operationType)
     {
-        ArgumentNullException.ThrowIfNull(operations);
-        ArgumentNullException.ThrowIfNull(operationType);
+        ValidateSelectionArguments(operations, operationType);
 
         for (int i = operations.Count - 1; i >= 0; i--)
         {
@@ -61,5 +57,13 @@ internal static class GalleryOperationTypeSelector
         }
 
         return null;
+    }
+
+    private static void ValidateSelectionArguments(
+        IReadOnlyList<GalleryOperation> operations,
+        Type operationType)
+    {
+        ArgumentNullException.ThrowIfNull(operations);
+        ArgumentNullException.ThrowIfNull(operationType);
     }
 }
