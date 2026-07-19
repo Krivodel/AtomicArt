@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Net.Http.Json;
-
 using Microsoft.Extensions.Logging;
 
 using AtomicArt.Contracts.Generation;
@@ -28,32 +26,17 @@ public sealed class GenerationModelCatalogApiClient
             .GetAsync(requestUri, ct)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            await SafeApiProblemDetailsReader
-                .LogResponseFailureAsync(
-                    Logger,
-                    response,
-                    SafeApiProblemDetailsApi.GenerationModelCatalog,
-                    errorCode => Logger.LogWarning(
-                        "Generation model catalog API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
-                        (int)response.StatusCode,
-                        errorCode,
-                        stopwatch.ElapsedMilliseconds),
-                    ct)
-                .ConfigureAwait(false);
-        }
-
-        response.EnsureSuccessStatusCode();
-
-        GenerationModelCatalogDto? catalog = await response.Content
-            .ReadFromJsonAsync<GenerationModelCatalogDto>(ct)
+        GenerationModelCatalogDto catalog = await ReadSuccessfulJsonResponseAsync<GenerationModelCatalogDto>(
+                response,
+                SafeApiProblemDetailsApi.GenerationModelCatalog,
+                errorCode => Logger.LogWarning(
+                    "Generation model catalog API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
+                    (int)response.StatusCode,
+                    errorCode,
+                    stopwatch.ElapsedMilliseconds),
+                "Generation model catalog API returned an empty response.",
+                ct)
             .ConfigureAwait(false);
-
-        if (catalog is null)
-        {
-            throw new InvalidOperationException("Generation model catalog API returned an empty response.");
-        }
 
         Logger.LogInformation(
             "Generation model catalog loaded with {ModelCount} models after {ElapsedMilliseconds} ms.",

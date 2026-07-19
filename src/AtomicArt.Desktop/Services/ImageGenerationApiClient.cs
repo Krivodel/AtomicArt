@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
-
 using Microsoft.Extensions.Logging;
 
 using AtomicArt.Contracts.Generation;
@@ -54,32 +53,17 @@ public sealed class ImageGenerationApiClient
             .SendAsync(requestMessage, ct)
             .ConfigureAwait(false);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            await SafeApiProblemDetailsReader
-                .LogResponseFailureAsync(
-                    Logger,
-                    response,
-                    SafeApiProblemDetailsApi.ImageGeneration,
-                    errorCode => Logger.LogWarning(
-                        "Image generation API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
-                        (int)response.StatusCode,
-                        errorCode,
-                        stopwatch.ElapsedMilliseconds),
-                    ct)
-                .ConfigureAwait(false);
-        }
-
-        response.EnsureSuccessStatusCode();
-
-        GenerationBatchDto? batch = await response.Content
-            .ReadFromJsonAsync<GenerationBatchDto>(ct)
+        GenerationBatchDto batch = await ReadSuccessfulJsonResponseAsync<GenerationBatchDto>(
+                response,
+                SafeApiProblemDetailsApi.ImageGeneration,
+                errorCode => Logger.LogWarning(
+                    "Image generation API returned HTTP {StatusCode} with error code {ErrorCode} after {ElapsedMilliseconds} ms.",
+                    (int)response.StatusCode,
+                    errorCode,
+                    stopwatch.ElapsedMilliseconds),
+                "Generation API returned an empty response.",
+                ct)
             .ConfigureAwait(false);
-
-        if (batch is null)
-        {
-            throw new InvalidOperationException("Generation API returned an empty response.");
-        }
 
         Logger.LogInformation(
             "Image generation API completed batch {BatchId} with {ItemCount} items after {ElapsedMilliseconds} ms.",
