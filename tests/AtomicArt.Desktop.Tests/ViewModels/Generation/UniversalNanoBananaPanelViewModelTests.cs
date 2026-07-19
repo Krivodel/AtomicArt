@@ -593,19 +593,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     public async Task LoadModelCatalogCommand_WithSavedPanelState_RestoresPanelValues()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
-        RecordingGenerationPanelStateService stateService = new()
-        {
-            StateToLoad = new GenerationPanelState
-            {
-                PanelId = GenerationPanelIds.NanoBanana,
-                SelectedModelId = metadata.Id,
-                AspectRatio = metadata.AspectRatios.Last(),
-                Resolution = metadata.Resolutions.Last(),
-                Temperature = 1.7d,
-                GenerationCount = metadata.GenerationCounts.Last(),
-                Prompt = "restored prompt"
-            }
-        };
+        RecordingGenerationPanelStateService stateService = CreateStateService(
+            metadata,
+            metadata.AspectRatios.Last(),
+            metadata.Resolutions.Last(),
+            metadata.GenerationCounts.Last(),
+            "restored prompt",
+            temperature: 1.7d);
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             generationPanelStateService: stateService,
             initializeCatalog: false);
@@ -625,18 +619,12 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     public async Task RestorePanelStateCommand_WithLoadedCatalog_RestoresPanelValuesWithoutCatalogCommand()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
-        RecordingGenerationPanelStateService stateService = new()
-        {
-            StateToLoad = new GenerationPanelState
-            {
-                PanelId = GenerationPanelIds.NanoBanana,
-                SelectedModelId = metadata.Id,
-                AspectRatio = metadata.AspectRatios.Last(),
-                Resolution = metadata.Resolutions.Last(),
-                GenerationCount = metadata.GenerationCounts.Last(),
-                Prompt = "constructor restored prompt"
-            }
-        };
+        RecordingGenerationPanelStateService stateService = CreateStateService(
+            metadata,
+            metadata.AspectRatios.Last(),
+            metadata.Resolutions.Last(),
+            metadata.GenerationCounts.Last(),
+            "constructor restored prompt");
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             generationPanelStateService: stateService);
 
@@ -654,18 +642,12 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     public async Task RestorePanelStateCommand_WithNormalizedState_AppliesServiceSnapshot()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
-        RecordingGenerationPanelStateService stateService = new()
-        {
-            StateToLoad = new GenerationPanelState
-            {
-                PanelId = GenerationPanelIds.NanoBanana,
-                SelectedModelId = metadata.Id,
-                AspectRatio = metadata.AspectRatios.Last(),
-                Resolution = metadata.Resolutions.Last(),
-                GenerationCount = metadata.GenerationCounts.Last(),
-                Prompt = "restored prompt"
-            }
-        };
+        RecordingGenerationPanelStateService stateService = CreateStateService(
+            metadata,
+            metadata.AspectRatios.Last(),
+            metadata.Resolutions.Last(),
+            metadata.GenerationCounts.Last(),
+            "restored prompt");
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             generationPanelStateService: stateService);
 
@@ -687,18 +669,12 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         int generationCount)
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
-        RecordingGenerationPanelStateService stateService = new()
-        {
-            StateToLoad = new GenerationPanelState
-            {
-                PanelId = GenerationPanelIds.NanoBanana,
-                SelectedModelId = metadata.Id,
-                AspectRatio = aspectRatio,
-                Resolution = resolution,
-                GenerationCount = generationCount,
-                Prompt = "restored prompt"
-            }
-        };
+        RecordingGenerationPanelStateService stateService = CreateStateService(
+            metadata,
+            aspectRatio,
+            resolution,
+            generationCount,
+            "restored prompt");
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             generationPanelStateService: stateService);
         SelectionValueResetRecorder resetRecorder = new(viewModel);
@@ -1606,6 +1582,29 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             viewModelErrorHandler);
 
         return viewModel;
+    }
+
+    private static RecordingGenerationPanelStateService CreateStateService(
+        GenerationModelMetadataDto metadata,
+        string aspectRatio,
+        string resolution,
+        int generationCount,
+        string prompt,
+        double? temperature = null)
+    {
+        return new RecordingGenerationPanelStateService
+        {
+            StateToLoad = new GenerationPanelState
+            {
+                PanelId = GenerationPanelIds.NanoBanana,
+                SelectedModelId = metadata.Id,
+                AspectRatio = aspectRatio,
+                Resolution = resolution,
+                Temperature = temperature,
+                GenerationCount = generationCount,
+                Prompt = prompt
+            }
+        };
     }
 
     private static INanoBanana2AttachmentValidator CreateAttachmentValidator()
