@@ -133,25 +133,15 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            NanoBanana2PanelView view = CreateView(
-                out UniversalNanoBananaPanelViewModel viewModel);
-            Window window = Show(view, ExpandedPanelWidth, ExpandedPanelHeight);
+            using ShownPanelContext context = new(ExpandedPanelWidth, ExpandedPanelHeight);
+            TextBox promptTextBox = context.View
+                .GetVisualDescendants()
+                .OfType<TextBox>()
+                .Single();
+            double promptMinimumHeight = GetPromptMinimumHeight(context.View);
 
-            try
-            {
-                TextBox promptTextBox = view
-                    .GetVisualDescendants()
-                    .OfType<TextBox>()
-                    .Single();
-                double promptMinimumHeight = GetPromptMinimumHeight(view);
-
-                promptTextBox.MinHeight.Should().Be(promptMinimumHeight);
-                promptTextBox.Bounds.Height.Should().BeGreaterThan(promptMinimumHeight);
-            }
-            finally
-            {
-                window.Close();
-            }
+            promptTextBox.MinHeight.Should().Be(promptMinimumHeight);
+            promptTextBox.Bounds.Height.Should().BeGreaterThan(promptMinimumHeight);
         });
     }
 
@@ -186,29 +176,19 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            NanoBanana2PanelView view = CreateView(
-                out UniversalNanoBananaPanelViewModel viewModel);
-            Window window = Show(view);
+            using ShownPanelContext context = new();
+            ScrollViewer promptScrollViewer = context.View
+                .GetVisualDescendants()
+                .OfType<TextBox>()
+                .Single()
+                .GetVisualDescendants()
+                .OfType<ScrollViewer>()
+                .Single();
 
-            try
-            {
-                ScrollViewer promptScrollViewer = view
-                    .GetVisualDescendants()
-                    .OfType<TextBox>()
-                    .Single()
-                    .GetVisualDescendants()
-                    .OfType<ScrollViewer>()
-                    .Single();
-
-                SmoothScrollBehavior
-                    .GetWheelMultiplier(promptScrollViewer)
-                    .Should()
-                    .Be(48d);
-            }
-            finally
-            {
-                window.Close();
-            }
+            SmoothScrollBehavior
+                .GetWheelMultiplier(promptScrollViewer)
+                .Should()
+                .Be(48d);
         });
     }
 
@@ -217,39 +197,29 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            NanoBanana2PanelView view = CreateView(
-                out UniversalNanoBananaPanelViewModel viewModel);
-            Window window = Show(view);
+            using ShownPanelContext context = new();
+            Button temperatureButton = GetTemperatureButton(context.View);
+            Popup popup = GetTemperaturePopup(context.View);
 
-            try
-            {
-                Button temperatureButton = GetTemperatureButton(view);
-                Popup popup = GetTemperaturePopup(view);
+            popup.IsOpen = true;
 
-                popup.IsOpen = true;
+            Border content = GetTemperaturePopupContent(popup);
+            Slider slider = content
+                .GetLogicalDescendants()
+                .OfType<Slider>()
+                .Single();
+            Button resetButton = content
+                .GetLogicalDescendants()
+                .OfType<Button>()
+                .Single(button => button.Command == context.ViewModel.ResetTemperatureCommand);
 
-                Border content = GetTemperaturePopupContent(popup);
-                Slider slider = content
-                    .GetLogicalDescendants()
-                    .OfType<Slider>()
-                    .Single();
-                Button resetButton = content
-                    .GetLogicalDescendants()
-                    .OfType<Button>()
-                    .Single(button => button.Command == viewModel.ResetTemperatureCommand);
+            slider.Minimum.Should().Be(context.ViewModel.MinimumTemperature);
+            slider.Maximum.Should().Be(context.ViewModel.MaximumTemperature);
+            slider.TickFrequency.Should().Be(context.ViewModel.TemperatureStep);
+            slider.Value.Should().Be(context.ViewModel.DefaultTemperature);
+            resetButton.Command.Should().BeSameAs(context.ViewModel.ResetTemperatureCommand);
 
-                slider.Minimum.Should().Be(viewModel.MinimumTemperature);
-                slider.Maximum.Should().Be(viewModel.MaximumTemperature);
-                slider.TickFrequency.Should().Be(viewModel.TemperatureStep);
-                slider.Value.Should().Be(viewModel.DefaultTemperature);
-                resetButton.Command.Should().BeSameAs(viewModel.ResetTemperatureCommand);
-
-                popup.IsOpen = false;
-            }
-            finally
-            {
-                window.Close();
-            }
+            popup.IsOpen = false;
         });
     }
 
@@ -341,27 +311,17 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            NanoBanana2PanelView view = CreateView(
-                out UniversalNanoBananaPanelViewModel viewModel);
-            Window window = Show(view);
+            using ShownPanelContext context = new();
+            Button temperatureButton = GetTemperatureButton(context.View);
+            ComboBox resolutionComboBox = GetComboBox(context.View, "ResolutionComboBox");
+            PathIcon temperatureIcon = temperatureButton
+                .GetVisualDescendants()
+                .OfType<PathIcon>()
+                .Single();
 
-            try
-            {
-                Button temperatureButton = GetTemperatureButton(view);
-                ComboBox resolutionComboBox = GetComboBox(view, "ResolutionComboBox");
-                PathIcon temperatureIcon = temperatureButton
-                    .GetVisualDescendants()
-                    .OfType<PathIcon>()
-                    .Single();
-
-                temperatureButton.Bounds.Height.Should().Be(resolutionComboBox.Bounds.Height);
-                temperatureButton.Bounds.Width.Should().Be(temperatureButton.Bounds.Height);
-                temperatureIcon.Bounds.Width.Should().BeGreaterThan(16d);
-            }
-            finally
-            {
-                window.Close();
-            }
+            temperatureButton.Bounds.Height.Should().Be(resolutionComboBox.Bounds.Height);
+            temperatureButton.Bounds.Width.Should().Be(temperatureButton.Bounds.Height);
+            temperatureIcon.Bounds.Width.Should().BeGreaterThan(16d);
         });
     }
 
@@ -370,28 +330,18 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            NanoBanana2PanelView view = CreateView(
-                out UniversalNanoBananaPanelViewModel viewModel);
-            Window window = Show(view);
+            using ShownPanelContext context = new();
+            Button temperatureButton = GetTemperatureButton(context.View);
+            Popup popup = GetTemperaturePopup(context.View);
+            Border content = GetTemperaturePopupContent(popup);
+            IReadOnlyList<Button> resetButtons = content
+                .GetLogicalDescendants()
+                .OfType<Button>()
+                .ToList();
 
-            try
-            {
-                Button temperatureButton = GetTemperatureButton(view);
-                Popup popup = GetTemperaturePopup(view);
-                Border content = GetTemperaturePopupContent(popup);
-                IReadOnlyList<Button> resetButtons = content
-                    .GetLogicalDescendants()
-                    .OfType<Button>()
-                    .ToList();
-
-                ToolTip.GetTip(temperatureButton).Should().BeNull();
-                resetButtons.Should().AllSatisfy(button =>
-                    ToolTip.GetTip(button).Should().BeNull());
-            }
-            finally
-            {
-                window.Close();
-            }
+            ToolTip.GetTip(temperatureButton).Should().BeNull();
+            resetButtons.Should().AllSatisfy(button =>
+                ToolTip.GetTip(button).Should().BeNull());
         });
     }
 
@@ -793,6 +743,28 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         }
 
         throw new InvalidOperationException($"Brush resource '{resourceKey}' was not found.");
+    }
+
+    private sealed class ShownPanelContext : IDisposable
+    {
+        public NanoBanana2PanelView View { get; }
+        public UniversalNanoBananaPanelViewModel ViewModel { get; }
+        public Window Window { get; }
+
+        public ShownPanelContext(double? width = null, double? height = null)
+        {
+            UniversalNanoBananaPanelViewModel viewModel;
+            View = CreateView(out viewModel);
+            ViewModel = viewModel;
+            Window = width is double panelWidth && height is double panelHeight
+                ? Show(View, panelWidth, panelHeight)
+                : Show(View);
+        }
+
+        public void Dispose()
+        {
+            Window.Close();
+        }
     }
 
     private sealed class FixedSecretStore : ISecretStore
