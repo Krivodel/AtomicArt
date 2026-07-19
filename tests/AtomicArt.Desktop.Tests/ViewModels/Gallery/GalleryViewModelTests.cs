@@ -356,77 +356,69 @@ public sealed class GalleryViewModelTests
     [Fact]
     public void OnGenerationStarted_WithSingleItem_InsertsGeneratingPlaceholderAtStart()
     {
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(lifecycleEventHub: lifecycleEventHub);
-        Guid correlationId = Guid.NewGuid();
+        using GalleryLifecycleTestContext context = new();
 
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartedEvent(correlationId, generationCount: 1));
+        Guid correlationId = context.Start(1);
 
-        viewModel.Items.Should().ContainSingle();
-        viewModel.Items[0].IsGenerating.Should().BeTrue();
-        viewModel.Items[0].CorrelationId.Should().Be(correlationId);
-        viewModel.Items[0].GenerationOrdinal.Should().Be(0);
-        viewModel.IsEmpty.Should().BeFalse();
+        context.ViewModel.Items.Should().ContainSingle();
+        context.ViewModel.Items[0].IsGenerating.Should().BeTrue();
+        context.ViewModel.Items[0].CorrelationId.Should().Be(correlationId);
+        context.ViewModel.Items[0].GenerationOrdinal.Should().Be(0);
+        context.ViewModel.IsEmpty.Should().BeFalse();
     }
 
     [Fact]
     public void OnGenerationStarted_WithSingleItem_UsesGenerateFrontOperation()
     {
         RecordingAnimatedGalleryOperations operations = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
-            lifecycleEventHub: lifecycleEventHub,
+        using GalleryLifecycleTestContext context = new(
             animatedGalleryOperations: operations);
-        Guid correlationId = Guid.NewGuid();
 
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartedEvent(correlationId, generationCount: 1));
+        context.Start(1);
 
         operations.GenerateFrontCallCount.Should().Be(1);
         operations.LastGenerateFrontItems.Should().ContainSingle();
-        operations.LastGenerateFrontItems[0].Should().BeSameAs(viewModel.Items[0]);
+        operations.LastGenerateFrontItems[0].Should().BeSameAs(context.ViewModel.Items[0]);
     }
 
     [Fact]
     public void OnGenerationStarted_WhenEventPublished_UsesUiThreadDispatcher()
     {
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
         ImmediateUiThreadDispatcher uiThreadDispatcher = new();
-        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
-            uiThreadDispatcher: uiThreadDispatcher,
-            lifecycleEventHub: lifecycleEventHub);
+        using GalleryLifecycleTestContext context = new(
+            uiThreadDispatcher: uiThreadDispatcher);
         int callCountBeforeEvent = uiThreadDispatcher.CallCount;
 
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartedEvent(Guid.NewGuid(), generationCount: 1));
+        context.Start(1);
 
         uiThreadDispatcher.CallCount.Should().BeGreaterThan(callCountBeforeEvent);
-        viewModel.Items.Should().ContainSingle();
+        context.ViewModel.Items.Should().ContainSingle();
     }
 
     [Fact]
     public void OnGenerationStarted_WithMultipleItems_PreservesPlaceholderOrder()
     {
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(lifecycleEventHub: lifecycleEventHub);
-        Guid correlationId = Guid.NewGuid();
+        using GalleryLifecycleTestContext context = new();
 
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartedEvent(correlationId, generationCount: 3));
+        Guid correlationId = context.Start(3);
 
-        viewModel.Items.Should().HaveCount(3);
-        viewModel.Items.Select(item => item.GenerationOrdinal).Should().Equal(0, 1, 2);
-        viewModel.Items.Select(item => item.CorrelationId).Should().OnlyContain(id => id == correlationId);
+        context.ViewModel.Items.Should().HaveCount(3);
+        context.ViewModel.Items.Select(item => item.GenerationOrdinal).Should().Equal(0, 1, 2);
+        context.ViewModel.Items.Select(item => item.CorrelationId).Should().OnlyContain(id => id == correlationId);
     }
 
     [Fact]
     public void OnGenerationCompleted_WithMatchingCorrelationId_ReplacesPlaceholders()
     {
-        using GalleryCompletionTestContext context = new();
+        using GalleryLifecycleTestContext context = new();
+        Guid correlationId = context.Start(1);
         GenerationItemViewModel placeholder = context.ViewModel.Items[0];
         GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
             prompt: "Finished",
             status: GenerationItemStatus.Generated,
             imagePath: "image.png");
 
-        context.Complete(resultItem);
+        context.Complete(correlationId, resultItem);
 
         context.ViewModel.Items[0].Should().BeSameAs(placeholder);
         context.ViewModel.Items[0].IsGenerated.Should().BeTrue();
@@ -438,12 +430,13 @@ public sealed class GalleryViewModelTests
     [Fact]
     public void OnGenerationCompleted_WithUntrustedImagePath_KeepsSafeDisplayState()
     {
-        using GalleryCompletionTestContext context = new(
+        using GalleryLifecycleTestContext context = new(
             new RejectingTrustedImageFileService());
+        Guid correlationId = context.Start(1);
         GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
             imagePath: "unsafe.png");
 
-        context.Complete(resultItem);
+        context.Complete(correlationId, resultItem);
 
         context.ViewModel.Items[0].ImagePath.Should().BeNull();
         context.ViewModel.Items[0].HasDisplayImagePath.Should().BeFalse();
@@ -452,11 +445,12 @@ public sealed class GalleryViewModelTests
     [Fact]
     public void Completed_WhenGeneratedItemHasNoImagePath_UsesEmptyImageState()
     {
-        using GalleryCompletionTestContext context = new();
+        using GalleryLifecycleTestContext context = new();
+        Guid correlationId = context.Start(1);
         GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
             imagePath: null);
 
-        context.Complete(resultItem);
+        context.Complete(correlationId, resultItem);
 
         context.ViewModel.Items[0].ImagePath.Should().BeNull();
         context.ViewModel.Items[0].HasDisplayImagePath.Should().BeFalse();
@@ -465,12 +459,13 @@ public sealed class GalleryViewModelTests
     [Fact]
     public void Completed_WhenGenerationFailed_KeepsFailedImageState()
     {
-        using GalleryCompletionTestContext context = new();
+        using GalleryLifecycleTestContext context = new();
+        Guid correlationId = context.Start(1);
         GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
             status: GenerationItemStatus.Failed,
             imagePath: null);
 
-        context.Complete(resultItem);
+        context.Complete(correlationId, resultItem);
 
         context.ViewModel.Items[0].IsFailed.Should().BeTrue();
         context.ViewModel.Items[0].ImagePath.Should().BeNull();
@@ -479,43 +474,39 @@ public sealed class GalleryViewModelTests
     [Fact]
     public void OnGenerationFailed_WithMatchingCorrelationId_MarksPlaceholdersAsFailed()
     {
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(lifecycleEventHub: lifecycleEventHub);
-        Guid correlationId = Guid.NewGuid();
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartedEvent(correlationId, generationCount: 2));
+        using GalleryLifecycleTestContext context = new();
 
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateFailedEvent(correlationId));
+        Guid correlationId = context.Start(2);
 
-        viewModel.Items.Should().OnlyContain(item => item.IsFailed);
-        viewModel.Items.Should().OnlyContain(item => !item.IsGenerating);
+        context.PublishFailure(correlationId);
+
+        context.ViewModel.Items.Should().OnlyContain(item => item.IsFailed);
+        context.ViewModel.Items.Should().OnlyContain(item => !item.IsGenerating);
     }
 
     [Fact]
     public void OnGenerationStartFailed_WithMatchingCorrelationId_RemovesPlaceholders()
     {
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(lifecycleEventHub: lifecycleEventHub);
-        Guid correlationId = Guid.NewGuid();
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartedEvent(correlationId, generationCount: 2));
+        using GalleryLifecycleTestContext context = new();
 
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartFailedEvent(correlationId));
+        Guid correlationId = context.Start(2);
 
-        viewModel.Items.Should().BeEmpty();
-        viewModel.IsEmpty.Should().BeTrue();
+        context.PublishStartFailure(correlationId);
+
+        context.ViewModel.Items.Should().BeEmpty();
+        context.ViewModel.IsEmpty.Should().BeTrue();
     }
 
     [Fact]
     public void OnGenerationStartFailed_WithMatchingCorrelationId_UsesMixedMutationOperation()
     {
         RecordingAnimatedGalleryOperations operations = new();
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
-            lifecycleEventHub: lifecycleEventHub,
+        using GalleryLifecycleTestContext context = new(
             animatedGalleryOperations: operations);
-        Guid correlationId = Guid.NewGuid();
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartedEvent(correlationId, generationCount: 2));
 
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartFailedEvent(correlationId));
+        Guid correlationId = context.Start(2);
+
+        context.PublishStartFailure(correlationId);
 
         operations.MixedMutationCallCount.Should().Be(1);
         operations.LastMixedMutationItems.Should().BeEmpty();
@@ -524,17 +515,15 @@ public sealed class GalleryViewModelTests
     [Fact]
     public void OnGenerationFailed_WithDifferentCorrelationId_DoesNotChangeOtherRun()
     {
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(lifecycleEventHub: lifecycleEventHub);
-        Guid firstCorrelationId = Guid.NewGuid();
-        Guid secondCorrelationId = Guid.NewGuid();
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartedEvent(firstCorrelationId, generationCount: 1));
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateStartedEvent(secondCorrelationId, generationCount: 1));
+        using GalleryLifecycleTestContext context = new();
 
-        lifecycleEventHub.Publish(GalleryViewModelTestFactory.CreateFailedEvent(firstCorrelationId));
+        Guid firstCorrelationId = context.Start(1);
+        Guid secondCorrelationId = context.Start(1);
 
-        GenerationItemViewModel failedItem = viewModel.Items.Single(item => item.CorrelationId == firstCorrelationId);
-        GenerationItemViewModel activeItem = viewModel.Items.Single(item => item.CorrelationId == secondCorrelationId);
+        context.PublishFailure(firstCorrelationId);
+
+        GenerationItemViewModel failedItem = context.ViewModel.Items.Single(item => item.CorrelationId == firstCorrelationId);
+        GenerationItemViewModel activeItem = context.ViewModel.Items.Single(item => item.CorrelationId == secondCorrelationId);
         failedItem.IsFailed.Should().BeTrue();
         activeItem.IsGenerating.Should().BeTrue();
     }
@@ -587,36 +576,57 @@ public sealed class GalleryViewModelTests
         return ((GalleryFileImageViewerSource)item.Source).ImagePath;
     }
 
-    private sealed class GalleryCompletionTestContext : IDisposable
+    private sealed class GalleryLifecycleTestContext : IDisposable
     {
         public GalleryViewModel ViewModel { get; }
 
         private readonly TestGenerationLifecycleEventHub _lifecycleEventHub;
-        private readonly Guid _correlationId;
 
-        public GalleryCompletionTestContext(
-            ITrustedImageFileService? trustedImageFileService = null)
+        public GalleryLifecycleTestContext(
+            ITrustedImageFileService? trustedImageFileService = null,
+            IAnimatedGalleryOperations? animatedGalleryOperations = null,
+            IUiThreadDispatcher? uiThreadDispatcher = null)
         {
             _lifecycleEventHub = new TestGenerationLifecycleEventHub();
-            _correlationId = Guid.NewGuid();
             ViewModel = GalleryViewModelTestFactory.CreateViewModel(
                 trustedImageFileService: trustedImageFileService,
-                lifecycleEventHub: _lifecycleEventHub);
-            _lifecycleEventHub.Publish(
-                GalleryViewModelTestFactory.CreateStartedEvent(
-                    _correlationId,
-                    generationCount: 1));
+                lifecycleEventHub: _lifecycleEventHub,
+                animatedGalleryOperations: animatedGalleryOperations,
+                uiThreadDispatcher: uiThreadDispatcher);
         }
 
-        public void Complete(GenerationItemDto item)
+        public Guid Start(int generationCount)
+        {
+            Guid correlationId = Guid.NewGuid();
+            _lifecycleEventHub.Publish(
+                GalleryViewModelTestFactory.CreateStartedEvent(
+                    correlationId,
+                    generationCount));
+
+            return correlationId;
+        }
+
+        public void Complete(Guid correlationId, GenerationItemDto item)
         {
             GenerationBatchDto batch = new(Guid.NewGuid(), [item]);
             GenerationLifecycleEvent completedEvent =
                 GalleryViewModelTestFactory.CreateCompletedEvent(
-                    _correlationId,
+                    correlationId,
                     batch);
 
             _lifecycleEventHub.Publish(completedEvent);
+        }
+
+        public void PublishFailure(Guid correlationId)
+        {
+            _lifecycleEventHub.Publish(
+                GalleryViewModelTestFactory.CreateFailedEvent(correlationId));
+        }
+
+        public void PublishStartFailure(Guid correlationId)
+        {
+            _lifecycleEventHub.Publish(
+                GalleryViewModelTestFactory.CreateStartFailedEvent(correlationId));
         }
 
         public void Dispose()
