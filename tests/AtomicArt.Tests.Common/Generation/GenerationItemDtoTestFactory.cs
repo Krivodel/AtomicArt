@@ -4,7 +4,6 @@ namespace AtomicArt.Tests.Common.Generation;
 
 public static class GenerationItemDtoTestFactory
 {
-    private const string DefaultPrompt = "Prompt";
     private static readonly Guid DefaultItemId =
         Guid.Parse("22222222-2222-2222-2222-222222222222");
     private static readonly DateTime DefaultCreatedAtUtc =
@@ -14,7 +13,7 @@ public static class GenerationItemDtoTestFactory
         Guid? id = null,
         string? modelId = null,
         string? modelDisplayName = null,
-        string prompt = DefaultPrompt,
+        string prompt = TestGenerationPrompts.Default,
         string aspectRatio = GenerationAspectRatios.Auto,
         string? resolution = null,
         DateTime? createdAtUtc = null,

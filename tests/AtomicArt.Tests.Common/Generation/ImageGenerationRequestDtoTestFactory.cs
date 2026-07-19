@@ -4,11 +4,9 @@ namespace AtomicArt.Tests.Common.Generation;
 
 public static class ImageGenerationRequestDtoTestFactory
 {
-    private const string DefaultPrompt = "Prompt";
-
     public static ImageGenerationRequestDto Create(
         string? modelId = null,
-        string prompt = DefaultPrompt,
+        string prompt = TestGenerationPrompts.Default,
         string aspectRatio = GenerationAspectRatios.Auto,
         string? resolution = null,
         double temperature = 1d,
