@@ -21,25 +21,13 @@ public sealed class GalleryLifecycleControllerTests
     [Fact]
     public void StartRequested_DoesNotLogWarning()
     {
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        Mock<ILogger<GalleryLifecycleController>> loggerMock = new();
-        using GalleryLifecycleController controller = CreateController(lifecycleEventHub, loggerMock.Object);
-
-        lifecycleEventHub.Publish(CreateEvent(GenerationLifecycleStatus.StartRequested));
-
-        VerifyWarningCount(loggerMock, Times.Never());
+        VerifyWarningCountForStatus(GenerationLifecycleStatus.StartRequested, Times.Never());
     }
 
     [Fact]
     public void UnsupportedStatus_LogsWarning()
     {
-        TestGenerationLifecycleEventHub lifecycleEventHub = new();
-        Mock<ILogger<GalleryLifecycleController>> loggerMock = new();
-        using GalleryLifecycleController controller = CreateController(lifecycleEventHub, loggerMock.Object);
-
-        lifecycleEventHub.Publish(CreateEvent((GenerationLifecycleStatus)int.MaxValue));
-
-        VerifyWarningCount(loggerMock, Times.Once());
+        VerifyWarningCountForStatus((GenerationLifecycleStatus)int.MaxValue, Times.Once());
     }
 
     [Fact]
@@ -74,6 +62,19 @@ public sealed class GalleryLifecycleControllerTests
             .WaitAsync(TimeSpan.FromSeconds(1));
 
         activityTracker.IsActive.Should().BeFalse();
+    }
+
+    private static void VerifyWarningCountForStatus(
+        GenerationLifecycleStatus status,
+        Times expectedCount)
+    {
+        TestGenerationLifecycleEventHub lifecycleEventHub = new();
+        Mock<ILogger<GalleryLifecycleController>> loggerMock = new();
+        using GalleryLifecycleController controller = CreateController(lifecycleEventHub, loggerMock.Object);
+
+        lifecycleEventHub.Publish(CreateEvent(status));
+
+        VerifyWarningCount(loggerMock, expectedCount);
     }
 
     private static GalleryLifecycleController CreateController(
