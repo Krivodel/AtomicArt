@@ -75,28 +75,17 @@ public sealed class GenerationPanelStateServiceTests
     [Fact]
     public async Task LoadAsync_WithUnavailableSavedValues_NormalizesToCurrentCatalog()
     {
-        GenerationPanelsState existingState = new()
-        {
-            Panels = new Dictionary<string, GenerationPanelState>(StringComparer.Ordinal)
+        GenerationPanelState state = await LoadFirstPanelAsync(
+            new GenerationPanelState
             {
-                [FirstPanelId] = new()
-                {
-                    PanelId = FirstPanelId,
-                    SelectedModelId = "missing-model",
-                    AspectRatio = "missing-aspect",
-                    Resolution = "missing-resolution",
-                    GenerationCount = 999,
-                    ThinkingLevel = "missing-thinking",
-                    Prompt = FirstPrompt
-                }
-            }
-        };
-        GenerationPanelStateService service = CreateService(
-            existingState,
-            new RecordingStateWriteScheduler(),
-            CreateCatalogWithTwoPanels());
-
-        GenerationPanelState state = await service.LoadAsync(FirstPanelId, CancellationToken.None);
+                PanelId = FirstPanelId,
+                SelectedModelId = "missing-model",
+                AspectRatio = "missing-aspect",
+                Resolution = "missing-resolution",
+                GenerationCount = 999,
+                ThinkingLevel = "missing-thinking",
+                Prompt = FirstPrompt
+            });
 
         state.PanelId.Should().Be(FirstPanelId);
         state.SelectedModelId.Should().Be("first-model");
@@ -112,24 +101,13 @@ public sealed class GenerationPanelStateServiceTests
     [Fact]
     public async Task LoadAsync_WithLegacyMinimalThinkingLevel_NormalizesToLow()
     {
-        GenerationPanelsState existingState = new()
-        {
-            Panels = new Dictionary<string, GenerationPanelState>(StringComparer.Ordinal)
+        GenerationPanelState state = await LoadFirstPanelAsync(
+            new GenerationPanelState
             {
-                [FirstPanelId] = new()
-                {
-                    PanelId = FirstPanelId,
-                    SelectedModelId = "first-model",
-                    ThinkingLevel = "minimal"
-                }
-            }
-        };
-        GenerationPanelStateService service = CreateService(
-            existingState,
-            new RecordingStateWriteScheduler(),
-            CreateCatalogWithTwoPanels());
-
-        GenerationPanelState state = await service.LoadAsync(FirstPanelId, CancellationToken.None);
+                PanelId = FirstPanelId,
+                SelectedModelId = "first-model",
+                ThinkingLevel = "minimal"
+            });
 
         state.ThinkingLevel.Should().Be("low");
     }
@@ -147,18 +125,13 @@ public sealed class GenerationPanelStateServiceTests
             Id = "unsupported-model",
             PanelId = FirstPanelId
         };
-        GenerationPanelsState existingState = new()
-        {
-            Panels = new Dictionary<string, GenerationPanelState>(StringComparer.Ordinal)
+        GenerationPanelsState existingState = CreatePanelsState(
+            new GenerationPanelState
             {
-                [FirstPanelId] = new()
-                {
-                    PanelId = FirstPanelId,
-                    SelectedModelId = unsupportedModel.Id,
-                    ThinkingLevel = "high"
-                }
-            }
-        };
+                PanelId = FirstPanelId,
+                SelectedModelId = unsupportedModel.Id,
+                ThinkingLevel = "high"
+            });
         GenerationPanelStateService service = CreateService(
             existingState,
             new RecordingStateWriteScheduler(),
@@ -184,6 +157,28 @@ public sealed class GenerationPanelStateServiceTests
             scheduler,
             optionCatalog,
             new GenerationPanelStateSection());
+    }
+
+    private static async Task<GenerationPanelState> LoadFirstPanelAsync(
+        GenerationPanelState state)
+    {
+        GenerationPanelStateService service = CreateService(
+            CreatePanelsState(state),
+            new RecordingStateWriteScheduler(),
+            CreateCatalogWithTwoPanels());
+
+        return await service.LoadAsync(FirstPanelId, CancellationToken.None);
+    }
+
+    private static GenerationPanelsState CreatePanelsState(GenerationPanelState state)
+    {
+        return new GenerationPanelsState
+        {
+            Panels = new Dictionary<string, GenerationPanelState>(StringComparer.Ordinal)
+            {
+                [FirstPanelId] = state
+            }
+        };
     }
 
     private static GenerationModelCatalogDto CreateCatalogWithTwoPanels()
