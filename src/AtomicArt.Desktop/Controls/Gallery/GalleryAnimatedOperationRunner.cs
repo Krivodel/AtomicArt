@@ -39,4 +39,10 @@ internal abstract class GalleryAnimatedOperationRunner : GalleryOperationRunner
             animationStarted(animation);
         }
     }
+
+    protected async Task RenderCardsAsync(GalleryOperationCoordinator context)
+    {
+        GalleryLayout.RenderCards(context);
+        await context.WaitForLayoutAsync();
+    }
 }

@@ -36,8 +36,7 @@ internal sealed class GalleryAppendRunner : GalleryAnimatedOperationRunner
             return;
         }
 
-        GalleryLayout.RenderCards(context);
-        await context.WaitForLayoutAsync();
+        await RenderCardsAsync(context);
         await AnimateAsync(context, operations, first, materialization.Batches, materialization.NewIds);
     }
 

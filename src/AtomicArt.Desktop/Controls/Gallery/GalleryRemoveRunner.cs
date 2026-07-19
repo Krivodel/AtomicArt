@@ -111,7 +111,7 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
     {
         ct.ThrowIfCancellationRequested();
         Dictionary<Guid, Rect> first = PrepareRemoval(context, operations, out List<(object Item, Rect Rect)> removedItems);
-        await RenderAfterRemovalAsync(context);
+        await RenderCardsAsync(context);
         StartRemovalAnimations(context, first, removedItems, deleteOverlays, runningMoveControls);
         ct.ThrowIfCancellationRequested();
     }
@@ -129,12 +129,6 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
         removedItems = MaterializeOperations(context, operations, first);
 
         return first;
-    }
-
-    private async Task RenderAfterRemovalAsync(GalleryOperationCoordinator context)
-    {
-        GalleryLayout.RenderCards(context);
-        await context.WaitForLayoutAsync();
     }
 
     private void StartRemovalAnimations(

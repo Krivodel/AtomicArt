@@ -58,14 +58,8 @@ internal sealed class GalleryMixedMutationRunner : GalleryAnimatedOperationRunne
         GalleryLayout.SynchronizeCardControlIds(context);
         Dictionary<Guid, Rect> first = GalleryLayout.TakeSnapshot(context);
         List<(object Item, Rect Rect)> removedItems = MaterializeOperations(context, operations, first);
-        await RenderMutationAsync(context);
+        await RenderCardsAsync(context);
         await Task.WhenAll(CreateAnimations(context, first, removedItems, deleteOverlays));
-    }
-
-    private async Task RenderMutationAsync(GalleryOperationCoordinator context)
-    {
-        GalleryLayout.RenderCards(context);
-        await context.WaitForLayoutAsync();
     }
 
     private List<Task> CreateAnimations(
