@@ -1,27 +1,31 @@
-using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Styling;
 using Avalonia.Themes.Fluent;
 
 using SukiUI;
 
+using AtomicArt.Desktop.Tests.Common;
+
 namespace AtomicArt.Desktop.Tests.Behaviors;
 
 internal sealed class ComboBoxAnimationTestApplication : Avalonia.Application
 {
+    private const string ColorsResourcePath = "avares://AtomicArt/Resources/Colors.axaml";
+    private const string ComboBoxStylesPath = "avares://AtomicArt/Resources/ComboBoxStyles.axaml";
+
     public override void Initialize()
     {
         RequestedThemeVariant = ThemeVariant.Dark;
         Uri baseUri = new("avares://AtomicArt/");
 
-        Resources.MergedDictionaries.Add(new ResourceInclude(baseUri)
-        {
-            Source = new Uri("avares://AtomicArt/Resources/Colors.axaml")
-        });
+        AvaloniaTestApplicationResources.AddResourceIncludes(
+            this,
+            baseUri,
+            new string[] { ColorsResourcePath });
         Styles.Add(new FluentTheme());
         Styles.Add(new SukiTheme());
-        Styles.Add(new StyleInclude(baseUri)
-        {
-            Source = new Uri("avares://AtomicArt/Resources/ComboBoxStyles.axaml")
-        });
+        AvaloniaTestApplicationResources.AddStyleIncludes(
+            this,
+            baseUri,
+            new string[] { ComboBoxStylesPath });
     }
 }
