@@ -47,8 +47,7 @@ public sealed class GenerationsControllerTests
     public async Task CreateAsync_WithValidRequest_ReturnsOkResponse()
     {
         GenerationBatchDto batch = CreateBatchWithContent();
-        ControllerTestContext context = CreateControllerTestContext(
-            Result<GenerationBatchDto>.Success(batch));
+        ControllerTestContext context = CreateSuccessfulControllerTestContext(batch);
 
         IActionResult actionResult = await CreateAsync(context);
 
@@ -78,8 +77,8 @@ public sealed class GenerationsControllerTests
     public async Task CreateAsync_WithNonLoopbackBoundary_ReturnsOkResponse(bool isHttps)
     {
         GenerationBatchDto batch = CreateBatchWithContent();
-        ControllerTestContext context = CreateControllerTestContext(
-            Result<GenerationBatchDto>.Success(batch),
+        ControllerTestContext context = CreateSuccessfulControllerTestContext(
+            batch,
             isHttps: isHttps,
             remoteIpAddress: IPAddress.Parse("203.0.113.10"));
 
@@ -382,6 +381,17 @@ public sealed class GenerationsControllerTests
             controller,
             mediator,
             generationRequest);
+    }
+
+    private static ControllerTestContext CreateSuccessfulControllerTestContext(
+        GenerationBatchDto batch,
+        bool isHttps = false,
+        IPAddress? remoteIpAddress = null)
+    {
+        return CreateControllerTestContext(
+            Result<GenerationBatchDto>.Success(batch),
+            isHttps: isHttps,
+            remoteIpAddress: remoteIpAddress);
     }
 
     private static Mock<IMediator> CreateMediator(Result<GenerationBatchDto> result)
