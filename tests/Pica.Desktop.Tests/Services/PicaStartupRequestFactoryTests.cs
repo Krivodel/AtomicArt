@@ -16,7 +16,7 @@ public sealed class PicaStartupRequestFactoryTests
     {
         using PicaTemporaryDirectory temporaryDirectory = new();
         string filePath = Path.Combine(temporaryDirectory.DirectoryPath, "image.png");
-        await File.WriteAllBytesAsync(filePath, [1, 2, 3]);
+        await CreateImageAsync(filePath, [1, 2, 3]);
         PicaStartupRequestFactory factory = CreateFactory();
 
         PicaStartupRequest request = await factory.CreateAsync(
@@ -39,9 +39,9 @@ public sealed class PicaStartupRequestFactoryTests
         string selectedImagePath = Path.Combine(temporaryDirectory.DirectoryPath, "02.png");
         string iconPath = Path.Combine(temporaryDirectory.DirectoryPath, "03.ico");
         string unsupportedFilePath = Path.Combine(temporaryDirectory.DirectoryPath, "notes.txt");
-        await File.WriteAllBytesAsync(firstImagePath, [1]);
-        await File.WriteAllBytesAsync(selectedImagePath, [2]);
-        await File.WriteAllBytesAsync(iconPath, [3]);
+        await CreateImageAsync(firstImagePath, [1]);
+        await CreateImageAsync(selectedImagePath, [2]);
+        await CreateImageAsync(iconPath, [3]);
         await File.WriteAllTextAsync(unsupportedFilePath, "text");
         SetLastWriteTimesNewestFirst(selectedImagePath, iconPath, firstImagePath);
         PicaStartupRequestFactory factory = CreateFactory();
@@ -63,8 +63,8 @@ public sealed class PicaStartupRequestFactoryTests
         using PicaTemporaryDirectory temporaryDirectory = new();
         string pngPath = Path.Combine(temporaryDirectory.DirectoryPath, "01.png");
         string selectedIconPath = Path.Combine(temporaryDirectory.DirectoryPath, "02.ico");
-        await File.WriteAllBytesAsync(pngPath, [1]);
-        await File.WriteAllBytesAsync(selectedIconPath, [2]);
+        await CreateImageAsync(pngPath, [1]);
+        await CreateImageAsync(selectedIconPath, [2]);
         SetLastWriteTimesNewestFirst(pngPath, selectedIconPath);
         PicaStartupRequestFactory factory = CreateFactory();
 
@@ -86,9 +86,9 @@ public sealed class PicaStartupRequestFactoryTests
         string firstRequestedImagePath = Path.Combine(temporaryDirectory.DirectoryPath, "01.jpg");
         string secondRequestedImagePath = Path.Combine(temporaryDirectory.DirectoryPath, "02.jpg");
         string otherFormatImagePath = Path.Combine(temporaryDirectory.DirectoryPath, "03.png");
-        await File.WriteAllBytesAsync(firstRequestedImagePath, [1]);
-        await File.WriteAllBytesAsync(secondRequestedImagePath, [2]);
-        await File.WriteAllBytesAsync(otherFormatImagePath, [3]);
+        await CreateImageAsync(firstRequestedImagePath, [1]);
+        await CreateImageAsync(secondRequestedImagePath, [2]);
+        await CreateImageAsync(otherFormatImagePath, [3]);
         SetLastWriteTimesNewestFirst(
             firstRequestedImagePath,
             secondRequestedImagePath,
@@ -120,9 +120,9 @@ public sealed class PicaStartupRequestFactoryTests
         string requestedImagePath = Path.Combine(
             secondTemporaryDirectory.DirectoryPath,
             "requested.jpg");
-        await File.WriteAllBytesAsync(selectedImagePath, [1]);
-        await File.WriteAllBytesAsync(unrequestedImagePath, [2]);
-        await File.WriteAllBytesAsync(requestedImagePath, [3]);
+        await CreateImageAsync(selectedImagePath, [1]);
+        await CreateImageAsync(unrequestedImagePath, [2]);
+        await CreateImageAsync(requestedImagePath, [3]);
         PicaStartupRequestFactory factory = CreateFactory();
 
         PicaStartupRequest request = await factory.CreateAsync(
@@ -142,6 +142,11 @@ public sealed class PicaStartupRequestFactoryTests
         {
             File.SetLastWriteTimeUtc(paths[index], newestDate.AddDays(-index));
         }
+    }
+
+    private static async Task CreateImageAsync(string path, byte[] content)
+    {
+        await File.WriteAllBytesAsync(path, content);
     }
 
     private static PicaStartupRequestFactory CreateFactory()
