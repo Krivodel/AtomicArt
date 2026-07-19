@@ -60,18 +60,9 @@ public sealed class GalleryStateServiceTests
     public async Task LoadAsync_WithExistingMetadata_RecreatesGalleryItems()
     {
         string imagePath = Path.Combine("D:", "AtomicArt", "Art", "generation.png");
-        GalleryStateService service = CreateService(
-            new GalleryState
-            {
-                Items = [CreateGeneratedItem(imagePath)]
-            },
-            new RecordingStateWriteScheduler(),
-            new PassthroughTrustedImageFileService());
+        GalleryState state = await LoadStateAsync(CreateGeneratedItem(imagePath));
 
-        GalleryState state = await service.LoadAsync(CancellationToken.None);
-
-        state.Items.Should().ContainSingle();
-        GalleryItemState item = state.Items[0];
+        GalleryItemState item = GetOnlyItem(state);
         item.Id.Should().Be(GeneratedItemId);
         item.Status.Should().Be(GenerationItemStatus.Generated);
         item.ImagePath.Should().Be(imagePath);
@@ -81,36 +72,21 @@ public sealed class GalleryStateServiceTests
     [Fact]
     public async Task LoadAsync_WithMissingImage_KeepsItemWithoutImagePath()
     {
-        GalleryStateService service = CreateService(
-            new GalleryState
-            {
-                Items = [CreateGeneratedItem("missing.png")]
-            },
-            new RecordingStateWriteScheduler(),
+        GalleryState state = await LoadStateAsync(
+            CreateGeneratedItem("missing.png"),
             new RejectingTrustedImageFileService());
 
-        GalleryState state = await service.LoadAsync(CancellationToken.None);
-
-        state.Items.Should().ContainSingle();
-        state.Items[0].Status.Should().Be(GenerationItemStatus.Generated);
-        state.Items[0].ImagePath.Should().BeNull();
+        GalleryItemState item = GetOnlyItem(state);
+        item.Status.Should().Be(GenerationItemStatus.Generated);
+        item.ImagePath.Should().BeNull();
     }
 
     [Fact]
     public async Task LoadAsync_WithRunningItems_MarksAsFailed()
     {
-        GalleryStateService service = CreateService(
-            new GalleryState
-            {
-                Items = [CreateRunningItem()]
-            },
-            new RecordingStateWriteScheduler(),
-            new PassthroughTrustedImageFileService());
+        GalleryState state = await LoadStateAsync(CreateRunningItem());
 
-        GalleryState state = await service.LoadAsync(CancellationToken.None);
-
-        state.Items.Should().ContainSingle();
-        GalleryItemState item = state.Items[0];
+        GalleryItemState item = GetOnlyItem(state);
         item.Status.Should().Be(GenerationItemStatus.Failed);
         item.CorrelationId.Should().BeNull();
         item.GenerationOrdinal.Should().BeNull();
@@ -151,6 +127,42 @@ public sealed class GalleryStateServiceTests
             trustedImageFileService,
             new GalleryStateSection(),
             NullLogger<GalleryStateService>.Instance);
+    }
+
+    private static GalleryStateService CreateLoadService(
+        GalleryItemState item,
+        ITrustedImageFileService trustedImageFileService)
+    {
+        GalleryState state = new()
+        {
+            Items = [item]
+        };
+
+        return CreateService(
+            state,
+            new RecordingStateWriteScheduler(),
+            trustedImageFileService);
+    }
+
+    private static async Task<GalleryState> LoadStateAsync(
+        GalleryItemState item,
+        ITrustedImageFileService trustedImageFileService)
+    {
+        GalleryStateService service = CreateLoadService(item, trustedImageFileService);
+
+        return await service.LoadAsync(CancellationToken.None);
+    }
+
+    private static Task<GalleryState> LoadStateAsync(GalleryItemState item)
+    {
+        return LoadStateAsync(item, new PassthroughTrustedImageFileService());
+    }
+
+    private static GalleryItemState GetOnlyItem(GalleryState state)
+    {
+        state.Items.Should().ContainSingle();
+
+        return state.Items[0];
     }
 
     private static IStateWriteScheduler CreateRealScheduler(AtomicArtDataPathProvider pathProvider)
