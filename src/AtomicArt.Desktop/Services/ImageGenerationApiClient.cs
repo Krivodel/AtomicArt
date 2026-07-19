@@ -31,8 +31,9 @@ public sealed class ImageGenerationApiClient
             request.AttachedImages.Count);
 
         Uri requestUri = ApiEndpointService.CreateRequestUri(GenerationApiRoutes.Generations);
+        bool hasProviderCredential = !string.IsNullOrWhiteSpace(providerCredential);
 
-        if (!string.IsNullOrWhiteSpace(providerCredential))
+        if (hasProviderCredential)
         {
             EnsureTrustedProviderCredentialTarget(requestUri);
         }
@@ -42,7 +43,7 @@ public sealed class ImageGenerationApiClient
             Content = JsonContent.Create(request)
         };
 
-        if (!string.IsNullOrWhiteSpace(providerCredential))
+        if (hasProviderCredential)
         {
             requestMessage.Headers.TryAddWithoutValidation(
                 GenerationApiRoutes.ProviderApiKeyHeaderName,
