@@ -229,9 +229,7 @@ public sealed class CreateImageGenerationHandlerTests
         HandlerTestContext context = new();
         CreateImageGenerationCommand command = CreateCommand(generationCount: 5);
 
-        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
-
-        context.AssertValidationRejected(result);
+        await AssertValidationRejectedAsync(context, command);
     }
 
     [Fact]
@@ -247,9 +245,7 @@ public sealed class CreateImageGenerationHandlerTests
             .ToList();
         CreateImageGenerationCommand command = CreateCommand(attachedImages: attachedImages);
 
-        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
-
-        context.AssertValidationRejected(result);
+        await AssertValidationRejectedAsync(context, command);
     }
 
     [Fact]
@@ -270,9 +266,7 @@ public sealed class CreateImageGenerationHandlerTests
                         GenerationImageTestData.PngSignatureLength + 1))
             ]);
 
-        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
-
-        context.AssertValidationRejected(result);
+        await AssertValidationRejectedAsync(context, command);
     }
 
     [Fact]
@@ -296,9 +290,7 @@ public sealed class CreateImageGenerationHandlerTests
                     GenerationImageTestData.PngSignatureBytes)
             ]);
 
-        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
-
-        context.AssertValidationRejected(result);
+        await AssertValidationRejectedAsync(context, command);
     }
 
     [Fact]
@@ -311,9 +303,7 @@ public sealed class CreateImageGenerationHandlerTests
                 new AttachedImageDto("reference.gif", "image/gif", CreateGifContent())
             ]);
 
-        Result<GenerationBatchDto> result = await context.Handler.Handle(command, CancellationToken.None);
-
-        context.AssertValidationRejected(result);
+        await AssertValidationRejectedAsync(context, command);
     }
 
     [Fact]
@@ -427,6 +417,17 @@ public sealed class CreateImageGenerationHandlerTests
 
         return result.Value
             ?? throw new InvalidOperationException("Generation batch result is missing.");
+    }
+
+    private static async Task AssertValidationRejectedAsync(
+        HandlerTestContext context,
+        CreateImageGenerationCommand command)
+    {
+        Result<GenerationBatchDto> result = await context.Handler.Handle(
+            command,
+            CancellationToken.None);
+
+        context.AssertValidationRejected(result);
     }
 
     private static async Task<(
