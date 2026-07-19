@@ -503,10 +503,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             using ShownPanelContext context = new();
-            Popup settingsPopup = GetTemperaturePopup(context.View);
-            Button settingsButton = GetTemperatureButton(context.View);
-
-            ToggleTemperaturePopup(settingsButton);
+            Popup settingsPopup = OpenTemperaturePopup(context.View);
 
             Border settingsPanel = GetTemperaturePopupContent(settingsPopup);
             ComboBox thinkingComboBox = settingsPanel
@@ -552,10 +549,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             using ShownPanelContext context = new();
-            Popup settingsPopup = GetTemperaturePopup(context.View);
-            Button settingsButton = GetTemperatureButton(context.View);
-
-            ToggleTemperaturePopup(settingsButton);
+            Popup settingsPopup = OpenTemperaturePopup(context.View);
 
             Point outsidePoint = new(
                 context.Window.Bounds.Width - 1d,
@@ -670,6 +664,16 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     private static void ToggleTemperaturePopup(Button temperatureButton)
     {
         temperatureButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+    }
+
+    private static Popup OpenTemperaturePopup(NanoBanana2PanelView view)
+    {
+        Popup popup = GetTemperaturePopup(view);
+        Button button = GetTemperatureButton(view);
+
+        ToggleTemperaturePopup(button);
+
+        return popup;
     }
 
     private static void AssertContainedByPanel(Control control, Border panel)
