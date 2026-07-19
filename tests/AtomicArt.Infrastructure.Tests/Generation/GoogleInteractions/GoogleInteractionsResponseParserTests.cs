@@ -253,22 +253,10 @@ public sealed class GoogleInteractionsResponseParserTests
     [Fact]
     public void Parse_WithInvalidImageBase64_ThrowsSafeProviderException()
     {
-        string responseJson = """
-            {
-              "status": "completed",
-              "steps": [
-                {
-                  "content": [
-                    {
-                      "type": "image",
-                      "mime_type": "image/jpeg",
-                      "data": "not-base64!"
-                    }
-                  ]
-                }
-              ]
-            }
-            """;
+        string responseJson =
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithoutUsage(
+                "image/jpeg",
+                "not-base64!");
 
         Action act = CreateParseAction(responseJson);
 
@@ -279,22 +267,10 @@ public sealed class GoogleInteractionsResponseParserTests
     [Fact]
     public void Parse_WithPngImageOutput_ThrowsSafeProviderException()
     {
-        string responseJson = """
-            {
-              "status": "completed",
-              "steps": [
-                {
-                  "content": [
-                    {
-                      "type": "image",
-                      "mime_type": "image/png",
-                      "data": "iVBORw0KGgo="
-                    }
-                  ]
-                }
-              ]
-            }
-            """;
+        string responseJson =
+            GoogleInteractionsResponseJsonTestFactory.CreateCompletedImageResponseWithoutUsage(
+                "image/png",
+                "iVBORw0KGgo=");
 
         Action act = CreateParseAction(responseJson);
 
