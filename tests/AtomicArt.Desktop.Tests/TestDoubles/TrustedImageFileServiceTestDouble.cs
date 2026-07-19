@@ -11,10 +11,13 @@ internal abstract class TrustedImageFileServiceTestDouble : ITrustedImageFileSer
         return GetRequiredTrustedPath(GetTrustedImagePathOrDefault(path, modelId));
     }
 
-    public abstract void DeleteTrustedImageFileIfExists(
+    public virtual void DeleteTrustedImageFileIfExists(
         string? path,
         string modelId,
-        Action<string> validateResolvedPath);
+        Action<string> validateResolvedPath)
+    {
+        throw CreateUntrustedPathException();
+    }
 
     protected static InvalidOperationException CreateUntrustedPathException()
     {

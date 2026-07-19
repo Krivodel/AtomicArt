@@ -7,11 +7,4 @@ internal sealed class RejectingTrustedImageFileService : TrustedImageFileService
         return null;
     }
 
-    public override void DeleteTrustedImageFileIfExists(
-        string? path,
-        string modelId,
-        Action<string> validateResolvedPath)
-    {
-        throw CreateUntrustedPathException();
-    }
 }
