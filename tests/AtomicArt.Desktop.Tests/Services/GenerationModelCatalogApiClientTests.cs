@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using FluentAssertions;
@@ -23,10 +24,7 @@ public sealed class GenerationModelCatalogApiClientTests
     {
         CapturingHttpMessageHandler handler = new(CreateCatalogJson());
         using HttpClient httpClient = new(handler);
-        GenerationModelCatalogApiClient apiClient = new(
-            httpClient,
-            TestApiEndpointServiceFactory.Create(),
-            NullLogger<GenerationModelCatalogApiClient>.Instance);
+        GenerationModelCatalogApiClient apiClient = CreateApiClient(httpClient);
 
         GenerationModelCatalogDto catalog = await apiClient.GetCatalogAsync(CancellationToken.None);
 
@@ -44,10 +42,7 @@ public sealed class GenerationModelCatalogApiClientTests
     {
         CapturingHttpMessageHandler handler = new("null");
         using HttpClient httpClient = new(handler);
-        GenerationModelCatalogApiClient apiClient = new(
-            httpClient,
-            TestApiEndpointServiceFactory.Create(),
-            NullLogger<GenerationModelCatalogApiClient>.Instance);
+        GenerationModelCatalogApiClient apiClient = CreateApiClient(httpClient);
 
         Func<Task> act = () => apiClient.GetCatalogAsync(CancellationToken.None);
 
@@ -64,10 +59,7 @@ public sealed class GenerationModelCatalogApiClientTests
             HttpStatusCode.ServiceUnavailable);
         using HttpClient httpClient = new(handler);
         RecordingLogger<GenerationModelCatalogApiClient> logger = new();
-        GenerationModelCatalogApiClient apiClient = new(
-            httpClient,
-            TestApiEndpointServiceFactory.Create(),
-            logger);
+        GenerationModelCatalogApiClient apiClient = CreateApiClient(httpClient, logger: logger);
 
         Func<Task> act = () => apiClient.GetCatalogAsync(CancellationToken.None);
 
@@ -87,10 +79,9 @@ public sealed class GenerationModelCatalogApiClientTests
         using HttpClient httpClient = new(handler);
         IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create(
             "https://first.atomicart.test/");
-        GenerationModelCatalogApiClient apiClient = new(
+        GenerationModelCatalogApiClient apiClient = CreateApiClient(
             httpClient,
-            endpointService,
-            NullLogger<GenerationModelCatalogApiClient>.Instance);
+            endpointService: endpointService);
 
         Task<GenerationModelCatalogDto> firstRequest = apiClient.GetCatalogAsync(
             CancellationToken.None);
@@ -118,6 +109,17 @@ public sealed class GenerationModelCatalogApiClientTests
         GenerationModelCatalogDto catalog = ApiModelMetadataTestCatalog.LoadCatalog();
 
         return JsonSerializer.Serialize(catalog, JsonOptions);
+    }
+
+    private static GenerationModelCatalogApiClient CreateApiClient(
+        HttpClient httpClient,
+        IApiEndpointService? endpointService = null,
+        ILogger<GenerationModelCatalogApiClient>? logger = null)
+    {
+        return new GenerationModelCatalogApiClient(
+            httpClient,
+            endpointService ?? TestApiEndpointServiceFactory.Create(),
+            logger ?? NullLogger<GenerationModelCatalogApiClient>.Instance);
     }
 
     private sealed class DelayedCapturingHttpMessageHandler : HttpMessageHandler
