@@ -18,6 +18,21 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     public ReadOnlyObservableCollection<GenerationItemViewModel> Items { get; }
     public bool IsEmpty => _itemsController.IsEmpty;
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
+    public GenerationMetadataViewModel? SelectedMetadata
+    {
+        get => _selectedMetadata;
+        private set
+        {
+            GenerationMetadataViewModel? previous = _selectedMetadata;
+
+            if (!SetProperty(ref _selectedMetadata, value))
+            {
+                return;
+            }
+
+            previous?.Dispose();
+        }
+    }
 
     private readonly IFileRevealService _fileRevealService;
     private readonly IImageViewerService _imageViewerService;
@@ -32,9 +47,6 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     private readonly GenerationDurationFormatter _durationFormatter;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
     private IGenerationPanelPresetTarget? _generationPanelPresetTarget;
-    [ObservableProperty]
-    private GenerationItemViewModel? _selectedItem;
-    [ObservableProperty]
     private GenerationMetadataViewModel? _selectedMetadata;
     [ObservableProperty]
     private bool _isMetadataOpen;
@@ -99,7 +111,16 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     {
         ArgumentNullException.ThrowIfNull(target);
 
+        if (_generationPanelPresetTarget is not null)
+        {
+            _generationPanelPresetTarget.PresetAvailabilityChanged -=
+                OnGenerationPresetAvailabilityChanged;
+        }
+
         _generationPanelPresetTarget = target;
+        _generationPanelPresetTarget.PresetAvailabilityChanged +=
+            OnGenerationPresetAvailabilityChanged;
+        ReuseGenerationCommand.NotifyCanExecuteChanged();
     }
 
     public void AddGeneratedItems(IReadOnlyList<GenerationItemDto> items, int attachedImagesCount)
@@ -123,8 +144,35 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        SelectedMetadata = null;
         _itemsController.IsEmptyChanged -= OnItemsEmptyChanged;
+
+        if (_generationPanelPresetTarget is not null)
+        {
+            _generationPanelPresetTarget.PresetAvailabilityChanged -=
+                OnGenerationPresetAvailabilityChanged;
+        }
+
         _lifecycleController.Dispose();
+    }
+
+    private static GenerationPanelPreset CreateGenerationPanelPreset(
+        GenerationItemViewModel item)
+    {
+        return new GenerationPanelPreset(
+            item.ModelId,
+            item.Prompt,
+            item.AspectRatio,
+            item.Resolution);
+    }
+
+    private static GalleryItemDeletionRequest CreateDeletionRequest(GenerationItemViewModel item)
+    {
+        return new GalleryItemDeletionRequest(
+            item.Id,
+            item.ModelId,
+            item.ImagePath,
+            item.ThumbnailPath);
     }
 
     [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -152,7 +200,6 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        SelectedItem = item;
         SelectedMetadata = GenerationMetadataViewModel.FromItem(
             item,
             CloseOverlayCommand,
@@ -198,7 +245,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         IsMetadataOpen = false;
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanReuseGeneration))]
     private void ReuseGeneration(GenerationItemViewModel? item)
     {
         IGenerationPanelPresetTarget? target = _generationPanelPresetTarget;
@@ -207,12 +254,23 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        target.ApplyPreset(new GenerationPanelPreset(
-            item.ModelId,
-            item.Prompt,
-            item.AspectRatio,
-            item.Resolution));
+        GenerationPanelPreset preset = CreateGenerationPanelPreset(item);
+        if (!target.CanApplyPreset(preset))
+        {
+            return;
+        }
+
+        target.ApplyPreset(preset);
         IsMetadataOpen = false;
+    }
+
+    private bool CanReuseGeneration(GenerationItemViewModel? item)
+    {
+        IGenerationPanelPresetTarget? target = _generationPanelPresetTarget;
+
+        return item is not null
+            && target is not null
+            && target.CanApplyPreset(CreateGenerationPanelPreset(item));
     }
 
     private void OnItemsEmptyChanged()
@@ -223,6 +281,11 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     private void OnItemsEmptyChanged(object? sender, EventArgs args)
     {
         OnItemsEmptyChanged();
+    }
+
+    private void OnGenerationPresetAvailabilityChanged(object? sender, EventArgs args)
+    {
+        ReuseGenerationCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanRunCommand()
@@ -248,15 +311,6 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             operationCt => OpenViewerCoreAsync(item, operationCt),
             nameof(OpenViewerAsync),
             ct);
-    }
-
-    private static GalleryItemDeletionRequest CreateDeletionRequest(GenerationItemViewModel item)
-    {
-        return new GalleryItemDeletionRequest(
-            item.Id,
-            item.ModelId,
-            item.ImagePath,
-            item.ThumbnailPath);
     }
 
     private async Task DeleteItemAsync(GenerationItemViewModel item, CancellationToken ct)

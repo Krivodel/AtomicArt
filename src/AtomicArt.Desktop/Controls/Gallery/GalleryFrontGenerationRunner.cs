@@ -4,7 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
@@ -16,12 +16,12 @@ internal sealed class GalleryFrontGenerationRunner :
     public override bool SupportsBatching => true;
     public bool IsRunning => _isRunning;
 
-    private readonly GalleryAnimationScheduler _animationScheduler;
+    private readonly UiAnimationScheduler _animationScheduler;
     private readonly GalleryFrontGenerationRetargetWaiter _retargetWaiter;
     private bool _isRunning;
 
     public GalleryFrontGenerationRunner(
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         GalleryMotionAnimator motionAnimator,
         GalleryLayoutService galleryLayout,
         ILogger<GalleryFrontGenerationRunner> logger,

@@ -1,13 +1,13 @@
 using Avalonia;
 using Avalonia.Controls;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GallerySpawnRetargetAnimator : GalleryLayoutAnimator
 {
     public GallerySpawnRetargetAnimator(
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects,
         GalleryLayoutService galleryLayout)
         : base(animationScheduler, overlayEffects, galleryLayout)
@@ -212,7 +212,7 @@ internal sealed class GallerySpawnRetargetAnimator : GalleryLayoutAnimator
             frames,
             startState.Duration,
             startState.Delay,
-            MotionEasing.EaseSpawn,
+            MotionEasing.EaseRail,
             () => CompleteSpawnTarget(context, target.Id, clone, state));
     }
 

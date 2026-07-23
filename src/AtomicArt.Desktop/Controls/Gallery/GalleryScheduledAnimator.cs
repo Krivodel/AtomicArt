@@ -1,12 +1,12 @@
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal abstract class GalleryScheduledAnimator
 {
-    protected GalleryAnimationScheduler AnimationScheduler { get; }
+    protected UiAnimationScheduler AnimationScheduler { get; }
 
-    protected GalleryScheduledAnimator(GalleryAnimationScheduler animationScheduler)
+    protected GalleryScheduledAnimator(UiAnimationScheduler animationScheduler)
     {
         AnimationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
     }

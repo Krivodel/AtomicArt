@@ -224,7 +224,10 @@ internal sealed class AnimatedGallerySceneController
     {
         AnimatedGalleryScene scene = AnimatedGallerySceneController.RequireScene(_scene);
 
-        return scene.CardControlFactory.Create(item, CreateCardCommands());
+        return scene.CardControlFactory.Create(
+            item,
+            CreateCardCommands(),
+            _owner.PreviewExpansionHost);
     }
 
     private GalleryCardCommands CreateCardCommands()

@@ -7,7 +7,8 @@ using Xunit;
 
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
+using AtomicArt.Desktop.Tests.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -24,8 +25,8 @@ public sealed class GalleryFrontGenerationRunnerTests
     {
         TestUiFrameScheduler frameScheduler = new();
         List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
+        UiAnimationScheduler animationScheduler =
+            UiAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryFrontGenerationRunner runner = CreateRunner(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         GalleryOperation operation = new GenerateFrontGalleryOperation(new List<object> { Guid.NewGuid() });
@@ -51,7 +52,7 @@ public sealed class GalleryFrontGenerationRunnerTests
     public async Task RunAsync_WhenAnimationCreationFails_ClearsOverlayCanvasAndFailsOperation()
     {
         TestUiFrameScheduler frameScheduler = new();
-        GalleryAnimationScheduler animationScheduler = new(
+        UiAnimationScheduler animationScheduler = new(
             frameScheduler,
             (_, _) =>
             {
@@ -73,7 +74,7 @@ public sealed class GalleryFrontGenerationRunnerTests
     public async Task RunAsync_WhenCancelledDuringSpawn_ClearsOverlayCanvasAndCancelsOperation()
     {
         TestUiFrameScheduler frameScheduler = new();
-        GalleryAnimationScheduler animationScheduler = new(frameScheduler);
+        UiAnimationScheduler animationScheduler = new(frameScheduler);
         GalleryFrontGenerationRunner runner = CreateRunner(animationScheduler);
         GalleryOperationCoordinator context = CreateContext(frameScheduler);
         CancellationTokenSource cancellationTokenSource = new();
@@ -95,8 +96,8 @@ public sealed class GalleryFrontGenerationRunnerTests
     {
         TestUiFrameScheduler frameScheduler = new();
         List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
+        UiAnimationScheduler animationScheduler =
+            UiAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryFrontGenerationRunner runner = CreateRunner(animationScheduler);
         GalleryOperationRunnerRegistry registry = new(
             new List<IGalleryOperationRunner> { runner });
@@ -127,8 +128,8 @@ public sealed class GalleryFrontGenerationRunnerTests
     {
         TestUiFrameScheduler frameScheduler = new();
         List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
+        UiAnimationScheduler animationScheduler =
+            UiAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryLayoutService layout = new();
         GalleryFrontGenerationRunner runner = CreateRunner(animationScheduler, layout);
         List<object> existingItems = CreateFixedItems(ExistingItemCount, ExistingItemIdStart);
@@ -151,13 +152,13 @@ public sealed class GalleryFrontGenerationRunnerTests
         await Task.WhenAll(runnerTask, operation.Completion.Task);
     }
 
-    private static GalleryFrontGenerationRunner CreateRunner(GalleryAnimationScheduler animationScheduler)
+    private static GalleryFrontGenerationRunner CreateRunner(UiAnimationScheduler animationScheduler)
     {
         return CreateRunner(animationScheduler, new GalleryLayoutService());
     }
 
     private static GalleryFrontGenerationRunner CreateRunner(
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         GalleryLayoutService layout)
     {
         GalleryOverlayEffects overlayEffects = new(animationScheduler);

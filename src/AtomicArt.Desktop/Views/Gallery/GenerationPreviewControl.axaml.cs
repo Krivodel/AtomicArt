@@ -7,6 +7,7 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Controls;
+using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -14,14 +15,6 @@ namespace AtomicArt.Desktop.Views.Gallery;
 
 public partial class GenerationPreviewControl : UserControl
 {
-    public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
-        AvaloniaProperty.Register<GenerationPreviewControl, IRelayCommand?>(
-            nameof(OpenViewerCommand));
-    public static readonly StyledProperty<double> PreviewSizeProperty =
-        AvaloniaProperty.Register<GenerationPreviewControl, double>(
-            nameof(PreviewSize),
-            DefaultPreviewSize);
-
     public IRelayCommand? OpenViewerCommand
     {
         get => GetValue(OpenViewerCommandProperty);
@@ -32,6 +25,17 @@ public partial class GenerationPreviewControl : UserControl
         get => GetValue(PreviewSizeProperty);
         set => SetValue(PreviewSizeProperty, value);
     }
+
+    public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
+        AvaloniaProperty.Register<GenerationPreviewControl, IRelayCommand?>(
+            nameof(OpenViewerCommand));
+    public static readonly StyledProperty<double> PreviewSizeProperty =
+        AvaloniaProperty.Register<GenerationPreviewControl, double>(
+            nameof(PreviewSize),
+            DefaultPreviewSize);
+
+    internal IGenerationPreviewExpansionHost? ExpansionHost { get; set; }
+    internal Control? OverflowOwner { get; set; }
 
     private const int DragPreviewWidth = 256;
     private const double DefaultPreviewSize = 220d;

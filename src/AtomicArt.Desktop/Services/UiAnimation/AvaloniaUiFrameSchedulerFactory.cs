@@ -1,8 +1,6 @@
 using Avalonia.Controls;
 
-using AtomicArt.Desktop.Services.GalleryAnimation;
-
-namespace AtomicArt.Desktop.Controls.Gallery;
+namespace AtomicArt.Desktop.Services.UiAnimation;
 
 internal sealed class AvaloniaUiFrameSchedulerFactory : IUiFrameSchedulerFactory
 {

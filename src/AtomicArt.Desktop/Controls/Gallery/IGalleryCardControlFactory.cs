@@ -4,7 +4,10 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal interface IGalleryCardControlFactory
 {
-    Control Create(object item, GalleryCardCommands commands);
+    Control Create(
+        object item,
+        GalleryCardCommands commands,
+        IGenerationPreviewExpansionHost previewExpansionHost);
 
     void ApplyCommands(Control control, GalleryCardCommands commands);
 }

@@ -285,6 +285,46 @@ public sealed class GalleryViewModelTests
     }
 
     [Fact]
+    public void RepeatCommand_WithUnavailablePreset_RemainsOpenAndDoesNotApplyPreset()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        RecordingGenerationPanelPresetTarget presetTarget = new()
+        {
+            CanApply = false
+        };
+        viewModel.ConfigureGenerationPresetTarget(presetTarget);
+        List<GenerationItemDto> items = [GalleryViewModelTestFactory.CreateItem()];
+        viewModel.AddGeneratedItems(items, 0);
+        GenerationItemViewModel item = viewModel.Items[0];
+        viewModel.OpenMetadataCommand.Execute(item);
+
+        viewModel.SelectedMetadata?.RepeatCommand.Execute(item);
+
+        presetTarget.Preset.Should().BeNull();
+        viewModel.IsMetadataOpen.Should().BeTrue();
+        viewModel.SelectedMetadata?.RepeatCommand.CanExecute(item).Should().BeFalse();
+    }
+
+    [Fact]
+    public void RepeatCommand_WhenPresetBecomesAvailable_UpdatesCanExecute()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        RecordingGenerationPanelPresetTarget presetTarget = new()
+        {
+            CanApply = false
+        };
+        viewModel.ConfigureGenerationPresetTarget(presetTarget);
+        List<GenerationItemDto> items = [GalleryViewModelTestFactory.CreateItem()];
+        viewModel.AddGeneratedItems(items, 0);
+        GenerationItemViewModel item = viewModel.Items[0];
+        viewModel.OpenMetadataCommand.Execute(item);
+
+        presetTarget.SetCanApply(true);
+
+        viewModel.SelectedMetadata?.RepeatCommand.CanExecute(item).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task RevealInFolderAsync_WhenServiceThrows_SetsErrorMessage()
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
@@ -684,12 +724,28 @@ public sealed class GalleryViewModelTests
     private sealed class RecordingGenerationPanelPresetTarget : IGenerationPanelPresetTarget
     {
         public GenerationPanelPreset? Preset { get; private set; }
+        public bool CanApply { get; set; } = true;
+
+        public event EventHandler? PresetAvailabilityChanged;
+
+        public bool CanApplyPreset(GenerationPanelPreset preset)
+        {
+            ArgumentNullException.ThrowIfNull(preset);
+
+            return CanApply;
+        }
 
         public void ApplyPreset(GenerationPanelPreset preset)
         {
             ArgumentNullException.ThrowIfNull(preset);
 
             Preset = preset;
+        }
+
+        public void SetCanApply(bool value)
+        {
+            CanApply = value;
+            PresetAvailabilityChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }

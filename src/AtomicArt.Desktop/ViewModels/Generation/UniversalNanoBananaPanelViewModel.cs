@@ -65,6 +65,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     }
 
     public event EventHandler<PropertyChangedEventArgs>? SelectionValueReset;
+    public event EventHandler? PresetAvailabilityChanged;
 
     private const string SelectedModelNotInitializedMessage =
         "Selected model is not initialized.";
@@ -175,21 +176,26 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelId);
 
-        return AvailableModels.Any(model =>
-            string.Equals(model.Id, modelId, StringComparison.Ordinal)
-            && _modelScope.SupportsModel(model));
+        return FindAvailableModelOrDefault(modelId) is not null;
+    }
+
+    public bool CanApplyPreset(GenerationPanelPreset preset)
+    {
+        ArgumentNullException.ThrowIfNull(preset);
+
+        return SupportsModel(preset.ModelId);
     }
 
     public void ApplyPreset(GenerationPanelPreset preset)
     {
         ArgumentNullException.ThrowIfNull(preset);
 
-        ImageModelOption? model = AvailableModels.FirstOrDefault(candidate =>
-            string.Equals(candidate.Id, preset.ModelId, StringComparison.Ordinal));
+        ImageModelOption? model = FindAvailableModelOrDefault(preset.ModelId);
 
         if (model is null)
         {
-            return;
+            throw new InvalidOperationException(
+                $"Generation preset model '{preset.ModelId}' is unavailable.");
         }
 
         SelectedModel = model;
@@ -267,6 +273,13 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
     }
 
+    private ImageModelOption? FindAvailableModelOrDefault(string modelId)
+    {
+        return AvailableModels.FirstOrDefault(model =>
+            string.Equals(model.Id, modelId, StringComparison.Ordinal)
+            && _modelScope.SupportsModel(model));
+    }
+
     [RelayCommand(CanExecute = nameof(CanLoadModelCatalog))]
     private async Task LoadModelCatalogAsync(CancellationToken ct)
     {
@@ -322,7 +335,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             if (IsCurrentCatalogLoad(operationId, endpointRevision))
             {
                 IsCatalogLoading = false;
-                NotifyCatalogStateChanged();
 
                 if (HasLoadedCatalog)
                 {
@@ -1208,6 +1220,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         PickImageCommand.NotifyCanExecuteChanged();
         AttachImagesCommand.NotifyCanExecuteChanged();
         AttachImageInputsCommand.NotifyCanExecuteChanged();
+        PresetAvailabilityChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void NotifySelectedModelMetadataChanged()

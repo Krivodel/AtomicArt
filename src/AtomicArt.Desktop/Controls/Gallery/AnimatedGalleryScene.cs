@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Logging;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class AnimatedGalleryScene : IDisposable
 {
     internal GalleryLayoutService GalleryLayout { get; }
-    internal GalleryAnimationScheduler AnimationScheduler { get; }
+    internal UiAnimationScheduler AnimationScheduler { get; }
     internal GalleryMotionAnimator MotionAnimator { get; }
     internal GalleryOperationCoordinator OperationCoordinator { get; }
     internal IGalleryCardControlFactory CardControlFactory { get; }
@@ -16,7 +16,7 @@ internal sealed class AnimatedGalleryScene : IDisposable
 
     public AnimatedGalleryScene(
         GalleryLayoutService galleryLayout,
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         GalleryMotionAnimator motionAnimator,
         GalleryOperationCoordinator operationCoordinator,
         IGalleryCardControlFactory cardControlFactory,

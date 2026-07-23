@@ -4,7 +4,7 @@ using Avalonia.Controls;
 
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Views.Gallery;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
@@ -25,7 +25,7 @@ internal static class AnimatedGallerySceneTestFactory
         IUiFrameScheduler frameScheduler = frameSchedulerOverride
             ?? new AvaloniaUiFrameSchedulerFactory().Create(topLevel);
         GalleryLayoutService galleryLayout = new();
-        GalleryAnimationScheduler animationScheduler = new(frameScheduler);
+        UiAnimationScheduler animationScheduler = new(frameScheduler);
         GalleryOverlayEffects overlayEffects = new(animationScheduler);
         GalleryMotionAnimator motionAnimator = GalleryMotionAnimatorTestFactory.Create(
             animationScheduler,

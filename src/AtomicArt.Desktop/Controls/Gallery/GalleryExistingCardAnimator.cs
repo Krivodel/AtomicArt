@@ -1,6 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
@@ -9,7 +9,7 @@ internal sealed class GalleryExistingCardAnimator : GalleryLayoutAnimator
     private static readonly IReadOnlySet<Guid> EmptyIds = new HashSet<Guid>();
 
     public GalleryExistingCardAnimator(
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects,
         GalleryLayoutService galleryLayout)
         : base(animationScheduler, overlayEffects, galleryLayout)

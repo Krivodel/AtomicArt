@@ -11,23 +11,28 @@ public sealed class GenerationPriceFormatterTests
     private readonly GenerationPriceFormatter _formatter = new();
 
     [Fact]
-    public void Format_WithUsdAmount_ReturnsDollarText()
+    public void FormatAmount_WithPrice_ReturnsInvariantAmount()
     {
         GenerationPriceDto price = new(
             0.0678m,
             "USD",
             GenerationPriceSources.ActualProviderUsage);
 
-        string? result = _formatter.Format(price);
+        string result = _formatter.FormatAmount(price);
 
-        result.Should().Be("$0.0678");
+        result.Should().Be("0.0678");
     }
 
     [Fact]
-    public void Format_WithMissingPrice_ReturnsNull()
+    public void FormatCurrency_WithUsdPrice_ReturnsDollarSymbol()
     {
-        string? result = _formatter.Format(null);
+        GenerationPriceDto price = new(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage);
 
-        result.Should().BeNull();
+        string result = _formatter.FormatCurrency(price);
+
+        result.Should().Be("$");
     }
 }

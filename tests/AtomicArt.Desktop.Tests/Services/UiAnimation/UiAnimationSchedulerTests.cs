@@ -2,12 +2,11 @@ using Avalonia.Controls;
 using FluentAssertions;
 using Xunit;
 
-using AtomicArt.Desktop.Services.GalleryAnimation;
-using AtomicArt.Desktop.Tests.Services.Gallery;
+using AtomicArt.Desktop.Services.UiAnimation;
 
-namespace AtomicArt.Desktop.Tests.Services.GalleryAnimation;
+namespace AtomicArt.Desktop.Tests.Services.UiAnimation;
 
-public sealed class GalleryAnimationSchedulerTests
+public sealed class UiAnimationSchedulerTests
 {
     private static readonly MotionFrame StandardFirstFrame = new(0d, 0d, 1d, 0d, 0d);
     private static readonly MotionFrame StandardLastFrame = new(100d, 50d, 2d, 20d, 1d);
@@ -94,8 +93,8 @@ public sealed class GalleryAnimationSchedulerTests
     {
         TestUiFrameScheduler frameScheduler = new();
         List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler scheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
+        UiAnimationScheduler scheduler =
+            UiAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         Border control = new();
 
         return new SchedulerScenario(frameScheduler, appliedFrames, scheduler, control);
@@ -133,7 +132,7 @@ public sealed class GalleryAnimationSchedulerTests
     private sealed record SchedulerScenario(
         TestUiFrameScheduler FrameScheduler,
         List<AppliedMotionFrame> AppliedFrames,
-        GalleryAnimationScheduler Scheduler,
+        UiAnimationScheduler Scheduler,
         Border Control);
 
     private sealed class TrackedAnimationScenario

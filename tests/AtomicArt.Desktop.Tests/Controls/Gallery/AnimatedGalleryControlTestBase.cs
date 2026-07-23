@@ -5,7 +5,7 @@ using Avalonia.Media;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Tests.Services.Gallery;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Gallery;

@@ -86,6 +86,21 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
+    public void CanApplyPreset_WithUnavailableModel_ReturnsFalse()
+    {
+        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        GenerationPanelPreset preset = new(
+            "missing-model",
+            "Промпт из галереи",
+            GenerationAspectRatios.Auto,
+            "1K");
+
+        bool result = viewModel.CanApplyPreset(preset);
+
+        result.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task GenerateCommand_WhenApiReturnsBatch_PublishesCompletedEvent()
     {
         TestGenerationLifecycleEventHub lifecycleEventHub = new();

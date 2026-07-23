@@ -6,6 +6,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.TestDoubles;
+using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.Tests.Services.Settings;
 
@@ -196,7 +197,8 @@ public sealed class SettingsStateServiceTests
             scheduler,
             catalog,
             new SettingsStateSection(),
-            applicators);
+            applicators,
+            new ImmediateUiThreadDispatcher());
     }
 
     private static IUiScaleSettingValueConverter CreateValueConverter()
@@ -225,7 +227,8 @@ public sealed class SettingsStateServiceTests
             new RecordingStateWriteScheduler(),
             catalog,
             new SettingsStateSection(),
-            applicators);
+            applicators,
+            new ImmediateUiThreadDispatcher());
     }
 
     private static SettingsState CreateMixedSettingsState(

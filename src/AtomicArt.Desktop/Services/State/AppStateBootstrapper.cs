@@ -12,12 +12,14 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
     private readonly ISettingsStateService _settingsStateService;
     private readonly IGalleryStateService _galleryStateService;
     private readonly IStateWriteScheduler _writeScheduler;
+    private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly ILogger<AppStateBootstrapper> _logger;
 
     public AppStateBootstrapper(
         ISettingsStateService settingsStateService,
         IGalleryStateService galleryStateService,
         IStateWriteScheduler writeScheduler,
+        IUiThreadDispatcher uiThreadDispatcher,
         ILogger<AppStateBootstrapper> logger)
     {
         _settingsStateService = settingsStateService
@@ -25,6 +27,8 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
         _galleryStateService = galleryStateService
             ?? throw new ArgumentNullException(nameof(galleryStateService));
         _writeScheduler = writeScheduler ?? throw new ArgumentNullException(nameof(writeScheduler));
+        _uiThreadDispatcher = uiThreadDispatcher
+            ?? throw new ArgumentNullException(nameof(uiThreadDispatcher));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -39,7 +43,9 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
             ct).ConfigureAwait(false);
         await RestoreSectionAsync(
             GenerationPanelsSectionName,
-            () => target.RestoreGenerationPanelsAsync(ct),
+            () => _uiThreadDispatcher.InvokeAsync(
+                () => target.RestoreGenerationPanelsAsync(ct),
+                ct),
             ct).ConfigureAwait(false);
         await RestoreSectionAsync(
             GalleryStateSection.KeyValue,
@@ -80,7 +86,9 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
     private async Task RestoreGalleryAsync(IAppStateRestoreTarget target, CancellationToken ct)
     {
         GalleryState state = await _galleryStateService.LoadAsync(ct).ConfigureAwait(false);
-        await target.RestoreGalleryAsync(state.Items, ct).ConfigureAwait(false);
+        await _uiThreadDispatcher.InvokeAsync(
+            () => target.RestoreGalleryAsync(state.Items, ct),
+            ct).ConfigureAwait(false);
     }
 
     private async Task RestoreSectionAsync(

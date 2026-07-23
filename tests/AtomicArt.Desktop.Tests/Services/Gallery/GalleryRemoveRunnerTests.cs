@@ -5,7 +5,7 @@ using Xunit;
 
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -48,7 +48,7 @@ public sealed class GalleryRemoveRunnerTests
     public async Task RunAsync_WhenRemovalAnimationFails_ClearsOverlayCanvasAndFailsOperation()
     {
         RemoveTestContext context = CreateContext(frameScheduler =>
-            new GalleryAnimationScheduler(
+            new UiAnimationScheduler(
                 frameScheduler,
                 (_, _) =>
                 {
@@ -62,12 +62,12 @@ public sealed class GalleryRemoveRunnerTests
     }
 
     private static RemoveTestContext CreateContext(
-        Func<TestUiFrameScheduler, GalleryAnimationScheduler>? animationSchedulerFactory = null)
+        Func<TestUiFrameScheduler, UiAnimationScheduler>? animationSchedulerFactory = null)
     {
         TestUiFrameScheduler frameScheduler = new();
-        GalleryAnimationScheduler animationScheduler =
+        UiAnimationScheduler animationScheduler =
             animationSchedulerFactory?.Invoke(frameScheduler)
-            ?? new GalleryAnimationScheduler(frameScheduler);
+            ?? new UiAnimationScheduler(frameScheduler);
         GalleryLayoutService layout = new();
         GalleryMotionAnimator animator = GalleryMotionAnimatorTestFactory.Create(
             animationScheduler,

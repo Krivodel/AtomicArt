@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.Globalization;
 
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Contracts.Generation;
@@ -9,40 +11,45 @@ using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
 
-public sealed class GenerationMetadataViewModel
+public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
 {
     public GenerationItemViewModel Item { get; }
-    public string CreatedAtUtc { get; }
-    public string CreatedDate { get; }
-    public string CreatedTime { get; }
-    public string Prompt { get; }
-    public string ModelDisplayName { get; }
-    public string Resolution { get; }
-    public string AspectRatio { get; }
-    public string AttachedImagesCount { get; }
-    public string Price { get; }
-    public string PriceCurrency { get; }
-    public string PriceAmount { get; }
-    public string GenerationDuration { get; }
-    public string ImagePath { get; }
-    public string Status { get; }
-    public bool IsGenerated { get; }
-    public bool IsGenerating { get; }
-    public bool IsFailed { get; }
+    public string CreatedDate => Item.CreatedAtUtc
+        .ToLocalTime()
+        .ToString("d MMM yyyy 'г.'", RussianCulture);
+    public string CreatedTime => Item.CreatedAtUtc
+        .ToLocalTime()
+        .ToString("HH:mm", RussianCulture);
+    public string Prompt => Item.Prompt;
+    public string ModelDisplayName => Item.ModelDisplayName;
+    public string Resolution => Item.Resolution;
+    public string AspectRatio => Item.AspectRatio;
+    public string AttachedImagesCount => Item.AttachedImagesCount.ToString(CultureInfo.InvariantCulture);
+    public string PriceCurrency => Item.Price is GenerationPriceDto price
+        ? _priceFormatter.FormatCurrency(price)
+        : string.Empty;
+    public string PriceAmount => Item.Price is GenerationPriceDto price
+        ? _priceFormatter.FormatAmount(price)
+        : UiStrings.MetadataUnavailable;
+    public string GenerationDuration => _durationFormatter.Format(Item.GenerationDuration)
+        ?? UiStrings.MetadataUnavailable;
+    public string ImagePath => Item.ImagePath ?? UiStrings.MetadataNoFilePath;
+    public string Status => Item.Status;
+    public bool IsGenerated => Item.IsGenerated;
+    public bool IsGenerating => Item.IsGenerating;
+    public bool IsFailed => Item.IsFailed;
     public IRelayCommand CloseCommand { get; }
-    public IRelayCommand RequestCloseCommand { get; }
     public IRelayCommand OpenViewerCommand { get; }
     public IRelayCommand RepeatCommand { get; }
-    public IRelayCommand RequestRepeatCommand { get; }
     public IAsyncRelayCommand CopyPromptCommand { get; }
     public IAsyncRelayCommand CopyImagePathCommand { get; }
 
-    public event EventHandler<GenerationMetadataActionRequestedEventArgs>? ActionRequested;
-
-    private const string UsdCurrencyCode = "USD";
+    private static readonly CultureInfo RussianCulture = CultureInfo.GetCultureInfo("ru-RU");
 
     private readonly ITextClipboardService _textClipboardService;
     private readonly IViewModelErrorHandler _errorHandler;
+    private readonly GenerationPriceFormatter _priceFormatter;
+    private readonly GenerationDurationFormatter _durationFormatter;
 
     private GenerationMetadataViewModel(
         GenerationItemViewModel item,
@@ -54,39 +61,17 @@ public sealed class GenerationMetadataViewModel
         GenerationPriceFormatter priceFormatter,
         GenerationDurationFormatter durationFormatter)
     {
-        DateTime createdAt = item.CreatedAtUtc.ToLocalTime();
-        CultureInfo russianCulture = CultureInfo.GetCultureInfo("ru-RU");
-        GenerationPriceDto? price = item.Price;
-
         Item = item;
-        CreatedAtUtc = item.CreatedAtUtc.ToString("u", CultureInfo.InvariantCulture);
-        CreatedDate = createdAt.ToString("d MMM yyyy 'г.'", russianCulture);
-        CreatedTime = createdAt.ToString("HH:mm", russianCulture);
-        Prompt = item.Prompt;
-        ModelDisplayName = item.ModelDisplayName;
-        Resolution = item.Resolution;
-        AspectRatio = item.AspectRatio;
-        AttachedImagesCount = item.AttachedImagesCount.ToString(CultureInfo.InvariantCulture);
-        Price = priceFormatter.Format(price) ?? UiStrings.MetadataUnavailable;
-        PriceCurrency = GetPriceCurrency(price);
-        PriceAmount = price?.Amount.ToString("0.####", CultureInfo.InvariantCulture)
-            ?? UiStrings.MetadataUnavailable;
-        GenerationDuration = durationFormatter.Format(item.GenerationDuration)
-            ?? UiStrings.MetadataUnavailable;
-        ImagePath = item.ImagePath ?? UiStrings.MetadataNoFilePath;
-        Status = item.Status;
-        IsGenerated = item.IsGenerated;
-        IsGenerating = item.IsGenerating;
-        IsFailed = item.IsFailed;
         CloseCommand = closeCommand;
-        RequestCloseCommand = new RelayCommand(RequestClose);
         OpenViewerCommand = openViewerCommand;
         RepeatCommand = repeatCommand;
-        RequestRepeatCommand = new RelayCommand(RequestRepeat);
         _textClipboardService = textClipboardService;
         _errorHandler = errorHandler;
+        _priceFormatter = priceFormatter;
+        _durationFormatter = durationFormatter;
         CopyPromptCommand = new AsyncRelayCommand(CopyPromptAsync);
-        CopyImagePathCommand = new AsyncRelayCommand(CopyImagePathAsync);
+        CopyImagePathCommand = new AsyncRelayCommand(CopyImagePathAsync, CanCopyImagePath);
+        Item.PropertyChanged += OnItemPropertyChanged;
     }
 
     public static GenerationMetadataViewModel FromItem(
@@ -119,22 +104,9 @@ public sealed class GenerationMetadataViewModel
             durationFormatter);
     }
 
-    private static string GetPriceCurrency(GenerationPriceDto? price)
+    public void Dispose()
     {
-        if (price is null)
-        {
-            return string.Empty;
-        }
-
-        if (string.Equals(
-            price.CurrencyCode,
-            UsdCurrencyCode,
-            StringComparison.OrdinalIgnoreCase))
-        {
-            return "$";
-        }
-
-        return price.CurrencyCode;
+        Item.PropertyChanged -= OnItemPropertyChanged;
     }
 
     private Task CopyPromptAsync(CancellationToken ct)
@@ -144,7 +116,14 @@ public sealed class GenerationMetadataViewModel
 
     private Task CopyImagePathAsync(CancellationToken ct)
     {
-        return CopyTextAsync(ImagePath, nameof(CopyImagePathAsync), ct);
+        string? imagePath = Item.ImagePath;
+
+        if (string.IsNullOrWhiteSpace(imagePath))
+        {
+            return Task.CompletedTask;
+        }
+
+        return CopyTextAsync(imagePath, nameof(CopyImagePathAsync), ct);
     }
 
     private async Task CopyTextAsync(string text, string operationName, CancellationToken ct)
@@ -163,17 +142,48 @@ public sealed class GenerationMetadataViewModel
         }
     }
 
-    private void RequestClose()
+    private bool CanCopyImagePath()
     {
-        ActionRequested?.Invoke(
-            this,
-            new GenerationMetadataActionRequestedEventArgs(CloseCommand, null));
+        return !string.IsNullOrWhiteSpace(Item.ImagePath);
     }
 
-    private void RequestRepeat()
+    private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        ActionRequested?.Invoke(
-            this,
-            new GenerationMetadataActionRequestedEventArgs(RepeatCommand, Item));
+        _ = sender;
+
+        if (string.IsNullOrWhiteSpace(e.PropertyName))
+        {
+            OnPropertyChanged(string.Empty);
+            CopyImagePathCommand.NotifyCanExecuteChanged();
+            return;
+        }
+
+        switch (e.PropertyName)
+        {
+            case nameof(GenerationItemViewModel.CreatedAtUtc):
+                OnPropertyChanged(nameof(CreatedDate));
+                OnPropertyChanged(nameof(CreatedTime));
+                break;
+            case nameof(GenerationItemViewModel.Price):
+                OnPropertyChanged(nameof(PriceCurrency));
+                OnPropertyChanged(nameof(PriceAmount));
+                break;
+            case nameof(GenerationItemViewModel.ImagePath):
+                OnPropertyChanged(nameof(ImagePath));
+                CopyImagePathCommand.NotifyCanExecuteChanged();
+                break;
+            case nameof(GenerationItemViewModel.Prompt):
+            case nameof(GenerationItemViewModel.ModelDisplayName):
+            case nameof(GenerationItemViewModel.Resolution):
+            case nameof(GenerationItemViewModel.AspectRatio):
+            case nameof(GenerationItemViewModel.AttachedImagesCount):
+            case nameof(GenerationItemViewModel.GenerationDuration):
+            case nameof(GenerationItemViewModel.Status):
+            case nameof(GenerationItemViewModel.IsGenerated):
+            case nameof(GenerationItemViewModel.IsGenerating):
+            case nameof(GenerationItemViewModel.IsFailed):
+                OnPropertyChanged(e.PropertyName);
+                break;
+        }
     }
 }

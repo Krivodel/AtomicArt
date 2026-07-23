@@ -63,11 +63,10 @@
             </Image>
 
             <TextBlock HorizontalAlignment="Center"
-                       FontFamily="Segoe UI"
                        FontSize="16"
                        FontWeight="SemiBold"
-                       Opacity="0.8"
                        Foreground="{DynamicResource SukiText}"
+                       Opacity="0.8"
                        Text="{x:Static resources:UiStrings.ImageDropLabel}" />
         </StackPanel>
     </Grid>

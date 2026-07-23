@@ -6,4 +6,6 @@
         <MergeResourceInclude Source="/Resources/Dimensions.axaml" />
         <MergeResourceInclude Source="/Resources/Icons.axaml" />
     </ResourceDictionary.MergedDictionaries>
+
+    <FontFamily x:Key="DefaultFontFamily">$Default</FontFamily>
 </ResourceDictionary>

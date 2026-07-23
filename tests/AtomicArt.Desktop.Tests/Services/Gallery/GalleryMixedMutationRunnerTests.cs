@@ -5,7 +5,7 @@ using Xunit;
 
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -15,7 +15,7 @@ public sealed class GalleryMixedMutationRunnerTests
     public async Task RunAsync_WhenMultipleMixedMutationsAreBatched_UsesLastFinalItems()
     {
         DiscardingUiFrameScheduler frameScheduler = new();
-        GalleryAnimationScheduler animationScheduler = new(frameScheduler);
+        UiAnimationScheduler animationScheduler = new(frameScheduler);
         GalleryLayoutService layout = new();
         GalleryMotionAnimator animator = GalleryMotionAnimatorTestFactory.Create(
             animationScheduler,

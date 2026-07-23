@@ -1,4 +1,4 @@
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
@@ -7,7 +7,7 @@ internal abstract class GalleryOverlayAnimator : GalleryScheduledAnimator
     protected GalleryOverlayEffects OverlayEffects { get; }
 
     protected GalleryOverlayAnimator(
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects)
         : base(animationScheduler)
     {

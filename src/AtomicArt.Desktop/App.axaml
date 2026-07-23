@@ -16,6 +16,7 @@
         <FluentTheme />
         <suki:SukiTheme ThemeColor="Blue" />
         <StyleInclude Source="avares://AtomicArt/Resources/SharedControlStyles.axaml" />
+        <StyleInclude Source="avares://AtomicArt/Controls/Themes/Generic.axaml" />
         <StyleInclude Source="avares://AtomicArt/Resources/ScrollViewerStyles.axaml" />
         <StyleInclude Source="avares://AtomicArt/Resources/Templates.axaml" />
     </Application.Styles>

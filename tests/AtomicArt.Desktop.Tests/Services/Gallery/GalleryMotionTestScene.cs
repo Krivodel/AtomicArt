@@ -1,6 +1,7 @@
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
+using AtomicArt.Desktop.Tests.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -27,8 +28,8 @@ internal sealed class GalleryMotionTestScene
     {
         TestUiFrameScheduler frameScheduler = new();
         List<AppliedMotionFrame> appliedFrames = [];
-        GalleryAnimationScheduler animationScheduler =
-            GalleryAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
+        UiAnimationScheduler animationScheduler =
+            UiAnimationSchedulerTestFactory.Create(frameScheduler, appliedFrames);
         GalleryOverlayEffects overlayEffects = new(animationScheduler);
         GalleryLayoutService galleryLayout = new();
         GalleryMotionAnimator animator = GalleryMotionAnimatorTestFactory.Create(

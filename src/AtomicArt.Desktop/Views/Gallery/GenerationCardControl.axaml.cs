@@ -5,25 +5,13 @@ using Avalonia.Platform.Storage;
 
 using CommunityToolkit.Mvvm.Input;
 
+using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.Views.Gallery;
 
 public partial class GenerationCardControl : UserControl
 {
-    public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
-        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
-            nameof(RevealInFolderCommand));
-    public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
-        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
-            nameof(OpenViewerCommand));
-    public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
-        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
-            nameof(OpenMetadataCommand));
-    public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
-        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
-            nameof(DeleteOrCancelCommand));
-
     public IRelayCommand? RevealInFolderCommand
     {
         get => GetValue(RevealInFolderCommandProperty);
@@ -45,9 +33,29 @@ public partial class GenerationCardControl : UserControl
         set => SetValue(DeleteOrCancelCommandProperty, value);
     }
 
+    public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(RevealInFolderCommand));
+    public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(OpenViewerCommand));
+    public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(OpenMetadataCommand));
+    public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(DeleteOrCancelCommand));
+
+    internal IGenerationPreviewExpansionHost? PreviewExpansionHost
+    {
+        get => GenerationPreview.ExpansionHost;
+        set => GenerationPreview.ExpansionHost = value;
+    }
+
     public GenerationCardControl()
     {
         InitializeComponent();
+        GenerationPreview.OverflowOwner = this;
     }
 
     internal static string? GetImageDragPathOrDefault(GenerationItemViewModel item)

@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 
-namespace AtomicArt.Desktop.Services.GalleryAnimation;
+namespace AtomicArt.Desktop.Services.UiAnimation;
 
-internal sealed class GalleryAnimationScheduler
+internal sealed class UiAnimationScheduler
 {
     public bool HasActiveAnimations
     {
@@ -17,12 +17,12 @@ internal sealed class GalleryAnimationScheduler
     private readonly List<ActiveAnimation> _animations = [];
     private bool _isRunning;
 
-    public GalleryAnimationScheduler(IUiFrameScheduler frameScheduler)
+    public UiAnimationScheduler(IUiFrameScheduler frameScheduler)
         : this(frameScheduler, MotionFrameApplier.Apply)
     {
     }
 
-    internal GalleryAnimationScheduler(
+    internal UiAnimationScheduler(
         IUiFrameScheduler frameScheduler,
         Action<Control, MotionFrame> applyFrame)
     {

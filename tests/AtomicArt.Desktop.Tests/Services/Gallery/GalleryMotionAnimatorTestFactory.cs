@@ -1,12 +1,12 @@
 using AtomicArt.Desktop.Controls.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
 internal static class GalleryMotionAnimatorTestFactory
 {
     public static GalleryMotionAnimator Create(
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects,
         GalleryLayoutService galleryLayout)
     {

@@ -51,4 +51,44 @@ public sealed class ImageDropOverlayControlTests : AnimatedGalleryControlTestBas
             }
         });
     }
+
+    [Fact]
+    public void FontFamily_WhenResourceIsOverridden_InheritsConfiguredApplicationFamily()
+    {
+        Dispatch(() =>
+        {
+            Avalonia.Application application = Avalonia.Application.Current
+                ?? throw new InvalidOperationException("Test application was not initialized.");
+            const string ConfiguredFontFamilyName = "AtomicArt Test Font";
+            FontFamily configuredFontFamily = new(ConfiguredFontFamilyName);
+            object? originalFontFamily = application.Resources["DefaultFontFamily"];
+            application.Resources["DefaultFontFamily"] = configuredFontFamily;
+
+            try
+            {
+                ImageDropOverlayControl overlay = new();
+                Window window = Show(overlay, WindowWidth, WindowHeight);
+
+                try
+                {
+                    TextBlock label = overlay
+                        .GetVisualDescendants()
+                        .OfType<TextBlock>()
+                        .Single();
+
+                    configuredFontFamily.Name.Should().NotBe(FontFamily.Default.Name);
+                    window.FontFamily.Should().Be(configuredFontFamily);
+                    label.FontFamily.Should().Be(configuredFontFamily);
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }
+            finally
+            {
+                application.Resources["DefaultFontFamily"] = originalFontFamily;
+            }
+        });
+    }
 }

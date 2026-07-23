@@ -13,7 +13,7 @@ public sealed class GalleryFactoryCompositionTests
         "BuildServiceProvider",
         "CreateStandalone",
         "new GalleryLayoutService",
-        "new GalleryAnimationScheduler",
+        "new UiAnimationScheduler",
         "new GalleryOverlayEffects",
         "new GalleryMotionAnimator",
         "new GalleryAppendRunner",

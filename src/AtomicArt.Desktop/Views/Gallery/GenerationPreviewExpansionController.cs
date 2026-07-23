@@ -13,10 +13,6 @@ namespace AtomicArt.Desktop.Views.Gallery;
 
 internal sealed class GenerationPreviewExpansionController
 {
-    private const string PreviewExpandedClass = "preview-expanded";
-    private const int ActivePreviewZIndex = 1001;
-    private const int CollapsingPreviewZIndex = 1000;
-
     private static readonly TimeSpan PreviewAnimationDuration = TimeSpan.FromSeconds(0.15d);
 
     private readonly GenerationPreviewControl _owner;
@@ -25,19 +21,13 @@ internal sealed class GenerationPreviewExpansionController
     private readonly Image _previewImage;
     private readonly Border _previewTrigger;
     private readonly TranslateTransform _previewTranslation = new();
-
     private CancellationTokenSource? _collapseCompletionCancellation;
-    private AnimatedGalleryControl? _galleryControl;
-    private ScrollViewer? _galleryScrollViewer;
+    private IGenerationPreviewExpansionHost? _expansionHost;
     private Control? _overflowOwner;
-    private Control? _standaloneViewport;
-    private TopLevel? _topLevel;
     private Size _collapsedPreviewSize;
     private KeyModifiers _currentKeyModifiers;
-    private int _originalStandaloneZIndex;
     private bool _isPointerInsidePreview;
     private bool _isPreviewExpanded;
-    private bool _hasStandaloneOverflow;
 
     internal GenerationPreviewExpansionController(
         GenerationPreviewControl owner,
@@ -93,7 +83,8 @@ internal sealed class GenerationPreviewExpansionController
     private void InitializeAnimation()
     {
         CubicEaseOut easing = new();
-        Transitions hostTransitions =
+        _previewExpansionHost.RenderTransform = _previewTranslation;
+        _previewExpansionHost.Transitions =
         [
             new DoubleTransition
             {
@@ -108,7 +99,7 @@ internal sealed class GenerationPreviewExpansionController
                 Easing = easing
             }
         ];
-        Transitions translationTransitions =
+        _previewTranslation.Transitions =
         [
             new DoubleTransition
             {
@@ -123,7 +114,7 @@ internal sealed class GenerationPreviewExpansionController
                 Easing = easing
             }
         ];
-        Transitions shadowTransitions =
+        _previewShadow.Transitions =
         [
             new DoubleTransition
             {
@@ -132,11 +123,6 @@ internal sealed class GenerationPreviewExpansionController
                 Easing = easing
             }
         ];
-
-        _previewExpansionHost.RenderTransform = _previewTranslation;
-        _previewExpansionHost.Transitions = hostTransitions;
-        _previewTranslation.Transitions = translationTransitions;
-        _previewShadow.Transitions = shadowTransitions;
     }
 
     private void UpdatePreviewExpansionState()
@@ -155,19 +141,20 @@ internal sealed class GenerationPreviewExpansionController
 
     private bool TryExpandPreview()
     {
-        Control? viewport = _galleryScrollViewer ?? _standaloneViewport;
+        IGenerationPreviewExpansionHost? expansionHost = _expansionHost;
+        Control? overflowOwner = _overflowOwner;
         IImage? source = _previewImage.Source;
         Size previewSize = _previewTrigger.Bounds.Size;
-        Size viewportSize = viewport?.Bounds.Size ?? default;
+        Size viewportSize = expansionHost?.Viewport.Bounds.Size ?? default;
 
-        if (viewport is null || _overflowOwner is null)
+        if (expansionHost is null || overflowOwner is null)
         {
             return false;
         }
 
         Point? previewPosition = _previewTrigger.TranslatePoint(
             new Point(0d, 0d),
-            viewport);
+            expansionHost.Viewport);
 
         if (source is null
             || previewPosition is null
@@ -187,7 +174,7 @@ internal sealed class GenerationPreviewExpansionController
             viewportBounds);
 
         _collapsedPreviewSize = previewSize;
-        BeginPreviewExpansion();
+        BeginPreviewExpansion(expansionHost, overflowOwner);
         _previewExpansionHost.Width = expandedSize.Width;
         _previewExpansionHost.Height = expandedSize.Height;
         _previewTranslation.X = translation.X;
@@ -197,7 +184,9 @@ internal sealed class GenerationPreviewExpansionController
         return true;
     }
 
-    private void BeginPreviewExpansion()
+    private void BeginPreviewExpansion(
+        IGenerationPreviewExpansionHost expansionHost,
+        Control overflowOwner)
     {
         CancelPendingCollapseCompletion();
 
@@ -207,18 +196,8 @@ internal sealed class GenerationPreviewExpansionController
         }
 
         _isPreviewExpanded = true;
-        Control overflowOwner = _overflowOwner
-            ?? throw new InvalidOperationException("Preview overflow owner is unavailable.");
-        _galleryControl?.EnablePreviewOverflow(overflowOwner, _previewExpansionHost);
-
-        if (_galleryControl is null)
-        {
-            _originalStandaloneZIndex = overflowOwner.ZIndex;
-            overflowOwner.ZIndex = ActivePreviewZIndex;
-            _hasStandaloneOverflow = true;
-        }
-
-        overflowOwner.Classes.Add(PreviewExpandedClass);
+        expansionHost.EnableOverflow(overflowOwner, _previewExpansionHost);
+        overflowOwner.Classes.Add(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
     }
 
     private void CollapsePreview()
@@ -229,18 +208,11 @@ internal sealed class GenerationPreviewExpansionController
         }
 
         _isPreviewExpanded = false;
-        Control? overflowOwner = _overflowOwner;
 
-        if (overflowOwner is not null)
+        if (_expansionHost is not null && _overflowOwner is not null)
         {
-            _galleryControl?.BeginPreviewOverflowCollapse(overflowOwner);
-
-            if (_galleryControl is null && _hasStandaloneOverflow)
-            {
-                overflowOwner.ZIndex = CollapsingPreviewZIndex;
-            }
-
-            overflowOwner.Classes.Remove(PreviewExpandedClass);
+            _expansionHost.BeginOverflowCollapse(_overflowOwner);
+            _overflowOwner.Classes.Remove(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
         }
 
         _previewExpansionHost.Width = _collapsedPreviewSize.Width;
@@ -294,7 +266,7 @@ internal sealed class GenerationPreviewExpansionController
     private void RestoreCollapsedPreviewImmediately()
     {
         _isPreviewExpanded = false;
-        _overflowOwner?.Classes.Remove(PreviewExpandedClass);
+        _overflowOwner?.Classes.Remove(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
 
         if (HasPositiveSize(_collapsedPreviewSize))
         {
@@ -310,18 +282,9 @@ internal sealed class GenerationPreviewExpansionController
 
     private void RestoreOverflow()
     {
-        Control? overflowOwner = _overflowOwner;
-        if (overflowOwner is null)
+        if (_expansionHost is not null && _overflowOwner is not null)
         {
-            return;
-        }
-
-        _galleryControl?.DisablePreviewOverflow(overflowOwner);
-
-        if (_hasStandaloneOverflow)
-        {
-            overflowOwner.ZIndex = _originalStandaloneZIndex;
-            _hasStandaloneOverflow = false;
+            _expansionHost.DisableOverflow(_overflowOwner);
         }
     }
 
@@ -330,42 +293,16 @@ internal sealed class GenerationPreviewExpansionController
         _ = sender;
         _ = e;
 
-        _galleryControl = _owner
-            .GetVisualAncestors()
-            .OfType<AnimatedGalleryControl>()
-            .FirstOrDefault();
-        _galleryScrollViewer = _galleryControl?.PreviewScrollViewer;
-        _overflowOwner = (Control?)_owner
-            .GetVisualAncestors()
-            .OfType<GenerationCardControl>()
-            .FirstOrDefault()
-            ?? _owner;
-        _standaloneViewport = _galleryScrollViewer is null
-            ? _owner
-                .GetVisualAncestors()
-                .OfType<GenerationMetadataOverlayView>()
-                .FirstOrDefault()
-            : null;
+        _expansionHost = _owner.ExpansionHost;
+        _overflowOwner = _owner.OverflowOwner ?? _owner;
 
-        if (_galleryControl is not null)
+        if (_expansionHost is null)
         {
-            _galleryControl.PreviewPointerStateChanged += OnGalleryPointerStateChanged;
+            return;
         }
 
-        if (_galleryScrollViewer is not null)
-        {
-            _galleryScrollViewer.SizeChanged += OnViewportSizeChanged;
-        }
-
-        if (_galleryControl is null)
-        {
-            AttachStandaloneKeyboardHandlers();
-
-            if (_standaloneViewport is not null)
-            {
-                _standaloneViewport.SizeChanged += OnViewportSizeChanged;
-            }
-        }
+        _expansionHost.PointerStateChanged += OnHostPointerStateChanged;
+        _expansionHost.Viewport.SizeChanged += OnViewportSizeChanged;
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
@@ -373,58 +310,18 @@ internal sealed class GenerationPreviewExpansionController
         _ = sender;
         _ = e;
 
-        if (_galleryScrollViewer is not null)
+        if (_expansionHost is not null)
         {
-            _galleryScrollViewer.SizeChanged -= OnViewportSizeChanged;
-            _galleryScrollViewer = null;
+            _expansionHost.PointerStateChanged -= OnHostPointerStateChanged;
+            _expansionHost.Viewport.SizeChanged -= OnViewportSizeChanged;
         }
 
-        if (_standaloneViewport is not null)
-        {
-            _standaloneViewport.SizeChanged -= OnViewportSizeChanged;
-            _standaloneViewport = null;
-        }
-
-        if (_galleryControl is not null)
-        {
-            _galleryControl.PreviewPointerStateChanged -= OnGalleryPointerStateChanged;
-        }
-
-        DetachStandaloneKeyboardHandlers();
         _isPointerInsidePreview = false;
         _currentKeyModifiers = KeyModifiers.None;
         CancelPendingCollapseCompletion();
         RestoreCollapsedPreviewImmediately();
         _overflowOwner = null;
-        _galleryControl = null;
-    }
-
-    private void AttachStandaloneKeyboardHandlers()
-    {
-        DetachStandaloneKeyboardHandlers();
-        _topLevel = TopLevel.GetTopLevel(_owner);
-        _topLevel?.AddHandler(
-            InputElement.KeyDownEvent,
-            OnStandaloneKeyDown,
-            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
-            true);
-        _topLevel?.AddHandler(
-            InputElement.KeyUpEvent,
-            OnStandaloneKeyUp,
-            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
-            true);
-    }
-
-    private void DetachStandaloneKeyboardHandlers()
-    {
-        if (_topLevel is null)
-        {
-            return;
-        }
-
-        _topLevel.RemoveHandler(InputElement.KeyDownEvent, OnStandaloneKeyDown);
-        _topLevel.RemoveHandler(InputElement.KeyUpEvent, OnStandaloneKeyUp);
-        _topLevel = null;
+        _expansionHost = null;
     }
 
     private void OnPreviewPointerMoved(object? sender, PointerEventArgs e)
@@ -446,54 +343,23 @@ internal sealed class GenerationPreviewExpansionController
         UpdatePreviewExpansionState();
     }
 
-    private void OnGalleryPointerStateChanged(object? sender, EventArgs e)
+    private void OnHostPointerStateChanged(object? sender, EventArgs e)
     {
         _ = sender;
         _ = e;
 
-        Point? pointerPosition = _galleryControl?.GetPreviewPointerPosition();
-        Point? triggerPosition = _galleryScrollViewer is null
+        IGenerationPreviewExpansionHost? expansionHost = _expansionHost;
+        Point? pointerPosition = expansionHost?.PointerPosition;
+        Point? triggerPosition = expansionHost is null
             ? null
             : _previewTrigger.TranslatePoint(
                 new Point(0d, 0d),
-                _galleryScrollViewer);
+                expansionHost.Viewport);
         _isPointerInsidePreview = pointerPosition is not null
             && triggerPosition is not null
             && new Rect(triggerPosition.Value, _previewTrigger.Bounds.Size)
                 .Contains(pointerPosition.Value);
-        _currentKeyModifiers = _galleryControl?.GetPreviewPointerModifiers()
-            ?? KeyModifiers.None;
-        UpdatePreviewExpansionState();
-    }
-
-    private void OnStandaloneKeyDown(object? sender, KeyEventArgs e)
-    {
-        _ = sender;
-        UpdateStandaloneModifiers(e, PreviewKeyTransition.Down);
-    }
-
-    private void OnStandaloneKeyUp(object? sender, KeyEventArgs e)
-    {
-        _ = sender;
-        UpdateStandaloneModifiers(e, PreviewKeyTransition.Up);
-    }
-
-    private void UpdateStandaloneModifiers(
-        KeyEventArgs e,
-        PreviewKeyTransition transition)
-    {
-        KeyModifiers modifier = GetExpansionModifier(e.Key);
-        if (modifier == KeyModifiers.None)
-        {
-            return;
-        }
-
-        _currentKeyModifiers = transition switch
-        {
-            PreviewKeyTransition.Down => e.KeyModifiers | modifier,
-            PreviewKeyTransition.Up => e.KeyModifiers & ~modifier,
-            _ => throw new ArgumentOutOfRangeException(nameof(transition), transition, null)
-        };
+        _currentKeyModifiers = expansionHost?.CurrentKeyModifiers ?? KeyModifiers.None;
         UpdatePreviewExpansionState();
     }
 
@@ -504,11 +370,5 @@ internal sealed class GenerationPreviewExpansionController
 
         _isPointerInsidePreview = false;
         CollapsePreview();
-    }
-
-    private enum PreviewKeyTransition
-    {
-        Down,
-        Up
     }
 }

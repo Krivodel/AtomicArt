@@ -11,7 +11,7 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Generation;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services.Generation;

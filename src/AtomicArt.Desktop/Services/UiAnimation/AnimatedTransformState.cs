@@ -2,7 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia;
 
-namespace AtomicArt.Desktop.Services.GalleryAnimation;
+namespace AtomicArt.Desktop.Services.UiAnimation;
 
 internal sealed class AnimatedTransformState
 {

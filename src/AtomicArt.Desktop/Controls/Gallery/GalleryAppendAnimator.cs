@@ -1,11 +1,11 @@
 using Avalonia.Controls;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryAppendAnimator : GalleryScheduledAnimator
 {
-    public GalleryAppendAnimator(GalleryAnimationScheduler animationScheduler)
+    public GalleryAppendAnimator(UiAnimationScheduler animationScheduler)
         : base(animationScheduler)
     {
     }

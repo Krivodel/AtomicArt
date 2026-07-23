@@ -5,7 +5,7 @@ using Avalonia.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views.Gallery;
 
@@ -44,7 +44,7 @@ internal static class GalleryServiceCollectionExtensions
                 .GetRequiredService<IUiFrameSchedulerFactory>()
                 .Create(provider.GetRequiredService<GallerySceneTopLevelContext>().TopLevel));
         services.AddScoped<GalleryLayoutService>();
-        services.AddScoped<GalleryAnimationScheduler>();
+        services.AddScoped<UiAnimationScheduler>();
         services.AddScoped<GalleryOverlayEffects>();
         services.AddScoped<GalleryAppendAnimator>();
         services.AddScoped<GalleryExistingCardAnimator>();

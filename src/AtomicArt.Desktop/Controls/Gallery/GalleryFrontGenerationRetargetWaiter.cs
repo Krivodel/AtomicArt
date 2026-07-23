@@ -1,15 +1,15 @@
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryFrontGenerationRetargetWaiter
 {
-    private readonly GalleryAnimationScheduler _animationScheduler;
+    private readonly UiAnimationScheduler _animationScheduler;
     private TaskCompletionSource? _retargetRequested;
     private bool _retargetPending;
 
-    public GalleryFrontGenerationRetargetWaiter(GalleryAnimationScheduler animationScheduler)
+    public GalleryFrontGenerationRetargetWaiter(UiAnimationScheduler animationScheduler)
     {
         _animationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
     }

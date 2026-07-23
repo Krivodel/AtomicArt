@@ -11,10 +11,7 @@ internal sealed class AnimatedGalleryControlTestApplication : Avalonia.Applicati
 {
     private static readonly string[] ResourcePaths =
     [
-        "avares://AtomicArt/Resources/Colors.axaml",
-        "avares://AtomicArt/Resources/Brushes.axaml",
-        "avares://AtomicArt/Resources/Dimensions.axaml",
-        "avares://AtomicArt/Resources/Icons.axaml",
+        "avares://AtomicArt/Resources/SharedResources.axaml",
         "avares://AtomicArt/Resources/Converters.axaml"
     ];
     private static readonly string[] StylePaths =
@@ -22,6 +19,7 @@ internal sealed class AnimatedGalleryControlTestApplication : Avalonia.Applicati
         "avares://AtomicArt/Resources/ComboBoxStyles.axaml",
         "avares://AtomicArt/Resources/TextStyles.axaml",
         "avares://AtomicArt/Resources/ButtonStyles.axaml",
+        "avares://AtomicArt/Controls/Themes/Generic.axaml",
         "avares://AtomicArt/Resources/ScrollViewerStyles.axaml",
         "avares://AtomicArt/Resources/Templates.axaml"
     ];

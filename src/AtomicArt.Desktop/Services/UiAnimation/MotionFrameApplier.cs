@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace AtomicArt.Desktop.Services.GalleryAnimation;
+namespace AtomicArt.Desktop.Services.UiAnimation;
 
 internal static class MotionFrameApplier
 {

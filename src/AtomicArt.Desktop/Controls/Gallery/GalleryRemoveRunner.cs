@@ -4,7 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
@@ -13,10 +13,10 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
     public override Type OperationType => typeof(RemoveGalleryOperation);
     public override bool SupportsBatching => false;
 
-    private readonly GalleryAnimationScheduler _animationScheduler;
+    private readonly UiAnimationScheduler _animationScheduler;
 
     public GalleryRemoveRunner(
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         GalleryMotionAnimator motionAnimator,
         GalleryLayoutService galleryLayout,
         ILogger<GalleryRemoveRunner> logger)

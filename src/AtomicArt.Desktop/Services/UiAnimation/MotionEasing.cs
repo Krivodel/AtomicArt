@@ -1,4 +1,4 @@
-namespace AtomicArt.Desktop.Services.GalleryAnimation;
+namespace AtomicArt.Desktop.Services.UiAnimation;
 
 internal static class MotionEasing
 {
@@ -13,11 +13,6 @@ internal static class MotionEasing
     public static double EaseRail(double value)
     {
         return CubicBezier(value, 0.22d, 0d, 0.18d, 1d);
-    }
-
-    public static double EaseSpawn(double value)
-    {
-        return EaseRail(value);
     }
 
     public static double EaseMaterial(double value)

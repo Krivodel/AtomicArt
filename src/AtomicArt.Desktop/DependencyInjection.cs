@@ -14,6 +14,7 @@ using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Gallery;

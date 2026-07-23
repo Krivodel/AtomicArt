@@ -1,0 +1,73 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:glass="using:SukiUI.Controls.GlassMorphism"
+        xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays">
+    <Styles.Resources>
+        <ControlTheme x:Key="{x:Type overlays:ModalOverlayControl}"
+                      TargetType="overlays:ModalOverlayControl">
+            <Setter Property="Margin"
+                    Value="{DynamicResource OverlayMargin}" />
+            <Setter Property="Padding"
+                    Value="{DynamicResource OverlayPadding}" />
+            <Setter Property="HorizontalAlignment"
+                    Value="Center" />
+            <Setter Property="VerticalAlignment"
+                    Value="Center" />
+            <Setter Property="Background"
+                    Value="{DynamicResource ModalOverlayTintBrush}" />
+            <Setter Property="BlurRadius"
+                    Value="{DynamicResource ModalOverlayBlurRadius}" />
+            <Setter Property="IsBlurDynamic"
+                    Value="False" />
+            <Setter Property="BorderBrush"
+                    Value="{DynamicResource GlassBorderBrush}" />
+            <Setter Property="BorderThickness"
+                    Value="{DynamicResource ShellBorderThickness}" />
+            <Setter Property="ClipToBounds"
+                    Value="False" />
+            <Setter Property="CornerRadius"
+                    Value="{DynamicResource OverlayCornerRadius}" />
+            <Setter Property="Template">
+                <ControlTemplate x:DataType="overlays:ModalOverlayControl">
+                    <Grid>
+                        <Border x:Name="PART_ShadowChrome"
+                                BoxShadow="{DynamicResource FloatingSurfaceShadow}"
+                                CornerRadius="{TemplateBinding CornerRadius}">
+                            <Border x:Name="PART_BackgroundChrome"
+                                    ClipToBounds="True"
+                                    Background="Transparent"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="{TemplateBinding CornerRadius}">
+                                <Grid>
+                                    <glass:BlurBackground x:Name="PART_BlurBackground"
+                                                          Margin="{DynamicResource ModalOverlayBlurMargin}"
+                                                          IsDynamic="{TemplateBinding IsBlurDynamic}" />
+                                    <Border Background="{TemplateBinding Background}" />
+                                </Grid>
+                            </Border>
+                        </Border>
+
+                        <Grid Margin="{TemplateBinding Padding}"
+                              RowDefinitions="Auto,*">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Classes="overlay-title"
+                                           Text="{TemplateBinding Title}" />
+                                <Button Grid.Column="1"
+                                        Classes="Icon close-action"
+                                        Command="{TemplateBinding CloseCommand}">
+                                    <PathIcon Data="{StaticResource AppCloseIcon}" />
+                                </Button>
+                            </Grid>
+
+                            <ContentControl Grid.Row="1"
+                                            HorizontalContentAlignment="Stretch"
+                                            VerticalContentAlignment="Stretch"
+                                            Content="{TemplateBinding Body}" />
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </Styles.Resources>
+</Styles>

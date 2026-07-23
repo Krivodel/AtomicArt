@@ -2,6 +2,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
                  xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+                 xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
                  xmlns:resources="using:AtomicArt.Desktop.Resources"
                  xmlns:suki="using:SukiUI.Controls"
                  xmlns:viewModels="using:AtomicArt.Desktop.ViewModels"
@@ -98,20 +99,16 @@
                               ShowsPreview="False" />
             </Grid>
 
-            <Grid ZIndex="10"
-                  IsVisible="{Binding IsSettingsOpen}">
-                <Button Classes="overlay-backdrop"
-                        Command="{Binding Settings.CloseCommand}" />
-                <ContentControl Margin="{StaticResource OverlayMargin}"
-                                Content="{Binding Settings}" />
-            </Grid>
-
-            <Grid ZIndex="11"
-                  IsVisible="{Binding Gallery.IsMetadataOpen}">
-                <Button Classes="overlay-backdrop"
-                        Command="{Binding Gallery.SelectedMetadata.RequestCloseCommand}" />
-                <ContentControl Content="{Binding Gallery.SelectedMetadata}" />
-            </Grid>
+            <overlays:ModalOverlayLayerControl ZIndex="10">
+                <overlays:ModalOverlayPresenterControl Order="{StaticResource SettingsModalOverlayOrder}"
+                                                       Body="{Binding Settings}"
+                                                       IsOpen="{Binding IsSettingsOpen}"
+                                                       CloseCommand="{Binding Settings.CloseCommand}" />
+                <overlays:ModalOverlayPresenterControl Order="{StaticResource MetadataModalOverlayOrder}"
+                                                       Body="{Binding Gallery.SelectedMetadata}"
+                                                       IsOpen="{Binding Gallery.IsMetadataOpen}"
+                                                       CloseCommand="{Binding Gallery.CloseOverlayCommand}" />
+            </overlays:ModalOverlayLayerControl>
 
             <controls:ImageDropOverlayControl x:Name="WindowDropOverlay"
                                               IconSize="200"

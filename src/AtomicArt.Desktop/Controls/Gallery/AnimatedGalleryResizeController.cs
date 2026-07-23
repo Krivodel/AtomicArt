@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 using Avalonia;
 using Avalonia.Controls;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 

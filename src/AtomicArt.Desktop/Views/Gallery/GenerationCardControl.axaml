@@ -13,7 +13,8 @@
                 <RowDefinition Height="{StaticResource GenerationCardInfoHeight}" />
             </Grid.RowDefinitions>
 
-            <controls:GenerationPreviewControl Grid.Row="0"
+            <controls:GenerationPreviewControl x:Name="GenerationPreview"
+                                               Grid.Row="0"
                                                PreviewSize="{StaticResource GenerationCardWidth}"
                                                OpenViewerCommand="{Binding $parent[controls:GenerationCardControl].OpenViewerCommand}" />
 

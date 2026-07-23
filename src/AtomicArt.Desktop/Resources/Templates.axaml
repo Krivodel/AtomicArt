@@ -13,19 +13,6 @@
                 Value="{StaticResource ShellCornerRadius}" />
     </Style>
 
-    <Style Selector="Border.overlay-panel">
-        <Setter Property="Padding"
-                Value="{StaticResource OverlayPadding}" />
-        <Setter Property="Background"
-                Value="{DynamicResource SukiGlassCardOpaqueBackground}" />
-        <Setter Property="BorderBrush"
-                Value="{DynamicResource GlassBorderBrush}" />
-        <Setter Property="BorderThickness"
-                Value="{StaticResource ShellBorderThickness}" />
-        <Setter Property="CornerRadius"
-                Value="{StaticResource OverlayCornerRadius}" />
-    </Style>
-
     <Style Selector=":is(Border).modal-glass-panel">
         <Setter Property="Padding"
                 Value="0" />
@@ -37,13 +24,6 @@
                 Value="{DynamicResource SukiPopupShadow}" />
         <Setter Property="ClipToBounds"
                 Value="True" />
-    </Style>
-
-    <Style Selector="Border.modal-popup-layer">
-        <Setter Property="Padding"
-                Value="{StaticResource OverlayPadding}" />
-        <Setter Property="Background"
-                Value="{DynamicResource PopupGradientBrush}" />
     </Style>
 
     <Style Selector="Border.attachment-preview">
@@ -84,7 +64,7 @@
 
     <Style Selector="Border.image-preview-shadow">
         <Setter Property="BoxShadow"
-                Value="0 18 42 0 #80000000" />
+                Value="{DynamicResource FloatingSurfaceShadow}" />
     </Style>
 
     <Style Selector="Border.generation-card-preview">
@@ -156,5 +136,48 @@
     <Style Selector="Image.generation-card-image">
         <Setter Property="Stretch"
                 Value="UniformToFill" />
+    </Style>
+
+    <Style Selector="Path.metadata-outline-icon">
+        <Setter Property="Width"
+                Value="{StaticResource MetadataIconSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource MetadataIconSize}" />
+        <Setter Property="Stretch"
+                Value="Uniform" />
+        <Setter Property="Stroke"
+                Value="{DynamicResource SukiText}" />
+        <Setter Property="StrokeThickness"
+                Value="2" />
+        <Setter Property="StrokeLineCap"
+                Value="Round" />
+        <Setter Property="StrokeJoin"
+                Value="Round" />
+    </Style>
+
+    <Style Selector="Border.metadata-chip">
+        <Setter Property="Height"
+                Value="{StaticResource MetadataChipHeight}" />
+        <Setter Property="Padding"
+                Value="{StaticResource MetadataChipPadding}" />
+        <Setter Property="Background"
+                Value="{DynamicResource GlassCardBrush}" />
+        <Setter Property="BorderBrush"
+                Value="{DynamicResource MetadataBorderBrush}" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ShellBorderThickness}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource MetadataChipCornerRadius}" />
+    </Style>
+
+    <Style Selector="Border.metadata-status">
+        <Setter Property="Height"
+                Value="{StaticResource MetadataStatusHeight}" />
+        <Setter Property="Padding"
+                Value="{StaticResource MetadataStatusPadding}" />
+        <Setter Property="HorizontalAlignment"
+                Value="Left" />
+        <Setter Property="VerticalAlignment"
+                Value="Top" />
     </Style>
 </Styles>

@@ -1,156 +1,25 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:views="using:AtomicArt.Desktop.Views.Gallery"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationMetadataOverlayView"
              x:Name="Root"
              x:DataType="gallery:GenerationMetadataViewModel"
              ClipToBounds="False">
-    <UserControl.Styles>
-        <Style Selector="Button.metadata-copy">
-            <Setter Property="Width"
-                    Value="{StaticResource MetadataCopyButtonSize}" />
-            <Setter Property="Height"
-                    Value="{StaticResource MetadataCopyButtonSize}" />
-            <Setter Property="MinWidth"
-                    Value="{StaticResource ZeroSize}" />
-            <Setter Property="MinHeight"
-                    Value="{StaticResource ZeroSize}" />
-            <Setter Property="Padding"
-                    Value="{StaticResource ZeroThickness}" />
-            <Setter Property="HorizontalContentAlignment"
-                    Value="Center" />
-            <Setter Property="VerticalContentAlignment"
-                    Value="Center" />
-            <Setter Property="Background"
-                    Value="Transparent" />
-            <Setter Property="BorderThickness"
-                    Value="{StaticResource ZeroThickness}" />
-            <Setter Property="Foreground"
-                    Value="{DynamicResource MetadataMutedTextBrush}" />
-            <Setter Property="Opacity"
-                    Value="0" />
-            <Setter Property="IsHitTestVisible"
-                    Value="False" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity"
-                                      Duration="0:0:0.14" />
-                </Transitions>
-            </Setter>
-        </Style>
-
-        <Style Selector="Border.metadata-copy-host:pointerover Button.metadata-copy">
-            <Setter Property="Opacity"
-                    Value="1" />
-            <Setter Property="IsHitTestVisible"
-                    Value="True" />
-        </Style>
-
-        <Style Selector="Button.metadata-copy:pointerover">
-            <Setter Property="Background"
-                    Value="{DynamicResource SukiPrimaryColor5}" />
-            <Setter Property="Foreground"
-                    Value="{DynamicResource SukiText}" />
-        </Style>
-
-        <Style Selector="Path.metadata-outline-icon">
-            <Setter Property="Width"
-                    Value="{StaticResource MetadataIconSize}" />
-            <Setter Property="Height"
-                    Value="{StaticResource MetadataIconSize}" />
-            <Setter Property="Stretch"
-                    Value="Uniform" />
-            <Setter Property="Stroke"
-                    Value="{DynamicResource SukiText}" />
-            <Setter Property="StrokeThickness"
-                    Value="2" />
-            <Setter Property="StrokeLineCap"
-                    Value="Round" />
-            <Setter Property="StrokeJoin"
-                    Value="Round" />
-        </Style>
-
-        <Style Selector="Border.metadata-chip">
-            <Setter Property="Height"
-                    Value="{StaticResource MetadataChipHeight}" />
-            <Setter Property="Padding"
-                    Value="{StaticResource MetadataChipPadding}" />
-            <Setter Property="Background"
-                    Value="{DynamicResource GlassCardBrush}" />
-            <Setter Property="BorderBrush"
-                    Value="{DynamicResource MetadataBorderBrush}" />
-            <Setter Property="BorderThickness"
-                    Value="{StaticResource ShellBorderThickness}" />
-            <Setter Property="CornerRadius"
-                    Value="{StaticResource MetadataChipCornerRadius}" />
-        </Style>
-
-        <Style Selector="Border.metadata-status">
-            <Setter Property="Height"
-                    Value="{StaticResource MetadataStatusHeight}" />
-            <Setter Property="Padding"
-                    Value="{StaticResource MetadataStatusPadding}" />
-            <Setter Property="HorizontalAlignment"
-                    Value="Left" />
-            <Setter Property="VerticalAlignment"
-                    Value="Top" />
-        </Style>
-    </UserControl.Styles>
-
-    <LayoutTransformControl x:Name="MetadataScaleHost"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-        <LayoutTransformControl.LayoutTransform>
-            <ScaleTransform ScaleX="{StaticResource MetadataOverlayScale}"
-                            ScaleY="{StaticResource MetadataOverlayScale}" />
-        </LayoutTransformControl.LayoutTransform>
-
-        <Border x:Name="PanelRoot"
-                Width="{StaticResource MetadataOverlayWidth}"
-                Height="{StaticResource MetadataOverlayHeight}"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Background="{DynamicResource SukiPopupBackground}"
-                BorderBrush="{DynamicResource SukiMenuBorderBrush}"
-                BorderThickness="{StaticResource ShellBorderThickness}"
-                BoxShadow="{DynamicResource SukiPopupShadow}"
-                ClipToBounds="True"
-                CornerRadius="{StaticResource MetadataOverlayCornerRadius}">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="{StaticResource MetadataHeaderGridHeight}" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Border Grid.Row="0"
-                    Padding="{StaticResource MetadataHeaderPadding}"
-                    Background="{DynamicResource GlassCardBrush}"
-                    BorderBrush="{DynamicResource MetadataBorderBrush}"
-                    BorderThickness="0,0,0,1">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock VerticalAlignment="Center"
-                               FontSize="25"
-                               FontWeight="ExtraBold"
-                               Foreground="{DynamicResource SukiText}"
-                               Text="{x:Static resources:UiStrings.MetadataTitle}" />
-                    <Button Grid.Column="1"
-                            Width="44"
-                            Height="44"
-                            Classes="Icon"
-                            Command="{Binding RequestCloseCommand}">
-                        <PathIcon Width="24"
-                                  Height="24"
-                                  Data="{StaticResource AppCloseIcon}" />
-                    </Button>
-                </Grid>
-            </Border>
-
+    <overlays:ModalOverlayControl x:Name="PanelRoot"
+                                  Width="{StaticResource MetadataOverlayWidth}"
+                                  Height="{StaticResource MetadataOverlayHeight}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Title="{x:Static resources:UiStrings.MetadataTitle}"
+                                  CloseCommand="{Binding CloseCommand}">
+        <overlays:ModalOverlayControl.Body>
             <Grid x:Name="ContentGrid"
-                  Grid.Row="1"
                   Margin="{StaticResource MetadataContentPadding}"
-                  RowDefinitions="124,Auto,Auto,Auto,Auto"
-                  ClipToBounds="False">
+                  ClipToBounds="False"
+                  RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                 <views:GenerationPreviewControl x:Name="PreviewEntry"
                                                 Grid.Row="0"
                                                 HorizontalAlignment="Left"
@@ -160,117 +29,105 @@
                                                 OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}" />
 
                 <Grid Grid.Row="0"
-                      ColumnDefinitions="124,26,*,Auto"
-                      ClipToBounds="False">
+                      ClipToBounds="False"
+                      ColumnDefinitions="100,21,*,Auto">
                     <StackPanel Grid.Column="2"
-                                Margin="0,2,14,0"
+                                Margin="0,2,11,0"
                                 Spacing="0">
                         <Grid x:Name="DateEntry"
-                              Height="38"
-                              ColumnDefinitions="24,Auto,Auto">
+                              Height="30"
+                              ColumnDefinitions="19,Auto,Auto">
                             <Path Grid.Column="0"
                                   Classes="metadata-outline-icon"
                                   Data="{StaticResource MetadataCalendarIcon}" />
                             <TextBlock Grid.Column="1"
-                                       Margin="8,0,0,0"
-                                       VerticalAlignment="Center"
-                                       FontSize="20"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource SukiText}"
+                                       Margin="6,0,0,0"
+                                       Classes="metadata-primary-text"
                                        Text="{Binding CreatedDate}" />
                             <TextBlock Grid.Column="2"
-                                       Margin="5,0,0,0"
+                                       Margin="4,0,0,0"
                                        VerticalAlignment="Center"
-                                       FontSize="18"
+                                       FontSize="15"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource MetadataMutedTextBrush}"
                                        Text="{Binding CreatedTime}" />
                         </Grid>
 
                         <Grid x:Name="DurationEntry"
-                              Height="38"
-                              ColumnDefinitions="24,*">
+                              Height="30"
+                              ColumnDefinitions="19,*">
                             <Path Grid.Column="0"
                                   Classes="metadata-outline-icon"
                                   Data="{StaticResource MetadataClockIcon}" />
                             <TextBlock Grid.Column="1"
-                                       Margin="8,0,0,0"
-                                       VerticalAlignment="Center"
-                                       FontSize="20"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource SukiText}"
+                                       Margin="6,0,0,0"
+                                       Classes="metadata-primary-text"
                                        Text="{Binding GenerationDuration}" />
                         </Grid>
 
                         <Grid x:Name="StatusEntry"
-                              Height="40"
-                              Margin="-10,0,0,0">
+                              Height="32"
+                              Margin="-8,0,0,0">
                             <Border Classes="metadata-status"
+                                    IsVisible="{Binding IsGenerated}"
                                     BorderBrush="{DynamicResource SukiSuccessColor}"
                                     BorderThickness="{StaticResource ShellBorderThickness}"
-                                    CornerRadius="{StaticResource MetadataStatusCornerRadius}"
-                                    IsVisible="{Binding IsGenerated}">
+                                    CornerRadius="{StaticResource MetadataStatusCornerRadius}">
                                 <Border.Background>
                                     <SolidColorBrush Color="{DynamicResource SukiSuccessColor}"
                                                      Opacity="0.14" />
                                 </Border.Background>
                                 <StackPanel Orientation="Horizontal"
-                                            Spacing="8">
-                                    <Path Classes="metadata-outline-icon"
-                                          Width="18"
-                                          Height="18"
-                                          Stroke="{DynamicResource SukiSuccessColor}"
-                                          Data="{StaticResource MetadataCheckIcon}" />
-                                    <TextBlock VerticalAlignment="Center"
-                                               FontSize="16"
-                                               FontWeight="Bold"
+                                            Spacing="6">
+                                    <Path Width="14"
+                                          Height="14"
+                                          Classes="metadata-outline-icon"
+                                          Data="{StaticResource MetadataCheckIcon}"
+                                          Stroke="{DynamicResource SukiSuccessColor}" />
+                                    <TextBlock Classes="metadata-status-text"
                                                Foreground="{DynamicResource SukiSuccessColor}"
                                                Text="{Binding Status}" />
                                 </StackPanel>
                             </Border>
 
                             <Border Classes="metadata-status"
+                                    IsVisible="{Binding IsGenerating}"
                                     BorderBrush="{DynamicResource SukiPrimaryColor120}"
                                     BorderThickness="{StaticResource ShellBorderThickness}"
-                                    CornerRadius="{StaticResource MetadataStatusCornerRadius}"
-                                    IsVisible="{Binding IsGenerating}">
+                                    CornerRadius="{StaticResource MetadataStatusCornerRadius}">
                                 <Border.Background>
                                     <SolidColorBrush Color="{DynamicResource SukiPrimaryColor}"
                                                      Opacity="0.14" />
                                 </Border.Background>
                                 <StackPanel Orientation="Horizontal"
-                                            Spacing="8">
-                                    <Path Classes="metadata-outline-icon"
-                                          Width="18"
-                                          Height="18"
-                                          Stroke="{DynamicResource SukiPrimaryColor120}"
-                                          Data="{StaticResource MetadataClockIcon}" />
-                                    <TextBlock VerticalAlignment="Center"
-                                               FontSize="16"
-                                               FontWeight="Bold"
+                                            Spacing="6">
+                                    <Path Width="14"
+                                          Height="14"
+                                          Classes="metadata-outline-icon"
+                                          Data="{StaticResource MetadataClockIcon}"
+                                          Stroke="{DynamicResource SukiPrimaryColor120}" />
+                                    <TextBlock Classes="metadata-status-text"
                                                Foreground="{DynamicResource SukiPrimaryColor120}"
                                                Text="{Binding Status}" />
                                 </StackPanel>
                             </Border>
 
                             <Border Classes="metadata-status"
+                                    IsVisible="{Binding IsFailed}"
                                     BorderBrush="{DynamicResource SukiDangerColor}"
                                     BorderThickness="{StaticResource ShellBorderThickness}"
-                                    CornerRadius="{StaticResource MetadataStatusCornerRadius}"
-                                    IsVisible="{Binding IsFailed}">
+                                    CornerRadius="{StaticResource MetadataStatusCornerRadius}">
                                 <Border.Background>
                                     <SolidColorBrush Color="{DynamicResource SukiDangerColor}"
                                                      Opacity="0.2" />
                                 </Border.Background>
                                 <StackPanel Orientation="Horizontal"
-                                            Spacing="8">
-                                    <PathIcon Width="18"
-                                              Height="18"
+                                            Spacing="6">
+                                    <PathIcon Width="14"
+                                              Height="14"
                                               Foreground="{DynamicResource SukiDangerColor}"
                                               Data="{StaticResource AppCloseIcon}" />
-                                    <TextBlock VerticalAlignment="Center"
-                                               FontSize="16"
-                                               FontWeight="Bold"
+                                    <TextBlock Classes="metadata-status-text"
                                                Foreground="{DynamicResource SukiDangerColor}"
                                                Text="{Binding Status}" />
                                 </StackPanel>
@@ -280,7 +137,7 @@
 
                     <Border x:Name="PriceEntry"
                             Grid.Column="3"
-                            Height="54"
+                            Height="43"
                             Padding="{StaticResource MetadataPricePadding}"
                             Background="{DynamicResource GlassCardBrush}"
                             BorderBrush="{DynamicResource MetadataBorderBrush}"
@@ -288,16 +145,13 @@
                             CornerRadius="{StaticResource MetadataChipCornerRadius}">
                         <StackPanel VerticalAlignment="Center"
                                     Orientation="Horizontal"
-                                    Spacing="9">
+                                    Spacing="7">
                             <TextBlock VerticalAlignment="Center"
-                                       FontSize="22"
+                                       FontSize="18"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource SukiText}"
                                        Text="{Binding PriceCurrency}" />
-                            <TextBlock VerticalAlignment="Center"
-                                       FontSize="20"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource SukiText}"
+                            <TextBlock Classes="metadata-primary-text"
                                        Text="{Binding PriceAmount}" />
                         </StackPanel>
                     </Border>
@@ -305,31 +159,25 @@
 
                 <StackPanel x:Name="ParametersEntry"
                             Grid.Row="1"
-                            Margin="0,26,0,0"
+                            Margin="0,21,0,0"
                             Orientation="Horizontal"
-                            Spacing="12">
-                    <Border Classes="metadata-chip"
+                            Spacing="10">
+                    <Border MaxWidth="{StaticResource MetadataModelChipMaxWidth}"
+                            Classes="metadata-chip"
                             Background="{DynamicResource SukiPrimaryColor10}"
-                            BorderBrush="{DynamicResource SukiMenuBorderBrush}"
-                            MaxWidth="{StaticResource MetadataModelChipMaxWidth}">
-                        <TextBlock VerticalAlignment="Center"
-                                   FontSize="19"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource SukiText}"
-                                   Text="{Binding ModelDisplayName}"
-                                   TextTrimming="CharacterEllipsis" />
+                            BorderBrush="{DynamicResource SukiMenuBorderBrush}">
+                        <TextBlock Classes="metadata-compact-text"
+                                   TextTrimming="CharacterEllipsis"
+                                   Text="{Binding ModelDisplayName}" />
                     </Border>
 
                     <Border Width="{StaticResource MetadataResolutionChipWidth}"
                             Classes="metadata-chip">
                         <StackPanel Orientation="Horizontal"
-                                    Spacing="9">
+                                    Spacing="7">
                             <Path Classes="metadata-outline-icon"
                                   Data="{StaticResource MetadataResolutionIcon}" />
-                            <TextBlock VerticalAlignment="Center"
-                                       FontSize="19"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource SukiText}"
+                            <TextBlock Classes="metadata-compact-text"
                                        Text="{Binding Resolution}" />
                         </StackPanel>
                     </Border>
@@ -337,13 +185,10 @@
                     <Border Width="{StaticResource MetadataAspectRatioChipWidth}"
                             Classes="metadata-chip">
                         <StackPanel Orientation="Horizontal"
-                                    Spacing="9">
+                                    Spacing="7">
                             <Path Classes="metadata-outline-icon"
                                   Data="{StaticResource MetadataAspectRatioIcon}" />
-                            <TextBlock VerticalAlignment="Center"
-                                       FontSize="19"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource SukiText}"
+                            <TextBlock Classes="metadata-compact-text"
                                        Text="{Binding AspectRatio}" />
                         </StackPanel>
                     </Border>
@@ -351,13 +196,10 @@
                     <Border Width="{StaticResource MetadataAttachmentChipWidth}"
                             Classes="metadata-chip">
                         <StackPanel Orientation="Horizontal"
-                                    Spacing="9">
+                                    Spacing="7">
                             <Path Classes="metadata-outline-icon"
                                   Data="{StaticResource MetadataAttachmentIcon}" />
-                            <TextBlock VerticalAlignment="Center"
-                                       FontSize="19"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource SukiText}"
+                            <TextBlock Classes="metadata-compact-text"
                                        Text="{Binding AttachedImagesCount}" />
                         </StackPanel>
                     </Border>
@@ -366,7 +208,7 @@
                 <Border x:Name="PromptEntry"
                         Grid.Row="2"
                         Height="{StaticResource MetadataPromptHeight}"
-                        Margin="0,26,0,0"
+                        Margin="0,21,0,0"
                         Padding="{StaticResource MetadataPromptPadding}"
                         Classes="metadata-copy-host"
                         Background="{DynamicResource GlassCardBrush}"
@@ -381,34 +223,34 @@
                                        Text="{x:Static resources:UiStrings.MetadataPrompt}" />
                             <TextBox x:Name="PromptText"
                                      Grid.Row="1"
-                                     Margin="0,12,0,0"
+                                     Margin="0,10,0,0"
                                      Padding="{StaticResource ZeroThickness}"
+                                     VerticalContentAlignment="Top"
                                      AcceptsReturn="True"
                                      Background="Transparent"
                                      BorderThickness="{StaticResource ZeroThickness}"
                                      CaretBrush="Transparent"
-                                     FontSize="20"
+                                     FontSize="16"
                                      FontWeight="Normal"
                                      Foreground="{DynamicResource SukiText}"
                                      IsReadOnly="True"
-                                     LineHeight="30"
+                                     LineHeight="24"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     Text="{Binding Prompt}"
                                      TextWrapping="Wrap"
-                                     VerticalContentAlignment="Top" />
+                                     Text="{Binding Prompt}" />
                         </Grid>
 
                         <Button x:Name="PromptCopyButton"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Top"
-                                Classes="metadata-copy"
+                                Classes="Icon metadata-copy"
                                 Command="{Binding CopyPromptCommand}">
-                            <Path Classes="metadata-outline-icon"
-                                  Width="19"
-                                  Height="19"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  Data="{StaticResource MetadataCopyIcon}" />
+                            <Path Width="15"
+                                  Height="15"
+                                  Classes="metadata-outline-icon"
+                                  Data="{StaticResource MetadataCopyIcon}"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
                         </Button>
                     </Grid>
                 </Border>
@@ -416,7 +258,7 @@
                 <Border x:Name="PathEntry"
                         Grid.Row="3"
                         Height="{StaticResource MetadataPathHeight}"
-                        Margin="0,18,0,0"
+                        Margin="0,14,0,0"
                         Padding="{StaticResource MetadataPathPadding}"
                         Classes="metadata-copy-host"
                         Background="{DynamicResource GlassCardBrush}"
@@ -432,24 +274,23 @@
                                      Background="Transparent"
                                      BorderThickness="{StaticResource ZeroThickness}"
                                      CaretBrush="Transparent"
-                                     FontFamily="Cascadia Code, Consolas"
-                                     FontSize="17"
+                                     FontSize="14"
                                      Foreground="{DynamicResource MetadataMutedTextBrush}"
                                      IsReadOnly="True"
                                      ScrollViewer.HorizontalScrollBarVisibility="Hidden"
                                      ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                     Text="{Binding ImagePath}"
-                                     TextWrapping="NoWrap" />
+                                     TextWrapping="NoWrap"
+                                     Text="{Binding ImagePath}" />
                             <Button x:Name="PathCopyButton"
                                     Grid.Column="1"
                                     VerticalAlignment="Center"
-                                    Classes="metadata-copy"
+                                    Classes="Icon metadata-copy"
                                     Command="{Binding CopyImagePathCommand}">
-                                <Path Classes="metadata-outline-icon"
-                                      Width="19"
-                                      Height="19"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                      Data="{StaticResource MetadataCopyIcon}" />
+                                <Path Width="15"
+                                      Height="15"
+                                      Classes="metadata-outline-icon"
+                                      Data="{StaticResource MetadataCopyIcon}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
                             </Button>
                         </Grid>
                     </Grid>
@@ -464,21 +305,18 @@
                         BorderBrush="{DynamicResource MetadataBorderBrush}"
                         BorderThickness="{StaticResource ShellBorderThickness}"
                         CornerRadius="{StaticResource MetadataBoxCornerRadius}"
-                        Command="{Binding RequestRepeatCommand}">
+                        Command="{Binding RepeatCommand}"
+                        CommandParameter="{Binding Item}">
                     <StackPanel HorizontalAlignment="Center"
                                 Orientation="Horizontal"
-                                Spacing="12">
+                                Spacing="10">
                         <Path Classes="metadata-outline-icon"
                               Data="{StaticResource MetadataRepeatIcon}" />
-                        <TextBlock VerticalAlignment="Center"
-                                   FontSize="19"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource SukiText}"
+                        <TextBlock Classes="metadata-compact-text"
                                    Text="{x:Static resources:UiStrings.MetadataRepeat}" />
                     </StackPanel>
                 </Button>
             </Grid>
-        </Grid>
-        </Border>
-    </LayoutTransformControl>
+        </overlays:ModalOverlayControl.Body>
+    </overlays:ModalOverlayControl>
 </UserControl>

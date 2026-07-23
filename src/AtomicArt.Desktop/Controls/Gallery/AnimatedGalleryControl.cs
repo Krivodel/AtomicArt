@@ -18,8 +18,6 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 public partial class AnimatedGalleryControl : UserControl
 {
     internal const double BottomOpacityFadeHeight = 30d;
-    private const int CollapsingPreviewZIndex = 1000;
-    private const int ActivePreviewZIndex = 1001;
 
     public IEnumerable<IGalleryItemViewModel>? Items
     {
@@ -72,6 +70,7 @@ public partial class AnimatedGalleryControl : UserControl
             nameof(Operations));
 
     internal ScrollViewer PreviewScrollViewer => GalleryScrollViewer;
+    internal IGenerationPreviewExpansionHost PreviewExpansionHost { get; }
 
     internal event EventHandler? PreviewPointerStateChanged;
 
@@ -101,6 +100,7 @@ public partial class AnimatedGalleryControl : UserControl
     {
         _itemsSubscription = new CollectionChangedSubscription(OnItemsCollectionChanged);
         InitializeComponent();
+        PreviewExpansionHost = new AnimatedGalleryPreviewExpansionHost(this);
         _sceneController = new AnimatedGallerySceneController(
             this,
             GalleryScrollViewer,
@@ -162,12 +162,12 @@ public partial class AnimatedGalleryControl : UserControl
 
         if (!_previewOverflowCards.Add(card))
         {
-            card.ZIndex = ActivePreviewZIndex;
+            card.ZIndex = GenerationPreviewExpansionVisualMetrics.ActiveZIndex;
             return;
         }
 
         _previewOriginalZIndices.Add(card, card.ZIndex);
-        card.ZIndex = ActivePreviewZIndex;
+        card.ZIndex = GenerationPreviewExpansionVisualMetrics.ActiveZIndex;
         IReadOnlyList<Visual> overflowPath = GetPreviewOverflowPath(preview);
         _previewOverflowPaths.Add(card, overflowPath);
 
@@ -184,7 +184,7 @@ public partial class AnimatedGalleryControl : UserControl
 
         if (_previewOverflowCards.Contains(card))
         {
-            card.ZIndex = CollapsingPreviewZIndex;
+            card.ZIndex = GenerationPreviewExpansionVisualMetrics.CollapsingZIndex;
         }
     }
 

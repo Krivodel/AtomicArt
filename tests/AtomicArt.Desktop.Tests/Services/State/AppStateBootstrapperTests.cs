@@ -10,6 +10,7 @@ using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.TestDoubles;
+using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.State;
@@ -30,6 +31,7 @@ public sealed class AppStateBootstrapperTests
         AssertRestoreCalls(context.Calls);
         context.Target.RestoredGalleryItems.Should().ContainSingle()
             .Which.Id.Should().Be(GalleryItemId);
+        context.UiThreadDispatcher.CallCount.Should().Be(2);
     }
 
     [Fact]
@@ -84,6 +86,7 @@ public sealed class AppStateBootstrapperTests
         public List<string> Calls { get; }
         public RecordingSettingsStateService SettingsStateService { get; }
         public RecordingRestoreTarget Target { get; }
+        public ImmediateUiThreadDispatcher UiThreadDispatcher { get; }
         public AppStateBootstrapper Bootstrapper { get; }
 
         public RestoreTestContext(ILogger<AppStateBootstrapper>? logger = null)
@@ -92,10 +95,12 @@ public sealed class AppStateBootstrapperTests
             SettingsStateService = new RecordingSettingsStateService(Calls);
             RecordingGalleryStateService galleryStateService = new(Calls);
             Target = new RecordingRestoreTarget(Calls);
+            UiThreadDispatcher = new ImmediateUiThreadDispatcher();
             Bootstrapper = new AppStateBootstrapper(
                 SettingsStateService,
                 galleryStateService,
                 new NoOpStateWriteScheduler(),
+                UiThreadDispatcher,
                 logger ?? NullLogger<AppStateBootstrapper>.Instance);
         }
     }
@@ -120,6 +125,7 @@ public sealed class AppStateBootstrapperTests
                 new RecordingSettingsStateService([]),
                 new RecordingGalleryStateService([]),
                 _scheduler,
+                new ImmediateUiThreadDispatcher(),
                 NullLogger<AppStateBootstrapper>.Instance);
         }
 

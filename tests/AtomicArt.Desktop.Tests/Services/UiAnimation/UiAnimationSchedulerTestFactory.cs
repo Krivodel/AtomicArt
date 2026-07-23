@@ -1,17 +1,17 @@
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
-namespace AtomicArt.Desktop.Tests.Services.Gallery;
+namespace AtomicArt.Desktop.Tests.Services.UiAnimation;
 
-internal static class GalleryAnimationSchedulerTestFactory
+internal static class UiAnimationSchedulerTestFactory
 {
-    internal static GalleryAnimationScheduler Create(
+    internal static UiAnimationScheduler Create(
         TestUiFrameScheduler frameScheduler,
         List<AppliedMotionFrame> appliedFrames)
     {
         ArgumentNullException.ThrowIfNull(frameScheduler);
         ArgumentNullException.ThrowIfNull(appliedFrames);
 
-        return new GalleryAnimationScheduler(
+        return new UiAnimationScheduler(
             frameScheduler,
             (control, frame) =>
             {

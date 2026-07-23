@@ -29,7 +29,8 @@ public sealed class GenerationMetadataViewModelTests
 
         GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
 
-        viewModel.Price.Should().Be("$0.0678");
+        viewModel.PriceCurrency.Should().Be("$");
+        viewModel.PriceAmount.Should().Be("0.0678");
         viewModel.GenerationDuration.Should().Be("30с");
     }
 
@@ -40,7 +41,8 @@ public sealed class GenerationMetadataViewModelTests
 
         GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
 
-        viewModel.Price.Should().Be(UiStrings.MetadataUnavailable);
+        viewModel.PriceCurrency.Should().BeEmpty();
+        viewModel.PriceAmount.Should().Be(UiStrings.MetadataUnavailable);
         viewModel.GenerationDuration.Should().Be(UiStrings.MetadataUnavailable);
     }
 
@@ -63,26 +65,59 @@ public sealed class GenerationMetadataViewModelTests
     }
 
     [Fact]
-    public void RequestCommands_RaiseDeferredCloseAndRepeatActions()
+    public void FromItem_WhenSourceItemCompletes_RefreshesMutableProperties()
     {
-        GenerationItemDto item = CreateItem();
-        IRelayCommand closeCommand = new RelayCommand(() => { });
-        IRelayCommand repeatCommand = new RelayCommand<GenerationItemViewModel>(_ => { });
-        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(
-            item,
-            closeCommand: closeCommand,
-            repeatCommand: repeatCommand);
-        List<GenerationMetadataActionRequestedEventArgs> requests = [];
-        viewModel.ActionRequested += (_, args) => requests.Add(args);
+        GenerationItemDto generatingItem = CreateItem(status: GenerationItemStatus.Generating);
+        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(generatingItem);
+        GenerationPriceDto price = new(
+            0.0678m,
+            "USD",
+            GenerationPriceSources.ActualProviderUsage);
+        GenerationItemDto completedItem = CreateItem(
+            status: GenerationItemStatus.Generated,
+            imagePath: "result.png",
+            price: price,
+            generationDuration: TimeSpan.FromSeconds(30));
 
-        viewModel.RequestCloseCommand.Execute(null);
-        viewModel.RequestRepeatCommand.Execute(null);
+        viewModel.Item.UpdateFromResult(completedItem, completedItem.ImagePath, null);
 
-        requests.Should().HaveCount(2);
-        requests[0].Command.Should().BeSameAs(closeCommand);
-        requests[0].Parameter.Should().BeNull();
-        requests[1].Command.Should().BeSameAs(repeatCommand);
-        requests[1].Parameter.Should().BeSameAs(viewModel.Item);
+        viewModel.IsGenerated.Should().BeTrue();
+        viewModel.IsGenerating.Should().BeFalse();
+        viewModel.ImagePath.Should().Be("result.png");
+        viewModel.PriceCurrency.Should().Be("$");
+        viewModel.PriceAmount.Should().Be("0.0678");
+        viewModel.GenerationDuration.Should().Be("30с");
+        viewModel.CopyImagePathCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CopyImagePathCommand_WithoutImagePath_DoesNotCopyPlaceholder()
+    {
+        GenerationItemDto item = CreateItem(imagePath: null);
+        RecordingTextClipboardService clipboardService = new();
+        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item, clipboardService);
+
+        await viewModel.CopyImagePathCommand.ExecuteAsync(null);
+
+        clipboardService.Text.Should().BeNull();
+        viewModel.CopyImagePathCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Dispose_WhenSourceItemChanges_DoesNotPublishPropertyChanges()
+    {
+        GenerationItemDto generatingItem = CreateItem(status: GenerationItemStatus.Generating);
+        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(generatingItem);
+        List<string?> changedProperties = [];
+        viewModel.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
+        GenerationItemDto completedItem = CreateItem(
+            status: GenerationItemStatus.Generated,
+            imagePath: "result.png");
+        viewModel.Dispose();
+
+        viewModel.Item.UpdateFromResult(completedItem, completedItem.ImagePath, null);
+
+        changedProperties.Should().BeEmpty();
     }
 
     private static GenerationMetadataViewModel CreateMetadataViewModel(
@@ -110,7 +145,9 @@ public sealed class GenerationMetadataViewModelTests
 
     private static GenerationItemDto CreateItem(
         GenerationPriceDto? price = null,
-        TimeSpan? generationDuration = null)
+        TimeSpan? generationDuration = null,
+        GenerationItemStatus status = GenerationItemStatus.Generated,
+        string? imagePath = "image.png")
     {
         return GenerationItemDtoTestFactory.Create(
             id: ItemId,
@@ -119,6 +156,8 @@ public sealed class GenerationMetadataViewModelTests
             createdAtUtc: CreatedAtUtc,
             completedAtUtc: CreatedAtUtc.AddSeconds(30),
             generationDuration: generationDuration,
+            status: status,
+            imagePath: imagePath,
             price: price);
     }
 }

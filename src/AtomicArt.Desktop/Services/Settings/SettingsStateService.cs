@@ -11,6 +11,7 @@ public sealed class SettingsStateService : ISettingsStateService
     private readonly IStateWriteScheduler _writeScheduler;
     private readonly ISettingsDefinitionCatalog _settingsDefinitionCatalog;
     private readonly IReadOnlyDictionary<string, ISettingsStateApplicator> _applicatorsByKey;
+    private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly SettingsStateSection _section;
     private readonly SemaphoreSlim _stateLock;
     private readonly ILogger<SettingsStateService> _logger;
@@ -21,13 +22,15 @@ public sealed class SettingsStateService : ISettingsStateService
         IStateWriteScheduler writeScheduler,
         ISettingsDefinitionCatalog settingsDefinitionCatalog,
         SettingsStateSection section,
-        IEnumerable<ISettingsStateApplicator> applicators)
+        IEnumerable<ISettingsStateApplicator> applicators,
+        IUiThreadDispatcher uiThreadDispatcher)
         : this(
             stateStore,
             writeScheduler,
             settingsDefinitionCatalog,
             section,
             applicators,
+            uiThreadDispatcher,
             NullLogger<SettingsStateService>.Instance)
     {
     }
@@ -38,6 +41,7 @@ public sealed class SettingsStateService : ISettingsStateService
         ISettingsDefinitionCatalog settingsDefinitionCatalog,
         SettingsStateSection section,
         IEnumerable<ISettingsStateApplicator> applicators,
+        IUiThreadDispatcher uiThreadDispatcher,
         ILogger<SettingsStateService> logger)
     {
         ArgumentNullException.ThrowIfNull(applicators);
@@ -48,6 +52,8 @@ public sealed class SettingsStateService : ISettingsStateService
             ?? throw new ArgumentNullException(nameof(settingsDefinitionCatalog));
         _section = section ?? throw new ArgumentNullException(nameof(section));
         _applicatorsByKey = CreateApplicatorRegistry(applicators);
+        _uiThreadDispatcher = uiThreadDispatcher
+            ?? throw new ArgumentNullException(nameof(uiThreadDispatcher));
         _stateLock = new SemaphoreSlim(1, 1);
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -55,11 +61,9 @@ public sealed class SettingsStateService : ISettingsStateService
     public async Task ApplySavedSettingsAsync(CancellationToken ct)
     {
         SettingsState state = await GetCurrentStateAsync(ct).ConfigureAwait(false);
-
-        foreach (KeyValuePair<string, string> value in state.Values)
-        {
-            ApplyValueIfSupported(value.Key, value.Value);
-        }
+        await _uiThreadDispatcher.InvokeAsync(
+            () => ApplySavedValues(state),
+            ct).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Applied {AppliedSettingCount} saved non-secret settings.",
@@ -125,6 +129,14 @@ public sealed class SettingsStateService : ISettingsStateService
         finally
         {
             _stateLock.Release();
+        }
+    }
+
+    private void ApplySavedValues(SettingsState state)
+    {
+        foreach (KeyValuePair<string, string> value in state.Values)
+        {
+            ApplyValueIfSupported(value.Key, value.Value);
         }
     }
 

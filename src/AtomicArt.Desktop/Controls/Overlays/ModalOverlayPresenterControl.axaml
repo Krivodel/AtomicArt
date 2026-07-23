@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
+             x:Class="AtomicArt.Desktop.Controls.Overlays.ModalOverlayPresenterControl"
+             x:Name="Root"
+             x:DataType="overlays:ModalOverlayPresenterControl">
+    <Grid>
+        <Button x:Name="Backdrop"
+                Theme="{StaticResource ModalOverlayBackdropButtonTheme}"
+                Command="{Binding #Root.CloseCommand}" />
+
+        <ContentControl x:Name="BodyPresenter"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch"
+                        Content="{Binding #Root.Body}" />
+
+        <Border x:Name="BodyTransitionSnapshotHost"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                BoxShadow="{DynamicResource FloatingSurfaceShadow}"
+                IsHitTestVisible="False"
+                IsVisible="False">
+            <Border x:Name="BodyTransitionSnapshotClip"
+                    ClipToBounds="True">
+                <Image x:Name="BodyTransitionSnapshot"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Stretch"
+                       Stretch="Fill" />
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,4 +1,9 @@
 <Styles xmlns="https://github.com/avaloniaui">
+    <Style Selector="Window">
+        <Setter Property="FontFamily"
+                Value="{DynamicResource DefaultFontFamily}" />
+    </Style>
+
     <Style Selector="TextBox">
         <Setter Property="Cursor"
                 Value="IBeam" />
@@ -77,10 +82,48 @@
                 Value="{StaticResource MetadataLabelMargin}" />
     </Style>
 
+    <Style Selector="TextBlock.overlay-title">
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+        <Setter Property="FontWeight"
+                Value="Bold" />
+    </Style>
+
     <Style Selector="TextBlock.metadata-value">
         <Setter Property="Margin"
                 Value="{StaticResource MetadataValueMargin}" />
         <Setter Property="TextWrapping"
                 Value="Wrap" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-primary-text">
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+        <Setter Property="FontSize"
+                Value="16" />
+        <Setter Property="FontWeight"
+                Value="Bold" />
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiText}" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-compact-text">
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+        <Setter Property="FontSize"
+                Value="15" />
+        <Setter Property="FontWeight"
+                Value="Bold" />
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiText}" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-status-text">
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+        <Setter Property="FontSize"
+                Value="13" />
+        <Setter Property="FontWeight"
+                Value="Bold" />
     </Style>
 </Styles>

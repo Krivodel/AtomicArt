@@ -2,15 +2,15 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryOverlayEffects
 {
-    private readonly GalleryAnimationScheduler _animationScheduler;
+    private readonly UiAnimationScheduler _animationScheduler;
 
-    public GalleryOverlayEffects(GalleryAnimationScheduler animationScheduler)
+    public GalleryOverlayEffects(UiAnimationScheduler animationScheduler)
     {
         _animationScheduler = animationScheduler ?? throw new ArgumentNullException(nameof(animationScheduler));
     }

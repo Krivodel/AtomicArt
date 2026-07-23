@@ -7,7 +7,7 @@ using Xunit;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Tests.TestDoubles;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -146,7 +146,7 @@ public sealed class GalleryOperationCoordinatorTests
         GalleryLayoutService layout,
         out List<object> items)
     {
-        GalleryAnimationScheduler animationScheduler = new(frameScheduler);
+        UiAnimationScheduler animationScheduler = new(frameScheduler);
         GalleryMotionAnimator animator = GalleryMotionAnimatorTestFactory.Create(
             animationScheduler,
             new GalleryOverlayEffects(animationScheduler),

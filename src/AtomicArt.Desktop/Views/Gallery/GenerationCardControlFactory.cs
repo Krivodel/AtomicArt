@@ -6,12 +6,19 @@ namespace AtomicArt.Desktop.Views.Gallery;
 
 internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
 {
-    public Control Create(object item, GalleryCardCommands commands)
+    public Control Create(
+        object item,
+        GalleryCardCommands commands,
+        IGenerationPreviewExpansionHost previewExpansionHost)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(commands);
+        ArgumentNullException.ThrowIfNull(previewExpansionHost);
 
-        GenerationCardControl control = new();
+        GenerationCardControl control = new()
+        {
+            PreviewExpansionHost = previewExpansionHost
+        };
         ApplyCommands(control, commands);
 
         return control;

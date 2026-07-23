@@ -1,13 +1,13 @@
 using Avalonia;
 using Avalonia.Controls;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryRemoveAnimator : GalleryOverlayAnimator
 {
     public GalleryRemoveAnimator(
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects)
         : base(animationScheduler, overlayEffects)
     {

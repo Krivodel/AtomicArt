@@ -12,7 +12,7 @@ using Avalonia.VisualTree;
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Resources;
-using AtomicArt.Desktop.Services.GalleryAnimation;
+using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Generation;
 
 namespace AtomicArt.Desktop.Controls.Generation;
@@ -44,7 +44,7 @@ public partial class AnimatedAttachmentListControl : UserControl
     private readonly CollectionChangedSubscription _itemsSubscription;
     private readonly Dictionary<Guid, AttachmentVisualEntry> _entries = [];
     private readonly List<AttachmentVisualEntry> _removingEntries = [];
-    private GalleryAnimationScheduler? _animationScheduler;
+    private UiAnimationScheduler? _animationScheduler;
     private AttachmentDragCandidate? _dragCandidate;
     private AttachmentDragState? _dragState;
     private bool _isAttached;
@@ -225,7 +225,7 @@ public partial class AnimatedAttachmentListControl : UserControl
     }
 
     private static void StartEntryAnimation(
-        GalleryAnimationScheduler animationScheduler,
+        UiAnimationScheduler animationScheduler,
         Control control,
         IReadOnlyList<MotionFrame> frames,
         int durationMilliseconds,
@@ -901,7 +901,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             return;
         }
 
-        _animationScheduler = new GalleryAnimationScheduler(new AvaloniaUiFrameScheduler(topLevel));
+        _animationScheduler = new UiAnimationScheduler(new AvaloniaUiFrameScheduler(topLevel));
     }
 
     private void CancelAllAnimations()

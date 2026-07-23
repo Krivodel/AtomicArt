@@ -8,20 +8,25 @@ public sealed class GenerationPriceFormatter
 {
     private const string UsdCurrencyCode = "USD";
 
-    public string? Format(GenerationPriceDto? price)
+    public string FormatAmount(GenerationPriceDto price)
     {
-        if (price is null)
+        ArgumentNullException.ThrowIfNull(price);
+
+        return price.Amount.ToString("0.####", CultureInfo.InvariantCulture);
+    }
+
+    public string FormatCurrency(GenerationPriceDto price)
+    {
+        ArgumentNullException.ThrowIfNull(price);
+
+        if (string.Equals(
+            price.CurrencyCode,
+            UsdCurrencyCode,
+            StringComparison.OrdinalIgnoreCase))
         {
-            return null;
+            return "$";
         }
 
-        string formattedAmount = price.Amount.ToString("0.####", CultureInfo.InvariantCulture);
-
-        if (string.Equals(price.CurrencyCode, UsdCurrencyCode, StringComparison.OrdinalIgnoreCase))
-        {
-            return $"${formattedAmount}";
-        }
-
-        return $"{price.CurrencyCode} {formattedAmount}";
+        return price.CurrencyCode;
     }
 }
