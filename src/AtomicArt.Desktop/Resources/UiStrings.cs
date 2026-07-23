@@ -15,9 +15,9 @@ public static class UiStrings
     public static string AttachmentCounterFormat => "{0}/{1}";
     public static string TemperatureValueFormat => "{0:0.0}";
     public static string PickImagesTitle => "Выбор изображений";
-    public static string ImageAttachmentFailed => "Не удалось прикрепить изображение.";
+    public static string ImageAttachmentFailed => "Не удалось прикрепить.";
     public static string GenerationApiUnavailable => "Сервер недоступен.";
-    public static string GenerationFailed => "Не удалось выполнить генерацию.";
+    public static string GenerationFailed => "Не удалось сгенерировать.";
     public static string GoogleApiKeyMissing => "Укажи Google API-ключ в настройках.";
     public static string ModelCatalogLoadFailed => "Не удалось загрузить список моделей.";
     public static string AttachImageButtonGlyph => "+";
@@ -38,7 +38,7 @@ public static class UiStrings
     public static string MetadataNoFilePath => "Нет файла";
     public static string MetadataUnavailable => "Недоступно";
     public static string MetadataRepeat => "Повторить";
-    public static string FileRevealFailed => "Не удалось открыть файл в папке.";
+    public static string FileRevealFailed => "Не удалось показать файл в папке.";
     public static string SettingsApiBaseAddressLabel => "Адрес сервера";
     public static string SettingsApiBaseAddressPlaceholder => "http://localhost:5000/";
     public static string SettingsApiBaseAddressInvalid => "Укажи абсолютный адрес HTTP или HTTPS.";
@@ -49,16 +49,16 @@ public static class UiStrings
     public static string SettingsSave => "Сохранить";
     public static string SettingsSaveApiKey => "Сохранить ключ";
     public static string SettingsApplyScale => "Применить";
-    public static string SettingsGpuResourceCacheRestartNotice => "Применится после перезапуска.";
+    public static string SettingsGpuResourceCacheRestartNotice => "Кэш применится после перезапуска.";
     public static string SettingsSaveSecretFailed => "Не удалось сохранить ключ.";
     public static string UpdateTitle => "Доступно обновление";
-    public static string UpdateAvailableFormat => "Версия {0} готова к установке.";
+    public static string UpdateAvailableFormat => "Обновление {0} готово к установке.";
     public static string UpdateInstall => "Обновить";
     public static string UpdateWaitAndInstall => "Дождаться и обновить";
-    public static string UpdateLater => "Обновить позже";
+    public static string UpdateLater => "Не сейчас";
     public static string UpdateWaitingForGeneration => "Обновление начнётся после завершения генерации.";
     public static string UpdateDownloading => "Скачивание обновления…";
-    public static string UpdateRestarting => "Обновление скачано. Приложение перезапускается…";
+    public static string UpdateRestarting => "Обновление скачано. Установка…";
     public static string UpdateCheckFailed => "Не удалось проверить наличие обновлений.";
-    public static string UpdateInstallFailed => "Не удалось установить обновление. Попробуй позже.";
+    public static string UpdateInstallFailed => "Не удалось установить обновление.";
 }
