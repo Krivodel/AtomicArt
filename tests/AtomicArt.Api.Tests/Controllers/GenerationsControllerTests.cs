@@ -1,19 +1,9 @@
-using System.Net;
-using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.Controllers;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.AspNetCore.Hosting;
 
 using FluentAssertions;
 using MediatR;
@@ -21,411 +11,126 @@ using Moq;
 using Xunit;
 
 using AtomicArt.Api.Controllers;
-using AtomicArt.Api.Filters;
-using AtomicArt.Api.Tests.ModelMetadata;
-using AtomicArt.Application;
-using AtomicArt.Application.Common.Models;
-using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
+using AtomicArt.Api.Generation;
+using AtomicArt.Application.Common.Interfaces;
+using AtomicArt.Application.Features.Generation.Commands.CreateStreamingGeneration;
+using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Models;
+using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
-using AtomicArt.Domain;
-using AtomicArt.Domain.Generation;
-using AtomicArt.Infrastructure;
-using AtomicArt.Infrastructure.Generation;
-using AtomicArt.Infrastructure.Generation.GoogleInteractions;
-using AtomicArt.Tests.Common;
 using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Api.Tests.Controllers;
 
 public sealed class GenerationsControllerTests
 {
-    private static readonly Guid BatchId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-    private static string ModelId => ApiModelMetadataTestCatalog.NanoBanana2ModelId;
+    private static readonly Guid LogicalGenerationId =
+        Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid BatchId =
+        Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Guid ItemId =
+        Guid.Parse("33333333-3333-3333-3333-333333333333");
+    private static readonly DateTime StartedAtUtc =
+        new(2026, 7, 23, 10, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime CompletedAtUtc =
+        new(2026, 7, 23, 10, 0, 5, DateTimeKind.Utc);
 
     [Fact]
-    public async Task CreateAsync_WithValidRequest_ReturnsOkResponse()
-    {
-        GenerationBatchDto batch = CreateBatchWithContent();
-        ControllerTestContext context = CreateSuccessfulControllerTestContext(batch);
-
-        IActionResult actionResult = await CreateAsync(context);
-
-        OkObjectResult okResult = VerifyOkResponse(actionResult, batch);
-        string responseJson = JsonSerializer.Serialize(okResult.Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        responseJson.Should().Contain("\"imageContent\"");
-        responseJson.Should().NotContain("previewContent");
-        responseJson.Should().NotContain("previewPath");
-        context.Mediator.Verify(
-            currentMediator => currentMediator.Send(
-                It.Is<CreateImageGenerationCommand>(command =>
-                    command.Request.ModelId == context.Request.ModelId
-                    && command.Request.Prompt == context.Request.Prompt
-                    && command.Request.AspectRatio == context.Request.AspectRatio
-                    && command.Request.Resolution == context.Request.Resolution
-                    && command.Request.GenerationCount == context.Request.GenerationCount
-                    && ReferenceEquals(command.Request.AttachedImages, context.Request.AttachedImages)
-                    && command.ProviderCredential == TestGenerationCredentials.ProviderCredential),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task CreateAsync_WithNonLoopbackBoundary_ReturnsOkResponse(bool isHttps)
-    {
-        GenerationBatchDto batch = CreateBatchWithContent();
-        ControllerTestContext context = CreateSuccessfulControllerTestContext(
-            batch,
-            isHttps: isHttps,
-            remoteIpAddress: IPAddress.Parse("203.0.113.10"));
-
-        IActionResult actionResult = await CreateAsync(context);
-
-        VerifyOkResponse(actionResult, batch);
-        context.Mediator.Verify(
-            currentMediator => currentMediator.Send(
-                It.IsAny<CreateImageGenerationCommand>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task CreateEndpoint_WithoutProviderCredential_ReturnsUnauthorized()
-    {
-        await using WebApplicationFactory<Program> factory = new();
-        using HttpClient client = factory.CreateClient();
-        ImageGenerationRequestDto request = CreateRequest();
-
-        using HttpResponseMessage response = await client.PostAsJsonAsync(
-            GenerationApiRoutes.Generations,
-            request,
-            CancellationToken.None);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task CreateEndpoint_WithTestModelWithoutProviderCredential_ReturnsOk()
-    {
-        string relativeImagesDirectory = Path.Combine("TestGenerationImages", Guid.NewGuid().ToString("N"));
-        using TemporaryDirectory contentRoot = new(
-            TestDirectories.GetUniqueDirectoryPath(
-                typeof(GenerationsControllerTests),
-                "ContentRoot"));
-        ApiContentRootTestFiles.CopyModelMetadata(contentRoot.DirectoryPath);
-        ApiContentRootTestFiles.WriteAppSettings(
-            contentRoot.DirectoryPath,
-            ApiTestAppSettingsJson.Create(true, relativeImagesDirectory));
-        using TemporaryDirectory imagesDirectory = new(
-            Path.Combine(AppContext.BaseDirectory, relativeImagesDirectory));
-        await File.WriteAllBytesAsync(
-            Path.Combine(imagesDirectory.DirectoryPath, "any-file-name"),
-            GenerationImageTestData.MinimalPngBytes,
-            CancellationToken.None);
-        await using WebApplicationFactory<Program> factory = CreateFactoryWithTestGeneration(
-            contentRoot.DirectoryPath);
-        using HttpClient client = factory.CreateClient();
-        ImageGenerationRequestDto request = CreateTestRequest();
-
-        using HttpResponseMessage response = await client.PostAsJsonAsync(
-            GenerationApiRoutes.Generations,
-            request,
-            CancellationToken.None);
-        GenerationBatchDto? batch = await response.Content
-            .ReadFromJsonAsync<GenerationBatchDto>(CancellationToken.None);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        batch.Should().NotBeNull();
-        GenerationItemDto item = batch.Items.Should().ContainSingle().Which;
-        item.ModelId.Should().Be(TestGenerationModelCatalogAugmenter.ModelId);
-        GenerationImageContentDto imageContent = item.ImageContent
-            ?? throw new InvalidOperationException("Generated image content is missing.");
-        imageContent.ContentType.Should().Be(GenerationImageContentTypes.Png);
-    }
-
-    [Fact]
-    public async Task ModelsEndpoint_WithoutProviderCredential_ReturnsOk()
-    {
-        await using WebApplicationFactory<Program> factory = new();
-        using HttpClient client = factory.CreateClient();
-
-        using HttpResponseMessage response = await client.GetAsync(
-            GenerationApiRoutes.Models,
-            CancellationToken.None);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-    }
-
-    [Fact]
-    public void LaunchSettings_WithDefaultApiUrl_UsesLocalApiPort()
-    {
-        string path = TestRepositoryFiles.Find(Path.Combine(
-            "src",
-            "AtomicArt.Api",
-            "Properties",
-            "launchSettings.json"));
-        string json = File.ReadAllText(path);
-        using JsonDocument document = JsonDocument.Parse(json);
-        string? applicationUrl = document.RootElement
-            .GetProperty("profiles")
-            .GetProperty("AtomicArt.Api")
-            .GetProperty("applicationUrl")
-            .GetString();
-
-        applicationUrl.Should().Be(LocalApiEndpointTestDefaults.LocalApiUrl);
-    }
-
-    [Fact]
-    public void RequiredBodyActionFilter_WithNullCreateRequest_ReturnsBadRequest()
-    {
-        RequiredBodyActionFilter filter = new(
-            NullLogger<RequiredBodyActionFilter>.Instance);
-        ActionExecutingContext context = CreateBodyActionContext(nameof(GenerationsController.CreateAsync));
-
-        filter.OnActionExecuting(context);
-
-        BadRequestObjectResult badRequest = context.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        ProblemDetails problemDetails = badRequest.Value.Should().BeOfType<ProblemDetails>().Subject;
-        problemDetails.Status.Should().Be(StatusCodes.Status400BadRequest);
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithValidationResult_ReturnsBadRequestProblemDetails()
-    {
-        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.ValidationError(
-            GenerationErrorCodes.ModelRequestValidation,
-            "Invalid request");
-        ControllerTestContext context = CreateControllerTestContext(result);
-
-        IActionResult actionResult = await CreateAsync(context);
-
-        AssertProblemDetails(actionResult, StatusCodes.Status400BadRequest);
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithNullAttachedImage_ReturnsBadRequestProblemDetails()
-    {
-        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.ValidationError(
-            GenerationErrorCodes.ModelRequestValidation,
-            "Invalid attachment");
-        ImageGenerationRequestDto request = CreateRequestWithNullAttachedImage();
-        ControllerTestContext context = CreateControllerTestContext(
-            result,
-            request: request);
-
-        IActionResult actionResult = await CreateAsync(context);
-
-        AssertProblemDetails(actionResult, StatusCodes.Status400BadRequest);
-        context.Mediator.Verify(
-            currentMediator => currentMediator.Send(
-                It.Is<CreateImageGenerationCommand>(command => CommandHasSingleNullAttachedImage(command)),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithValidRequest_DoesNotWriteGenerationFiles()
-    {
-        using TemporaryCurrentDirectory outputDirectory = new(
-            typeof(GenerationsControllerTests),
-            nameof(CreateAsync_WithValidRequest_DoesNotWriteGenerationFiles));
-        ServiceCollection services = [];
-        IConfiguration configuration = CreateConfiguration();
-        services.AddLogging();
-        services.AddDomainServices();
-        services.AddSingleton(ApiModelMetadataStartupTestCatalog.LoadCatalog());
-        services.AddApplicationServices();
-        services.AddInfrastructureServices(configuration);
-        services.AddScoped<Application.Features.Generation.Interfaces.IImageGenerationContentProvider>(
-            _ => new TestImageGenerationContentProvider());
-        await using ServiceProvider serviceProvider = services.BuildServiceProvider(
-            new ServiceProviderOptions
-            {
-                ValidateOnBuild = true,
-                ValidateScopes = true
-            });
-        using IServiceScope scope = serviceProvider.CreateScope();
-        IMediator mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-        GenerationsController controller = CreateController(
-            mediator,
-            TestGenerationCredentials.ProviderCredential);
-        ImageGenerationRequestDto request = CreateRequest();
-
-        IActionResult actionResult = await controller.CreateAsync(request, CancellationToken.None);
-
-        OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
-        GenerationBatchDto batch = okResult.Value.Should().BeOfType<GenerationBatchDto>().Subject;
-        batch.Items.Should().ContainSingle();
-        GenerationItemDto item = batch.Items.Single();
-        item.ImagePath.Should().BeNull();
-        item.ImageContent.Should().NotBeNull();
-        Directory.Exists(Path.Combine(outputDirectory.DirectoryPath, "generations")).Should().BeFalse();
-        outputDirectory.GetEntries().Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithNotFoundResult_ReturnsBadRequestProblemDetails()
-    {
-        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.NotFound(
-            GenerationErrorCodes.ModelNotFound,
-            "Model not found");
-        ControllerTestContext context = CreateControllerTestContext(result);
-
-        IActionResult actionResult = await CreateAsync(context);
-
-        ProblemDetails problemDetails = AssertProblemDetails(
-            actionResult,
-            StatusCodes.Status400BadRequest);
-        problemDetails.Detail.Should().NotBe("Model not found");
-    }
-
-    [Fact]
-    public async Task CreateAsync_WithUnavailableResult_ReturnsInternalServerErrorProblemDetails()
-    {
-        string rawErrorMessage = "Provider failed at C:\\internal\\path";
-        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.Unavailable("ERR-GEN-999", rawErrorMessage);
-        ControllerTestContext context = CreateControllerTestContext(result);
-
-        IActionResult actionResult = await CreateAsync(context);
-
-        ProblemDetails problemDetails = AssertProblemDetails(
-            actionResult,
-            StatusCodes.Status500InternalServerError);
-        problemDetails.Detail.Should().NotBe(rawErrorMessage);
-    }
-
-    [Theory]
-    [InlineData(
-        ImageGenerationProviderFailureKind.Authentication,
-        StatusCodes.Status401Unauthorized)]
-    [InlineData(
-        ImageGenerationProviderFailureKind.Authorization,
-        StatusCodes.Status403Forbidden)]
-    [InlineData(
-        ImageGenerationProviderFailureKind.RateLimited,
-        StatusCodes.Status429TooManyRequests)]
-    [InlineData(
-        ImageGenerationProviderFailureKind.RequestRejected,
-        StatusCodes.Status502BadGateway)]
-    [InlineData(
-        ImageGenerationProviderFailureKind.ResourceNotFound,
-        StatusCodes.Status502BadGateway)]
-    [InlineData(
-        ImageGenerationProviderFailureKind.InternalError,
-        StatusCodes.Status502BadGateway)]
-    [InlineData(
-        ImageGenerationProviderFailureKind.InvalidResponse,
-        StatusCodes.Status502BadGateway)]
-    [InlineData(
-        ImageGenerationProviderFailureKind.Unknown,
-        StatusCodes.Status502BadGateway)]
-    [InlineData(
-        ImageGenerationProviderFailureKind.Timeout,
-        StatusCodes.Status504GatewayTimeout)]
-    [InlineData(
-        ImageGenerationProviderFailureKind.Unavailable,
-        StatusCodes.Status503ServiceUnavailable)]
-    public async Task CreateAsync_WithProviderUnavailableResult_ReturnsProviderStatusProblemDetails(
-        ImageGenerationProviderFailureKind failureKind,
-        int expectedStatusCode)
-    {
-        string rawErrorMessage = "Provider failed with secret response body";
-        string errorCode = ImageGenerationProviderFailureCatalog.GetErrorCode(failureKind);
-        Result<GenerationBatchDto> result = Result<GenerationBatchDto>.Unavailable(errorCode, rawErrorMessage);
-        ControllerTestContext context = CreateControllerTestContext(result);
-
-        IActionResult actionResult = await CreateAsync(context);
-
-        ProblemDetails problemDetails = AssertProblemDetails(actionResult, expectedStatusCode);
-        problemDetails.Detail.Should().NotBe(rawErrorMessage);
-        problemDetails.Extensions["code"].Should().Be(errorCode);
-    }
-
-    private static async Task<IActionResult> CreateAsync(ControllerTestContext context)
-    {
-        return await context.Controller.CreateAsync(
-            context.Request,
-            CancellationToken.None);
-    }
-
-    private static ProblemDetails AssertProblemDetails(
-        IActionResult actionResult,
-        int expectedStatusCode)
-    {
-        ObjectResult objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
-        ProblemDetails problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
-        objectResult.StatusCode.Should().Be(expectedStatusCode);
-        problemDetails.Extensions.Should().ContainKey("code");
-
-        return problemDetails;
-    }
-
-    private static ControllerTestContext CreateControllerTestContext(
-        Result<GenerationBatchDto> result,
-        ImageGenerationRequestDto? request = null,
-        bool isHttps = false,
-        IPAddress? remoteIpAddress = null)
-    {
-        Mock<IMediator> mediator = CreateMediator(result);
-        GenerationsController controller = CreateController(
-            mediator.Object,
-            isHttps: isHttps,
-            remoteIpAddress: remoteIpAddress);
-        ImageGenerationRequestDto generationRequest = request ?? CreateRequest();
-
-        return new ControllerTestContext(
-            controller,
-            mediator,
-            generationRequest);
-    }
-
-    private static ControllerTestContext CreateSuccessfulControllerTestContext(
-        GenerationBatchDto batch,
-        bool isHttps = false,
-        IPAddress? remoteIpAddress = null)
-    {
-        return CreateControllerTestContext(
-            Result<GenerationBatchDto>.Success(batch),
-            isHttps: isHttps,
-            remoteIpAddress: remoteIpAddress);
-    }
-
-    private static Mock<IMediator> CreateMediator(Result<GenerationBatchDto> result)
+    public async Task CreateAsync_WhenConcurrencyLimitIsReached_ReturnsNonRetryableTooManyRequests()
     {
         Mock<IMediator> mediator = new();
+        GenerationsController controller = CreateController(
+            mediator.Object,
+            new FullGenerationRequestConcurrencyLimiter());
+
+        IActionResult result = await controller.CreateAsync(
+            CancellationToken.None);
+
+        ObjectResult objectResult = result
+            .Should()
+            .BeOfType<ObjectResult>()
+            .Subject;
+        objectResult.StatusCode.Should().Be(
+            StatusCodes.Status429TooManyRequests);
+        ProblemDetails problemDetails = objectResult.Value
+            .Should()
+            .BeOfType<ProblemDetails>()
+            .Subject;
+        problemDetails.Extensions[
+                GenerationApiRoutes.ProblemDetailsErrorCodeExtensionName]
+            .Should()
+            .Be(GenerationProtocolErrorCodes.ConcurrencyLimitReached);
+        problemDetails.Extensions[
+                GenerationApiRoutes.ProblemDetailsRetryableExtensionName]
+            .Should()
+            .Be(false);
+        mediator.Verify(
+            currentMediator => currentMediator.Send(
+                It.IsAny<CreateStreamingGenerationCommand>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void GenerationRoute_UsesVersionTwo()
+    {
+        GenerationApiRoutes.Generations.Should().Be(
+            "api/v2/generations");
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithPreparedAttempt_WritesProviderAndFinalMetadataParts()
+    {
+        Mock<IMediator> mediator = new();
+        StreamingGenerationAttempt attempt = CreateAttempt();
         mediator
             .Setup(currentMediator => currentMediator.Send(
-                It.IsAny<CreateImageGenerationCommand>(),
+                It.IsAny<CreateStreamingGenerationCommand>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(result);
+            .ReturnsAsync(GenerationAttemptPreparation.Success(attempt));
+        GenerationsController controller = CreateController(
+            mediator.Object,
+            new AvailableGenerationRequestConcurrencyLimiter());
+        using MultipartFormDataContent requestContent =
+            CreateRequestContent();
+        await using Stream requestBody =
+            await requestContent.ReadAsStreamAsync();
+        controller.HttpContext.Request.ContentType =
+            requestContent.Headers.ContentType?.ToString();
+        controller.HttpContext.Request.Body = requestBody;
+        using MemoryStream responseBody = new();
+        controller.HttpContext.Response.Body = responseBody;
 
-        return mediator;
+        IActionResult result = await controller.CreateAsync(
+            CancellationToken.None);
+
+        result.Should().BeOfType<EmptyResult>();
+        responseBody.Position = 0L;
+        string responseText = await new StreamReader(
+                responseBody,
+                Encoding.UTF8)
+            .ReadToEndAsync();
+        responseText.Should().Contain(
+            $"name=\"{GenerationApiRoutes.ProviderResponsePartName}\"");
+        responseText.Should().Contain("\"data\":\"iVBORw==\"");
+        responseText.Should().Contain(
+            $"name=\"{GenerationApiRoutes.GenerationMetadataPartName}\"");
+        responseText.Should().Contain(
+            $"\"logicalGenerationId\":\"{LogicalGenerationId}\"");
+        responseText.Should().Contain("\"status\":\"Generated\"");
     }
 
     private static GenerationsController CreateController(
         IMediator mediator,
-        string? providerCredential = TestGenerationCredentials.ProviderCredential,
-        bool isHttps = false,
-        IPAddress? remoteIpAddress = null,
-        GenerationModelCatalogDto? modelCatalog = null)
+        IGenerationRequestConcurrencyLimiter concurrencyLimiter)
     {
-        DefaultHttpContext httpContext = new()
-        {
-            Request =
-            {
-                Scheme = isHttps ? "https" : "http"
-            },
-            Connection =
-            {
-                RemoteIpAddress = remoteIpAddress ?? IPAddress.Loopback
-            }
-        };
-
+        DefaultHttpContext httpContext = new();
         GenerationsController controller = new(
             mediator,
-            modelCatalog ?? ApiModelMetadataStartupTestCatalog.LoadCatalog(),
+            concurrencyLimiter,
+            new MultipartGenerationRequestReader(),
+            new GenerationStreamingResponseWriter(
+                NullLogger<GenerationStreamingResponseWriter>.Instance),
             NullLogger<GenerationsController>.Instance)
         {
             ControllerContext = new ControllerContext
@@ -434,193 +139,123 @@ public sealed class GenerationsControllerTests
             }
         };
 
-        if (!string.IsNullOrWhiteSpace(providerCredential))
-        {
-            controller.HttpContext.Request.Headers[GenerationApiRoutes.ProviderApiKeyHeaderName] = providerCredential;
-        }
-
         return controller;
     }
 
-    private static IConfiguration CreateConfiguration()
+    private static StreamingGenerationAttempt CreateAttempt()
     {
-        Dictionary<string, string?> values =
-            GoogleInteractionsTestConfiguration.CreateWithDefaultBaseUrl();
+        GenerationModelMetadataDto model =
+            ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+        StreamingImageGenerationRequest request = new(
+            LogicalGenerationId,
+            1,
+            model.Id,
+            "Create an image",
+            "16:9",
+            "2K",
+            1.0,
+            "low",
+            new Dictionary<string, JsonElement>(StringComparer.Ordinal),
+            Array.Empty<IGenerationAttachmentSource>());
 
-        return new ConfigurationBuilder()
-            .AddInMemoryCollection(values)
-            .Build();
+        return new StreamingGenerationAttempt(
+            new TestProviderGenerationStream(),
+            new GenerationUsagePriceCalculator(),
+            new FixedDateTimeProvider(CompletedAtUtc),
+            request,
+            model,
+            GenerationProviderIds.Google,
+            BatchId,
+            ItemId,
+            StartedAtUtc);
     }
 
-    private static ImageGenerationRequestDto CreateRequest()
+    private static MultipartFormDataContent CreateRequestContent()
     {
-        return CreateRequest(ModelId, ApiModelMetadataStartupTestCatalog.LoadCatalog());
+        GenerationRequestMetadataDto metadata = new(
+            LogicalGenerationId,
+            1,
+            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
+            "Create an image",
+            new Dictionary<string, JsonElement>(StringComparer.Ordinal),
+            Array.Empty<GenerationAttachmentMetadataDto>());
+        MultipartFormDataContent content = new();
+        content.Add(
+            new StringContent(
+                JsonSerializer.Serialize(
+                    metadata,
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web)),
+                Encoding.UTF8,
+                "application/json"),
+            GenerationApiRoutes.MetadataPartName);
+
+        return content;
     }
 
-    private static OkObjectResult VerifyOkResponse(
-        IActionResult actionResult,
-        GenerationBatchDto expectedBatch)
+    private sealed class FullGenerationRequestConcurrencyLimiter
+        : IGenerationRequestConcurrencyLimiter
     {
-        OkObjectResult okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().Be(expectedBatch);
-
-        return okResult;
-    }
-
-    private static ImageGenerationRequestDto CreateTestRequest()
-    {
-        GenerationModelCatalogDto catalog = TestGenerationModelCatalogAugmenter.AddTestModelIfEnabled(
-            ApiModelMetadataStartupTestCatalog.LoadCatalog(),
-            new TestGenerationOptions
-            {
-                Enabled = true
-            });
-
-        return CreateRequest(TestGenerationModelCatalogAugmenter.ModelId, catalog);
-    }
-
-    private static ImageGenerationRequestDto CreateRequest(
-        string modelId,
-        GenerationModelCatalogDto catalog)
-    {
-        GenerationModelMetadataDto metadata = catalog
-            .Models
-            .Single(model => model.Id == modelId);
-
-        return ImageGenerationRequestDtoTestFactory.Create(
-            modelId: modelId,
-            aspectRatio: metadata.AspectRatios.First(),
-            resolution: metadata.Resolutions.First(),
-            temperature: metadata.Temperature.Default);
-    }
-
-    private static WebApplicationFactory<Program> CreateFactoryWithTestGeneration(string contentRoot)
-    {
-        return new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder => builder.UseContentRoot(contentRoot));
-    }
-
-    private static ImageGenerationRequestDto CreateRequestWithNullAttachedImage()
-    {
-        ImageGenerationRequestDto? request = JsonSerializer.Deserialize<ImageGenerationRequestDto>(
-            $$"""
-            {
-              "modelId": "{{ModelId}}",
-              "prompt": "Prompt",
-              "aspectRatio": "авто",
-              "resolution": "1k",
-              "generationCount": 1,
-              "attachedImages": [null]
-            }
-            """,
-            new JsonSerializerOptions(JsonSerializerDefaults.Web));
-
-        if (request is null)
+        public IDisposable? TryAcquire()
         {
-            throw new InvalidOperationException("Failed to deserialize test request.");
-        }
-
-        return request;
-    }
-
-    private static GenerationBatchDto CreateBatchWithContent()
-    {
-        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        GenerationImageContentDto content = new("image/png", "iVBORw0KGgo=");
-        GenerationItemDto item = new(
-            Guid.Parse("22222222-2222-2222-2222-222222222222"),
-            ModelId,
-            metadata.DisplayName,
-            "Prompt",
-            GenerationAspectRatios.Auto,
-            "1k",
-            new DateTime(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc),
-            GenerationItemStatus.Generated,
-            null,
-            content);
-
-        return new GenerationBatchDto(BatchId, [item]);
-    }
-
-    private static ActionExecutingContext CreateBodyActionContext(string actionName)
-    {
-        ActionContext actionContext = new(
-            new DefaultHttpContext(),
-            new RouteData(),
-            CreateActionDescriptor(actionName));
-        Dictionary<string, object?> actionArguments = new(StringComparer.Ordinal)
-        {
-            ["request"] = null
-        };
-
-        return new ActionExecutingContext(
-            actionContext,
-            Array.Empty<IFilterMetadata>(),
-            actionArguments,
-            new object());
-    }
-
-    private static ControllerActionDescriptor CreateActionDescriptor(string actionName)
-    {
-        System.Reflection.MethodInfo methodInfo = typeof(GenerationsController)
-            .GetMethod(actionName)
-            ?? throw new InvalidOperationException("Controller action was not found.");
-        System.Reflection.ParameterInfo requestParameter = methodInfo
-            .GetParameters()
-            .Single(parameter => parameter.Name == "request");
-
-        return new ControllerActionDescriptor
-        {
-            MethodInfo = methodInfo,
-            Parameters = new List<ParameterDescriptor>
-            {
-                new ControllerParameterDescriptor
-                {
-                    Name = "request",
-                    ParameterInfo = requestParameter,
-                    BindingInfo = new BindingInfo
-                    {
-                        BindingSource = BindingSource.Body
-                    }
-                }
-            }
-        };
-    }
-
-    private static bool CommandHasSingleNullAttachedImage(CreateImageGenerationCommand command)
-    {
-        return command.Request.AttachedImages is [null];
-    }
-
-    private sealed class ControllerTestContext
-    {
-        public GenerationsController Controller { get; }
-        public Mock<IMediator> Mediator { get; }
-        public ImageGenerationRequestDto Request { get; }
-
-        public ControllerTestContext(
-            GenerationsController controller,
-            Mock<IMediator> mediator,
-            ImageGenerationRequestDto request)
-        {
-            Controller = controller;
-            Mediator = mediator;
-            Request = request;
+            return null;
         }
     }
 
-    private sealed class TestImageGenerationContentProvider
-        : Application.Features.Generation.Interfaces.IImageGenerationContentProvider
+    private sealed class AvailableGenerationRequestConcurrencyLimiter
+        : IGenerationRequestConcurrencyLimiter
     {
-        public Task<ImageGenerationContentResult> GetContentAsync(
-            ImageGenerationContentProviderContext context,
+        public IDisposable? TryAcquire()
+        {
+            return new TestLease();
+        }
+    }
+
+    private sealed class TestProviderGenerationStream
+        : IProviderGenerationStream
+    {
+        public string ContentType => "application/json";
+        public ProviderGenerationSummary? Summary { get; private set; }
+
+        public async Task CopyToAsync(
+            Stream destination,
+            long maximumBytes,
             CancellationToken ct)
         {
-            ImageGenerationContentResult result = new(
-                "image/png",
-                "iVBORw0KGgo=");
+            byte[] response = """
+                {"status":"completed","output":[{"mime_type":"image/png","data":"iVBORw=="}]}
+                """u8.ToArray();
+            await destination.WriteAsync(response, ct);
 
-            return Task.FromResult(result);
+            Summary = new ProviderGenerationSummary(
+                "completed",
+                1,
+                new List<string>
+                {
+                    GenerationImageContentTypes.Png
+                },
+                null);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class FixedDateTimeProvider : IDateTimeProvider
+    {
+        public DateTime UtcNow { get; }
+
+        public FixedDateTimeProvider(DateTime utcNow)
+        {
+            UtcNow = utcNow;
+        }
+    }
+
+    private sealed class TestLease : IDisposable
+    {
+        public void Dispose()
+        {
         }
     }
 }

@@ -24,24 +24,26 @@ public sealed class DependencyInjectionTests
         services.AddInfrastructureServices(configuration);
 
         services.Should().Contain(descriptor =>
-            descriptor.ServiceType == typeof(IImageGenerationOutputPlanner));
+            descriptor.ServiceType
+                == typeof(IStreamingImageGenerationProvider));
         services.Should().Contain(descriptor =>
-            descriptor.ServiceType == typeof(IImageGenerationContentProvider));
+            descriptor.ServiceType
+                == typeof(IProviderStreamingImageGenerationProvider));
     }
 
     [Fact]
-    public void AddInfrastructureServices_WithServices_ResolvesGenerationContentProvider()
+    public void AddInfrastructureServices_WithServices_ResolvesStreamingGenerationProvider()
     {
         IConfiguration configuration = CreateConfiguration();
         using ServiceProvider serviceProvider = CreateServiceProvider(
             configuration,
             services => services.AddSingleton<GenerationUsagePriceCalculator>());
 
-        IImageGenerationContentProvider provider = serviceProvider
-            .GetRequiredService<IImageGenerationContentProvider>();
+        IStreamingImageGenerationProvider provider = serviceProvider
+            .GetRequiredService<IStreamingImageGenerationProvider>();
 
         provider.GetType().FullName.Should().Be(
-            "AtomicArt.Infrastructure.Generation.RoutingImageGenerationContentProvider");
+            "AtomicArt.Infrastructure.Generation.RoutingStreamingImageGenerationProvider");
     }
 
     [Fact]

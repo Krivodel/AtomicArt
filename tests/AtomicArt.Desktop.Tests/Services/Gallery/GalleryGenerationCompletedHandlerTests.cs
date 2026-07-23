@@ -135,6 +135,30 @@ public sealed class GalleryGenerationCompletedHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_WithStreamingImagePath_CreatesThumbnail()
+    {
+        string rootDirectory = CreateCleanDirectory(
+            nameof(HandleAsync_WithStreamingImagePath_CreatesThumbnail));
+        GenerationResultStorage storage = CreateStorage(rootDirectory);
+        RecordingGalleryThumbnailStorage thumbnailStorage =
+            new("thumbnail.png");
+        GalleryGenerationCompletedHandler handler = CreateHandler(
+            storage,
+            out List<IReadOnlyList<GalleryCompletedItemUpdate>> updateBatches,
+            thumbnailStorage: thumbnailStorage);
+        GenerationLifecycleEvent lifecycleEvent = CreateCompletedEvent(
+            CreateItem(imagePath: "streamed.png"));
+
+        await handler.HandleAsync(lifecycleEvent, CancellationToken.None);
+
+        updateBatches.Should().ContainSingle();
+        GalleryCompletedItemUpdate update = updateBatches[0].Single();
+        update.TrustedImagePath.Should().Be("streamed.png");
+        update.ThumbnailPath.Should().Be("thumbnail.png");
+        thumbnailStorage.FullImagePath.Should().Be("streamed.png");
+    }
+
+    [Fact]
     public async Task HandleAsync_WithGeneratedItemWithoutContentOrTrustedPath_ReturnsEmptyImageState()
     {
         HandlerTestContext context = CreateContext(
@@ -201,7 +225,8 @@ public sealed class GalleryGenerationCompletedHandlerTests
     private static GalleryGenerationCompletedHandler CreateHandler(
         IGenerationResultStorage storage,
         out List<IReadOnlyList<GalleryCompletedItemUpdate>> capturedUpdateBatches,
-        ITrustedImageFileService? trustedImageFileService = null)
+        ITrustedImageFileService? trustedImageFileService = null,
+        IGalleryThumbnailStorage? thumbnailStorage = null)
     {
         List<IReadOnlyList<GalleryCompletedItemUpdate>> updateBatches = [];
         Mock<IGalleryLifecycleViewState> viewStateMock = new();
@@ -224,7 +249,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
         return new GalleryGenerationCompletedHandler(
             trustedImageFileService ?? new PassthroughTrustedImageFileService(),
             storage,
-            new NullGalleryThumbnailStorage(),
+            thumbnailStorage ?? new NullGalleryThumbnailStorage(),
             GenerationImageFormatRegistryTestFactory.CreateValidator(),
             statusRegistry,
             viewStateMock.Object,

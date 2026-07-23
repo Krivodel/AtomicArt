@@ -1,226 +1,47 @@
 using FluentAssertions;
 using Xunit;
 
-using AtomicArt.Application.Common.Models;
-using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Application.Tests.Generation;
 using AtomicArt.Contracts.Generation;
-using AtomicArt.Domain.Generation;
 using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Application.Tests.Features.Generation.Models;
 
 public sealed class MetadataImageModelDefinitionTests
 {
-    private const string GifContentType = "image/gif";
-    private const string PngContentType = "image/png";
-    private static readonly byte[] GifBytes = GenerationImageFileSignatures.Gif89A.ToArray();
-    private static readonly byte[] PngBytes = [.. GenerationImageFileSignatures.Png, 0x00];
-
     [Fact]
     public void Metadata_WithNanoBanana2_ReturnsDisplayName()
     {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
+        GenerationModelMetadataDto metadata =
+            ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+        MetadataImageModelDefinition definition =
+            MetadataImageModelTestFactory.CreateDefinition(metadata);
 
-        string displayName = definition.Metadata.DisplayName;
-
-        displayName.Should().Be(ApiModelMetadataTestCatalog.NanoBanana2DisplayName);
+        definition.Metadata.DisplayName.Should().Be(metadata.DisplayName);
     }
 
     [Fact]
     public void Constraints_WithNanoBanana2_ReturnsCatalogContentTypes()
     {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+        GenerationModelMetadataDto metadata =
+            ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+        MetadataImageModelDefinition definition =
+            MetadataImageModelTestFactory.CreateDefinition(metadata);
 
-        IReadOnlyList<string> contentTypes = definition.Constraints.SupportedContentTypes;
-
-        contentTypes.Should().Equal(metadata.Attachments.SupportedContentTypes);
+        definition.Constraints.SupportedContentTypes.Should()
+            .BeEquivalentTo(metadata.Attachments.SupportedContentTypes);
     }
 
     [Fact]
     public void Constraints_WithNanoBanana2_ReturnsAggregateAttachmentLimit()
     {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
+        GenerationModelMetadataDto metadata =
+            ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+        MetadataImageModelDefinition definition =
+            MetadataImageModelTestFactory.CreateDefinition(metadata);
 
-        long maxTotalAttachedImageBytes = definition.Constraints.MaxTotalAttachedImageBytes;
-
-        maxTotalAttachedImageBytes.Should().BeGreaterThan(definition.Constraints.MaxAttachedImageBytes);
-    }
-
-    [Fact]
-    public void Validate_WithUnsupportedResolution_ReturnsError()
-    {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        ImageGenerationRequestDto request = CreateRequest(resolution: "1x1");
-
-        AssertValidationError(
-            definition,
-            request,
-            GenerationErrorCodes.UnsupportedResolution);
-    }
-
-    [Fact]
-    public void Validate_WithAutoAspectRatio_ReturnsSuccess()
-    {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        ImageGenerationRequestDto request = CreateRequest(aspectRatio: GenerationAspectRatios.Auto);
-
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsSuccess.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Validate_WithUnsupportedTemperature_ReturnsError()
-    {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        ImageGenerationRequestDto request = CreateRequest(temperature: 0.15d);
-
-        AssertValidationError(
-            definition,
-            request,
-            GenerationErrorCodes.ModelRequestValidation);
-    }
-
-    [Fact]
-    public void Validate_WithoutThinkingLevel_AppliesMetadataDefault()
-    {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        ImageGenerationRequestDto request = CreateRequest();
-
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
-        result.Value?.ThinkingLevel.Should().Be("low");
-    }
-
-    [Fact]
-    public void Validate_WithUnsupportedThinkingLevel_ReturnsError()
-    {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        ImageGenerationRequestDto request = CreateRequest(thinkingLevel: "medium");
-
-        AssertValidationError(
-            definition,
-            request,
-            GenerationErrorCodes.ModelRequestValidation);
-    }
-
-    [Fact]
-    public void Validate_WithThinkingLevelForNanoBananaPro_ReturnsError()
-    {
-        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition(metadata);
-        ImageGenerationRequestDto request = CreateRequest(metadata, thinkingLevel: "high");
-
-        AssertValidationError(
-            definition,
-            request,
-            GenerationErrorCodes.ModelRequestValidation);
-    }
-
-    [Fact]
-    public void Validate_WithTooManyAttachments_ReturnsError()
-    {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        IReadOnlyList<AttachedImageDto> attachedImages = Enumerable
-            .Range(0, definition.Constraints.MaxAttachedImages + 1)
-            .Select(index => CreateAttachedImage($"image-{index}.png"))
-            .ToList();
-        ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
-
-        AssertValidationError(
-            definition,
-            request,
-            GenerationErrorCodes.ModelRequestValidation);
-    }
-
-    [Fact]
-    public void Validate_WithPromptLongerThanModelLimit_ReturnsError()
-    {
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        string prompt = new('a', definition.Constraints.MaxPromptLength + 1);
-        ImageGenerationRequestDto request = CreateRequest(prompt: prompt);
-
-        AssertValidationError(
-            definition,
-            request,
-            GenerationErrorCodes.ModelRequestValidation);
-    }
-
-    [Fact]
-    public void Validate_WithInvalidImageSignature_ReturnsError()
-    {
-        AttachedImageDto attachedImage = new("image.png", PngContentType, [0x00, 0x01, 0x02]);
-
-        AssertAttachmentRejected(attachedImage);
-    }
-
-    [Fact]
-    public void Validate_WithUnsupportedModelAttachmentContentType_ReturnsError()
-    {
-        AttachedImageDto attachedImage = new("image.gif", GifContentType, GifBytes);
-
-        AssertAttachmentRejected(attachedImage);
-    }
-
-    private static ImageGenerationRequestDto CreateRequest(
-        GenerationModelMetadataDto? metadata = null,
-        string prompt = "Prompt",
-        string? aspectRatio = null,
-        string? resolution = null,
-        double? temperature = null,
-        IReadOnlyList<AttachedImageDto>? attachedImages = null,
-        string? thinkingLevel = null)
-    {
-        GenerationModelMetadataDto modelMetadata =
-            metadata ?? ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-
-        return ImageGenerationRequestDtoTestFactory.Create(
-            modelId: modelMetadata.Id,
-            prompt: prompt,
-            aspectRatio: aspectRatio ?? modelMetadata.AspectRatios.First(),
-            resolution: resolution ?? modelMetadata.Resolutions.First(),
-            temperature: temperature ?? modelMetadata.Temperature.Default,
-            attachedImages: attachedImages,
-            thinkingLevel: thinkingLevel);
-    }
-
-    private static AttachedImageDto CreateAttachedImage(string fileName)
-    {
-        return new AttachedImageDto(fileName, PngContentType, PngBytes);
-    }
-
-    private static void AssertAttachmentRejected(AttachedImageDto attachedImage)
-    {
-        ArgumentNullException.ThrowIfNull(attachedImage);
-
-        MetadataImageModelDefinition definition = MetadataImageModelTestFactory.CreateDefinition();
-        IReadOnlyList<AttachedImageDto> attachedImages =
-            new List<AttachedImageDto> { attachedImage };
-        ImageGenerationRequestDto request = CreateRequest(attachedImages: attachedImages);
-
-        AssertValidationError(
-            definition,
-            request,
-            GenerationErrorCodes.ModelRequestValidation);
-    }
-
-    private static void AssertValidationError(
-        MetadataImageModelDefinition definition,
-        ImageGenerationRequestDto request,
-        string expectedErrorCode)
-    {
-        ArgumentNullException.ThrowIfNull(definition);
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentException.ThrowIfNullOrWhiteSpace(expectedErrorCode);
-
-        Result<ImageGenerationRequestDto> result = definition.Validate(request);
-
-        result.IsValidationError.Should().BeTrue();
-        result.ErrorCode.Should().Be(expectedErrorCode);
+        definition.Constraints.MaxTotalAttachedImageBytes.Should()
+            .Be(metadata.Attachments.MaxTotalBytes);
     }
 }

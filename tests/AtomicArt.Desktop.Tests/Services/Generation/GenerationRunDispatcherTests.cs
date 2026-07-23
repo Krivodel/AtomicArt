@@ -83,6 +83,77 @@ public sealed class GenerationRunDispatcherTests
     }
 
     [Fact]
+    public async Task EnqueueAsync_WithFourRetryableFailuresThenSuccess_CompletesOneLogicalGeneration()
+    {
+        RetrySequenceImageGenerationApiClient apiClient = new(
+            retryableFailureCount: 4,
+            succeedAfterFailures: true);
+        RunTestContext context = CreateRunContext(apiClient);
+
+        await EnqueueAndWaitForStatusAsync(
+            context,
+            GenerationLifecycleStatus.Completed);
+
+        apiClient.AttemptNumbers.Should().Equal(1, 2, 3, 4, 5);
+        apiClient.LogicalGenerationIds.Distinct().Should().ContainSingle();
+        context.LifecycleEventHub.PublishedEvents
+            .Count(lifecycleEvent =>
+                lifecycleEvent.Status == GenerationLifecycleStatus.Started)
+            .Should()
+            .Be(1);
+        context.LifecycleEventHub.PublishedEvents
+            .Count(lifecycleEvent =>
+                lifecycleEvent.Status == GenerationLifecycleStatus.Completed)
+            .Should()
+            .Be(1);
+        context.LifecycleEventHub.PublishedEvents
+            .Should()
+            .NotContain(lifecycleEvent =>
+                lifecycleEvent.Status == GenerationLifecycleStatus.Failed);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_WithFiveRetryableFailures_PublishesOneFinalFailure()
+    {
+        RetrySequenceImageGenerationApiClient apiClient = new(
+            retryableFailureCount: 5,
+            succeedAfterFailures: false);
+        RunTestContext context = CreateRunContext(apiClient);
+
+        await EnqueueAndWaitForStatusAsync(
+            context,
+            GenerationLifecycleStatus.Failed);
+
+        apiClient.AttemptNumbers.Should().Equal(1, 2, 3, 4, 5);
+        context.LifecycleEventHub.PublishedEvents
+            .Count(lifecycleEvent =>
+                lifecycleEvent.Status == GenerationLifecycleStatus.Started)
+            .Should()
+            .Be(1);
+        context.LifecycleEventHub.PublishedEvents
+            .Count(lifecycleEvent =>
+                lifecycleEvent.Status == GenerationLifecycleStatus.Failed)
+            .Should()
+            .Be(1);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_WithNonRetryableFailure_DoesNotRetry()
+    {
+        RetrySequenceImageGenerationApiClient apiClient = new(
+            retryableFailureCount: 1,
+            succeedAfterFailures: false,
+            retryable: false);
+        RunTestContext context = CreateRunContext(apiClient);
+
+        await EnqueueAndWaitForStatusAsync(
+            context,
+            GenerationLifecycleStatus.Failed);
+
+        apiClient.AttemptNumbers.Should().ContainSingle().Which.Should().Be(1);
+    }
+
+    [Fact]
     public async Task EnqueueAsync_WhenCommandTokenCanceledAfterAcceptedRun_KeepsBackgroundGeneration()
     {
         using CancellationTokenSource cancellationTokenSource = new();
@@ -549,6 +620,8 @@ public sealed class GenerationRunDispatcherTests
 
         public async Task<GenerationBatchDto> CreateGenerationAsync(
             ImageGenerationRequestDto request,
+            Guid logicalGenerationId,
+            int attemptNumber,
             string providerCredential,
             CancellationToken ct = default)
         {
@@ -621,9 +694,85 @@ public sealed class GenerationRunDispatcherTests
     {
         public Task<GenerationBatchDto> CreateGenerationAsync(
             ImageGenerationRequestDto request,
+            Guid logicalGenerationId,
+            int attemptNumber,
             string providerCredential,
             CancellationToken ct = default)
         {
+            return Task.FromResult(CreateBatch(request));
+        }
+    }
+
+    private sealed class RetrySequenceImageGenerationApiClient
+        : IImageGenerationApiClient
+    {
+        public IReadOnlyList<int> AttemptNumbers
+        {
+            get
+            {
+                lock (_syncRoot)
+                {
+                    return _attemptNumbers.ToList();
+                }
+            }
+        }
+        public IReadOnlyList<Guid> LogicalGenerationIds
+        {
+            get
+            {
+                lock (_syncRoot)
+                {
+                    return _logicalGenerationIds.ToList();
+                }
+            }
+        }
+
+        private readonly object _syncRoot = new();
+        private readonly List<int> _attemptNumbers = [];
+        private readonly List<Guid> _logicalGenerationIds = [];
+        private readonly int _retryableFailureCount;
+        private readonly bool _succeedAfterFailures;
+        private readonly bool _retryable;
+
+        public RetrySequenceImageGenerationApiClient(
+            int retryableFailureCount,
+            bool succeedAfterFailures,
+            bool retryable = true)
+        {
+            _retryableFailureCount = retryableFailureCount;
+            _succeedAfterFailures = succeedAfterFailures;
+            _retryable = retryable;
+        }
+
+        public Task<GenerationBatchDto> CreateGenerationAsync(
+            ImageGenerationRequestDto request,
+            Guid logicalGenerationId,
+            int attemptNumber,
+            string providerCredential,
+            CancellationToken ct = default)
+        {
+            lock (_syncRoot)
+            {
+                _attemptNumbers.Add(attemptNumber);
+                _logicalGenerationIds.Add(logicalGenerationId);
+            }
+
+            if (attemptNumber <= _retryableFailureCount)
+            {
+                throw new GenerationAttemptException(
+                    "Transient provider failure.",
+                    GenerationProviderFailureErrorCodes.InternalError,
+                    _retryable);
+            }
+
+            if (!_succeedAfterFailures)
+            {
+                throw new GenerationAttemptException(
+                    "Terminal provider failure.",
+                    GenerationProviderFailureErrorCodes.InternalError,
+                    false);
+            }
+
             return Task.FromResult(CreateBatch(request));
         }
     }

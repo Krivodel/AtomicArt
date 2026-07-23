@@ -26,6 +26,19 @@
           "image/heic",
           "image/heif"
         ]
+      },
+      "transportLimits": {
+        "maxRequestBytes": 536870912,
+        "maxResponseBytes": 536870912,
+        "maxResultCount": 1,
+        "maxStatisticsBytes": 4194304,
+        "maxStructureDepth": 64,
+        "maxDiagnosticTextCharacters": 512,
+        "allowedResponseContentTypes": [
+          "image/jpeg",
+          "image/png",
+          "image/webp"
+        ]
       }
     },
     "standard-aspect-ratios": {

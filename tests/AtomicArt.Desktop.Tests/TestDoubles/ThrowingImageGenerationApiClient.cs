@@ -33,6 +33,8 @@ internal sealed class ThrowingImageGenerationApiClient : IImageGenerationApiClie
 
     public Task<GenerationBatchDto> CreateGenerationAsync(
         ImageGenerationRequestDto request,
+        Guid logicalGenerationId,
+        int attemptNumber,
         string providerCredential,
         CancellationToken ct = default)
     {

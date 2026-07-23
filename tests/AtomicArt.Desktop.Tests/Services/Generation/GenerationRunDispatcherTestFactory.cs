@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
@@ -10,7 +11,8 @@ internal static class GenerationRunDispatcherTestFactory
     public static GenerationRunDispatcher Create(
         IImageGenerationApiClient apiClient,
         IGenerationLifecycleEventHub lifecycleEventHub,
-        IGenerationConcurrencyLimiter? limiter = null)
+        IGenerationConcurrencyLimiter? limiter = null,
+        int maxAutomaticRetries = GenerationClientOptions.DefaultMaxAutomaticRetries)
     {
         ArgumentNullException.ThrowIfNull(apiClient);
         ArgumentNullException.ThrowIfNull(lifecycleEventHub);
@@ -21,6 +23,10 @@ internal static class GenerationRunDispatcherTestFactory
             new NanoBanana2GenerationLifecyclePublisher(lifecycleEventHub),
             new NullGenerationResultStorage(),
             TestGenerationActivityTrackerFactory.Create(),
-            NullLogger<GenerationRunDispatcher>.Instance);
+            NullLogger<GenerationRunDispatcher>.Instance,
+            Options.Create(new GenerationClientOptions
+            {
+                MaxAutomaticRetries = maxAutomaticRetries
+            }));
     }
 }

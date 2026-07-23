@@ -2,8 +2,8 @@ namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
 internal interface IGoogleInteractionsClient
 {
-    Task<string> CreateInteractionAsync(
-        string requestJson,
+    Task<GoogleInteractionsStreamingResponse> CreateInteractionStreamAsync(
+        HttpContent content,
         string providerCredential,
         CancellationToken ct);
 }

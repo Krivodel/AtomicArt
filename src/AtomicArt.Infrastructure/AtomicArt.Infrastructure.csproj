@@ -15,10 +15,6 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
   </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="Generation\Placeholders\**\*" />
-  </ItemGroup>
-
   <PropertyGroup>
     <GenerationModelCatalogMetadataPath>Generation\ModelMetadata\model-metadata.json</GenerationModelCatalogMetadataPath>
   </PropertyGroup>

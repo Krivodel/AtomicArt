@@ -38,13 +38,14 @@ public static class DependencyInjection
                 TestGenerationOptions.IsValid,
                 "TestGeneration configuration must include a positive MaxImageBytes value.");
 
-        services.AddScoped<IImageGenerationOutputPlanner, FakeImageGenerationOutputPlanner>();
-        services.AddSingleton<IPlaceholderImageProvider, FileSystemPlaceholderImageProvider>();
-        services.AddSingleton<GoogleInteractionsRequestBuilder>();
+        services.AddSingleton<FileSystemPlaceholderImageProvider>();
+        services.AddSingleton<IStreamingPlaceholderImageProvider>(serviceProvider =>
+            serviceProvider.GetRequiredService<FileSystemPlaceholderImageProvider>());
         services.AddSingleton<GoogleInteractionsResponseParser>();
-        services.AddScoped<IProviderImageGenerationContentProvider, GoogleImageGenerationContentProvider>();
-        services.AddScoped<IProviderImageGenerationContentProvider, FakeImageGenerationContentProvider>();
-        services.AddScoped<IImageGenerationContentProvider, RoutingImageGenerationContentProvider>();
+        services.AddSingleton<GoogleInteractionsFailureClassifier>();
+        services.AddScoped<IProviderStreamingImageGenerationProvider, GoogleStreamingImageGenerationProvider>();
+        services.AddScoped<IProviderStreamingImageGenerationProvider, FakeStreamingImageGenerationProvider>();
+        services.AddScoped<IStreamingImageGenerationProvider, RoutingStreamingImageGenerationProvider>();
         services.AddSingleton<IGenerationModelCatalogJsonSource, FileGenerationModelCatalogJsonSource>();
 
         return services;

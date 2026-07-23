@@ -6,6 +6,7 @@ using AtomicArt.Application;
 using AtomicArt.Api.Authentication;
 using AtomicArt.Api.ErrorHandling;
 using AtomicArt.Api.Filters;
+using AtomicArt.Api.Generation;
 using AtomicArt.Api.Middleware;
 using AtomicArt.Api.ModelMetadata;
 using AtomicArt.Contracts.Generation;
@@ -29,6 +30,16 @@ builder.Services
         ProviderCredentialAuthenticationDefaults.SchemeName,
         _ => { });
 builder.Services.AddAuthorization();
+builder.Services
+    .AddOptions<GenerationServerOptions>()
+    .Bind(builder.Configuration.GetSection(GenerationServerOptions.SectionName))
+    .Validate(
+        GenerationServerOptions.IsValid,
+        "Generation configuration must include a positive MaxConcurrentGenerations value.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IGenerationRequestConcurrencyLimiter, GenerationRequestConcurrencyLimiter>();
+builder.Services.AddSingleton<MultipartGenerationRequestReader>();
+builder.Services.AddSingleton<GenerationStreamingResponseWriter>();
 builder.Services.AddDomainServices();
 string modelMetadataPath = GenerationModelCatalogDefaults.ResolvePath(builder.Environment.ContentRootPath);
 TestGenerationOptions testGenerationOptions = builder.Configuration

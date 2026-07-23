@@ -16,28 +16,37 @@ public sealed class FileSystemPlaceholderImageProviderTests
     private const string ProviderModelId = "test";
 
     [Fact]
-    public async Task GetNextAsync_WithSupportedImageWithoutExtension_ReturnsImage()
+    public async Task OpenNextAsync_WithSupportedImage_ReturnsFileBackedStream()
     {
         using TemporaryDirectory directory = new(
             typeof(FileSystemPlaceholderImageProviderTests),
-            nameof(GetNextAsync_WithSupportedImageWithoutExtension_ReturnsImage));
-        string path = Path.Combine(directory.DirectoryPath, "any name");
+            nameof(OpenNextAsync_WithSupportedImage_ReturnsFileBackedStream));
+        string path = Path.Combine(directory.DirectoryPath, "streamed-image");
         await File.WriteAllBytesAsync(
             path,
             GenerationImageTestData.MinimalPngBytes,
             CancellationToken.None);
-        PlaceholderImage image = await GetNextImageAsync(directory.DirectoryPath);
+        FileSystemPlaceholderImageProvider provider = CreateProvider(
+            directory.DirectoryPath);
+
+        await using StreamingPlaceholderImage image =
+            await provider.OpenNextAsync(
+                ProviderModelId,
+                0,
+                CancellationToken.None);
 
         image.ContentType.Should().Be(GenerationImageContentTypes.Png);
-        image.Content.Should().Equal(GenerationImageTestData.MinimalPngBytes);
+        image.ContentLength.Should().Be(
+            GenerationImageTestData.MinimalPngBytes.LongLength);
+        image.Content.Should().BeOfType<FileStream>();
     }
 
     [Fact]
-    public async Task GetNextAsync_WithUnsupportedFiles_SkipsThem()
+    public async Task OpenNextAsync_WithUnsupportedFiles_SkipsThem()
     {
         using TemporaryDirectory directory = new(
             typeof(FileSystemPlaceholderImageProviderTests),
-            nameof(GetNextAsync_WithUnsupportedFiles_SkipsThem));
+            nameof(OpenNextAsync_WithUnsupportedFiles_SkipsThem));
         await File.WriteAllTextAsync(
             Path.Combine(directory.DirectoryPath, "notes.txt"),
             "not an image",
@@ -46,44 +55,69 @@ public sealed class FileSystemPlaceholderImageProviderTests
             Path.Combine(directory.DirectoryPath, "image.bin"),
             GenerationImageTestData.MinimalPngBytes,
             CancellationToken.None);
-        PlaceholderImage image = await GetNextImageAsync(directory.DirectoryPath);
+        FileSystemPlaceholderImageProvider provider = CreateProvider(
+            directory.DirectoryPath);
+
+        await using StreamingPlaceholderImage image =
+            await provider.OpenNextAsync(
+                ProviderModelId,
+                0,
+                CancellationToken.None);
 
         image.ContentType.Should().Be(GenerationImageContentTypes.Png);
     }
 
     [Fact]
-    public async Task GetNextAsync_WithEmptyDirectory_ThrowsProviderException()
+    public async Task OpenNextAsync_WithEmptyDirectory_ThrowsProviderException()
     {
         using TemporaryDirectory directory = new(
             typeof(FileSystemPlaceholderImageProviderTests),
-            nameof(GetNextAsync_WithEmptyDirectory_ThrowsProviderException));
+            nameof(OpenNextAsync_WithEmptyDirectory_ThrowsProviderException));
+        FileSystemPlaceholderImageProvider provider = CreateProvider(
+            directory.DirectoryPath);
 
-        await AssertUnavailableAsync(() => GetNextImageAsync(directory.DirectoryPath));
+        Func<Task> act = async () =>
+        {
+            await using StreamingPlaceholderImage image =
+                await provider.OpenNextAsync(
+                    ProviderModelId,
+                    0,
+                    CancellationToken.None);
+        };
+
+        await act.Should().ThrowAsync<ImageGenerationProviderException>()
+            .Where(exception =>
+                exception.FailureKind
+                    == ImageGenerationProviderFailureKind.Unavailable);
     }
 
     [Fact]
-    public async Task GetNextAsync_WithImageOverLimit_SkipsFile()
+    public async Task OpenNextAsync_WithImageOverLimit_SkipsFile()
     {
         using TemporaryDirectory directory = new(
             typeof(FileSystemPlaceholderImageProviderTests),
-            nameof(GetNextAsync_WithImageOverLimit_SkipsFile));
-        string path = Path.Combine(directory.DirectoryPath, "large");
+            nameof(OpenNextAsync_WithImageOverLimit_SkipsFile));
         await File.WriteAllBytesAsync(
-            path,
+            Path.Combine(directory.DirectoryPath, "large"),
             GenerationImageTestData.MinimalPngBytes,
             CancellationToken.None);
-        await AssertUnavailableAsync(() => GetNextImageAsync(
+        FileSystemPlaceholderImageProvider provider = CreateProvider(
             directory.DirectoryPath,
-            maxImageBytes: 4));
-    }
+            maxImageBytes: 4);
 
-    private static async Task AssertUnavailableAsync(Func<Task> action)
-    {
-        ArgumentNullException.ThrowIfNull(action);
+        Func<Task> act = async () =>
+        {
+            await using StreamingPlaceholderImage image =
+                await provider.OpenNextAsync(
+                    ProviderModelId,
+                    0,
+                    CancellationToken.None);
+        };
 
-        await action.Should().ThrowAsync<ImageGenerationProviderException>()
+        await act.Should().ThrowAsync<ImageGenerationProviderException>()
             .Where(exception =>
-                exception.FailureKind == ImageGenerationProviderFailureKind.Unavailable);
+                exception.FailureKind
+                    == ImageGenerationProviderFailureKind.Unavailable);
     }
 
     private static FileSystemPlaceholderImageProvider CreateProvider(
@@ -97,20 +131,5 @@ public sealed class FileSystemPlaceholderImageProviderTests
                 ImagesDirectory = imagesDirectory,
                 MaxImageBytes = maxImageBytes
             }));
-    }
-
-    private static async Task<PlaceholderImage> GetNextImageAsync(
-        string imagesDirectory,
-        long maxImageBytes = TestGenerationOptions.DefaultMaxImageBytes)
-    {
-        FileSystemPlaceholderImageProvider provider = CreateProvider(
-            imagesDirectory,
-            maxImageBytes);
-
-        return await provider.GetNextAsync(
-                ProviderModelId,
-                0,
-                CancellationToken.None)
-            .ConfigureAwait(false);
     }
 }

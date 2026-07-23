@@ -45,6 +45,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     private readonly ITextClipboardService _textClipboardService;
     private readonly GenerationPriceFormatter _priceFormatter;
     private readonly GenerationDurationFormatter _durationFormatter;
+    private readonly IGenerationCancellationService _generationCancellationService;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
     private IGenerationPanelPresetTarget? _generationPanelPresetTarget;
     private GenerationMetadataViewModel? _selectedMetadata;
@@ -70,7 +71,8 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         IViewModelErrorHandler errorHandler,
         ITextClipboardService textClipboardService,
         GenerationPriceFormatter priceFormatter,
-        GenerationDurationFormatter durationFormatter)
+        GenerationDurationFormatter durationFormatter,
+        IGenerationCancellationService? generationCancellationService = null)
     {
         ArgumentNullException.ThrowIfNull(fileRevealService);
         ArgumentNullException.ThrowIfNull(imageViewerService);
@@ -97,6 +99,8 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         _textClipboardService = textClipboardService;
         _priceFormatter = priceFormatter;
         _durationFormatter = durationFormatter;
+        _generationCancellationService = generationCancellationService
+            ?? NullGenerationCancellationService.Instance;
     }
 
     public void ConfigureImageViewerAttachments(
@@ -231,6 +235,12 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
                 if (!_itemsController.Contains(item))
                 {
                     return;
+                }
+
+                if (item.IsGenerating
+                    && item.CorrelationId is Guid logicalGenerationId)
+                {
+                    _generationCancellationService.Cancel(logicalGenerationId);
                 }
 
                 await DeleteItemAsync(item, operationCt);

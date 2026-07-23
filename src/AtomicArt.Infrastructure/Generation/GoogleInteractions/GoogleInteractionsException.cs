@@ -16,6 +16,23 @@ internal sealed class GoogleInteractionsException : ImageGenerationProviderExcep
     public GoogleInteractionsException(
         ImageGenerationProviderFailureKind failureKind,
         string message,
+        bool retryable)
+        : base(failureKind, message, retryable)
+    {
+    }
+
+    public GoogleInteractionsException(
+        ImageGenerationProviderFailureKind failureKind,
+        string message,
+        bool retryable,
+        Exception innerException)
+        : base(failureKind, message, retryable, innerException)
+    {
+    }
+
+    public GoogleInteractionsException(
+        ImageGenerationProviderFailureKind failureKind,
+        string message,
         GoogleInteractionsNoImageDiagnostics noImageDiagnostics)
         : base(failureKind, message)
     {

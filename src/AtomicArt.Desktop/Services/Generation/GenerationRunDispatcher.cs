@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
@@ -12,6 +13,8 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
     private readonly NanoBanana2GenerationLifecyclePublisher _lifecyclePublisher;
     private readonly IGenerationActivityTracker _generationActivityTracker;
     private readonly ILogger<GenerationRunDispatcher> _logger;
+    private readonly IGenerationCancellationService _cancellationService;
+    private readonly int _maxAutomaticRetries;
     private readonly object _syncRoot = new();
     private readonly HashSet<GenerationRunLifetime> _activeRunLifetimes = [];
     private bool _isDisposed;
@@ -23,6 +26,26 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         IGenerationResultStorage generationResultStorage,
         IGenerationActivityTracker generationActivityTracker,
         ILogger<GenerationRunDispatcher> logger)
+        : this(
+            concurrencyLimiter,
+            apiClient,
+            lifecyclePublisher,
+            generationResultStorage,
+            generationActivityTracker,
+            logger,
+            Options.Create(new GenerationClientOptions()))
+    {
+    }
+
+    public GenerationRunDispatcher(
+        IGenerationConcurrencyLimiter concurrencyLimiter,
+        IImageGenerationApiClient apiClient,
+        NanoBanana2GenerationLifecyclePublisher lifecyclePublisher,
+        IGenerationResultStorage generationResultStorage,
+        IGenerationActivityTracker generationActivityTracker,
+        ILogger<GenerationRunDispatcher> logger,
+        IOptions<GenerationClientOptions> options,
+        IGenerationCancellationService? cancellationService = null)
     {
         ArgumentNullException.ThrowIfNull(concurrencyLimiter);
         ArgumentNullException.ThrowIfNull(apiClient);
@@ -30,12 +53,16 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         ArgumentNullException.ThrowIfNull(generationResultStorage);
         ArgumentNullException.ThrowIfNull(generationActivityTracker);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
 
         _concurrencyLimiter = concurrencyLimiter;
         _apiClient = apiClient;
         _lifecyclePublisher = lifecyclePublisher;
         _generationActivityTracker = generationActivityTracker;
         _logger = logger;
+        _cancellationService = cancellationService
+            ?? NullGenerationCancellationService.Instance;
+        _maxAutomaticRetries = options.Value.MaxAutomaticRetries;
     }
 
     public Task EnqueueAsync(GenerationRunRequest request, CancellationToken ct)
@@ -48,6 +75,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         ImageGenerationRequestDto generationRequest = request.Request;
         string providerCredential = request.ProviderCredential;
         GenerationRunLifetime runLifetime = CreateRunLifetime();
+        _cancellationService.Register(correlationId, runLifetime.Cancel);
         _generationActivityTracker.Start(
             correlationId,
             GenerationActivityPhase.GenerationRequest);
@@ -130,8 +158,11 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
                 "Generation run {CorrelationId} started its API request.",
                 correlationId);
 
-            GenerationBatchDto batch = await _apiClient
-                .CreateGenerationAsync(request, providerCredential, ct)
+            GenerationBatchDto batch = await ExecuteAttemptsAsync(
+                    correlationId,
+                    request,
+                    providerCredential,
+                    ct)
                 .ConfigureAwait(false);
 
             _logger.LogInformation(
@@ -165,6 +196,46 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         }
     }
 
+    private async Task<GenerationBatchDto> ExecuteAttemptsAsync(
+        Guid logicalGenerationId,
+        ImageGenerationRequestDto request,
+        string providerCredential,
+        CancellationToken ct)
+    {
+        int maximumAttemptNumber = checked(_maxAutomaticRetries + 1);
+
+        for (int attemptNumber = 1;
+             attemptNumber <= maximumAttemptNumber;
+             attemptNumber++)
+        {
+            try
+            {
+                return await _apiClient
+                    .CreateGenerationAsync(
+                        request,
+                        logicalGenerationId,
+                        attemptNumber,
+                        providerCredential,
+                        ct)
+                    .ConfigureAwait(false);
+            }
+            catch (GenerationAttemptException exception)
+                when (exception.Retryable
+                    && attemptNumber < maximumAttemptNumber)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "Generation attempt {AttemptNumber} for logical generation {LogicalGenerationId} failed transiently and will be retried immediately. Safe error code {SafeErrorCode}.",
+                    attemptNumber,
+                    logicalGenerationId,
+                    exception.SafeErrorCode);
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Generation retry loop completed without a terminal result.");
+    }
+
     private GenerationRunLifetime CreateRunLifetime()
     {
         lock (_syncRoot)
@@ -190,6 +261,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         _generationActivityTracker.Complete(
             correlationId,
             GenerationActivityPhase.GenerationRequest);
+        _cancellationService.Unregister(correlationId);
         runLifetime.Dispose();
     }
 

@@ -2,7 +2,6 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Application.Common.Models;
-using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Application.Features.Generation.Services;

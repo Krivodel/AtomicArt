@@ -37,5 +37,14 @@ public sealed class TestGenerationModelCatalogAugmenterTests
         testMetadata.Attachments.MaxTotalBytes.Should()
             .Be(baseMetadata.Attachments.MaxTotalBytes);
         testMetadata.Thinking.Should().BeNull();
+        testMetadata.TransportLimits.Should().NotBeNull();
+        testMetadata.TransportLimits?.AllowedResponseContentTypes.Should()
+            .BeEquivalentTo(
+                GenerationImageFileFormats.All.Select(
+                    format => format.ContentType));
+        long encodedMaximumImageBytes =
+            ((options.MaxImageBytes + 2L) / 3L) * 4L;
+        testMetadata.TransportLimits?.MaxResponseBytes.Should()
+            .BeGreaterThan(encodedMaximumImageBytes);
     }
 }

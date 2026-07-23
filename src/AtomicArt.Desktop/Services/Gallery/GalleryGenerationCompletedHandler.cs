@@ -110,9 +110,20 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
                 .ConfigureAwait(false);
         }
 
-        string? trustedImagePath = GetLegacyTrustedImagePathOrDefault(item);
+        string? trustedImagePath = GetTrustedImagePathOrDefault(item);
+        string? thumbnailPath = IsGenerated(item)
+            ? await SaveThumbnailAndGetPathOrDefaultAsync(
+                    batchId,
+                    item,
+                    trustedImagePath,
+                    ct)
+                .ConfigureAwait(false)
+            : null;
 
-        return new GalleryCompletedItemUpdate(item, trustedImagePath, null);
+        return new GalleryCompletedItemUpdate(
+            item,
+            trustedImagePath,
+            thumbnailPath);
     }
 
     private async Task<GalleryCompletedItemUpdate> CreateGeneratedContentItemUpdateAsync(
@@ -182,7 +193,7 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         return new GalleryCompletedItemUpdate(item, trustedImagePath, thumbnailPath);
     }
 
-    private string? GetLegacyTrustedImagePathOrDefault(GenerationItemDto item)
+    private string? GetTrustedImagePathOrDefault(GenerationItemDto item)
     {
         string? trustedImagePath = _trustedImageFileService.GetTrustedImagePathOrDefault(
             item.ImagePath,

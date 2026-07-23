@@ -1,7 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 
@@ -13,79 +10,79 @@ internal sealed class GoogleInteractionsClient : IGoogleInteractionsClient
 {
     private const string ApiKeyHeaderName = "X-Goog-Api-Key";
     private const string InteractionsPath = "/v1beta/interactions";
-    private const string JsonMediaType = "application/json";
-    private const int MaxInternalServerErrorRetryCount = 4;
-
     private readonly HttpClient _httpClient;
     private readonly ILogger<GoogleInteractionsClient> _logger;
+    private readonly GoogleInteractionsFailureClassifier _failureClassifier;
+
+    internal GoogleInteractionsClient(
+        HttpClient httpClient,
+        ILogger<GoogleInteractionsClient> logger)
+        : this(
+            httpClient,
+            logger,
+            new GoogleInteractionsFailureClassifier())
+    {
+    }
 
     public GoogleInteractionsClient(
         HttpClient httpClient,
-        ILogger<GoogleInteractionsClient> logger)
+        ILogger<GoogleInteractionsClient> logger,
+        GoogleInteractionsFailureClassifier failureClassifier)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(failureClassifier);
 
         _httpClient = httpClient;
         _logger = logger;
+        _failureClassifier = failureClassifier;
     }
 
-    public async Task<string> CreateInteractionAsync(
-        string requestJson,
+    public async Task<GoogleInteractionsStreamingResponse> CreateInteractionStreamAsync(
+        HttpContent content,
         string providerCredential,
         CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(requestJson);
+        ArgumentNullException.ThrowIfNull(content);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerCredential);
 
-        int attemptNumber = 1;
-        Stopwatch stopwatch = Stopwatch.StartNew();
+        HttpRequestMessage request = CreateRequest(content, providerCredential);
 
-        _logger.LogInformation(
-            "Google Interactions API request started. Request size {RequestSize} characters.",
-            requestJson.Length);
-
-        while (true)
+        try
         {
-            using HttpRequestMessage request = CreateRequest(requestJson, providerCredential);
-            using HttpResponseMessage response = await SendAsync(request, ct).ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode)
-            {
-                string responseJson = await response.Content
-                    .ReadAsStringAsync(ct)
-                    .ConfigureAwait(false);
-
-                _logger.LogInformation(
-                    "Google Interactions API request completed with HTTP status {StatusCode} after {ElapsedMilliseconds} ms. Response size {ResponseSize} characters.",
-                    (int)response.StatusCode,
-                    stopwatch.ElapsedMilliseconds,
-                    responseJson.Length);
-
-                return responseJson;
-            }
-
-            GoogleInteractionsErrorDiagnostics diagnostics = await GoogleInteractionsErrorResponseReader
-                .ReadAsync(response.Content, ct)
+            HttpResponseMessage response = await SendAsync(request, ct)
                 .ConfigureAwait(false);
 
-            if (CanRetryInternalServerError(response.StatusCode, attemptNumber))
+            if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning(
-                    "Google Interactions API returned HTTP status {StatusCode}. Retrying request {RetryAttempt} of {MaxRetryAttempts}. Error body {ErrorBodyKind}; provider code {ProviderErrorCode}; provider status {ProviderErrorStatus}; provider message {ProviderErrorMessage}.",
-                    (int)response.StatusCode,
-                    attemptNumber,
-                    MaxInternalServerErrorRetryCount,
-                    diagnostics.BodyKind,
-                    diagnostics.ErrorCode,
-                    diagnostics.ErrorStatus,
-                    diagnostics.ErrorMessage);
+                GoogleInteractionsErrorDiagnostics diagnostics =
+                    await GoogleInteractionsErrorResponseReader
+                        .ReadAsync(response.Content, ct)
+                        .ConfigureAwait(false);
 
-                attemptNumber++;
-                continue;
+                try
+                {
+                    ThrowProviderError(response.StatusCode, diagnostics, 0L);
+                }
+                finally
+                {
+                    response.Dispose();
+                }
             }
 
-            ThrowProviderError(response.StatusCode, diagnostics, stopwatch.ElapsedMilliseconds);
+            Stream responseStream = await response.Content
+                .ReadAsStreamAsync(ct)
+                .ConfigureAwait(false);
+            request.Dispose();
+
+            return new GoogleInteractionsStreamingResponse(
+                response,
+                responseStream);
+        }
+        catch
+        {
+            request.Dispose();
+            throw;
         }
     }
 
@@ -121,26 +118,17 @@ internal sealed class GoogleInteractionsClient : IGoogleInteractionsClient
         }
     }
 
-    private HttpRequestMessage CreateRequest(
-        string requestJson,
+    private static HttpRequestMessage CreateRequest(
+        HttpContent content,
         string providerCredential)
     {
         HttpRequestMessage request = new(
             HttpMethod.Post,
             InteractionsPath);
         request.Headers.Add(ApiKeyHeaderName, providerCredential.Trim());
-        request.Content = new StringContent(requestJson, Encoding.UTF8, JsonMediaType);
-        request.Content.Headers.ContentType = new MediaTypeHeaderValue(JsonMediaType);
+        request.Content = content;
 
         return request;
-    }
-
-    private static bool CanRetryInternalServerError(
-        HttpStatusCode statusCode,
-        int attemptNumber)
-    {
-        return statusCode == HttpStatusCode.InternalServerError
-            && attemptNumber <= MaxInternalServerErrorRetryCount;
     }
 
     private void ThrowProviderError(
@@ -148,19 +136,8 @@ internal sealed class GoogleInteractionsClient : IGoogleInteractionsClient
         GoogleInteractionsErrorDiagnostics diagnostics,
         long elapsedMilliseconds)
     {
-        ImageGenerationProviderFailureKind failureKind = statusCode switch
-        {
-            HttpStatusCode.BadRequest => ImageGenerationProviderFailureKind.RequestRejected,
-            HttpStatusCode.Unauthorized => ImageGenerationProviderFailureKind.Authentication,
-            HttpStatusCode.Forbidden => ImageGenerationProviderFailureKind.Authorization,
-            HttpStatusCode.NotFound => ImageGenerationProviderFailureKind.ResourceNotFound,
-            (HttpStatusCode)429 => ImageGenerationProviderFailureKind.RateLimited,
-            HttpStatusCode.InternalServerError => ImageGenerationProviderFailureKind.InternalError,
-            HttpStatusCode.BadGateway => ImageGenerationProviderFailureKind.InvalidResponse,
-            HttpStatusCode.ServiceUnavailable => ImageGenerationProviderFailureKind.Unavailable,
-            HttpStatusCode.GatewayTimeout => ImageGenerationProviderFailureKind.Timeout,
-            _ => ImageGenerationProviderFailureKind.Unknown
-        };
+        ImageGenerationProviderFailureKind failureKind =
+            _failureClassifier.GetFailureKind(statusCode);
 
         _logger.LogWarning(
             "Google Interactions API request failed with HTTP status {StatusCode} mapped to provider failure {FailureKind} after {ElapsedMilliseconds} ms. Error body {ErrorBodyKind} with {ErrorBodyCharacterCount} characters; provider code {ProviderErrorCode}; provider status {ProviderErrorStatus}; provider message {ProviderErrorMessage}.",
@@ -175,6 +152,7 @@ internal sealed class GoogleInteractionsClient : IGoogleInteractionsClient
 
         throw new GoogleInteractionsException(
             failureKind,
-            "The generation provider returned an error.");
+            "The generation provider returned an error.",
+            _failureClassifier.IsRetryable(statusCode));
     }
 }

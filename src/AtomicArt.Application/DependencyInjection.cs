@@ -6,7 +6,6 @@ using FluentValidation;
 using MediatR;
 
 using AtomicArt.Application.Common.Behaviors;
-using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
@@ -34,6 +33,7 @@ public static class DependencyInjection
         services.AddSingleton<IAttachedImageFormatRegistry, AttachedImageFormatRegistry>();
         services.AddSingleton<IImageModelRegistry, ImageModelRegistry>();
         services.AddSingleton<GenerationUsagePriceCalculator>();
+        services.AddSingleton<StreamingGenerationRequestValidator>();
 
         return services;
     }

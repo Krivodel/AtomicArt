@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
@@ -23,7 +24,7 @@ public sealed class GoogleInteractionsClientTests
     private const string InternalServerErrorResponseJson = """{"error":"flex unavailable"}""";
 
     [Fact]
-    public async Task CreateInteractionAsync_WithProviderCredential_SendsApiKeyHeaderWithoutQueryString()
+    public async Task CreateInteractionStreamAsync_WithProviderCredential_SendsApiKeyHeaderWithoutQueryString()
     {
         using ClientTestContext context = CreateClient(HttpStatusCode.OK, CompletedResponseJson);
 
@@ -50,7 +51,7 @@ public sealed class GoogleInteractionsClientTests
     [InlineData(HttpStatusCode.ServiceUnavailable, ImageGenerationProviderFailureKind.Unavailable)]
     [InlineData(HttpStatusCode.GatewayTimeout, ImageGenerationProviderFailureKind.Timeout)]
     [InlineData((HttpStatusCode)418, ImageGenerationProviderFailureKind.Unknown)]
-    public async Task CreateInteractionAsync_WithProviderHttpError_MapsFailureKind(
+    public async Task CreateInteractionStreamAsync_WithProviderHttpError_MapsFailureKind(
         HttpStatusCode statusCode,
         ImageGenerationProviderFailureKind expectedFailureKind)
     {
@@ -64,7 +65,7 @@ public sealed class GoogleInteractionsClientTests
     }
 
     [Fact]
-    public async Task CreateInteractionAsync_WithStructuredProviderError_LogsUsefulDiagnostics()
+    public async Task CreateInteractionStreamAsync_WithStructuredProviderError_LogsUsefulDiagnostics()
     {
         const string responseJson =
             """{"error":{"code":403,"status":"PERMISSION_DENIED","message":"Requested model is unavailable in this region."}}""";
@@ -81,7 +82,7 @@ public sealed class GoogleInteractionsClientTests
     }
 
     [Fact]
-    public async Task CreateInteractionAsync_WithStringProviderErrorCode_DoesNotThrowSecondaryException()
+    public async Task CreateInteractionStreamAsync_WithStringProviderErrorCode_DoesNotThrowSecondaryException()
     {
         const string responseJson =
             """{"error":{"code":"INVALID_ARGUMENT","status":"INVALID_ARGUMENT","message":"Request format is invalid."}}""";
@@ -98,7 +99,7 @@ public sealed class GoogleInteractionsClientTests
     }
 
     [Fact]
-    public async Task CreateInteractionAsync_WithLetterOnlyBase64InProviderMessage_LogsEncodedData()
+    public async Task CreateInteractionStreamAsync_WithLetterOnlyBase64InProviderMessage_LogsEncodedData()
     {
         const string base64Fragment = "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB";
         string responseJson =
@@ -115,7 +116,7 @@ public sealed class GoogleInteractionsClientTests
     }
 
     [Fact]
-    public async Task CreateInteractionAsync_WithSensitiveProviderMessage_LogsProviderMessageWithoutRedaction()
+    public async Task CreateInteractionStreamAsync_WithSensitiveProviderMessage_LogsProviderMessageWithoutRedaction()
     {
         const string providerCredential = "provider-key-secret-123456";
         const string requestJson =
@@ -149,7 +150,7 @@ public sealed class GoogleInteractionsClientTests
     }
 
     [Fact]
-    public async Task CreateInteractionAsync_WithMalformedRequestStructure_LogsProviderMessage()
+    public async Task CreateInteractionStreamAsync_WithMalformedRequestStructure_LogsProviderMessage()
     {
         const string responseJson =
             """{"error":{"code":400,"status":"INVALID_ARGUMENT","message":"Potentially echoed private input."}}""";
@@ -165,7 +166,7 @@ public sealed class GoogleInteractionsClientTests
     }
 
     [Fact]
-    public async Task CreateInteractionAsync_WithLargeErrorBody_LogsFirst512MessageCharacters()
+    public async Task CreateInteractionStreamAsync_WithLargeErrorBody_LogsFirst512MessageCharacters()
     {
         string providerMessage = new('x', 20 * 1024);
         string responseJson = CreateProviderErrorResponseJson(
@@ -184,7 +185,7 @@ public sealed class GoogleInteractionsClientTests
     }
 
     [Fact]
-    public async Task CreateInteractionAsync_WithControlCharactersInMessage_LogsSingleLineMessage()
+    public async Task CreateInteractionStreamAsync_WithControlCharactersInMessage_LogsSingleLineMessage()
     {
         const string providerMessage = "First line\r\nSecond\tsegment\u0001done";
         string responseJson = CreateProviderErrorResponseJson(
@@ -206,7 +207,7 @@ public sealed class GoogleInteractionsClientTests
     [Theory]
     [InlineData("", "Empty")]
     [InlineData("{malformed response", "Malformed")]
-    public async Task CreateInteractionAsync_WithUnreadableProviderError_DoesNotThrowSecondaryException(
+    public async Task CreateInteractionStreamAsync_WithUnreadableProviderError_DoesNotThrowSecondaryException(
         string responseJson,
         string expectedBodyKind)
     {
@@ -222,27 +223,37 @@ public sealed class GoogleInteractionsClientTests
     }
 
     [Fact]
-    public async Task CreateInteractionAsync_WithInternalServerErrorThenSuccess_RetriesAndReturnsResponse()
+    public async Task CreateInteractionStreamAsync_WithInternalServerErrorThenSuccess_DoesNotRetryOnServer()
     {
         using ClientTestContext context = CreateInternalServerErrorClient(
             2,
             (HttpStatusCode.OK, CompletedResponseJson));
+        Func<Task> act = () => context.CreateInteractionStreamAsync();
 
-        await CreateInteractionAndAssertCompletedAsync(context);
+        ImageGenerationProviderException exception = (await act.Should()
+                .ThrowAsync<ImageGenerationProviderException>())
+            .Which;
 
-        context.Handler.Requests.Should().HaveCount(3);
+        exception.FailureKind.Should().Be(
+            ImageGenerationProviderFailureKind.InternalError);
+        exception.Retryable.Should().BeTrue();
+        context.Handler.Requests.Should().ContainSingle();
     }
 
     [Fact]
-    public async Task CreateInteractionAsync_WithPersistentInternalServerError_ThrowsAfterRetryAttempts()
+    public async Task CreateInteractionStreamAsync_WithPersistentInternalServerError_ReturnsRetryClassificationWithoutRetry()
     {
         using ClientTestContext context = CreateInternalServerErrorClient(5);
+        Func<Task> act = () => context.CreateInteractionStreamAsync();
 
-        await AssertProviderFailureAsync(
-            context,
+        ImageGenerationProviderException exception = (await act.Should()
+                .ThrowAsync<ImageGenerationProviderException>())
+            .Which;
+
+        exception.FailureKind.Should().Be(
             ImageGenerationProviderFailureKind.InternalError);
-
-        context.Handler.Requests.Should().HaveCount(5);
+        exception.Retryable.Should().BeTrue();
+        context.Handler.Requests.Should().ContainSingle();
     }
 
     private static ClientTestContext CreateClient(
@@ -337,7 +348,7 @@ public sealed class GoogleInteractionsClientTests
     private static async Task CreateInteractionAndAssertCompletedAsync(
         ClientTestContext context)
     {
-        string responseJson = await context.CreateInteractionAsync().ConfigureAwait(false);
+        string responseJson = await context.CreateInteractionStreamAsync().ConfigureAwait(false);
 
         responseJson.Should().Be(CompletedResponseJson);
     }
@@ -362,7 +373,7 @@ public sealed class GoogleInteractionsClientTests
             string providerCredential = TestGenerationCredentials.ProviderCredential)
     {
         using ClientTestContext context = CreateRecordingClient(statusCode, responseJson);
-        Func<Task> act = () => context.CreateInteractionAsync(requestJson, providerCredential);
+        Func<Task> act = () => context.CreateInteractionStreamAsync(requestJson, providerCredential);
 
         FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
             await act.Should()
@@ -377,7 +388,7 @@ public sealed class GoogleInteractionsClientTests
         ClientTestContext context,
         ImageGenerationProviderFailureKind expectedFailureKind)
     {
-        Func<Task> act = () => context.CreateInteractionAsync();
+        Func<Task> act = () => context.CreateInteractionStreamAsync();
 
         FluentAssertions.Specialized.ExceptionAssertions<ImageGenerationProviderException> assertions =
             await act.Should()
@@ -414,16 +425,29 @@ public sealed class GoogleInteractionsClientTests
             Client = new GoogleInteractionsClient(_httpClient, logger);
         }
 
-        public Task<string> CreateInteractionAsync(
+        public async Task<string> CreateInteractionStreamAsync(
             string? requestJson = null,
             string providerCredential = TestGenerationCredentials.ProviderCredential)
         {
             string request = requestJson ?? CreateRequestJson();
-
-            return Client.CreateInteractionAsync(
+            using StringContent content = new(
                 request,
-                providerCredential,
-                CancellationToken.None);
+                Encoding.UTF8,
+                "application/json");
+            await using GoogleInteractionsStreamingResponse response =
+                await Client.CreateInteractionStreamAsync(
+                        content,
+                        providerCredential,
+                        CancellationToken.None)
+                    .ConfigureAwait(false);
+            using StreamReader reader = new(
+                response.Content,
+                Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: true,
+                leaveOpen: true);
+
+            return await reader.ReadToEndAsync(CancellationToken.None)
+                .ConfigureAwait(false);
         }
 
         public void Dispose()

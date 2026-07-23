@@ -162,6 +162,13 @@ public static class DependencyInjection
 
     private static IServiceCollection AddGenerationServices(this IServiceCollection services)
     {
+        services
+            .AddOptions<GenerationClientOptions>()
+            .BindConfiguration(GenerationClientOptions.SectionName)
+            .Validate(
+                GenerationClientOptions.IsValid,
+                "Generation configuration must include valid concurrency and retry limits.")
+            .ValidateOnStart();
         services.AddSingleton<DesktopModelPanelRegistry>();
         services.AddSingleton<IImageModelOptionCatalog, ImageModelOptionCatalog>();
         services.AddGenerationImageFormatsByConvention();
@@ -178,11 +185,15 @@ public static class DependencyInjection
         services.AddSingleton<GalleryThumbnailSpecification>();
         services.AddSingleton<GalleryThumbnailImageFormat>();
         services.AddSingleton<IGenerationResultStorage, GenerationResultStorage>();
+        services.AddSingleton<IGenerationStreamingResultStore, GenerationStreamingResultStore>();
+        services.AddSingleton<IProviderResponseImageDecoder, JsonBase64ProviderResponseImageDecoder>();
+        services.AddSingleton<ProviderResponseImageDecoderRegistry>();
         services.AddSingleton<IGalleryThumbnailGenerator, GalleryThumbnailGenerator>();
         services.AddSingleton<IGalleryThumbnailStorage, GalleryThumbnailStorage>();
         services.AddSingleton<IPanelAttachmentStore, PanelAttachmentStore>();
         services.AddSingleton<IGenerationLifecycleEventHub, GenerationLifecycleEventHub>();
         services.AddSingleton<IGenerationActivityTracker, GenerationActivityTracker>();
+        services.AddSingleton<IGenerationCancellationService, GenerationCancellationService>();
         services.AddSingleton<IGenerationConcurrencyLimiter, GenerationConcurrencyLimiter>();
         services.AddSingleton<AttachedImagePreparationConcurrencyLimiter>();
         services.AddTransient<IAttachedImageCodec, SkiaAttachedImageCodec>();

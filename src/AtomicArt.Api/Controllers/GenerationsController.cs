@@ -2,11 +2,10 @@ using Microsoft.AspNetCore.Mvc;
 
 using MediatR;
 
-using AtomicArt.Api.ErrorHandling;
-using AtomicArt.Application.Common.Models;
-using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
+using AtomicArt.Api.Generation;
+using AtomicArt.Api.Filters;
+using AtomicArt.Application.Features.Generation.Commands.CreateStreamingGeneration;
 using AtomicArt.Application.Features.Generation.Models;
-using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Api.Controllers;
@@ -15,154 +14,104 @@ namespace AtomicArt.Api.Controllers;
 [Route(GenerationApiRoutes.Generations)]
 public sealed class GenerationsController : ControllerBase
 {
+    private const long GlobalMaximumRequestBytes = 1024L * 1024L * 1024L;
+
     private readonly IMediator _mediator;
-    private readonly GenerationModelCatalogDto _modelCatalog;
+    private readonly IGenerationRequestConcurrencyLimiter _concurrencyLimiter;
+    private readonly MultipartGenerationRequestReader _requestReader;
+    private readonly GenerationStreamingResponseWriter _responseWriter;
     private readonly ILogger<GenerationsController> _logger;
 
     public GenerationsController(
         IMediator mediator,
-        GenerationModelCatalogDto modelCatalog,
+        IGenerationRequestConcurrencyLimiter concurrencyLimiter,
+        MultipartGenerationRequestReader requestReader,
+        GenerationStreamingResponseWriter responseWriter,
         ILogger<GenerationsController> logger)
     {
-        ArgumentNullException.ThrowIfNull(mediator);
-        ArgumentNullException.ThrowIfNull(modelCatalog);
-        ArgumentNullException.ThrowIfNull(logger);
-
-        _mediator = mediator;
-        _modelCatalog = modelCatalog;
-        _logger = logger;
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _concurrencyLimiter = concurrencyLimiter
+            ?? throw new ArgumentNullException(nameof(concurrencyLimiter));
+        _requestReader = requestReader
+            ?? throw new ArgumentNullException(nameof(requestReader));
+        _responseWriter = responseWriter
+            ?? throw new ArgumentNullException(nameof(responseWriter));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(GenerationBatchDto), StatusCodes.Status200OK)]
+    [RequestSizeLimit(GlobalMaximumRequestBytes)]
+    [DisableFormValueModelBinding]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> CreateAsync(
-        [FromBody] ImageGenerationRequestDto request,
-        CancellationToken ct)
+    public async Task<IActionResult> CreateAsync(CancellationToken ct)
     {
-        string? providerCredential = Request.Headers[GenerationApiRoutes.ProviderApiKeyHeaderName]
-            .FirstOrDefault();
+        IDisposable? concurrencyLease = _concurrencyLimiter.TryAcquire();
 
-        if (string.IsNullOrWhiteSpace(providerCredential))
+        if (concurrencyLease is null)
         {
-            if (RequiresProviderCredential(request.ModelId))
+            return _responseWriter.CreateProblemResponse(
+                StatusCodes.Status429TooManyRequests,
+                GenerationProtocolErrorCodes.ConcurrencyLimitReached,
+                null,
+                false,
+                null,
+                null);
+        }
+
+        using (concurrencyLease)
+        {
+            try
+            {
+                await using MultipartGenerationRequest request =
+                    await _requestReader.ReadAsync(Request, ct)
+                        .ConfigureAwait(false);
+                string? providerCredential =
+                    Request.Headers[GenerationApiRoutes.ProviderApiKeyHeaderName]
+                        .FirstOrDefault();
+                CreateStreamingGenerationCommand command = new(
+                    request.Metadata,
+                    request.Attachments,
+                    providerCredential);
+                GenerationAttemptPreparation preparation = await _mediator
+                    .Send(command, ct)
+                    .ConfigureAwait(false);
+
+                if (preparation is not
+                    {
+                        IsSuccess: true,
+                        Attempt: { } attempt
+                    })
+                {
+                    return _responseWriter.CreatePreparationFailureResponse(
+                        preparation,
+                        request.Metadata);
+                }
+
+                await using (attempt)
+                {
+                    return await _responseWriter
+                        .WriteAsync(HttpContext, attempt, ct)
+                        .ConfigureAwait(false);
+                }
+            }
+            catch (GenerationMultipartRequestException exception)
             {
                 _logger.LogWarning(
-                    "Generation request was rejected at the API boundary because required provider credentials are missing.");
+                    exception,
+                    "Generation multipart request was rejected.");
 
-                ProblemDetails problemDetails = CreateProblemDetails(
-                    StatusCodes.Status401Unauthorized,
-                    "Provider credential не передан.",
-                    "Для выбранной модели требуется ключ провайдера.",
-                    null);
-
-                return StatusCode(StatusCodes.Status401Unauthorized, problemDetails);
+                return _responseWriter.CreateProblemResponse(
+                    StatusCodes.Status400BadRequest,
+                    exception.SafeErrorCode,
+                    null,
+                    false,
+                    exception.LogicalGenerationId,
+                    exception.AttemptNumber);
             }
         }
-
-        CreateImageGenerationCommand command = new(request, providerCredential);
-        Result<GenerationBatchDto> result = await _mediator
-            .Send(command, ct)
-            .ConfigureAwait(false);
-
-        return CreateResponse(
-            result,
-            "Ошибка запроса генерации.",
-            GetCreateFailureStatusCode);
-    }
-
-    private IActionResult CreateResponse<TResponse>(
-        Result<TResponse> result,
-        string problemTitle,
-        Func<Result<TResponse>, int> getFailureStatusCode)
-        where TResponse : class
-    {
-        if (result is { IsSuccess: true, Value: { } value })
-        {
-            return Ok(value);
-        }
-
-        int statusCode = getFailureStatusCode(result);
-        ProblemDetails problemDetails = CreateProblemDetails(
-            statusCode,
-            problemTitle,
-            ValidationProblemDetailsFactory.RequestValidationDetail,
-            result.ErrorCode);
-
-        return StatusCode(statusCode, problemDetails);
-    }
-
-    private static int GetCreateFailureStatusCode<TResponse>(Result<TResponse> result)
-    {
-        if (result.IsUnavailable)
-        {
-            return GetCreateUnavailableStatusCode(result.ErrorCode);
-        }
-
-        return result.Status switch
-        {
-            ResultStatus.ValidationError or ResultStatus.NotFound => StatusCodes.Status400BadRequest,
-            _ => StatusCodes.Status500InternalServerError
-        };
-    }
-
-    private static int GetCreateUnavailableStatusCode(string? errorCode)
-    {
-        if (!ImageGenerationProviderFailureCatalog.TryGetFailureKind(
-            errorCode,
-            out ImageGenerationProviderFailureKind failureKind))
-        {
-            return StatusCodes.Status500InternalServerError;
-        }
-
-        return failureKind switch
-        {
-            ImageGenerationProviderFailureKind.Authentication => StatusCodes.Status401Unauthorized,
-            ImageGenerationProviderFailureKind.Authorization => StatusCodes.Status403Forbidden,
-            ImageGenerationProviderFailureKind.RateLimited => StatusCodes.Status429TooManyRequests,
-            ImageGenerationProviderFailureKind.RequestRejected
-                or ImageGenerationProviderFailureKind.ResourceNotFound
-                or ImageGenerationProviderFailureKind.InternalError
-                or ImageGenerationProviderFailureKind.Unknown
-                => StatusCodes.Status502BadGateway,
-            ImageGenerationProviderFailureKind.InvalidResponse => StatusCodes.Status502BadGateway,
-            ImageGenerationProviderFailureKind.Timeout => StatusCodes.Status504GatewayTimeout,
-            ImageGenerationProviderFailureKind.Unavailable => StatusCodes.Status503ServiceUnavailable,
-            _ => StatusCodes.Status500InternalServerError
-        };
-    }
-
-    private bool RequiresProviderCredential(string modelId)
-    {
-        GenerationModelMetadataDto? model = _modelCatalog.Models?
-            .FirstOrDefault(candidate => string.Equals(candidate.Id, modelId, StringComparison.Ordinal));
-
-        return model is not null
-            && GenerationProviderCredentialRequirements
-                .Resolve(model.Provider)
-                .RequiredAtApiBoundary;
-    }
-
-    private static ProblemDetails CreateProblemDetails(
-        int statusCode,
-        string title,
-        string detail,
-        string? errorCode)
-    {
-        ProblemDetails problemDetails = new()
-        {
-            Status = statusCode,
-            Title = title,
-            Detail = detail
-        };
-
-        if (!string.IsNullOrWhiteSpace(errorCode))
-        {
-            problemDetails.Extensions[
-                GenerationApiRoutes.ProblemDetailsErrorCodeExtensionName] = errorCode;
-        }
-
-        return problemDetails;
     }
 }

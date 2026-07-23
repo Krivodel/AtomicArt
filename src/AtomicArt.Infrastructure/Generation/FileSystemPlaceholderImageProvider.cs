@@ -10,8 +10,11 @@ using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Infrastructure.Generation;
 
-internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvider
+internal sealed class FileSystemPlaceholderImageProvider
+    : IStreamingPlaceholderImageProvider
 {
+    private const int FileStreamBufferSize = 81920;
+
     private static readonly int MaxSignatureBytes = GenerationImageFileFormats.All
         .SelectMany(format => format.SignatureAlternatives)
         .SelectMany(alternative => alternative)
@@ -35,18 +38,21 @@ internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvi
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    protected override async Task<PlaceholderImage> GetNextCoreAsync(
+    public async Task<StreamingPlaceholderImage> OpenNextAsync(
         string modelId,
         int itemIndex,
         CancellationToken ct)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelId);
+        ArgumentOutOfRangeException.ThrowIfNegative(itemIndex);
+
         TestGenerationOptions options = _options.Value;
         List<string> candidatePaths = await CreateCandidatePathsAsync(options, ct)
             .ConfigureAwait(false);
         int candidateCount = candidatePaths.Count;
 
         _logger.LogInformation(
-            "Test image search completed with {CandidateCount} matching files.",
+            "Streaming test image search completed with {CandidateCount} matching files.",
             candidateCount);
 
         while (candidatePaths.Count > 0)
@@ -55,22 +61,26 @@ internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvi
             string path = candidatePaths[index];
             candidatePaths.RemoveAt(index);
 
-            PlaceholderImage? image = await TryReadImageAsync(path, options.MaxImageBytes, ct)
-                .ConfigureAwait(false);
+            StreamingPlaceholderImage? image =
+                await TryOpenStreamingImageAsync(
+                        path,
+                        options.MaxImageBytes,
+                        ct)
+                    .ConfigureAwait(false);
 
             if (image is not null)
             {
                 _logger.LogInformation(
-                    "Test image was read successfully. Content type: {ContentType}; size: {ContentLength} bytes.",
+                    "Test image was opened for streaming. Content type: {ContentType}; size: {ContentLength} bytes.",
                     image.ContentType,
-                    image.Content.Length);
+                    image.ContentLength);
 
                 return image;
             }
         }
 
         _logger.LogWarning(
-            "No supported test image was found among {CandidateCount} candidates.",
+            "No supported streaming test image was found among {CandidateCount} candidates.",
             candidateCount);
 
         throw new ImageGenerationProviderException(
@@ -165,38 +175,42 @@ internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvi
         }
     }
 
-    private async Task<PlaceholderImage?> TryReadImageAsync(
+    private async Task<StreamingPlaceholderImage?> TryOpenStreamingImageAsync(
         string path,
         long maxImageBytes,
         CancellationToken ct)
     {
+        FileStream? stream = null;
+
         try
         {
-            await using FileStream stream = OpenRead(path);
-
-            string? contentType = await GetSupportedContentTypeAsync(stream, maxImageBytes, ct)
+            stream = OpenRead(path);
+            string? contentType = await GetSupportedContentTypeAsync(
+                    stream,
+                    maxImageBytes,
+                    ct)
                 .ConfigureAwait(false);
 
             if (contentType is null)
             {
+                await stream.DisposeAsync().ConfigureAwait(false);
+
                 return null;
             }
 
-            stream.Position = 0;
-            byte[] content = await BoundedStreamReader
-                .ReadToEndAsync(
-                    stream,
-                    maxImageBytes,
-                    CreateImageTooLargeException,
-                    ct)
-                .ConfigureAwait(false);
+            stream.Position = 0L;
+            StreamingPlaceholderImage image = new(
+                contentType,
+                stream.Length,
+                stream);
+            stream = null;
 
-            return new PlaceholderImage(contentType, content);
+            return image;
         }
         catch (IOException exception)
         {
             _logger.LogWarning(
-                "Failed to read the selected test image. Failure category: {FailureType}.",
+                "Failed to open the selected test image for streaming. Failure category: {FailureType}.",
                 exception.GetType().Name);
 
             return null;
@@ -204,10 +218,17 @@ internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvi
         catch (UnauthorizedAccessException exception)
         {
             _logger.LogWarning(
-                "Access was denied while reading the selected test image. Failure category: {FailureType}.",
+                "Access was denied while opening the selected test image for streaming. Failure category: {FailureType}.",
                 exception.GetType().Name);
 
             return null;
+        }
+        finally
+        {
+            if (stream is not null)
+            {
+                await stream.DisposeAsync().ConfigureAwait(false);
+            }
         }
     }
 
@@ -231,7 +252,7 @@ internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvi
             FileMode.Open,
             FileAccess.Read,
             FileShare.ReadWrite | FileShare.Delete,
-            bufferSize: BoundedStreamReader.BufferSize,
+            bufferSize: FileStreamBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
     }
 
@@ -277,11 +298,6 @@ internal sealed class FileSystemPlaceholderImageProvider : PlaceholderImageProvi
         }
 
         return totalBytesRead;
-    }
-
-    private static IOException CreateImageTooLargeException()
-    {
-        return new IOException("The test image exceeds the allowed size.");
     }
 
     private static ImageGenerationProviderException CreateDirectoryReadException()

@@ -1,9 +1,7 @@
-using AtomicArt.Application.Features.Generation.Commands.CreateImageGeneration;
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
-using AtomicArt.Domain.Generation;
 
 namespace AtomicArt.Application.Tests.Generation;
 
@@ -52,14 +50,6 @@ internal static class MetadataImageModelTestFactory
 
     private static MetadataImageModelDefinitionFactory CreateDefinitionFactory()
     {
-        IGenerationModelRules[] modelRules = [new MetadataGenerationModelRules()];
-        GenerationModelRules rules = new(modelRules);
-        IReadOnlyList<IAttachedImageFormat> formats = GenerationImageFileFormats.All
-            .Select<GenerationImageFileFormatDescriptor, IAttachedImageFormat>(
-                format => new AttachedImageFormat(format))
-            .ToList();
-        IAttachedImageFormatRegistry formatRegistry = new AttachedImageFormatRegistry(formats);
-
-        return new MetadataImageModelDefinitionFactory(rules, formatRegistry);
+        return new MetadataImageModelDefinitionFactory();
     }
 }
