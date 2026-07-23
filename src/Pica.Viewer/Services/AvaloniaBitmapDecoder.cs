@@ -1,22 +1,50 @@
+using Avalonia;
 using Avalonia.Media.Imaging;
+using SkiaSharp;
 
 namespace Pica.Viewer.Services;
 
-internal static class AvaloniaBitmapDecoder
+internal sealed class AvaloniaBitmapDecoder : IImageDecoder
 {
-    internal static Bitmap DecodeFile(string fullPath, CancellationToken ct)
+    public PixelSize ReadPixelSize(Stream sourceStream, CancellationToken ct)
     {
-        return Decode(
-            () =>
-            {
-                using FileStream stream = File.OpenRead(fullPath);
+        ArgumentNullException.ThrowIfNull(sourceStream);
+        ct.ThrowIfCancellationRequested();
+        using SKManagedStream managedStream = new(sourceStream);
+        using SKCodec codec = SKCodec.Create(managedStream)
+            ?? throw new InvalidDataException("Failed to read the image dimensions.");
+        SKImageInfo imageInfo = codec.Info;
+        bool swapDimensions = codec.EncodedOrigin is SKEncodedOrigin.LeftTop
+            or SKEncodedOrigin.RightTop
+            or SKEncodedOrigin.RightBottom
+            or SKEncodedOrigin.LeftBottom;
+        ct.ThrowIfCancellationRequested();
 
-                return new Bitmap(stream);
-            },
+        return swapDimensions
+            ? new PixelSize(imageInfo.Height, imageInfo.Width)
+            : new PixelSize(imageInfo.Width, imageInfo.Height);
+    }
+
+    public Bitmap Decode(Stream sourceStream, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(sourceStream);
+
+        return DecodeBitmap(() => new Bitmap(sourceStream), ct);
+    }
+
+    public Bitmap DecodeToWidth(Stream sourceStream, int width, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(sourceStream);
+
+        return DecodeBitmap(
+            () => Bitmap.DecodeToWidth(
+                sourceStream,
+                width,
+                BitmapInterpolationMode.MediumQuality),
             ct);
     }
 
-    internal static Bitmap Decode(Func<Bitmap> decode, CancellationToken ct)
+    private static Bitmap DecodeBitmap(Func<Bitmap> decode, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         Bitmap bitmap = decode();

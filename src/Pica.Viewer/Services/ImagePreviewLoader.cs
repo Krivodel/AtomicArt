@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Media.Imaging;
 using Microsoft.Extensions.Logging;
-using SkiaSharp;
 
 using Pica.Protocol;
 
@@ -11,10 +10,14 @@ internal sealed class ImagePreviewLoader
 {
     internal const int PreviewDecodeWidth = 128;
 
+    private readonly IImageDecoderResolver _decoderResolver;
     private readonly ILogger<ImagePreviewLoader> _logger;
 
-    public ImagePreviewLoader(ILogger<ImagePreviewLoader> logger)
+    public ImagePreviewLoader(
+        IImageDecoderResolver decoderResolver,
+        ILogger<ImagePreviewLoader> logger)
     {
+        _decoderResolver = decoderResolver ?? throw new ArgumentNullException(nameof(decoderResolver));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -27,45 +30,27 @@ internal sealed class ImagePreviewLoader
         return await Task.Run(() => Load(item, ct), ct).ConfigureAwait(false);
     }
 
-    private static DecodedImagePreview DecodePreviewFile(
+    private DecodedImagePreview DecodePreviewFile(
         string previewPath,
         PixelSize sourcePixelSize,
         CancellationToken ct)
     {
-        Bitmap bitmap = AvaloniaBitmapDecoder.DecodeFile(previewPath, ct);
+        IImageDecoder decoder = _decoderResolver.Resolve(previewPath);
+        using FileStream previewStream = File.OpenRead(previewPath);
+        Bitmap bitmap = decoder.Decode(previewStream, ct);
 
         return new DecodedImagePreview(bitmap, sourcePixelSize);
     }
 
     private static DecodedImagePreview DecodeSourcePreview(
+        IImageDecoder decoder,
         Stream sourceStream,
         PixelSize sourcePixelSize,
         CancellationToken ct)
     {
-        Bitmap bitmap = AvaloniaBitmapDecoder.Decode(
-            () => Bitmap.DecodeToWidth(
-                sourceStream,
-                PreviewDecodeWidth,
-                BitmapInterpolationMode.MediumQuality),
-            ct);
+        Bitmap bitmap = decoder.DecodeToWidth(sourceStream, PreviewDecodeWidth, ct);
 
         return new DecodedImagePreview(bitmap, sourcePixelSize);
-    }
-
-    private static PixelSize ReadSourcePixelSize(Stream sourceStream)
-    {
-        using SKManagedStream managedStream = new(sourceStream);
-        using SKCodec codec = SKCodec.Create(managedStream)
-            ?? throw new InvalidDataException("Failed to read the image dimensions.");
-        SKImageInfo imageInfo = codec.Info;
-        bool swapDimensions = codec.EncodedOrigin is SKEncodedOrigin.LeftTop
-            or SKEncodedOrigin.RightTop
-            or SKEncodedOrigin.RightBottom
-            or SKEncodedOrigin.LeftBottom;
-
-        return swapDimensions
-            ? new PixelSize(imageInfo.Height, imageInfo.Width)
-            : new PixelSize(imageInfo.Width, imageInfo.Height);
     }
 
     private static string? GetExistingPreviewPath(PicaImageItem item)
@@ -83,8 +68,9 @@ internal sealed class ImagePreviewLoader
     private DecodedImagePreview Load(PicaImageItem item, CancellationToken ct)
     {
         string sourcePath = Path.GetFullPath(item.FilePath);
+        IImageDecoder decoder = _decoderResolver.Resolve(sourcePath);
         using FileStream sourceStream = File.OpenRead(sourcePath);
-        PixelSize sourcePixelSize = ReadSourcePixelSize(sourceStream);
+        PixelSize sourcePixelSize = decoder.ReadPixelSize(sourceStream, ct);
         sourceStream.Position = 0;
         string? existingPreviewPath = GetExistingPreviewPath(item);
 
@@ -104,6 +90,6 @@ internal sealed class ImagePreviewLoader
             }
         }
 
-        return DecodeSourcePreview(sourceStream, sourcePixelSize, ct);
+        return DecodeSourcePreview(decoder, sourceStream, sourcePixelSize, ct);
     }
 }

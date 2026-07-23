@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Headless;
+using Avalonia.Media.Imaging;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using SkiaSharp;
@@ -64,6 +65,44 @@ public sealed class ImagePreviewLoaderTests
         });
     }
 
+    [Fact]
+    public async Task LoadAsync_WithHeicSource_DecodesSmallPreviewAndPreservesSourceDimensions()
+    {
+        await DispatchAsync(async () =>
+        {
+            using ImagePreviewTestContext context = new(".heic");
+
+            DecodedImagePreview preview = await context.LoadAsync(CancellationToken.None);
+
+            preview.SourcePixelSize.Should().Be(
+                new PixelSize(HeicImageTestData.Width, HeicImageTestData.Height));
+            preview.Bitmap.PixelSize.Width.Should().BePositive();
+            preview.Bitmap.PixelSize.Height.Should().BePositive();
+            preview.Bitmap.Dispose();
+        });
+    }
+
+    [Fact]
+    public async Task FullResolutionLoadAsync_WithHeicSource_DecodesFullResolutionBitmap()
+    {
+        await DispatchAsync(async () =>
+        {
+            using PicaTemporaryDirectory temporaryDirectory = new();
+            string imagePath = Path.Combine(
+                temporaryDirectory.DirectoryPath,
+                "source.heic");
+            HeicImageTestData.Create(imagePath);
+            FullResolutionImageLoader loader = new(new ImageFormatRegistry());
+
+            using Bitmap bitmap = await loader.LoadAsync(
+                imagePath,
+                CancellationToken.None);
+
+            bitmap.PixelSize.Should().Be(
+                new PixelSize(HeicImageTestData.Width, HeicImageTestData.Height));
+        });
+    }
+
     private static void AssertSourcePixelSize(DecodedImagePreview preview)
     {
         preview.SourcePixelSize.Should().Be(new PixelSize(SourceWidth, SourceHeight));
@@ -97,12 +136,24 @@ public sealed class ImagePreviewLoaderTests
         private readonly ImagePreviewLoader _loader;
         private string? _previewPath;
 
-        public ImagePreviewTestContext()
+        public ImagePreviewTestContext(string extension = ".png")
         {
             _temporaryDirectory = new PicaTemporaryDirectory();
-            _loader = new ImagePreviewLoader(NullLogger<ImagePreviewLoader>.Instance);
-            SourcePath = Path.Combine(DirectoryPath, SourceFileName);
-            CreatePng(SourcePath, SourceWidth, SourceHeight);
+            _loader = new ImagePreviewLoader(
+                new ImageFormatRegistry(),
+                NullLogger<ImagePreviewLoader>.Instance);
+            SourcePath = Path.Combine(
+                DirectoryPath,
+                Path.ChangeExtension(SourceFileName, extension));
+
+            if (string.Equals(extension, PicaImageFormats.HeicExtension, StringComparison.Ordinal))
+            {
+                HeicImageTestData.Create(SourcePath);
+            }
+            else
+            {
+                CreatePng(SourcePath, SourceWidth, SourceHeight);
+            }
         }
 
         public void AddProvidedPreview(int width, int height)
@@ -114,8 +165,12 @@ public sealed class ImagePreviewLoaderTests
         public async Task<DecodedImagePreview> LoadAsync(CancellationToken ct)
         {
             PicaImageItem item = _previewPath is null
-                ? new PicaImageItem(ItemId, SourcePath, SourceFileName)
-                : new PicaImageItem(ItemId, SourcePath, SourceFileName, _previewPath);
+                ? new PicaImageItem(ItemId, SourcePath, Path.GetFileName(SourcePath))
+                : new PicaImageItem(
+                    ItemId,
+                    SourcePath,
+                    Path.GetFileName(SourcePath),
+                    _previewPath);
 
             return await _loader.LoadAsync(item, ct).ConfigureAwait(false);
         }

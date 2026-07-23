@@ -6,6 +6,7 @@
     <Version>1.0.3</Version>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <DesktopConfigurationFileName>appsettings.json</DesktopConfigurationFileName>
+    <NeutralLanguage>ru-RU</NeutralLanguage>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(PublishDir)' != ''">

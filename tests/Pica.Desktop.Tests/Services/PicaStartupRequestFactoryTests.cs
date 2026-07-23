@@ -144,6 +144,26 @@ public sealed class PicaStartupRequestFactoryTests
         }
     }
 
+    [Fact]
+    public async Task CreateAsync_WithAdjacentHeic_IncludesHeicImage()
+    {
+        using PicaTemporaryDirectory temporaryDirectory = new();
+        string selectedImagePath = Path.Combine(temporaryDirectory.DirectoryPath, "01.png");
+        string heicImagePath = Path.Combine(temporaryDirectory.DirectoryPath, "02.heic");
+        await CreateImageAsync(selectedImagePath, [1]);
+        await CreateImageAsync(heicImagePath, [2]);
+        SetLastWriteTimesNewestFirst(selectedImagePath, heicImagePath);
+        PicaStartupRequestFactory factory = CreateFactory();
+
+        PicaStartupRequest request = await factory.CreateAsync(
+            [selectedImagePath],
+            CancellationToken.None);
+
+        request.ViewerRequest.Items.Select(item => item.FileName)
+            .Should()
+            .Equal("01.png", "02.heic");
+    }
+
     private static async Task CreateImageAsync(string path, byte[] content)
     {
         await File.WriteAllBytesAsync(path, content);

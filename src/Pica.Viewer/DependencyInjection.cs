@@ -11,7 +11,11 @@ public static class DependencyInjection
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddSingleton<IImageFormatRegistry, ImageFormatRegistry>();
+        services.AddSingleton<ImageFormatRegistry>();
+        services.AddSingleton<IImageFormatRegistry>(provider =>
+            provider.GetRequiredService<ImageFormatRegistry>());
+        services.AddSingleton<IImageDecoderResolver>(provider =>
+            provider.GetRequiredService<ImageFormatRegistry>());
         services.AddSingleton<IImageViewerStateService, ImageViewerStateService>();
         services.AddSingleton<ImagePreviewLoader>();
         services.AddSingleton<FullResolutionImageLoader>();
