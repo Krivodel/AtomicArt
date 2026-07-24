@@ -19,18 +19,6 @@ public sealed class ImagePanMotionTests
     private static readonly Rect PanBounds = new(-100d, -100d, 100d, 100d);
 
     [Fact]
-    public void Move_WithImmediateMode_AppliesOffsetImmediately()
-    {
-        ImagePanMotion motion = CreateMotion(
-            new Point(-50d, -50d),
-            new Vector(20d, 10d),
-            ImagePanMotionMode.Immediate);
-
-        motion.CurrentOffset.Should().Be(new Point(-30d, -40d));
-        motion.IsActive.Should().BeFalse();
-    }
-
-    [Fact]
     public void Advance_WithSmoothMode_InterpolatesTowardTarget()
     {
         ImagePanMotion motion = CreateSmoothMotion();
@@ -103,14 +91,12 @@ public sealed class ImagePanMotionTests
 
     private static ImagePanMotion CreateMotion(
         Point initialOffset,
-        Vector movement,
-        ImagePanMotionMode mode)
+        Vector movement)
     {
         ImagePanMotion motion = new();
         motion.Begin(initialOffset, StartedAt);
         motion.Move(
             movement,
-            mode,
             PanBounds,
             StartedAt.AddMilliseconds(16d));
 
@@ -121,15 +107,13 @@ public sealed class ImagePanMotionTests
     {
         return CreateMotion(
             new Point(-50d, -50d),
-            new Vector(20d, 0d),
-            ImagePanMotionMode.Smooth);
+            new Vector(20d, 0d));
     }
 
     private static ImagePanMotion CreateInertiaMotion()
     {
         return CreateMotion(
             new Point(-80d, -50d),
-            new Vector(20d, 0d),
-            ImagePanMotionMode.SmoothWithInertia);
+            new Vector(20d, 0d));
     }
 }

@@ -34,12 +34,6 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private IReadOnlyList<ViewerSettingControl> CreateSettingControls()
     {
-        ViewerCheckBoxSettingControl panningInertiaControl = new(
-            "Инерция перемещения",
-            _settings.IsPanningInertiaEnabled,
-            ChangePanningInertiaAsync,
-            _settings.IsSmoothPanningEnabled);
-
         List<ViewerSettingControl> settingControls =
         [
             new ViewerChoiceSettingControl<int>(
@@ -48,10 +42,9 @@ public sealed partial class ImageViewerWindow : SukiWindow
                 _settings.MovementSpeed,
                 ChangeMovementSpeedAsync),
             new ViewerCheckBoxSettingControl(
-                "Плавное перемещение",
-                _settings.IsSmoothPanningEnabled,
-                isEnabled => ChangeSmoothPanningAsync(isEnabled, panningInertiaControl)),
-            panningInertiaControl,
+                "Инерция перемещения",
+                _settings.IsPanningInertiaEnabled,
+                ChangePanningInertiaAsync),
             new ViewerChoiceSettingControl<int>(
                 "Скорость масштабирования",
                 ViewerSettingChoices.SpeedOptions,
@@ -140,27 +133,9 @@ public sealed partial class ImageViewerWindow : SukiWindow
         await SaveCurrentStateAsync();
     }
 
-    private async Task ChangeSmoothPanningAsync(
-        bool isSmoothPanningEnabled,
-        ViewerCheckBoxSettingControl panningInertiaControl)
-    {
-        _settings.IsSmoothPanningEnabled = isSmoothPanningEnabled;
-        panningInertiaControl.IsEnabled = _settings.IsSmoothPanningEnabled;
-
-        if (!_settings.IsSmoothPanningEnabled)
-        {
-            _settings.IsPanningInertiaEnabled = false;
-            panningInertiaControl.SetValue(false);
-        }
-
-        ResetPanMotion();
-        await SaveCurrentStateAsync();
-    }
-
     private async Task ChangePanningInertiaAsync(bool isPanningInertiaEnabled)
     {
-        _settings.IsPanningInertiaEnabled = _settings.IsSmoothPanningEnabled
-            && isPanningInertiaEnabled;
+        _settings.IsPanningInertiaEnabled = isPanningInertiaEnabled;
 
         ResetPanMotion();
         await SaveCurrentStateAsync();

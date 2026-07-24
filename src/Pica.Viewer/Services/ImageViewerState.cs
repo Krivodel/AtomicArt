@@ -8,7 +8,6 @@ public sealed class ImageViewerState
     public bool ExpandOnDoubleClick { get; set; } = ViewerSettingsDefaults.ExpandOnDoubleClick;
     public bool IsFastLoadingEnabled { get; set; } = ViewerSettingsDefaults.FastLoadingEnabled;
     public bool AllowFreeZoomOut { get; set; } = ViewerSettingsDefaults.AllowFreeZoomOut;
-    public bool IsSmoothPanningEnabled { get; set; } = ViewerSettingsDefaults.SmoothPanningEnabled;
     public bool IsPanningInertiaEnabled { get; set; } = ViewerSettingsDefaults.PanningInertiaEnabled;
     public WindowResizeBehavior ResizeBehavior { get; set; } = ViewerSettingsDefaults.ResizeBehavior;
     public bool RememberWindowPlacement { get; set; } = ViewerSettingsDefaults.RememberWindowPlacement;
@@ -32,8 +31,6 @@ public sealed class ImageViewerState
         normalizedState.ZoomSpeed = ViewerSettingsDefaults.NormalizeSpeed(
             ZoomSpeed,
             ViewerSettingsDefaults.ZoomSpeed);
-        normalizedState.IsPanningInertiaEnabled =
-            IsSmoothPanningEnabled && IsPanningInertiaEnabled;
         normalizedState.ResizeBehavior =
             ViewerSettingsDefaults.NormalizeResizeBehavior(ResizeBehavior);
         normalizedState.IsWindowed = RememberWindowPlacement

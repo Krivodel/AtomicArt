@@ -8,7 +8,6 @@ internal static class ViewerSettingsDefaults
     public const bool ExpandOnDoubleClick = true;
     public const bool FastLoadingEnabled = false;
     public const bool AllowFreeZoomOut = false;
-    public const bool SmoothPanningEnabled = true;
     public const bool PanningInertiaEnabled = true;
     public const bool RememberWindowPlacement = true;
     public const WindowResizeBehavior ResizeBehavior = WindowResizeBehavior.AlwaysFitImage;

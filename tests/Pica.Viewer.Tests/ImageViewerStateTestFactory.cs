@@ -14,7 +14,6 @@ internal static class ImageViewerStateTestFactory
             ExpandOnDoubleClick = false,
             IsFastLoadingEnabled = true,
             AllowFreeZoomOut = true,
-            IsSmoothPanningEnabled = true,
             IsPanningInertiaEnabled = true,
             ResizeBehavior = WindowResizeBehavior.FitWhenWindowed,
             RememberWindowPlacement = true,

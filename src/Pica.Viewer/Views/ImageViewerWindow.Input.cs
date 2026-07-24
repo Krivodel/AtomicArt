@@ -59,11 +59,6 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
     private ImagePanMotionMode GetPanMotionMode()
     {
-        if (!_settings.IsSmoothPanningEnabled)
-        {
-            return ImagePanMotionMode.Immediate;
-        }
-
         return _settings.IsPanningInertiaEnabled
             ? ImagePanMotionMode.SmoothWithInertia
             : ImagePanMotionMode.Smooth;
@@ -92,7 +87,6 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _lastPointerPosition = pointerPosition;
         _panMotion.Move(
             imageDelta,
-            GetPanMotionMode(),
             bounds,
             DateTimeOffset.UtcNow);
         ApplyPanMotionOffset();

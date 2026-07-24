@@ -44,7 +44,6 @@ internal sealed class ImagePanMotion
 
     public void Move(
         Vector delta,
-        ImagePanMotionMode mode,
         Rect bounds,
         DateTimeOffset timestamp)
     {
@@ -66,14 +65,6 @@ internal sealed class ImagePanMotion
             (_velocity.X * (1d - VelocityBlend)) + (measuredVelocity.X * VelocityBlend),
             (_velocity.Y * (1d - VelocityBlend)) + (measuredVelocity.Y * VelocityBlend));
         SetTargetOffset(_targetOffset + delta, bounds);
-
-        if (mode == ImagePanMotionMode.Immediate)
-        {
-            CurrentOffset = _targetOffset;
-            _velocity = new Vector();
-            IsActive = false;
-            return;
-        }
 
         IsActive = GetDistance(CurrentOffset, _targetOffset) > StopDistance;
     }
@@ -101,12 +92,6 @@ internal sealed class ImagePanMotion
     {
         if (!IsActive)
         {
-            return;
-        }
-
-        if (mode == ImagePanMotionMode.Immediate)
-        {
-            Reset(CurrentOffset);
             return;
         }
 

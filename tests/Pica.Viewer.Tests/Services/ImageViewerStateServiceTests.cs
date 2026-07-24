@@ -27,7 +27,6 @@ public sealed class ImageViewerStateServiceTests
         restoredState.ExpandOnDoubleClick.Should().BeFalse();
         restoredState.IsFastLoadingEnabled.Should().BeTrue();
         restoredState.AllowFreeZoomOut.Should().BeTrue();
-        restoredState.IsSmoothPanningEnabled.Should().BeTrue();
         restoredState.IsPanningInertiaEnabled.Should().BeTrue();
         restoredState.ResizeBehavior.Should().Be(WindowResizeBehavior.FitWhenWindowed);
         restoredState.RememberWindowPlacement.Should().BeTrue();
@@ -86,24 +85,28 @@ public sealed class ImageViewerStateServiceTests
         restoredState.IsFilteringEnabled.Should().BeTrue();
         restoredState.IsFastLoadingEnabled.Should().BeFalse();
         restoredState.AllowFreeZoomOut.Should().BeFalse();
-        restoredState.IsSmoothPanningEnabled.Should().BeTrue();
         restoredState.IsPanningInertiaEnabled.Should().BeTrue();
     }
 
     [Fact]
-    public async Task SaveAsync_WithInertiaWithoutSmoothPanning_DisablesInertia()
+    public async Task LoadAsync_WithLegacyDisabledSmoothPanning_PreservesInertia()
     {
         using ImageViewerStateTestContext context = new();
-        ImageViewerState state = new()
-        {
-            IsSmoothPanningEnabled = false,
-            IsPanningInertiaEnabled = true
-        };
+        const string legacyStateJson = """
+            {
+              "isSmoothPanningEnabled": false,
+              "isPanningInertiaEnabled": true
+            }
+            """;
+        await File.WriteAllTextAsync(
+            context.StateFilePath,
+            legacyStateJson,
+            CancellationToken.None);
 
-        ImageViewerState restoredState = await SaveAndLoadAsync(context.Service, state);
+        ImageViewerState restoredState = await context.Service.LoadAsync(
+            CancellationToken.None);
 
-        restoredState.IsSmoothPanningEnabled.Should().BeFalse();
-        restoredState.IsPanningInertiaEnabled.Should().BeFalse();
+        restoredState.IsPanningInertiaEnabled.Should().BeTrue();
     }
 
     private static ImageViewerStateService CreateService(string stateFilePath)
