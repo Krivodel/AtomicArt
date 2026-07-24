@@ -7,6 +7,7 @@ using Xunit;
 
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Services;
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Infrastructure.Generation.GoogleInteractions;
 using AtomicArt.Tests.Common.Generation;
@@ -59,6 +60,20 @@ public sealed class DependencyInjectionTests
     }
 
     [Fact]
+    public void AddInfrastructureServices_WithGoogleInteractionsHttpClient_UsesGenerationAttemptTimeout()
+    {
+        IConfiguration configuration = CreateConfiguration();
+        using ServiceProvider serviceProvider = CreateServiceProvider(configuration);
+        IHttpClientFactory httpClientFactory =
+            serviceProvider.GetRequiredService<IHttpClientFactory>();
+        using HttpClient httpClient = httpClientFactory.CreateClient(
+            nameof(IGoogleInteractionsClient));
+
+        httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(
+            GenerationAttemptLimits.ProviderResponseTimeoutSeconds));
+    }
+
+    [Fact]
     public void AddInfrastructureServices_WithServices_RegistersTestGenerationOptions()
     {
         IConfiguration configuration = CreateConfiguration();
@@ -97,8 +112,7 @@ public sealed class DependencyInjectionTests
     {
         GoogleInteractionsOptions options = new()
         {
-            BaseUrl = baseUrl,
-            TimeoutSeconds = 30
+            BaseUrl = baseUrl
         };
 
         bool isValid = GoogleInteractionsOptions.IsValid(options);

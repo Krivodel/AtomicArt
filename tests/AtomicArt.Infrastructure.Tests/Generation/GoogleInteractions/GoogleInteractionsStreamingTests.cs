@@ -402,6 +402,115 @@ public sealed class GoogleInteractionsStreamingTests
     }
 
     [Fact]
+    public void Complete_WithLongErrorMessage_ReturnsInvalidResponse()
+    {
+        GoogleStreamingResponseAnalyzer analyzer = CreateAnalyzer(
+            maximumDiagnosticTextCharacters: 4);
+        analyzer.Append(
+            """{"error":{"message":"provider diagnostic"}}"""u8);
+
+        Action act = () => analyzer.Complete();
+
+        act.Should()
+            .Throw<GoogleInteractionsException>()
+            .Which.FailureKind.Should()
+            .Be(ImageGenerationProviderFailureKind.InvalidResponse);
+    }
+
+    [Fact]
+    public void Complete_WithLongModelTextAndImage_ExtractsImageMetadata()
+    {
+        string modelText = new('т', 1580);
+        string responseJson = $$"""
+        {
+          "status": "completed",
+          "steps": [
+            {
+              "type": "model_output",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{{modelText}}"
+                }
+              ]
+            },
+            {
+              "type": "model_output",
+              "content": [
+                {
+                  "type": "image",
+                  "mime_type": "image/jpeg",
+                  "data": "not-base64"
+                }
+              ]
+            }
+          ],
+          "usage": {
+            "total_input_tokens": 10,
+            "total_output_tokens": 20,
+            "total_tokens": 30
+          }
+        }
+        """;
+        GoogleStreamingResponseAnalyzer analyzer = CreateAnalyzer(
+            maximumDiagnosticTextCharacters: 512);
+        byte[] bytes = Encoding.UTF8.GetBytes(responseJson);
+
+        for (int offset = 0; offset < bytes.Length; offset += 23)
+        {
+            int count = Math.Min(23, bytes.Length - offset);
+            analyzer.Append(bytes.AsSpan(offset, count));
+        }
+
+        ProviderGenerationSummary summary = analyzer.Complete();
+
+        summary.State.Should().Be("completed");
+        summary.ResultCount.Should().Be(1);
+        summary.ContentTypes.Should().ContainSingle()
+            .Which.Should().Be(GenerationImageContentTypes.Jpeg);
+        summary.Usage?.TotalTokens.Should().Be(30);
+    }
+
+    [Fact]
+    public void Complete_WithLongModelTextWithoutImage_ReturnsInvalidResponse()
+    {
+        string modelText = new('т', 1580);
+        string responseJson = $$"""
+        {
+          "status": "completed",
+          "steps": [
+            {
+              "type": "model_output",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "{{modelText}}"
+                }
+              ]
+            }
+          ]
+        }
+        """;
+        GoogleStreamingResponseAnalyzer analyzer = CreateAnalyzer(
+            maximumDiagnosticTextCharacters: 512);
+        analyzer.Append(Encoding.UTF8.GetBytes(responseJson));
+
+        Action act = () => analyzer.Complete();
+
+        GoogleInteractionsException exception = act.Should()
+            .Throw<GoogleInteractionsException>()
+            .Which;
+        exception.FailureKind.Should().Be(
+            ImageGenerationProviderFailureKind.InvalidResponse);
+        exception.NoImageDiagnostics.Should().BeEquivalentTo(new
+        {
+            Category = "text_only",
+            TextContentLength = modelText.Length,
+            TextContentItemCount = 1
+        });
+    }
+
+    [Fact]
     public void Complete_WithLongThoughtSignature_DoesNotRetainSignature()
     {
         string signature = new('s', 4096);

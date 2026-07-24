@@ -181,8 +181,19 @@ internal sealed class GoogleStreamingResponseAnalyzer
         switch (element.ValueKind)
         {
             case JsonValueKind.Object:
+                bool isTextContent =
+                    GoogleInteractionsContentContract.IsTextContent(element);
+
                 foreach (JsonProperty property in element.EnumerateObject())
                 {
+                    if (isTextContent
+                        && property.NameEquals(
+                            GoogleInteractionsContentContract
+                                .TextPropertyName))
+                    {
+                        continue;
+                    }
+
                     ThrowIfDiagnosticTextExceedsLimit(property.Value);
                 }
 

@@ -31,9 +31,6 @@ public sealed class GenerationsEndpointIntegrationTests
             contentRoot.DirectoryPath,
             """
             {
-              "GoogleInteractions": {
-                "TimeoutSeconds": 900
-              },
               "Generation": {
                 "MaxConcurrentGenerations": 64
               },

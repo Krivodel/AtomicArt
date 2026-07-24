@@ -17,8 +17,7 @@ internal static class ApiTestAppSettingsJson
             }
           },
           "GoogleInteractions": {
-            "BaseUrl": {{JsonSerializer.Serialize(GoogleInteractionsOptions.DefaultBaseUrl)}},
-            "TimeoutSeconds": 100
+            "BaseUrl": {{JsonSerializer.Serialize(GoogleInteractionsOptions.DefaultBaseUrl)}}
           },
           "TestGeneration": {
             "Enabled": {{testGenerationEnabled.ToString().ToLowerInvariant()}},

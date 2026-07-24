@@ -463,14 +463,7 @@ internal sealed class GoogleInteractionsResponseParser
         bool isInsideModelOutput,
         bool isInsideContent)
     {
-        if (!TryGetStringProperty(
-            element,
-            GoogleInteractionsContentContract.TypePropertyName,
-            out string? type)
-            || !string.Equals(
-                type,
-                GoogleInteractionsContentContract.TextType,
-                StringComparison.OrdinalIgnoreCase)
+        if (!GoogleInteractionsContentContract.IsTextContent(element)
             || !TryGetStringProperty(
                 element,
                 GoogleInteractionsContentContract.TextPropertyName,

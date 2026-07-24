@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 
 using SukiUI.Toasts;
 
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
@@ -200,7 +201,12 @@ public static class DependencyInjection
         services.AddGenerationModelServicesByConvention();
         services.AddGenerationViewModelsByConvention();
         services.AddHttpClient<IGenerationModelCatalogApiClient, GenerationModelCatalogApiClient>();
-        services.AddHttpClient<IImageGenerationApiClient, ImageGenerationApiClient>();
+        services.AddHttpClient<IImageGenerationApiClient, ImageGenerationApiClient>(
+            httpClient =>
+            {
+                httpClient.Timeout = TimeSpan.FromSeconds(
+                    GenerationAttemptLimits.ProviderResponseTimeoutSeconds);
+            });
 
         return services;
     }

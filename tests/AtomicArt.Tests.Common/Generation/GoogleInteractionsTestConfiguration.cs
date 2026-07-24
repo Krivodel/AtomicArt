@@ -4,14 +4,9 @@ namespace AtomicArt.Tests.Common.Generation;
 
 public static class GoogleInteractionsTestConfiguration
 {
-    private const string TimeoutSecondsValue = "30";
-
     public static Dictionary<string, string?> Create()
     {
-        return new Dictionary<string, string?>(StringComparer.Ordinal)
-        {
-            [CreateKey(nameof(GoogleInteractionsOptions.TimeoutSeconds))] = TimeoutSecondsValue
-        };
+        return new Dictionary<string, string?>(StringComparer.Ordinal);
     }
 
     public static Dictionary<string, string?> CreateWithDefaultBaseUrl()

@@ -200,6 +200,19 @@ public sealed class DependencyInjectionTests
     }
 
     [Fact]
+    public void AddDesktopServices_WithImageGenerationHttpClient_UsesGenerationAttemptTimeout()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+        IHttpClientFactory httpClientFactory =
+            serviceProvider.GetRequiredService<IHttpClientFactory>();
+        using HttpClient httpClient = httpClientFactory.CreateClient(
+            nameof(IImageGenerationApiClient));
+
+        httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(
+            GenerationAttemptLimits.ProviderResponseTimeoutSeconds));
+    }
+
+    [Fact]
     public void AddDesktopServices_WithPicaViewer_ResolvesConstructorRegisteredServices()
     {
         using ServiceProvider serviceProvider = CreateServiceProvider();

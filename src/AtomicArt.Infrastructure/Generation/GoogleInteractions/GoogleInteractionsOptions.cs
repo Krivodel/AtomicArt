@@ -11,7 +11,6 @@ public sealed class GoogleInteractionsOptions
     public const int DefaultMaxDiagnosticTextCharacters = 512;
 
     public string BaseUrl { get; init; } = DefaultBaseUrl;
-    public int TimeoutSeconds { get; init; }
     public long MaxRequestBytes { get; init; } = DefaultMaxRequestBytes;
     public long MaxResponseBytes { get; init; } = DefaultMaxResponseBytes;
     public int MaxAnalyzedMetadataBytes { get; init; } =
@@ -28,7 +27,6 @@ public sealed class GoogleInteractionsOptions
         ArgumentNullException.ThrowIfNull(options);
 
         return IsValidBaseUrl(options.BaseUrl)
-            && options.TimeoutSeconds > 0
             && options.MaxRequestBytes > 0
             && options.MaxResponseBytes > 0
             && options.MaxAnalyzedMetadataBytes > 0

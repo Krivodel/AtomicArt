@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using AtomicArt.Application.Common.Interfaces;
 using AtomicArt.Application.Features.Generation.Interfaces;
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
@@ -77,7 +78,7 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(GoogleInteractionsOptions.SectionName))
             .Validate(
                 GoogleInteractionsOptions.IsValid,
-                "GoogleInteractions configuration must include valid BaseUrl and positive TimeoutSeconds.")
+                "GoogleInteractions configuration must include a valid BaseUrl and positive response limits.")
             .ValidateOnStart();
 
         services.AddHttpClient<IGoogleInteractionsClient, GoogleInteractionsClient>((serviceProvider, httpClient) =>
@@ -87,7 +88,8 @@ public static class DependencyInjection
                 .Value;
 
             httpClient.BaseAddress = new Uri(options.BaseUrl);
-            httpClient.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+            httpClient.Timeout = TimeSpan.FromSeconds(
+                GenerationAttemptLimits.ProviderResponseTimeoutSeconds);
         });
 
         return services;
