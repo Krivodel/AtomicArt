@@ -83,28 +83,40 @@ internal sealed class UiAnimationScheduler
             return Task.CompletedTask;
         }
 
-        if (durationMilliseconds <= 0)
-        {
-            _applyFrame(control, frames[^1]);
-            completed?.Invoke();
-            return Task.CompletedTask;
-        }
+        MotionFrame[] animationFrames = frames.ToArray();
 
-        TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        ActiveAnimation animation = new(
+        return AnimateProgressAsync(
             control,
-            frames.ToArray(),
-            TimeSpan.FromMilliseconds(durationMilliseconds),
-            TimeSpan.FromMilliseconds(Math.Max(0, delayMilliseconds)),
+            durationMilliseconds,
+            delayMilliseconds,
             ease,
-            completed,
-            completion);
+            progress => _applyFrame(
+                control,
+                Interpolate(animationFrames, progress)),
+            completed);
+    }
 
-        _applyFrame(control, animation.Frames[0]);
-        _animations.Add(animation);
-        StartIfNeeded();
+    public Task AnimateValueAsync(
+        Control control,
+        double fromValue,
+        double toValue,
+        int durationMilliseconds,
+        int delayMilliseconds,
+        Func<double, double> ease,
+        Action<double> applyValue,
+        Action? completed = null)
+    {
+        ArgumentNullException.ThrowIfNull(control);
+        ArgumentNullException.ThrowIfNull(ease);
+        ArgumentNullException.ThrowIfNull(applyValue);
 
-        return completion.Task;
+        return AnimateProgressAsync(
+            control,
+            durationMilliseconds,
+            delayMilliseconds,
+            ease,
+            progress => applyValue(Lerp(fromValue, toValue, progress)),
+            completed);
     }
 
     private static MotionFrame Interpolate(IReadOnlyList<MotionFrame> frames, double progress)
@@ -131,6 +143,38 @@ internal sealed class UiAnimationScheduler
     private static double Lerp(double from, double to, double amount)
     {
         return from + ((to - from) * amount);
+    }
+
+    private Task AnimateProgressAsync(
+        Control control,
+        int durationMilliseconds,
+        int delayMilliseconds,
+        Func<double, double> ease,
+        Action<double> applyProgress,
+        Action? completed)
+    {
+        if (durationMilliseconds <= 0)
+        {
+            applyProgress(1d);
+            completed?.Invoke();
+            return Task.CompletedTask;
+        }
+
+        TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ActiveAnimation animation = new(
+            control,
+            TimeSpan.FromMilliseconds(durationMilliseconds),
+            TimeSpan.FromMilliseconds(Math.Max(0, delayMilliseconds)),
+            ease,
+            applyProgress,
+            completed,
+            completion);
+
+        animation.ApplyProgress(0d);
+        _animations.Add(animation);
+        StartIfNeeded();
+
+        return completion.Task;
     }
 
     private void StartIfNeeded()
@@ -161,8 +205,7 @@ internal sealed class UiAnimationScheduler
                 (elapsed - animation.Delay).TotalMilliseconds / animation.Duration.TotalMilliseconds,
                 0d,
                 1d);
-            MotionFrame frame = Interpolate(animation.Frames, animation.Ease(rawProgress));
-            _applyFrame(animation.Control, frame);
+            animation.ApplyProgress(animation.Ease(rawProgress));
 
             if (rawProgress >= 1d)
             {

@@ -11,6 +11,11 @@ namespace AtomicArt.Desktop.Controls.Overlays;
 
 public partial class ModalOverlayPresenterControl : UserControl
 {
+    public double BlurIntensity
+    {
+        get => GetValue(BlurIntensityProperty);
+        set => SetValue(BlurIntensityProperty, value);
+    }
     public object? Body
     {
         get => GetValue(BodyProperty);
@@ -32,6 +37,11 @@ public partial class ModalOverlayPresenterControl : UserControl
         set => SetValue(OrderProperty, value);
     }
 
+    public static readonly StyledProperty<double> BlurIntensityProperty =
+        AvaloniaProperty.Register<ModalOverlayPresenterControl, double>(
+            nameof(BlurIntensity),
+            defaultValue: 1d,
+            inherits: true);
     public static readonly StyledProperty<object?> BodyProperty =
         AvaloniaProperty.Register<ModalOverlayPresenterControl, object?>(nameof(Body));
     public static readonly StyledProperty<ICommand?> CloseCommandProperty =
@@ -43,8 +53,10 @@ public partial class ModalOverlayPresenterControl : UserControl
 
     private const int BackdropAnimationDurationMilliseconds = 100;
     private const int PanelAnimationDurationMilliseconds = 160;
+    private const double HiddenBlurIntensity = 0d;
     private const double PanelHiddenOffsetY = 16d;
     private const double PanelHiddenScale = 0.98d;
+    private const double VisibleBlurIntensity = 1d;
 
     private static readonly MotionFrame BackdropHiddenFrame = new(0d, 0d, 1d, 0d, 0d);
     private static readonly MotionFrame PanelHiddenFrame = new(
@@ -138,8 +150,16 @@ public partial class ModalOverlayPresenterControl : UserControl
     private void CancelAnimations()
     {
         _animationVersion++;
-        _animationScheduler?.Cancel(
-            new Control[] { Backdrop, BodyPresenter, BodyTransitionSnapshotHost });
+        List<Control> animationTargets =
+        [
+            this,
+            Backdrop,
+            BodyPresenter,
+            BodyTransitionSnapshotHost,
+            BodyTransitionBlur
+        ];
+
+        _animationScheduler?.Cancel(animationTargets);
     }
 
     private void CompleteClosingAnimation(int animationVersion)
@@ -163,16 +183,18 @@ public partial class ModalOverlayPresenterControl : UserControl
         int animationVersion = BeginAnimation();
         BodyPresenter.IsHitTestVisible = false;
         Backdrop.IsEnabled = false;
+        ModalOverlayControl? panel = FindPanel();
 
         UiAnimationScheduler? animationScheduler = _animationScheduler;
         if (animationScheduler is null)
         {
+            BlurIntensity = HiddenBlurIntensity;
             CompleteClosingAnimation(animationVersion);
             return;
         }
 
         MotionFrameApplier.Apply(BodyPresenter, MotionFrame.Identity);
-        Control panelAnimationTarget = PrepareClosingAnimationTarget();
+        Control panelAnimationTarget = PrepareClosingAnimationTarget(panel);
         _ = animationScheduler.AnimateAsync(
             Backdrop,
             new MotionFrame[] { MotionFrame.Identity, BackdropHiddenFrame },
@@ -186,12 +208,21 @@ public partial class ModalOverlayPresenterControl : UserControl
             0,
             MotionEasing.EaseOut,
             () => CompleteClosingAnimation(animationVersion));
+        StartBlurAnimation(
+            animationScheduler,
+            BlurIntensity,
+            HiddenBlurIntensity,
+            MotionEasing.EaseOut);
     }
 
     private void StartOpeningAnimation()
     {
+        double initialBlurIntensity = IsVisible
+            ? BlurIntensity
+            : HiddenBlurIntensity;
         CancelAnimations();
         ReleaseTransitionSnapshot();
+        BlurIntensity = initialBlurIntensity;
         IsVisible = true;
         BodyPresenter.IsHitTestVisible = true;
         Backdrop.IsEnabled = true;
@@ -201,6 +232,8 @@ public partial class ModalOverlayPresenterControl : UserControl
         {
             MotionFrameApplier.Apply(Backdrop, MotionFrame.Identity);
             MotionFrameApplier.Apply(BodyPresenter, MotionFrame.Identity);
+            BlurIntensity = VisibleBlurIntensity;
+
             return;
         }
 
@@ -216,17 +249,18 @@ public partial class ModalOverlayPresenterControl : UserControl
             PanelAnimationDurationMilliseconds,
             0,
             MotionEasing.EaseMaterial);
+        StartBlurAnimation(
+            animationScheduler,
+            initialBlurIntensity,
+            VisibleBlurIntensity,
+            MotionEasing.EaseMaterial);
     }
 
-    private Control PrepareClosingAnimationTarget()
+    private Control PrepareClosingAnimationTarget(ModalOverlayControl? panel)
     {
         ReleaseTransitionSnapshot();
 
         TopLevel? topLevel = TopLevel.GetTopLevel(this);
-        ModalOverlayControl? panel = BodyPresenter
-            .GetVisualDescendants()
-            .OfType<ModalOverlayControl>()
-            .SingleOrDefault();
         if (topLevel is null || panel is null)
         {
             return BodyPresenter;
@@ -240,7 +274,8 @@ public partial class ModalOverlayPresenterControl : UserControl
                 this,
                 BodyTransitionSnapshotHost,
                 BodyTransitionSnapshotClip,
-                BodyTransitionSnapshot);
+                BodyTransitionSnapshot,
+                BodyTransitionBlur);
         }
         catch (Exception ex)
         {
@@ -258,6 +293,30 @@ public partial class ModalOverlayPresenterControl : UserControl
         BodyPresenter.IsVisible = false;
 
         return BodyTransitionSnapshotHost;
+    }
+
+    private void StartBlurAnimation(
+        UiAnimationScheduler animationScheduler,
+        double fromIntensity,
+        double toIntensity,
+        Func<double, double> easing)
+    {
+        _ = animationScheduler.AnimateValueAsync(
+            this,
+            fromIntensity,
+            toIntensity,
+            PanelAnimationDurationMilliseconds,
+            0,
+            easing,
+            value => BlurIntensity = value);
+    }
+
+    private ModalOverlayControl? FindPanel()
+    {
+        return BodyPresenter
+            .GetVisualDescendants()
+            .OfType<ModalOverlayControl>()
+            .SingleOrDefault();
     }
 
     private void ReleaseTransitionSnapshot()

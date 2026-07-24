@@ -1,28 +1,44 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+             xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:system="using:System"
              x:Class="AtomicArt.Desktop.Controls.Generation.ImageDropOverlayControl"
              x:Name="Root"
              x:DataType="controls:ImageDropOverlayControl"
              ClipToBounds="True"
              IsHitTestVisible="False">
+    <UserControl.Resources>
+        <system:TimeSpan x:Key="ImageDropOverlayFadeDuration">0:0:0.18</system:TimeSpan>
+        <CubicEaseOut x:Key="ImageDropOverlayEasing" />
+    </UserControl.Resources>
+
     <Grid>
         <Grid x:Name="OverlayChrome"
               Opacity="0">
             <Grid.Transitions>
                 <Transitions>
-                    <DoubleTransition Property="Opacity"
-                                      Duration="0:0:0.18"
-                                      Easing="CubicEaseOut" />
+                    <DoubleTransition Duration="{StaticResource ImageDropOverlayFadeDuration}"
+                                      Easing="{StaticResource ImageDropOverlayEasing}"
+                                      Property="Opacity" />
                 </Transitions>
             </Grid.Transitions>
 
-            <Border CornerRadius="{Binding #Root.BackdropCornerRadius}">
-                <Border.Background>
-                    <SolidColorBrush Color="{DynamicResource SukiDialogBackground}"
-                                     Opacity="{StaticResource OverlayBackdropOpacity}" />
-                </Border.Background>
+            <Border ClipToBounds="True"
+                    CornerRadius="{Binding #Root.BackdropCornerRadius}">
+                <overlays:BlurBackdropControl x:Name="BackdropBlur"
+                                               BlurRadius="{DynamicResource ImageDropOverlayBlurRadius}"
+                                               Intensity="0"
+                                               IsDynamic="{Binding #Root.IsActive}">
+                    <overlays:BlurBackdropControl.Transitions>
+                        <Transitions>
+                            <DoubleTransition Duration="{StaticResource ImageDropOverlayFadeDuration}"
+                                              Easing="{StaticResource ImageDropOverlayEasing}"
+                                              Property="Intensity" />
+                        </Transitions>
+                    </overlays:BlurBackdropControl.Transitions>
+                </overlays:BlurBackdropControl>
             </Border>
 
             <controls:ImageDropDashedBorderControl Margin="10"
@@ -38,12 +54,12 @@
                     Spacing="7">
             <StackPanel.Transitions>
                 <Transitions>
-                    <DoubleTransition Property="Opacity"
-                                      Duration="0:0:0.18"
-                                      Easing="CubicEaseOut" />
-                    <TransformOperationsTransition Property="RenderTransform"
-                                                   Duration="0:0:0.22"
-                                                   Easing="CubicEaseOut" />
+                    <DoubleTransition Duration="{StaticResource ImageDropOverlayFadeDuration}"
+                                      Easing="{StaticResource ImageDropOverlayEasing}"
+                                      Property="Opacity" />
+                    <TransformOperationsTransition Duration="0:0:0.22"
+                                                   Easing="{StaticResource ImageDropOverlayEasing}"
+                                                   Property="RenderTransform" />
                 </Transitions>
             </StackPanel.Transitions>
 

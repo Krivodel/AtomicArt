@@ -89,6 +89,30 @@ public sealed class UiAnimationSchedulerTests
         context.Scenario.Scheduler.HasActiveAnimations.Should().BeFalse();
     }
 
+    [Fact]
+    public void AnimateValueAsync_HalfwayThroughAnimation_InterpolatesScalarValue()
+    {
+        TestUiFrameScheduler frameScheduler = new();
+        UiAnimationScheduler scheduler = new(frameScheduler);
+        Border animationTarget = new();
+        List<double> appliedValues = [];
+        scheduler.AnimateValueAsync(
+            animationTarget,
+            4d,
+            12d,
+            100,
+            0,
+            Identity,
+            appliedValues.Add);
+
+        frameScheduler.RunNextFrame(TimeSpan.Zero);
+        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(50d));
+
+        appliedValues[0].Should().Be(4d);
+        appliedValues[^1].Should().Be(8d);
+        scheduler.HasActiveAnimations.Should().BeTrue();
+    }
+
     private static SchedulerScenario CreateScenario()
     {
         TestUiFrameScheduler frameScheduler = new();

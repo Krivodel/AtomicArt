@@ -22,10 +22,14 @@
                 IsVisible="False">
             <Border x:Name="BodyTransitionSnapshotClip"
                     ClipToBounds="True">
-                <Image x:Name="BodyTransitionSnapshot"
-                       HorizontalAlignment="Stretch"
-                       VerticalAlignment="Stretch"
-                       Stretch="Fill" />
+                <Grid>
+                    <overlays:BlurBackdropControl x:Name="BodyTransitionBlur"
+                                                  Intensity="{Binding #Root.BlurIntensity}" />
+                    <Image x:Name="BodyTransitionSnapshot"
+                           HorizontalAlignment="Stretch"
+                           VerticalAlignment="Stretch"
+                           Stretch="Fill" />
+                </Grid>
             </Border>
         </Border>
     </Grid>

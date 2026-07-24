@@ -3,15 +3,16 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Avalonia.Styling;
-using Avalonia.VisualTree;
-
-using SukiUI.Controls.GlassMorphism;
 
 namespace AtomicArt.Desktop.Controls.Overlays;
 
 public sealed class ModalOverlayControl : TemplatedControl
 {
+    public double BlurIntensity
+    {
+        get => GetValue(BlurIntensityProperty);
+        set => SetValue(BlurIntensityProperty, value);
+    }
     public double BlurRadius
     {
         get => GetValue(BlurRadiusProperty);
@@ -38,6 +39,8 @@ public sealed class ModalOverlayControl : TemplatedControl
         set => SetValue(TitleProperty, value);
     }
 
+    public static readonly StyledProperty<double> BlurIntensityProperty =
+        ModalOverlayPresenterControl.BlurIntensityProperty.AddOwner<ModalOverlayControl>();
     public static readonly StyledProperty<double> BlurRadiusProperty =
         AvaloniaProperty.Register<ModalOverlayControl, double>(nameof(BlurRadius));
     public static readonly StyledProperty<object?> BodyProperty =
@@ -49,93 +52,14 @@ public sealed class ModalOverlayControl : TemplatedControl
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<ModalOverlayControl, string?>(nameof(Title));
 
-    private const double SukiBlurSizeDivisor = 42d;
-    private const double SukiLightThemeBaseBlurRadius = 50d;
-    private const double SukiMinimumBaseBlurRadius = 20d;
+    internal BlurBackdropControl? BlurBackdrop => _blurBackdrop;
 
-    private BlurBackground? _blurBackground;
-
-    protected override Size ArrangeOverride(Size finalSize)
-    {
-        Size arrangedSize = base.ArrangeOverride(finalSize);
-
-        UpdateBlurIntensityFactor();
-
-        return arrangedSize;
-    }
-
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnAttachedToVisualTree(e);
-
-        ActualThemeVariantChanged += OnActualThemeVariantChanged;
-        UpdateBlurIntensityFactor();
-    }
-
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        ActualThemeVariantChanged -= OnActualThemeVariantChanged;
-
-        base.OnDetachedFromVisualTree(e);
-    }
+    private BlurBackdropControl? _blurBackdrop;
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
         base.OnApplyTemplate(e);
 
-        _blurBackground = e.NameScope.Find<BlurBackground>("PART_BlurBackground");
-        UpdateBlurIntensityFactor();
-    }
-
-    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
-    {
-        base.OnPropertyChanged(change);
-
-        if (change.Property == BlurRadiusProperty)
-        {
-            UpdateBlurIntensityFactor();
-        }
-
-    }
-
-    private static double CalculateBaseBlurRadius(Size blurSize, ThemeVariant themeVariant)
-    {
-        double baseBlurRadius = themeVariant == ThemeVariant.Dark
-            ? (blurSize.Width + blurSize.Height) / SukiBlurSizeDivisor
-            : SukiLightThemeBaseBlurRadius;
-
-        return Math.Max(SukiMinimumBaseBlurRadius, baseBlurRadius);
-    }
-
-    private void UpdateBlurIntensityFactor()
-    {
-        BlurBackground? blurBackground = _blurBackground;
-        if ((blurBackground is null)
-            || (blurBackground.Bounds.Width <= 0d)
-            || (blurBackground.Bounds.Height <= 0d))
-        {
-            return;
-        }
-
-        double baseBlurRadius = CalculateBaseBlurRadius(
-            blurBackground.Bounds.Size,
-            ActualThemeVariant);
-        double desiredBlurRadius = double.IsFinite(BlurRadius)
-            ? Math.Max(0d, BlurRadius)
-            : 0d;
-
-        double intensityFactor = desiredBlurRadius / baseBlurRadius;
-        if (blurBackground.IntensityFactor == intensityFactor)
-        {
-            return;
-        }
-
-        blurBackground.IntensityFactor = intensityFactor;
-        blurBackground.InvalidateVisual();
-    }
-
-    private void OnActualThemeVariantChanged(object? sender, EventArgs e)
-    {
-        UpdateBlurIntensityFactor();
+        _blurBackdrop = e.NameScope.Find<BlurBackdropControl>("PART_BlurBackdrop");
     }
 }

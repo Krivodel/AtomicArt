@@ -5,7 +5,6 @@ using Avalonia.Media;
 using Avalonia.VisualTree;
 
 using FluentAssertions;
-using SukiUI.Controls.GlassMorphism;
 using Xunit;
 
 using AtomicArt.Desktop.Controls.Overlays;
@@ -15,11 +14,8 @@ namespace AtomicArt.Desktop.Tests.Controls.Overlays;
 
 public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
 {
-    private const double DefaultBlurRadius = 27d;
+    private const double DefaultBlurRadius = 120d;
     private const double DefaultTintOpacity = 0.6d;
-    private const double BlurMargin = -96d;
-    private const double SukiBlurSizeDivisor = 42d;
-    private const double SukiMinimumBaseBlurRadius = 20d;
 
     [Fact]
     public void AppearanceProperties_WhenCustomized_PropagateToSharedBackground()
@@ -35,6 +31,7 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
                 Height = 320d,
                 Margin = margin,
                 Padding = padding,
+                BlurIntensity = 0.4d,
                 BlurRadius = 18d,
                 Body = new Border(),
                 CornerRadius = cornerRadius,
@@ -48,15 +45,16 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
                     .GetVisualDescendants()
                     .OfType<Border>()
                     .Single(control => control.Name == "PART_BackgroundChrome");
-                BlurBackground blurBackground = GetBlurBackground(overlay);
+                BlurBackdropControl blurBackdrop = GetBlurBackdrop(overlay);
 
                 overlay.Bounds.Width.Should().Be(480d);
                 overlay.Bounds.Height.Should().Be(320d);
                 overlay.Margin.Should().Be(margin);
                 overlay.Padding.Should().Be(padding);
                 backgroundChrome.CornerRadius.Should().Be(cornerRadius);
-                CalculateEffectiveBlurRadius(blurBackground).Should().BeApproximately(18d, 0.001d);
-                blurBackground.IsDynamic.Should().BeTrue();
+                blurBackdrop.Intensity.Should().Be(0.4d);
+                blurBackdrop.BlurRadius.Should().Be(18d);
+                blurBackdrop.IsDynamic.Should().BeTrue();
             }
             finally
             {
@@ -86,7 +84,7 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
                     .GetVisualDescendants()
                     .OfType<Border>()
                     .Single(control => control.Name == "PART_ShadowChrome");
-                BlurBackground blurBackground = GetBlurBackground(overlay);
+                BlurBackdropControl blurBackdrop = GetBlurBackdrop(overlay);
                 SolidColorBrush tintBrush = overlay.Background
                     .Should()
                     .BeOfType<SolidColorBrush>()
@@ -95,14 +93,12 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
                     "FloatingSurfaceShadow",
                     out object? shadowResource);
 
-                blurBackground.IsVisible.Should().BeTrue();
+                blurBackdrop.IsVisible.Should().BeTrue();
+                blurBackdrop.IsHitTestVisible.Should().BeFalse();
                 overlay.IsBlurDynamic.Should().BeFalse();
-                blurBackground.IsDynamic.Should().BeFalse();
+                blurBackdrop.IsDynamic.Should().BeFalse();
                 overlay.BlurRadius.Should().Be(DefaultBlurRadius);
-                CalculateEffectiveBlurRadius(blurBackground)
-                    .Should()
-                    .BeApproximately(DefaultBlurRadius, 0.001d);
-                blurBackground.Margin.Should().Be(new Thickness(BlurMargin));
+                blurBackdrop.BlurRadius.Should().Be(DefaultBlurRadius);
                 tintBrush.Color.Should().Be(Color.Parse("#172133"));
                 tintBrush.Opacity.Should().Be(DefaultTintOpacity);
                 foundShadow.Should().BeTrue();
@@ -125,7 +121,7 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void BlurRadius_WhenPanelsHaveDifferentSizes_ProducesSameEffectiveRadius()
+    public void BlurRadius_WhenPanelsHaveDifferentSizes_UsesSameConfiguredStrength()
     {
         Dispatch(() =>
         {
@@ -139,9 +135,7 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
 
             try
             {
-                BlurBackground settingsBlur = GetBlurBackground(settingsOverlay);
-                double settingsIntensity = settingsBlur.IntensityFactor;
-                double settingsRadius = CalculateEffectiveBlurRadius(settingsBlur);
+                BlurBackdropControl settingsBlur = GetBlurBackdrop(settingsOverlay);
 
                 ModalOverlayControl metadataOverlay = new()
                 {
@@ -153,13 +147,10 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
 
                 try
                 {
-                    BlurBackground metadataBlur = GetBlurBackground(metadataOverlay);
-                    double metadataIntensity = metadataBlur.IntensityFactor;
-                    double metadataRadius = CalculateEffectiveBlurRadius(metadataBlur);
+                    BlurBackdropControl metadataBlur = GetBlurBackdrop(metadataOverlay);
 
-                    settingsIntensity.Should().NotBe(metadataIntensity);
-                    settingsRadius.Should().BeApproximately(DefaultBlurRadius, 0.001d);
-                    metadataRadius.Should().BeApproximately(DefaultBlurRadius, 0.001d);
+                    settingsBlur.BlurRadius.Should().Be(DefaultBlurRadius);
+                    metadataBlur.BlurRadius.Should().Be(DefaultBlurRadius);
                 }
                 finally
                 {
@@ -174,7 +165,7 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void Bounds_WhenChanged_RecalculatesBlurIntensityFactor()
+    public void Bounds_WhenChanged_ResizesBlurBackdrop()
     {
         Dispatch(() =>
         {
@@ -188,17 +179,15 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
 
             try
             {
-                BlurBackground blurBackground = GetBlurBackground(overlay);
-                double initialIntensity = blurBackground.IntensityFactor;
+                BlurBackdropControl blurBackdrop = GetBlurBackdrop(overlay);
 
                 overlay.Width = 560d;
                 overlay.Height = 588d;
                 window.CaptureRenderedFrame();
 
-                blurBackground.IntensityFactor.Should().NotBe(initialIntensity);
-                CalculateEffectiveBlurRadius(blurBackground)
-                    .Should()
-                    .BeApproximately(DefaultBlurRadius, 0.001d);
+                blurBackdrop.Bounds.Width.Should().Be(560d);
+                blurBackdrop.Bounds.Height.Should().Be(588d);
+                blurBackdrop.BlurRadius.Should().Be(DefaultBlurRadius);
             }
             finally
             {
@@ -229,12 +218,10 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
 
                 try
                 {
-                    BlurBackground blurBackground = GetBlurBackground(overlay);
+                    BlurBackdropControl blurBackdrop = GetBlurBackdrop(overlay);
 
                     overlay.BlurRadius.Should().Be(CustomBlurRadius);
-                    CalculateEffectiveBlurRadius(blurBackground)
-                        .Should()
-                        .BeApproximately(CustomBlurRadius, 0.001d);
+                    blurBackdrop.BlurRadius.Should().Be(CustomBlurRadius);
                 }
                 finally
                 {
@@ -248,21 +235,11 @@ public sealed class ModalOverlayControlTests : AnimatedGalleryControlTestBase
         });
     }
 
-    private static double CalculateEffectiveBlurRadius(BlurBackground blurBackground)
-    {
-        double baseBlurRadius = Math.Max(
-            SukiMinimumBaseBlurRadius,
-            (blurBackground.Bounds.Width + blurBackground.Bounds.Height)
-            / SukiBlurSizeDivisor);
-
-        return baseBlurRadius * blurBackground.IntensityFactor;
-    }
-
-    private static BlurBackground GetBlurBackground(ModalOverlayControl overlay)
+    private static BlurBackdropControl GetBlurBackdrop(ModalOverlayControl overlay)
     {
         return overlay
             .GetVisualDescendants()
-            .OfType<BlurBackground>()
+            .OfType<BlurBackdropControl>()
             .Single();
     }
 }

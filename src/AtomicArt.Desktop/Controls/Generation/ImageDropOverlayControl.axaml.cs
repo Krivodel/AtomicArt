@@ -49,6 +49,7 @@ public partial class ImageDropOverlayControl : UserControl
 
     private void UpdateVisualState()
     {
+        BackdropBlur.Intensity = IsActive ? 1d : 0d;
         OverlayChrome.Opacity = IsActive ? 1d : 0d;
         AnimatedContent.Opacity = IsActive ? 1d : 0d;
         AnimatedContent.RenderTransform = IsActive ? VisibleTransform : HiddenTransform;

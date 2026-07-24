@@ -1,6 +1,5 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:glass="using:SukiUI.Controls.GlassMorphism"
         xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays">
     <Styles.Resources>
         <ControlTheme x:Key="{x:Type overlays:ModalOverlayControl}"
@@ -40,9 +39,10 @@
                                     BorderThickness="{TemplateBinding BorderThickness}"
                                     CornerRadius="{TemplateBinding CornerRadius}">
                                 <Grid>
-                                    <glass:BlurBackground x:Name="PART_BlurBackground"
-                                                          Margin="{DynamicResource ModalOverlayBlurMargin}"
-                                                          IsDynamic="{TemplateBinding IsBlurDynamic}" />
+                                    <overlays:BlurBackdropControl x:Name="PART_BlurBackdrop"
+                                                                  BlurRadius="{TemplateBinding BlurRadius}"
+                                                                  Intensity="{TemplateBinding BlurIntensity}"
+                                                                  IsDynamic="{TemplateBinding IsBlurDynamic}" />
                                     <Border Background="{TemplateBinding Background}" />
                                 </Grid>
                             </Border>
