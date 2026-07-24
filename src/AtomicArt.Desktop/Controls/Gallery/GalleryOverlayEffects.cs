@@ -8,7 +8,16 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryOverlayEffects
 {
-    private const int RevealHighlightDurationMilliseconds = 700;
+    private const int RevealHighlightDurationMilliseconds = 900;
+    private const int RevealFirstPulseDurationMilliseconds = 270;
+    private const int RevealSecondPulseDurationMilliseconds =
+        RevealHighlightDurationMilliseconds - RevealFirstPulseDurationMilliseconds;
+    private const double RevealHighlightBorderThickness = 2d;
+    private const double RevealHighlightShadowBlurRadius = 18d;
+    private const double RevealHighlightShadowOpacity = 0.8d;
+    private const string RevealHighlightBorderColor = "#F2FFD166";
+    private const string RevealHighlightBackgroundColor = "#24FFB347";
+    private const string RevealHighlightShadowColor = "#FF9F43";
 
     private readonly UiAnimationScheduler _animationScheduler;
 
@@ -93,6 +102,7 @@ internal sealed class GalleryOverlayEffects
         int index,
         double speed,
         int delay,
+        CornerRadius cornerRadius,
         GalleryAnimationTracker overlayControls,
         GalleryAnimationTracker animatedControls)
     {
@@ -103,7 +113,7 @@ internal sealed class GalleryOverlayEffects
             return Task.CompletedTask;
         }
 
-        Border flash = CreateTargetFlashOverlay(rect);
+        Border flash = CreateTargetFlashOverlay(rect, cornerRadius);
         RegisterOverlay(overlayCanvas, overlayControls, animatedControls, flash);
 
         return _animationScheduler.AnimateAsync(
@@ -117,20 +127,15 @@ internal sealed class GalleryOverlayEffects
 
     internal Task CreateRevealHighlightAsync(
         Canvas overlayCanvas,
-        Rect rect)
+        Rect rect,
+        CornerRadius cornerRadius)
     {
         ArgumentNullException.ThrowIfNull(overlayCanvas);
 
-        Border highlight = CreateTargetFlashOverlay(rect);
+        Border highlight = CreateRevealHighlightOverlay(rect, cornerRadius);
         overlayCanvas.Children.Add(highlight);
 
-        return _animationScheduler.AnimateAsync(
-            highlight,
-            CreateTargetFlashFrames(),
-            RevealHighlightDurationMilliseconds,
-            0,
-            MotionEasing.EaseOut,
-            () => overlayCanvas.Children.Remove(highlight));
+        return AnimateRevealHighlightAsync(overlayCanvas, highlight);
     }
 
     private static void ValidateOverlayArguments(
@@ -168,13 +173,15 @@ internal sealed class GalleryOverlayEffects
             .ToList();
     }
 
-    private static Border CreateTargetFlashOverlay(Rect rect)
+    private static Border CreateTargetFlashOverlay(
+        Rect rect,
+        CornerRadius cornerRadius)
     {
         Border flash = new()
         {
             Width = rect.Width,
             Height = rect.Height,
-            CornerRadius = new CornerRadius(16d),
+            CornerRadius = cornerRadius,
             BorderBrush = Brush.Parse("#57AACDFF"),
             BorderThickness = new Thickness(1d),
             Background = Brush.Parse("#1A9AC6FF"),
@@ -186,12 +193,61 @@ internal sealed class GalleryOverlayEffects
         return flash;
     }
 
+    private static Border CreateRevealHighlightOverlay(
+        Rect rect,
+        CornerRadius cornerRadius)
+    {
+        Border highlight = new()
+        {
+            Width = rect.Width,
+            Height = rect.Height,
+            CornerRadius = cornerRadius,
+            BorderBrush = Brush.Parse(RevealHighlightBorderColor),
+            BorderThickness = new Thickness(RevealHighlightBorderThickness),
+            Background = Brush.Parse(RevealHighlightBackgroundColor),
+            Effect = new DropShadowEffect
+            {
+                BlurRadius = RevealHighlightShadowBlurRadius,
+                Color = Color.Parse(RevealHighlightShadowColor),
+                OffsetX = 0d,
+                OffsetY = 0d,
+                Opacity = RevealHighlightShadowOpacity
+            },
+            Opacity = 0d
+        };
+        Canvas.SetLeft(highlight, rect.Left);
+        Canvas.SetTop(highlight, rect.Top);
+
+        return highlight;
+    }
+
     private static List<MotionFrame> CreateTargetFlashFrames()
     {
         return
         [
             new MotionFrame(0d, 0d, 0.96d, 0d, 0d),
             new MotionFrame(0d, 0d, 1d, 0d, 0.75d),
+            new MotionFrame(0d, 0d, 1.025d, 0d, 0d)
+        ];
+    }
+
+    private static List<MotionFrame> CreateRevealFirstPulseFrames()
+    {
+        return
+        [
+            new MotionFrame(0d, 0d, 0.985d, 0d, 0d),
+            new MotionFrame(0d, 0d, 1d, 0d, 1d),
+            new MotionFrame(0d, 0d, 1.012d, 0d, 0d)
+        ];
+    }
+
+    private static List<MotionFrame> CreateRevealSecondPulseFrames()
+    {
+        return
+        [
+            new MotionFrame(0d, 0d, 0.99d, 0d, 0d),
+            new MotionFrame(0d, 0d, 1.002d, 0d, 0.95d),
+            new MotionFrame(0d, 0d, 1.012d, 0d, 0.58d),
             new MotionFrame(0d, 0d, 1.025d, 0d, 0d)
         ];
     }
@@ -246,6 +302,32 @@ internal sealed class GalleryOverlayEffects
     {
         overlayCanvas.Children.Remove(overlay);
         overlayControls.Remove(overlay);
+    }
+
+    private async Task AnimateRevealHighlightAsync(
+        Canvas overlayCanvas,
+        Border highlight)
+    {
+        try
+        {
+            await _animationScheduler.AnimateAsync(
+                highlight,
+                CreateRevealFirstPulseFrames(),
+                RevealFirstPulseDurationMilliseconds,
+                0,
+                MotionEasing.Linear);
+            await _animationScheduler.AnimateAsync(
+                highlight,
+                CreateRevealSecondPulseFrames(),
+                RevealSecondPulseDurationMilliseconds,
+                0,
+                MotionEasing.Linear,
+                () => overlayCanvas.Children.Remove(highlight));
+        }
+        finally
+        {
+            overlayCanvas.Children.Remove(highlight);
+        }
     }
 
     private (Ellipse Glow, Ellipse Burst) CreateBurstOverlays(

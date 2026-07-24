@@ -188,21 +188,30 @@ internal sealed class GalleryLayoutService
         return rect is { Width: > 0d, Height: > 0d };
     }
 
-    public bool TryGetCardSurfaceRect(
+    public bool TryGetCardSurface(
         Control control,
         Canvas overlayCanvas,
-        out Rect rect)
+        out Rect rect,
+        out CornerRadius cornerRadius)
     {
         ArgumentNullException.ThrowIfNull(control);
         ArgumentNullException.ThrowIfNull(overlayCanvas);
 
-        if (control is ContentControl { Content: Control content }
-            && TryGetOverlayRect(content, overlayCanvas, out rect))
+        Control surface = control is ContentControl { Content: Control content }
+            ? content
+            : control;
+
+        if (!TryGetOverlayRect(surface, overlayCanvas, out rect))
         {
-            return true;
+            cornerRadius = default;
+            return false;
         }
 
-        return TryGetOverlayRect(control, overlayCanvas, out rect);
+        cornerRadius = surface is Border border
+            ? border.CornerRadius
+            : default;
+
+        return true;
     }
 
     public int CalculateColumnCount(double viewportWidth)

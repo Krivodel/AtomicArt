@@ -232,13 +232,16 @@ internal sealed class GallerySpawnRetargetAnimator : GalleryLayoutAnimator
         }
 
         Rect flashRect = target.Rect;
+        CornerRadius flashCornerRadius = default;
         if (context.CardControls.TryGetValue(target.Id, out Control? control)
-            && GalleryLayout.TryGetCardSurfaceRect(
+            && GalleryLayout.TryGetCardSurface(
                 control,
                 context.OverlayCanvas,
-                out Rect cardSurfaceRect))
+                out Rect cardSurfaceRect,
+                out CornerRadius cardCornerRadius))
         {
             flashRect = cardSurfaceRect;
+            flashCornerRadius = cardCornerRadius;
         }
 
         List<Task> animations =
@@ -249,6 +252,7 @@ internal sealed class GallerySpawnRetargetAnimator : GalleryLayoutAnimator
                 index,
                 GalleryMotionTimings.SpawnSpeed,
                 GalleryMotionTimings.SpawnDelayMilliseconds,
+                flashCornerRadius,
                 overlayControls,
                 animatedControls)
         ];

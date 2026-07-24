@@ -5,6 +5,11 @@ internal static class MotionEasing
     private const double DerivativeEpsilon = 0.0001d;
     private const int IterationCount = 5;
 
+    public static double Linear(double value)
+    {
+        return value;
+    }
+
     public static double EaseOut(double value)
     {
         return 1d - Math.Pow(1d - value, 3d);

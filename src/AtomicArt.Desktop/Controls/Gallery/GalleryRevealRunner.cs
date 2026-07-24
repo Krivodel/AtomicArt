@@ -53,15 +53,17 @@ internal sealed class GalleryRevealRunner : GalleryOperationRunner
         _galleryLayout.RefreshGalleryVirtualization(context);
 
         if (context.CardControls.TryGetValue(revealedItemId, out Control? control)
-            && _galleryLayout.TryGetCardSurfaceRect(
+            && _galleryLayout.TryGetCardSurface(
                 control,
                 context.OverlayCanvas,
-                out Rect rect))
+                out Rect rect,
+                out CornerRadius cornerRadius))
         {
             ObserveHighlight(
                 _overlayEffects.CreateRevealHighlightAsync(
                     context.OverlayCanvas,
-                    rect),
+                    rect,
+                    cornerRadius),
                 revealedItemId);
         }
 

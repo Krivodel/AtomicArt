@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Media;
 using FluentAssertions;
 using Xunit;
 
@@ -18,6 +19,13 @@ public sealed class GalleryRevealRunnerTests : AnimatedGalleryControlTestBase
     private const double CardSurfaceWidth = 220d;
     private const double CardSurfaceHeight = 322d;
     private const double CardCellMargin = 16d;
+    private const double CardSurfaceCornerRadius = 8d;
+    private const double HighlightBorderThickness = 2d;
+    private const int FirstPulsePeakMilliseconds = 135;
+    private const int FirstPulseEndMilliseconds = 270;
+    private const int SecondPulsePeakMilliseconds = 480;
+    private const int SecondPulseFadeMilliseconds = 690;
+    private const int AnimationEndMilliseconds = 900;
 
     private static readonly Guid RevealedItemId =
         Guid.Parse("88888888-8888-8888-8888-888888888888");
@@ -46,18 +54,86 @@ public sealed class GalleryRevealRunnerTests : AnimatedGalleryControlTestBase
 
             await context.RunAsync(RevealedItemId, CancellationToken.None);
 
-            Border highlight = context.Coordinator
-                .OverlayCanvas
-                .Children
-                .Single()
-                .Should()
-                .BeOfType<Border>()
-                .Subject;
+            Border highlight = GetHighlight(context.Coordinator);
             Rect expectedRect = GetCardSurfaceRect(context.Coordinator);
             Canvas.GetLeft(highlight).Should().BeApproximately(expectedRect.Left, 0.01d);
             Canvas.GetTop(highlight).Should().BeApproximately(expectedRect.Top, 0.01d);
             highlight.Width.Should().BeApproximately(expectedRect.Width, 0.01d);
             highlight.Height.Should().BeApproximately(expectedRect.Height, 0.01d);
+            highlight.CornerRadius.Should().Be(
+                new CornerRadius(CardSurfaceCornerRadius));
+        });
+    }
+
+    [Fact]
+    public async Task RunAsync_WithExistingItem_UsesFastThenLongPulseAndRemovesHighlight()
+    {
+        await DispatchAsync(async () =>
+        {
+            using RevealTestContext context = CreateContext();
+            await context.RunAsync(RevealedItemId, CancellationToken.None);
+            Border highlight = GetHighlight(context.Coordinator);
+
+            context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+            context.FrameScheduler.RunNextFrame(
+                TimeSpan.FromMilliseconds(FirstPulsePeakMilliseconds));
+            double firstPulseOpacity = highlight.Opacity;
+            context.FrameScheduler.RunNextFrame(
+                TimeSpan.FromMilliseconds(FirstPulseEndMilliseconds));
+            await TestUiFrameScheduler.RunQueuedContinuationsAsync();
+            context.FrameScheduler.RunNextFrame(
+                TimeSpan.FromMilliseconds(FirstPulseEndMilliseconds));
+            context.FrameScheduler.RunNextFrame(
+                TimeSpan.FromMilliseconds(SecondPulsePeakMilliseconds));
+            double secondPulseOpacity = highlight.Opacity;
+            context.FrameScheduler.RunNextFrame(
+                TimeSpan.FromMilliseconds(SecondPulseFadeMilliseconds));
+            double secondPulseFadeOpacity = highlight.Opacity;
+
+            firstPulseOpacity.Should().BeGreaterThan(0.9d);
+            secondPulseOpacity.Should().BeGreaterThan(0.9d);
+            secondPulseFadeOpacity.Should().BeGreaterThan(0d);
+            secondPulseFadeOpacity.Should().BeLessThan(secondPulseOpacity);
+
+            context.FrameScheduler.RunNextFrame(
+                TimeSpan.FromMilliseconds(AnimationEndMilliseconds));
+
+            context.Coordinator.OverlayCanvas.Children.Should().BeEmpty();
+        });
+    }
+
+    [Fact]
+    public async Task RunAsync_WithExistingItem_UsesWarmHighlightPalette()
+    {
+        const string ExpectedBorderColor = "#F2FFD166";
+        const string ExpectedBackgroundColor = "#24FFB347";
+        const string ExpectedShadowColor = "#FF9F43";
+
+        await DispatchAsync(async () =>
+        {
+            using RevealTestContext context = CreateContext();
+
+            await context.RunAsync(RevealedItemId, CancellationToken.None);
+
+            Border highlight = GetHighlight(context.Coordinator);
+            ISolidColorBrush borderBrush = highlight
+                .BorderBrush
+                .Should()
+                .BeAssignableTo<ISolidColorBrush>()
+                .Subject;
+            ISolidColorBrush backgroundBrush = highlight
+                .Background
+                .Should()
+                .BeAssignableTo<ISolidColorBrush>()
+                .Subject;
+            DropShadowEffect shadow = highlight
+                .Effect
+                .Should()
+                .BeOfType<DropShadowEffect>()
+                .Subject;
+            borderBrush.Color.Should().Be(Color.Parse(ExpectedBorderColor));
+            backgroundBrush.Color.Should().Be(Color.Parse(ExpectedBackgroundColor));
+            shadow.Color.Should().Be(Color.Parse(ExpectedShadowColor));
         });
     }
 
@@ -125,7 +201,11 @@ public sealed class GalleryRevealRunnerTests : AnimatedGalleryControlTestBase
         layout.RenderCards(coordinator);
         window.CaptureRenderedFrame();
 
-        return new RevealTestContext(window, runner, coordinator);
+        return new RevealTestContext(
+            window,
+            frameScheduler,
+            runner,
+            coordinator);
     }
 
     private static Control CreateCardControl(object item)
@@ -138,6 +218,7 @@ public sealed class GalleryRevealRunnerTests : AnimatedGalleryControlTestBase
             {
                 Width = CardSurfaceWidth,
                 Height = CardSurfaceHeight,
+                CornerRadius = new CornerRadius(CardSurfaceCornerRadius),
                 Margin = new Thickness(0d, 0d, CardCellMargin, CardCellMargin)
             }
         };
@@ -155,8 +236,19 @@ public sealed class GalleryRevealRunnerTests : AnimatedGalleryControlTestBase
         return new Rect(surface.Bounds.Size).TransformToAABB(transform);
     }
 
+    private static Border GetHighlight(GalleryOperationCoordinator coordinator)
+    {
+        return coordinator
+            .OverlayCanvas
+            .Children
+            .OfType<Border>()
+            .Single(border =>
+                border.BorderThickness == new Thickness(HighlightBorderThickness));
+    }
+
     private sealed class RevealTestContext : IDisposable
     {
+        public TestUiFrameScheduler FrameScheduler { get; }
         public GalleryRevealRunner Runner { get; }
         public GalleryOperationCoordinator Coordinator { get; }
 
@@ -164,10 +256,13 @@ public sealed class GalleryRevealRunnerTests : AnimatedGalleryControlTestBase
 
         public RevealTestContext(
             Window window,
+            TestUiFrameScheduler frameScheduler,
             GalleryRevealRunner runner,
             GalleryOperationCoordinator coordinator)
         {
             _window = window ?? throw new ArgumentNullException(nameof(window));
+            FrameScheduler = frameScheduler
+                ?? throw new ArgumentNullException(nameof(frameScheduler));
             Runner = runner;
             Coordinator = coordinator;
         }
