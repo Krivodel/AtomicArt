@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -11,13 +12,22 @@ namespace AtomicArt.Infrastructure.Benchmarks;
 internal static class GoogleStreamingResponseAnalyzerMeasurements
 {
     private const int BlockSize = 65536;
-    private const int IterationCount = 5;
-    private const int WarmupCount = 2;
+    private const int IterationCount = 15;
+    private const int WarmupCount = 5;
 
     private static readonly int[] ImageDataSizes =
     [
         16 * 1024 * 1024,
         128 * 1024 * 1024
+    ];
+
+    private static readonly ClientSignatureScenario[] ClientSignatureScenarios =
+    [
+        new("Размер реального ответа", 1244508, 2932808),
+        new(
+            "Крупный искусственный ответ",
+            16 * 1024 * 1024,
+            32 * 1024 * 1024)
     ];
 
     public static void Run(string[] args)
@@ -26,6 +36,7 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
 
         string outputPath = GetOutputPath(args);
         List<ComparisonResult> results = [];
+        List<ClientSignatureComparisonResult> clientSignatureResults = [];
 
         foreach (int imageDataSize in ImageDataSizes)
         {
@@ -44,7 +55,27 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
                 current));
         }
 
-        string report = CreateReport(results);
+        foreach (ClientSignatureScenario scenario in ClientSignatureScenarios)
+        {
+            byte[] response = CreateResponse(
+                scenario.ImageDataSize,
+                scenario.SignatureSize);
+            MeasurementResult withSignature = Measure(
+                response,
+                AnalyzeWithCurrentImplementationAndRetainSignature);
+            MeasurementResult withoutSignature = Measure(
+                response,
+                AnalyzeWithCurrentImplementation);
+
+            clientSignatureResults.Add(new ClientSignatureComparisonResult(
+                scenario,
+                response.LongLength,
+                response.LongLength - scenario.SignatureSize,
+                withSignature,
+                withoutSignature));
+        }
+
+        string report = CreateReport(results, clientSignatureResults);
         string? outputDirectory = Path.GetDirectoryName(outputPath);
 
         if (!string.IsNullOrWhiteSpace(outputDirectory))
@@ -114,40 +145,109 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
             new GoogleInteractionsResponseParser(),
             new GoogleInteractionsFailureClassifier());
 
-        AppendInBlocks(response, analyzer.Append);
+        long clientResponseBytes = ProcessInBlocks(
+            response,
+            AppendAndRetain);
 
         ProviderGenerationSummary summary = analyzer.Complete();
         GC.KeepAlive(summary);
+        GC.KeepAlive(clientResponseBytes);
+
+        int AppendAndRetain(Span<byte> content)
+        {
+            analyzer.Append(content);
+
+            return content.Length;
+        }
     }
 
     private static void AnalyzeWithCurrentImplementation(byte[] response)
+    {
+        AnalyzeWithCurrentImplementation(response, sanitizeClientResponse: true);
+    }
+
+    private static void AnalyzeWithCurrentImplementationAndRetainSignature(
+        byte[] response)
+    {
+        AnalyzeWithCurrentImplementation(
+            response,
+            sanitizeClientResponse: false);
+    }
+
+    private static void AnalyzeWithCurrentImplementation(
+        byte[] response,
+        bool sanitizeClientResponse)
     {
         GoogleStreamingResponseAnalyzer analyzer = new(
             new GoogleInteractionsResponseParser(),
             new GoogleInteractionsFailureClassifier());
 
-        AppendInBlocks(response, analyzer.Append);
+        long clientResponseBytes = ProcessInBlocks(
+            response,
+            Transform);
 
         ProviderGenerationSummary summary = analyzer.Complete();
         GC.KeepAlive(summary);
+        GC.KeepAlive(clientResponseBytes);
+
+        int Transform(Span<byte> content)
+        {
+            if (sanitizeClientResponse)
+            {
+                return analyzer.AppendAndSanitize(content);
+            }
+
+            analyzer.Append(content);
+
+            return content.Length;
+        }
     }
 
-    private static void AppendInBlocks(
+    private static long ProcessInBlocks(
         byte[] response,
-        SpanConsumer append)
+        SpanTransformer transform)
     {
-        for (int offset = 0; offset < response.Length; offset += BlockSize)
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(BlockSize);
+        long outputBytes = 0L;
+
+        try
         {
-            int count = Math.Min(BlockSize, response.Length - offset);
-            append(response.AsSpan(offset, count));
+            for (int offset = 0; offset < response.Length; offset += BlockSize)
+            {
+                int count = Math.Min(BlockSize, response.Length - offset);
+                response.AsSpan(offset, count).CopyTo(buffer);
+                outputBytes += transform(buffer.AsSpan(0, count));
+            }
         }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+
+        return outputBytes;
     }
 
     private static byte[] CreateResponse(int imageDataSize)
     {
+        return CreateResponse(imageDataSize, signatureSize: 0);
+    }
+
+    private static byte[] CreateResponse(
+        int imageDataSize,
+        int signatureSize)
+    {
         byte[] prefix = """
         {
           "status": "completed",
+          "steps": [
+            {
+              "type": "thought",
+              "signature": "
+        """u8.ToArray();
+        byte[] betweenSignatureAndImage = """
+        "
+            }
+          ],
           "output": [
             {
               "type": "image",
@@ -165,16 +265,29 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
           }
         }
         """u8.ToArray();
-        byte[] response = new byte[prefix.Length + imageDataSize + suffix.Length];
+        byte[] response = new byte[
+            prefix.Length
+            + signatureSize
+            + betweenSignatureAndImage.Length
+            + imageDataSize
+            + suffix.Length];
 
         prefix.CopyTo(response, 0);
-        response.AsSpan(prefix.Length, imageDataSize).Fill((byte)'A');
-        suffix.CopyTo(response, prefix.Length + imageDataSize);
+        response.AsSpan(prefix.Length, signatureSize).Fill((byte)'S');
+        int imageOffset =
+            prefix.Length + signatureSize + betweenSignatureAndImage.Length;
+        betweenSignatureAndImage.CopyTo(
+            response,
+            prefix.Length + signatureSize);
+        response.AsSpan(imageOffset, imageDataSize).Fill((byte)'A');
+        suffix.CopyTo(response, imageOffset + imageDataSize);
 
         return response;
     }
 
-    private static string CreateReport(IReadOnlyList<ComparisonResult> results)
+    private static string CreateReport(
+        IReadOnlyList<ComparisonResult> results,
+        IReadOnlyList<ClientSignatureComparisonResult> clientSignatureResults)
     {
         StringBuilder report = new();
         report.AppendLine("# Измерения GoogleStreamingResponseAnalyzer");
@@ -210,6 +323,30 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
                 $"| {imageSize} | Блочная | {FormatNumber(result.Current.ElapsedMilliseconds)} | {result.Current.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | {FormatNumber(speedup)}× | {FormatPercent(allocationReduction)} |");
         }
 
+        report.AppendLine();
+        report.AppendLine(
+            "## Передача клиенту с подписью и без неё");
+        report.AppendLine();
+        report.AppendLine(
+            "Измерение включает блочный анализ и формирование клиентских блоков в памяти; сетевое время не учитывается.");
+        report.AppendLine();
+        report.AppendLine(
+            "| Сценарий | Вариант | Время, мс | Выделено, байт | Передано клиенту | Изменение времени |");
+        report.AppendLine(
+            "|---|---|---:|---:|---:|---:|");
+
+        foreach (ClientSignatureComparisonResult result in clientSignatureResults)
+        {
+            double elapsedChange = result.WithoutSignature.ElapsedMilliseconds
+                / result.WithSignature.ElapsedMilliseconds
+                - 1.0;
+
+            report.AppendLine(
+                $"| {result.Scenario.Name} (`data` {FormatByteSize(result.Scenario.ImageDataSize)}, `signature` {FormatByteSize(result.Scenario.SignatureSize)}) | С подписью | {FormatNumber(result.WithSignature.ElapsedMilliseconds)} | {result.WithSignature.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | {FormatByteSize(result.ResponseBytes)} | 0,00% |");
+            report.AppendLine(
+                $"| {result.Scenario.Name} (`data` {FormatByteSize(result.Scenario.ImageDataSize)}, `signature` {FormatByteSize(result.Scenario.SignatureSize)}) | Без подписи | {FormatNumber(result.WithoutSignature.ElapsedMilliseconds)} | {result.WithoutSignature.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | {FormatByteSize(result.SanitizedResponseBytes)} | {FormatSignedPercent(elapsedChange)} |");
+        }
+
         return report.ToString();
     }
 
@@ -225,12 +362,26 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
         return value.ToString("0.00", CultureInfo.InvariantCulture);
     }
 
+    private static string FormatByteSize(long byteCount)
+    {
+        double mebibytes = byteCount / (1024.0 * 1024.0);
+
+        return $"{mebibytes.ToString("0.00", CultureInfo.InvariantCulture)} МиБ";
+    }
+
     private static string FormatPercent(double value)
     {
         return value.ToString("P2", CultureInfo.InvariantCulture);
     }
 
-    private delegate void SpanConsumer(ReadOnlySpan<byte> content);
+    private static string FormatSignedPercent(double value)
+    {
+        string prefix = value > 0.0 ? "+" : string.Empty;
+
+        return string.Concat(prefix, FormatPercent(value));
+    }
+
+    private delegate int SpanTransformer(Span<byte> content);
 
     private sealed record MeasurementResult(
         double ElapsedMilliseconds,
@@ -240,4 +391,16 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
         int ImageDataSize,
         MeasurementResult Previous,
         MeasurementResult Current);
+
+    private sealed record ClientSignatureScenario(
+        string Name,
+        int ImageDataSize,
+        int SignatureSize);
+
+    private sealed record ClientSignatureComparisonResult(
+        ClientSignatureScenario Scenario,
+        long ResponseBytes,
+        long SanitizedResponseBytes,
+        MeasurementResult WithSignature,
+        MeasurementResult WithoutSignature);
 }

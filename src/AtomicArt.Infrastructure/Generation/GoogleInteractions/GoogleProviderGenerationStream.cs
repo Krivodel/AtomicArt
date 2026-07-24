@@ -95,10 +95,15 @@ internal sealed class GoogleProviderGenerationStream : IProviderGenerationStream
                         "The generation provider response exceeded its limit.");
                 }
 
-                analyzer.Append(buffer.AsSpan(0, bytesRead));
-                await destination
-                    .WriteAsync(buffer.AsMemory(0, bytesRead), ct)
-                    .ConfigureAwait(false);
+                int sanitizedBytes = analyzer.AppendAndSanitize(
+                    buffer.AsSpan(0, bytesRead));
+
+                if (sanitizedBytes > 0)
+                {
+                    await destination
+                        .WriteAsync(buffer.AsMemory(0, sanitizedBytes), ct)
+                        .ConfigureAwait(false);
+                }
             }
 
             Summary = analyzer.Complete();

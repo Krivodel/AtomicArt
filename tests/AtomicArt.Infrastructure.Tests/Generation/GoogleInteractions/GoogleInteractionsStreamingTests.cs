@@ -214,9 +214,92 @@ public sealed class GoogleInteractionsStreamingTests
     }
 
     [Fact]
-    public async Task CopyToAsync_WithFilteredImageData_WritesOriginalResponse()
+    public void AppendAndSanitize_WithEveryPossibleBoundary_RemovesSignatureOnly()
     {
-        string responseJson = CreateCompletedResponse("not-base64\\\"payload");
+        const string Signature = "opaque\\\\\\\"signature";
+        const string Data = "not-base64\\\\\\\"payload";
+        string responseJson = $$"""
+        {
+          "status": "completed",
+          "steps": [
+            {
+              "type": "thought",
+              "signature": "{{Signature}}"
+            }
+          ],
+          "output": [
+            {
+              "type": "image",
+              "mime_type": "image/jpeg",
+              "data": "{{Data}}"
+            }
+          ],
+          "usage": {
+            "total_input_tokens": 10,
+            "total_output_tokens": 20,
+            "total_tokens": 30
+          }
+        }
+        """;
+        string expectedResponse = responseJson.Replace(
+            Signature,
+            string.Empty,
+            StringComparison.Ordinal);
+        byte[] responseBytes = Encoding.UTF8.GetBytes(responseJson);
+
+        for (int boundary = 0; boundary <= responseBytes.Length; boundary++)
+        {
+            GoogleStreamingResponseAnalyzer analyzer = CreateAnalyzer();
+            byte[] workingBytes = responseBytes.ToArray();
+            using MemoryStream destination = new();
+
+            int firstLength = analyzer.AppendAndSanitize(
+                workingBytes.AsSpan(0, boundary));
+            destination.Write(workingBytes.AsSpan(0, firstLength));
+            int secondLength = analyzer.AppendAndSanitize(
+                workingBytes.AsSpan(boundary));
+            destination.Write(
+                workingBytes.AsSpan(boundary, secondLength));
+
+            ProviderGenerationSummary summary = analyzer.Complete();
+
+            Encoding.UTF8.GetString(destination.ToArray())
+                .Should().Be(expectedResponse);
+            summary.ResultCount.Should().Be(1);
+        }
+    }
+
+    [Fact]
+    public async Task CopyToAsync_WithSignature_WritesSanitizedResponse()
+    {
+        const string Signature = "opaque\\\\\\\"signature";
+        string responseJson = $$"""
+        {
+          "status": "completed",
+          "steps": [
+            {
+              "type": "thought",
+              "signature": "{{Signature}}"
+            }
+          ],
+          "output": [
+            {
+              "type": "image",
+              "mime_type": "image/jpeg",
+              "data": "not-base64\\\"payload"
+            }
+          ],
+          "usage": {
+            "total_input_tokens": 10,
+            "total_output_tokens": 20,
+            "total_tokens": 30
+          }
+        }
+        """;
+        string expectedResponse = responseJson.Replace(
+            Signature,
+            string.Empty,
+            StringComparison.Ordinal);
         byte[] responseBytes = Encoding.UTF8.GetBytes(responseJson);
         using HttpResponseMessage responseMessage = new(HttpStatusCode.OK)
         {
@@ -243,7 +326,8 @@ public sealed class GoogleInteractionsStreamingTests
             responseBytes.Length,
             CancellationToken.None);
 
-        destination.ToArray().Should().Equal(responseBytes);
+        Encoding.UTF8.GetString(destination.ToArray())
+            .Should().Be(expectedResponse);
         providerStream.Summary?.ResultCount.Should().Be(1);
     }
 

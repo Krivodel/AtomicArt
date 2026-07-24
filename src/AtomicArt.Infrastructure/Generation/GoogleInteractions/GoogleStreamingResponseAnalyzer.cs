@@ -30,6 +30,7 @@ internal sealed class GoogleStreamingResponseAnalyzer
     private readonly List<byte> _candidate = [];
     private AnalyzerState _state;
     private SkippedStringProperty _candidateProperty;
+    private SkippedStringProperty _skippedProperty;
     private int _candidateIndex;
     private bool _colonSeen;
 
@@ -62,6 +63,22 @@ internal sealed class GoogleStreamingResponseAnalyzer
 
     public void Append(ReadOnlySpan<byte> content)
     {
+        ClientResponseWriter clientResponseWriter = new([], false);
+        Append(content, ref clientResponseWriter);
+    }
+
+    public int AppendAndSanitize(Span<byte> content)
+    {
+        ClientResponseWriter clientResponseWriter = new(content, true);
+        Append(content, ref clientResponseWriter);
+
+        return clientResponseWriter.WrittenCount;
+    }
+
+    private void Append(
+        ReadOnlySpan<byte> content,
+        ref ClientResponseWriter clientResponseWriter)
+    {
         int consumedBytes = 0;
 
         while (consumedBytes < content.Length)
@@ -70,19 +87,33 @@ internal sealed class GoogleStreamingResponseAnalyzer
             consumedBytes += _state switch
             {
                 AnalyzerState.NormalOutsideString
-                    => ProcessOutsideString(remainingContent),
+                    => ProcessOutsideString(
+                        remainingContent,
+                        ref clientResponseWriter),
                 AnalyzerState.NormalInsideString
-                    => ProcessInsideString(remainingContent),
+                    => ProcessInsideString(
+                        remainingContent,
+                        ref clientResponseWriter),
                 AnalyzerState.NormalEscape
-                    => ProcessNormalEscape(remainingContent),
+                    => ProcessNormalEscape(
+                        remainingContent,
+                        ref clientResponseWriter),
                 AnalyzerState.CandidateSkippedKey
-                    => ProcessCandidate(remainingContent),
+                    => ProcessCandidate(
+                        remainingContent,
+                        ref clientResponseWriter),
                 AnalyzerState.AfterSkippedKey
-                    => ProcessAfterSkippedKey(remainingContent),
+                    => ProcessAfterSkippedKey(
+                        remainingContent,
+                        ref clientResponseWriter),
                 AnalyzerState.SkipStringValue
-                    => SkipStringValue(remainingContent),
+                    => SkipStringValue(
+                        remainingContent,
+                        ref clientResponseWriter),
                 AnalyzerState.SkipStringEscape
-                    => SkipStringEscape(remainingContent),
+                    => SkipStringEscape(
+                        remainingContent,
+                        ref clientResponseWriter),
                 _ => throw new InvalidOperationException(
                     "Unknown analyzer state.")
             };
@@ -176,30 +207,36 @@ internal sealed class GoogleStreamingResponseAnalyzer
         }
     }
 
-    private int ProcessOutsideString(ReadOnlySpan<byte> content)
+    private int ProcessOutsideString(
+        ReadOnlySpan<byte> content,
+        ref ClientResponseWriter clientResponseWriter)
     {
         int quoteIndex = content.IndexOf((byte)'"');
 
         if (quoteIndex < 0)
         {
-            WriteBytes(content);
+            WriteRetainedBytes(content, ref clientResponseWriter);
 
             return content.Length;
         }
 
-        WriteBytes(content[..quoteIndex]);
-        StartCandidate();
+        WriteRetainedBytes(
+            content[..quoteIndex],
+            ref clientResponseWriter);
+        StartCandidate(ref clientResponseWriter);
 
         return quoteIndex + 1;
     }
 
-    private int ProcessInsideString(ReadOnlySpan<byte> content)
+    private int ProcessInsideString(
+        ReadOnlySpan<byte> content,
+        ref ClientResponseWriter clientResponseWriter)
     {
         int terminatorIndex = content.IndexOfAny(StringTerminators);
 
         if (terminatorIndex < 0)
         {
-            WriteBytes(content);
+            WriteRetainedBytes(content, ref clientResponseWriter);
 
             return content.Length;
         }
@@ -207,7 +244,9 @@ internal sealed class GoogleStreamingResponseAnalyzer
         int consumedBytes = terminatorIndex + 1;
         byte terminator = content[terminatorIndex];
 
-        WriteBytes(content[..consumedBytes]);
+        WriteRetainedBytes(
+            content[..consumedBytes],
+            ref clientResponseWriter);
         _state = terminator == (byte)'\\'
             ? AnalyzerState.NormalEscape
             : AnalyzerState.NormalOutsideString;
@@ -215,15 +254,19 @@ internal sealed class GoogleStreamingResponseAnalyzer
         return consumedBytes;
     }
 
-    private int ProcessNormalEscape(ReadOnlySpan<byte> content)
+    private int ProcessNormalEscape(
+        ReadOnlySpan<byte> content,
+        ref ClientResponseWriter clientResponseWriter)
     {
-        WriteBytes(content[..1]);
+        WriteRetainedBytes(content[..1], ref clientResponseWriter);
         _state = AnalyzerState.NormalInsideString;
 
         return 1;
     }
 
-    private int ProcessCandidate(ReadOnlySpan<byte> content)
+    private int ProcessCandidate(
+        ReadOnlySpan<byte> content,
+        ref ClientResponseWriter clientResponseWriter)
     {
         int consumedBytes = 0;
 
@@ -232,6 +275,7 @@ internal sealed class GoogleStreamingResponseAnalyzer
         {
             byte value = content[consumedBytes];
             AppendCandidate(content.Slice(consumedBytes, 1));
+            clientResponseWriter.Write(content.Slice(consumedBytes, 1));
             consumedBytes++;
 
             if (_candidateIndex == 1)
@@ -273,24 +317,30 @@ internal sealed class GoogleStreamingResponseAnalyzer
         return consumedBytes;
     }
 
-    private int ProcessAfterSkippedKey(ReadOnlySpan<byte> content)
+    private int ProcessAfterSkippedKey(
+        ReadOnlySpan<byte> content,
+        ref ClientResponseWriter clientResponseWriter)
     {
         int whitespaceLength = content.IndexOfAnyExcept(JsonWhitespace);
 
         if (whitespaceLength < 0)
         {
             AppendCandidate(content);
+            clientResponseWriter.Write(content);
 
             return content.Length;
         }
 
         AppendCandidate(content[..whitespaceLength]);
+        clientResponseWriter.Write(content[..whitespaceLength]);
         byte value = content[whitespaceLength];
         int consumedBytes = whitespaceLength + 1;
 
         if (!_colonSeen && value == (byte)':')
         {
             AppendCandidate(content.Slice(whitespaceLength, 1));
+            clientResponseWriter.Write(
+                content.Slice(whitespaceLength, 1));
             _colonSeen = true;
 
             return consumedBytes;
@@ -300,6 +350,9 @@ internal sealed class GoogleStreamingResponseAnalyzer
         {
             FlushCandidate();
             WriteReplacementValue();
+            clientResponseWriter.Write(
+                content.Slice(whitespaceLength, 1));
+            _skippedProperty = _candidateProperty;
             _candidateProperty = SkippedStringProperty.None;
             _state = AnalyzerState.SkipStringValue;
 
@@ -307,6 +360,7 @@ internal sealed class GoogleStreamingResponseAnalyzer
         }
 
         AppendCandidate(content.Slice(whitespaceLength, 1));
+        clientResponseWriter.Write(content.Slice(whitespaceLength, 1));
         FlushCandidate();
         _candidateProperty = SkippedStringProperty.None;
         _state = AnalyzerState.NormalOutsideString;
@@ -314,33 +368,61 @@ internal sealed class GoogleStreamingResponseAnalyzer
         return consumedBytes;
     }
 
-    private int SkipStringValue(ReadOnlySpan<byte> content)
+    private int SkipStringValue(
+        ReadOnlySpan<byte> content,
+        ref ClientResponseWriter clientResponseWriter)
     {
         int terminatorIndex = content.IndexOfAny(StringTerminators);
 
         if (terminatorIndex < 0)
         {
+            WriteSkippedValueBytes(content, ref clientResponseWriter);
+
             return content.Length;
         }
 
-        _state = content[terminatorIndex] == (byte)'\\'
-            ? AnalyzerState.SkipStringEscape
-            : AnalyzerState.NormalOutsideString;
+        int consumedBytes = terminatorIndex + 1;
+        byte terminator = content[terminatorIndex];
 
-        return terminatorIndex + 1;
+        WriteSkippedValueBytes(
+            content[..consumedBytes],
+            ref clientResponseWriter);
+
+        if (terminator == (byte)'\\')
+        {
+            _state = AnalyzerState.SkipStringEscape;
+        }
+        else
+        {
+            if (_skippedProperty == SkippedStringProperty.Signature)
+            {
+                clientResponseWriter.Write(
+                    content.Slice(terminatorIndex, 1));
+            }
+
+            _skippedProperty = SkippedStringProperty.None;
+            _state = AnalyzerState.NormalOutsideString;
+        }
+
+        return consumedBytes;
     }
 
-    private int SkipStringEscape(ReadOnlySpan<byte> content)
+    private int SkipStringEscape(
+        ReadOnlySpan<byte> content,
+        ref ClientResponseWriter clientResponseWriter)
     {
+        WriteSkippedValueBytes(content[..1], ref clientResponseWriter);
         _state = AnalyzerState.SkipStringValue;
 
         return 1;
     }
 
-    private void StartCandidate()
+    private void StartCandidate(
+        ref ClientResponseWriter clientResponseWriter)
     {
         _candidate.Clear();
         AppendCandidate(DataPropertyName.AsSpan(0, 1));
+        clientResponseWriter.Write(DataPropertyName.AsSpan(0, 1));
         _candidateProperty = SkippedStringProperty.None;
         _candidateIndex = 1;
         _state = AnalyzerState.CandidateSkippedKey;
@@ -365,6 +447,24 @@ internal sealed class GoogleStreamingResponseAnalyzer
             _ => throw new InvalidOperationException(
                 "Unknown skipped string property.")
         });
+    }
+
+    private void WriteRetainedBytes(
+        ReadOnlySpan<byte> values,
+        ref ClientResponseWriter clientResponseWriter)
+    {
+        WriteBytes(values);
+        clientResponseWriter.Write(values);
+    }
+
+    private void WriteSkippedValueBytes(
+        ReadOnlySpan<byte> values,
+        ref ClientResponseWriter clientResponseWriter)
+    {
+        if (_skippedProperty == SkippedStringProperty.Data)
+        {
+            clientResponseWriter.Write(values);
+        }
     }
 
     private void AppendCandidate(ReadOnlySpan<byte> values)
@@ -442,5 +542,36 @@ internal sealed class GoogleStreamingResponseAnalyzer
         None,
         Data,
         Signature
+    }
+
+    private ref struct ClientResponseWriter
+    {
+        public int WrittenCount { get; private set; }
+
+        private readonly Span<byte> _destination;
+        private readonly bool _enabled;
+
+        public ClientResponseWriter(Span<byte> destination, bool enabled)
+        {
+            _destination = destination;
+            _enabled = enabled;
+        }
+
+        public void Write(ReadOnlySpan<byte> values)
+        {
+            if (!_enabled)
+            {
+                return;
+            }
+
+            if (values.Length > _destination.Length - WrittenCount)
+            {
+                throw new InvalidOperationException(
+                    "The sanitized response exceeded its input block.");
+            }
+
+            values.CopyTo(_destination[WrittenCount..]);
+            WrittenCount += values.Length;
+        }
     }
 }
