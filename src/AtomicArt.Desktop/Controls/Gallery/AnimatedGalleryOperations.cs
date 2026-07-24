@@ -52,6 +52,14 @@ internal sealed class AnimatedGalleryOperations :
             operations => operations.RemoveAsync(itemId, ct));
     }
 
+    public Task RevealAsync(Guid itemId, CancellationToken ct)
+    {
+        return ExecuteWithActiveOperationsAsync(
+            nameof(RevealAsync),
+            1,
+            operations => operations.RevealAsync(itemId, ct));
+    }
+
     public Task ApplyMixedMutationAsync(IReadOnlyList<object> finalItems, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(finalItems);

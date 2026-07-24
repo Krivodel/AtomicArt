@@ -21,7 +21,7 @@ internal sealed class GalleryOperationBatchDispatcher
             ct.ThrowIfCancellationRequested();
             if (IsBatchableOperation(operations[i]))
             {
-                i = await DispatchBatchableAddOperationsAsync(context, operations, i, ct);
+                i = await DispatchBatchableOperationsAsync(context, operations, i, ct);
                 continue;
             }
 
@@ -29,21 +29,21 @@ internal sealed class GalleryOperationBatchDispatcher
         }
     }
 
-    private async Task<int> DispatchBatchableAddOperationsAsync(
+    private async Task<int> DispatchBatchableOperationsAsync(
         GalleryOperationCoordinator context,
         IReadOnlyList<GalleryOperation> operations,
         int startIndex,
         CancellationToken ct)
     {
-        List<GalleryOperation> addBatch = [];
+        List<GalleryOperation> batch = [];
         int index = startIndex;
         while ((index < operations.Count) && IsBatchableOperation(operations[index]))
         {
-            addBatch.Add(operations[index]);
+            batch.Add(operations[index]);
             index++;
         }
 
-        await RunMatchingRunnersAsync(context, addBatch, ct);
+        await RunMatchingRunnersAsync(context, batch, ct);
 
         return index;
     }

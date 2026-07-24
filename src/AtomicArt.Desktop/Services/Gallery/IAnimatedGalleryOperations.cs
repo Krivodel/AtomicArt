@@ -8,6 +8,8 @@ public interface IAnimatedGalleryOperations
 
     Task RemoveAsync(Guid itemId, CancellationToken ct);
 
+    Task RevealAsync(Guid itemId, CancellationToken ct);
+
     Task ApplyMixedMutationAsync(IReadOnlyList<object> finalItems, CancellationToken ct);
 
     Task RestoreSnapshotAsync(IReadOnlyList<object> finalItems, CancellationToken ct);

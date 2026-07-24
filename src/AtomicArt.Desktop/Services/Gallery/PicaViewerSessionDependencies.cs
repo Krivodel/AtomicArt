@@ -12,6 +12,8 @@ public sealed class PicaViewerSessionDependencies
     public ITrustedImageFileService TrustedImageFileService { get; }
     public IGenerationImageFormatRegistry FormatRegistry { get; }
     public IUiThreadDispatcher UiThreadDispatcher { get; }
+    public IWindowStateService WindowStateService { get; }
+    public IAnimatedGalleryOperations GalleryOperations { get; }
 
     internal ILogger<PicaViewerSession> Logger { get; }
 
@@ -20,6 +22,8 @@ public sealed class PicaViewerSessionDependencies
         ITrustedImageFileService trustedImageFileService,
         IGenerationImageFormatRegistry formatRegistry,
         IUiThreadDispatcher uiThreadDispatcher,
+        IWindowStateService windowStateService,
+        IAnimatedGalleryOperations galleryOperations,
         ILoggerFactory loggerFactory)
     {
         ClipboardImageWriter = clipboardImageWriter
@@ -29,6 +33,10 @@ public sealed class PicaViewerSessionDependencies
         FormatRegistry = formatRegistry ?? throw new ArgumentNullException(nameof(formatRegistry));
         UiThreadDispatcher = uiThreadDispatcher
             ?? throw new ArgumentNullException(nameof(uiThreadDispatcher));
+        WindowStateService = windowStateService
+            ?? throw new ArgumentNullException(nameof(windowStateService));
+        GalleryOperations = galleryOperations
+            ?? throw new ArgumentNullException(nameof(galleryOperations));
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         Logger = loggerFactory.CreateLogger<PicaViewerSession>();

@@ -23,11 +23,15 @@ public sealed class ImageViewerServiceTests
         Mock<ITrustedImageFileService> trustedImageFileServiceMock = new();
         Mock<IGenerationImageFormatRegistry> formatRegistryMock = new();
         Mock<IUiThreadDispatcher> uiThreadDispatcherMock = new();
+        Mock<IWindowStateService> windowStateServiceMock = new();
+        Mock<IAnimatedGalleryOperations> galleryOperationsMock = new();
         PicaViewerSessionDependencies sessionDependencies = new(
             clipboardImageWriterMock.Object,
             trustedImageFileServiceMock.Object,
             formatRegistryMock.Object,
             uiThreadDispatcherMock.Object,
+            windowStateServiceMock.Object,
+            galleryOperationsMock.Object,
             NullLoggerFactory.Instance);
         PicaViewerSessionFactory sessionFactory = new(sessionDependencies);
         ImageViewerService service = new(

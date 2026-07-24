@@ -107,6 +107,46 @@ internal sealed class GalleryLayoutService
         SynchronizeCardControlIdsCore(context);
     }
 
+    public int? FindItemIndex(
+        GalleryOperationCoordinator context,
+        Guid itemId)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        context.EnsureSceneAttached();
+        IReadOnlyList<object> items = context.Items;
+
+        for (int index = 0; index < items.Count; index++)
+        {
+            if (context.GetItemId(items[index]) == itemId)
+            {
+                return index;
+            }
+        }
+
+        return null;
+    }
+
+    public void ScrollItemIntoView(
+        GalleryOperationCoordinator context,
+        int itemIndex)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        context.EnsureSceneAttached();
+        RefreshGalleryVirtualization(context);
+        int columns = CalculateColumnCount(GetViewportWidth(context.ScrollViewer));
+        Rect itemRect = GetLogicalCardRect(itemIndex, columns);
+        double viewportHeight = GetViewportHeight(context.ScrollViewer);
+        double targetOffsetY = itemRect.Center.Y - (viewportHeight / 2d);
+        double maximumOffsetY = Math.Max(
+            0d,
+            context.GalleryPanel.Height - viewportHeight);
+        Vector currentOffset = context.ScrollViewer.Offset;
+        context.ScrollViewer.Offset = new Vector(
+            currentOffset.X,
+            Math.Clamp(targetOffsetY, 0d, maximumOffsetY));
+        RefreshGalleryVirtualization(context);
+    }
+
     public Dictionary<Guid, Rect> TakeOverlaySnapshots(
         Canvas overlayCanvas,
         Dictionary<Guid, Control> overlays)
@@ -146,6 +186,23 @@ internal sealed class GalleryLayoutService
         }
 
         return rect is { Width: > 0d, Height: > 0d };
+    }
+
+    public bool TryGetCardSurfaceRect(
+        Control control,
+        Canvas overlayCanvas,
+        out Rect rect)
+    {
+        ArgumentNullException.ThrowIfNull(control);
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        if (control is ContentControl { Content: Control content }
+            && TryGetOverlayRect(content, overlayCanvas, out rect))
+        {
+            return true;
+        }
+
+        return TryGetOverlayRect(control, overlayCanvas, out rect);
     }
 
     public int CalculateColumnCount(double viewportWidth)

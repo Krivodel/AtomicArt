@@ -8,6 +8,8 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryOverlayEffects
 {
+    private const int RevealHighlightDurationMilliseconds = 700;
+
     private readonly UiAnimationScheduler _animationScheduler;
 
     public GalleryOverlayEffects(UiAnimationScheduler animationScheduler)
@@ -111,6 +113,24 @@ internal sealed class GalleryOverlayEffects
             delay + AnimationTiming.ScaleTime(430 + (index * 28), speed),
             MotionEasing.EaseOut,
             () => RemoveOverlay(overlayCanvas, overlayControls, flash));
+    }
+
+    internal Task CreateRevealHighlightAsync(
+        Canvas overlayCanvas,
+        Rect rect)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        Border highlight = CreateTargetFlashOverlay(rect);
+        overlayCanvas.Children.Add(highlight);
+
+        return _animationScheduler.AnimateAsync(
+            highlight,
+            CreateTargetFlashFrames(),
+            RevealHighlightDurationMilliseconds,
+            0,
+            MotionEasing.EaseOut,
+            () => overlayCanvas.Children.Remove(highlight));
     }
 
     private static void ValidateOverlayArguments(

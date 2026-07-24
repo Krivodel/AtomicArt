@@ -54,6 +54,20 @@ public sealed class AnimatedGalleryOperationsTests
     }
 
     [Fact]
+    public async Task RevealAsync_WhenSceneAttached_DelegatesToActiveOperations()
+    {
+        Guid itemId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        (
+            AnimatedGalleryOperations operations,
+            RecordingAnimatedGalleryOperations sceneOperations) = CreateAttachedOperations();
+
+        await operations.RevealAsync(itemId, CancellationToken.None);
+
+        sceneOperations.RevealCallCount.Should().Be(1);
+        sceneOperations.LastRevealedItemId.Should().Be(itemId);
+    }
+
+    [Fact]
     public async Task RestoreSnapshotAsync_WhenSceneAttached_DelegatesToActiveOperations()
     {
         (

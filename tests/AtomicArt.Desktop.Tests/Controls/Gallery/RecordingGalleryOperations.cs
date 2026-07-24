@@ -26,6 +26,11 @@ internal sealed class RecordingGalleryOperations : IAnimatedGalleryOperations, I
         return CompleteOperation(ct);
     }
 
+    public Task RevealAsync(Guid itemId, CancellationToken ct)
+    {
+        return CompleteOperation(ct);
+    }
+
     public Task ApplyMixedMutationAsync(IReadOnlyList<object> finalItems, CancellationToken ct)
     {
         return CompleteCollectionOperation(finalItems, ct);

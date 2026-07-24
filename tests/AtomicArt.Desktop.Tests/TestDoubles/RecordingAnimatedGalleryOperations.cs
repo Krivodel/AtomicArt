@@ -7,11 +7,13 @@ internal sealed class RecordingAnimatedGalleryOperations : IAnimatedGalleryOpera
     public int AppendBatchCallCount { get; private set; }
     public int GenerateFrontCallCount { get; private set; }
     public int RemoveCallCount { get; private set; }
+    public int RevealCallCount { get; private set; }
     public int MixedMutationCallCount { get; private set; }
     public int RestoreSnapshotCallCount { get; private set; }
     public IReadOnlyList<object> LastAppendItems { get; private set; } = [];
     public IReadOnlyList<object> LastGenerateFrontItems { get; private set; } = [];
     public Guid? LastRemovedItemId { get; private set; }
+    public Guid? LastRevealedItemId { get; private set; }
     public IReadOnlyList<object> LastMixedMutationItems { get; private set; } = [];
     public IReadOnlyList<object> LastRestoreSnapshotItems { get; private set; } = [];
 
@@ -43,6 +45,16 @@ internal sealed class RecordingAnimatedGalleryOperations : IAnimatedGalleryOpera
 
         RemoveCallCount++;
         LastRemovedItemId = itemId;
+
+        return Task.CompletedTask;
+    }
+
+    public Task RevealAsync(Guid itemId, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        RevealCallCount++;
+        LastRevealedItemId = itemId;
 
         return Task.CompletedTask;
     }

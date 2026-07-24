@@ -16,6 +16,8 @@ internal sealed class PicaViewerSessionTestDependencies
     internal Mock<ITrustedImageFileService> TrustedImageFileService { get; } = new();
     internal Mock<IGenerationImageFormatRegistry> FormatRegistry { get; } = new();
     internal Mock<IUiThreadDispatcher> UiThreadDispatcher { get; } = new();
+    internal Mock<IWindowStateService> WindowStateService { get; } = new();
+    internal Mock<IAnimatedGalleryOperations> GalleryOperations { get; } = new();
 
     internal PicaViewerSession CreateSession(
         IGenerationImageFormatRegistry? formatRegistry = null)
@@ -25,6 +27,8 @@ internal sealed class PicaViewerSessionTestDependencies
             TrustedImageFileService.Object,
             formatRegistry ?? FormatRegistry.Object,
             UiThreadDispatcher.Object,
+            WindowStateService.Object,
+            GalleryOperations.Object,
             NullLoggerFactory.Instance);
 
         return new PicaViewerSession(dependencies);

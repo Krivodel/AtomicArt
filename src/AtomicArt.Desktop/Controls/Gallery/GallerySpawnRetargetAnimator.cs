@@ -231,11 +231,21 @@ internal sealed class GallerySpawnRetargetAnimator : GalleryLayoutAnimator
             return emptyAnimations;
         }
 
+        Rect flashRect = target.Rect;
+        if (context.CardControls.TryGetValue(target.Id, out Control? control)
+            && GalleryLayout.TryGetCardSurfaceRect(
+                control,
+                context.OverlayCanvas,
+                out Rect cardSurfaceRect))
+        {
+            flashRect = cardSurfaceRect;
+        }
+
         List<Task> animations =
         [
             OverlayEffects.CreateTargetFlash(
                 context.OverlayCanvas,
-                target.Rect,
+                flashRect,
                 index,
                 GalleryMotionTimings.SpawnSpeed,
                 GalleryMotionTimings.SpawnDelayMilliseconds,

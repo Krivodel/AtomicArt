@@ -79,6 +79,29 @@ public sealed class PicaViewerSessionTests
     }
 
     [Fact]
+    public async Task PrepareAsync_WithGalleryFiles_AddsShowInGalleryAction()
+    {
+        const string modelId = "model";
+        const string imagePath = "images/source.png";
+        const string trustedImagePath = "trusted/source.png";
+        PicaViewerSessionTestDependencies dependencies = new();
+        dependencies.TrustedImageFileService
+            .Setup(service => service.GetTrustedImagePath(imagePath, modelId))
+            .Returns(trustedImagePath);
+        GalleryImageViewerRequest request = CreateRequest(
+            new GalleryFileImageViewerSource(modelId, imagePath, null),
+            null);
+
+        await using PicaViewerSession session = dependencies.CreateSession();
+        await session.PrepareAsync(request, CancellationToken.None);
+
+        PicaViewerRequest preparedRequest = GetPreparedRequest(session);
+        preparedRequest.Actions.Should().ContainSingle(action =>
+            action.Id == AtomicArtPicaActions.ShowInGalleryId
+            && action.Targets == PicaActionTargets.CurrentImage);
+    }
+
+    [Fact]
     public async Task DispatchCurrentImageAsync_WithAttachAction_ExecutesAtomicArtCommand()
     {
         const string modelId = "model";
@@ -132,6 +155,42 @@ public sealed class PicaViewerSessionTests
         {
             Directory.Delete(directoryPath, true);
         }
+    }
+
+    [Fact]
+    public async Task DispatchCurrentImageAsync_WithShowInGalleryAction_RevealsItemAndActivatesWindow()
+    {
+        const string modelId = "model";
+        const string imagePath = "images/source.png";
+        const string trustedImagePath = "trusted/source.png";
+        PicaViewerSessionTestDependencies dependencies = new();
+        dependencies.TrustedImageFileService
+            .Setup(service => service.GetTrustedImagePath(imagePath, modelId))
+            .Returns(trustedImagePath);
+        dependencies.UiThreadDispatcher
+            .Setup(dispatcher => dispatcher.InvokeAsync(
+                It.IsAny<Func<Task>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((Func<Task> action, CancellationToken _) => action());
+        GalleryImageViewerRequest request = CreateRequest(
+            new GalleryFileImageViewerSource(modelId, imagePath, null),
+            null);
+
+        await using PicaViewerSession session = dependencies.CreateSession();
+        await session.PrepareAsync(request, CancellationToken.None);
+        PicaViewerRequest preparedRequest = GetPreparedRequest(session);
+
+        await session.DispatchCurrentImageAsync(
+            AtomicArtPicaActions.ShowInGallery,
+            preparedRequest.Items.Single(),
+            CancellationToken.None);
+
+        dependencies.WindowStateService.Verify(
+            service => service.ShowAndActivate(),
+            Times.Once);
+        dependencies.GalleryOperations.Verify(
+            operations => operations.RevealAsync(ItemId, CancellationToken.None),
+            Times.Once);
     }
 
     private static GalleryImageViewerRequest CreateRequest(

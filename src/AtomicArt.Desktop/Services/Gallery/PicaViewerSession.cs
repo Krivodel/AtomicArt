@@ -17,6 +17,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
     private readonly PicaViewerSessionDependencies _dependencies;
     private readonly HashSet<string> _allowedImagePaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<Guid> _galleryItemIds = [];
     private readonly string _sessionDirectory;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
     private ImageViewerWindow? _window;
@@ -39,16 +40,28 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         IReadOnlyList<GalleryImageViewerItem> sourceItems = sourceRequest.ItemsSource.GetItems();
         List<PicaImageItem> items = [];
+        bool canShowInGallery = sourceItems.Count > 0
+            && sourceItems.All(item => item.Source is GalleryFileImageViewerSource);
 
         foreach (GalleryImageViewerItem sourceItem in sourceItems)
         {
             PicaImageItem item = await MaterializeItemAsync(sourceItem, ct).ConfigureAwait(false);
             items.Add(item);
             _allowedImagePaths.Add(Path.GetFullPath(item.FilePath));
+
+            if (sourceItem.Source is GalleryFileImageViewerSource)
+            {
+                _galleryItemIds.Add(sourceItem.Id);
+            }
         }
 
         _attachImagesCommand = sourceRequest.AttachImagesCommand;
         List<PicaActionDefinition> actions = [];
+
+        if (canShowInGallery)
+        {
+            actions.Add(AtomicArtPicaActions.ShowInGallery);
+        }
 
         if (_attachImagesCommand is not null)
         {
@@ -88,7 +101,16 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(item);
 
-        if (!CanDispatch(action))
+        if (string.Equals(
+                action.Id,
+                AtomicArtPicaActions.ShowInGalleryId,
+                StringComparison.Ordinal))
+        {
+            await DispatchShowInGalleryAsync(item, ct).ConfigureAwait(false);
+            return;
+        }
+
+        if (!CanDispatchAttach(action))
         {
             _dependencies.Logger.LogWarning(
                 "Embedded Pica rejected unsupported action {ActionId} for item {ItemId}",
@@ -129,7 +151,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(pngContent);
 
-        if (!CanDispatch(action))
+        if (!CanDispatchAttach(action))
         {
             _dependencies.Logger.LogWarning(
                 "Embedded Pica rejected unsupported selection action {ActionId} for item {ItemId}",
@@ -232,10 +254,42 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         return new PicaImageItem(itemId, filePath, Path.GetFileName(image.FileName));
     }
 
-    private bool CanDispatch(PicaActionDefinition action)
+    private bool CanDispatchAttach(PicaActionDefinition action)
     {
         return _attachImagesCommand is not null
             && string.Equals(action.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal);
+    }
+
+    private async Task DispatchShowInGalleryAsync(
+        PicaImageItem item,
+        CancellationToken ct)
+    {
+        if (!_galleryItemIds.Contains(item.Id))
+        {
+            _dependencies.Logger.LogWarning(
+                "Embedded Pica rejected show-in-gallery action for unavailable item {ItemId}",
+                item.Id);
+            return;
+        }
+
+        await _dependencies.UiThreadDispatcher.InvokeAsync(
+            async () =>
+            {
+                try
+                {
+                    _dependencies.WindowStateService.ShowAndActivate();
+                    await _dependencies.GalleryOperations
+                        .RevealAsync(item.Id, ct);
+                }
+                finally
+                {
+                    _window?.Close();
+                }
+            },
+            ct).ConfigureAwait(false);
+        _dependencies.Logger.LogInformation(
+            "Embedded Pica revealed gallery item {ItemId}",
+            item.Id);
     }
 
     private string GetExtension(string fileName, string contentType)

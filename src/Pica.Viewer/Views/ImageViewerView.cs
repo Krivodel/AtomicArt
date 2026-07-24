@@ -548,6 +548,17 @@ internal sealed class ImageViewerView : IDisposable
             events.ContextCopyClicked,
             0d));
 
+        panel.Children.Add(CreateMenuButton(
+            ViewerUiStrings.SaveAs,
+            SaveIconGeometry,
+            events.ContextSaveAsClicked,
+            0d));
+        panel.Children.Add(CreateMenuButton(
+            "Выделить область",
+            "M6,6 L12,6 L12,8 L8,8 L8,12 L6,12 Z M12,16 L16,16 L16,12 L18,12 L18,18 L12,18 Z",
+            events.ContextSelectAreaClicked,
+            0d));
+
         foreach (PicaActionDefinition action in GetActions(actions, PicaActionTargets.CurrentImage))
         {
             Button button = CreateMenuButton(
@@ -559,16 +570,6 @@ internal sealed class ImageViewerView : IDisposable
             panel.Children.Add(button);
         }
 
-        panel.Children.Add(CreateMenuButton(
-            ViewerUiStrings.SaveAs,
-            SaveIconGeometry,
-            events.ContextSaveAsClicked,
-            0d));
-        panel.Children.Add(CreateMenuButton(
-            "Выделить область",
-            "M6,6 L12,6 L12,8 L8,8 L8,12 L6,12 Z M12,16 L16,16 L16,12 L18,12 L18,18 L12,18 Z",
-            events.ContextSelectAreaClicked,
-            0d));
         panel.Children.Add(CreateMenuButton(
             "Показать в папке",
             FolderIconGeometry,
@@ -971,9 +972,9 @@ internal sealed class ImageViewerView : IDisposable
                 Property = Visual.OpacityProperty,
                 Duration = duration
             }
-            
+
         ];
-        
+
         return transitions;
     }
 

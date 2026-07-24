@@ -65,6 +65,13 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         return _operationQueue.EnqueueAsync(operation, this, ct);
     }
 
+    public Task RevealAsync(Guid itemId, CancellationToken ct)
+    {
+        GalleryOperation operation = new RevealGalleryItemOperation(itemId);
+
+        return _operationQueue.EnqueueAsync(operation, this, ct);
+    }
+
     public Task ApplyMixedMutationAsync(IReadOnlyList<object> finalItems, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(finalItems);
