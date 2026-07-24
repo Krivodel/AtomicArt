@@ -162,6 +162,7 @@ public sealed class GenerationsControllerTests
             new TestProviderGenerationStream(),
             new GenerationUsagePriceCalculator(),
             new FixedDateTimeProvider(CompletedAtUtc),
+            NullLogger<StreamingGenerationAttempt>.Instance,
             request,
             model,
             GenerationProviderIds.Google,

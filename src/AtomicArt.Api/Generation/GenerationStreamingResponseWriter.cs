@@ -48,6 +48,8 @@ public sealed class GenerationStreamingResponseWriter
             GenerationAttemptMetadataDto metadata =
                 await attempt.CopyProviderResponseAsync(response.Body, ct)
                     .ConfigureAwait(false);
+
+            LogFailedAttempt(metadata);
             await WriteMetadataPartAsync(response, boundary, metadata, ct)
                 .ConfigureAwait(false);
 
@@ -229,6 +231,25 @@ public sealed class GenerationStreamingResponseWriter
                 => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status502BadGateway
         };
+    }
+
+    private void LogFailedAttempt(GenerationAttemptMetadataDto metadata)
+    {
+        if (metadata.Status == GenerationItemStatus.Generated)
+        {
+            return;
+        }
+
+        _logger.LogWarning(
+            "Streaming generation attempt {AttemptNumber} for logical generation {LogicalGenerationId} failed with provider {ProviderId}. Provider state {ProviderState}; safe error code {SafeErrorCode}; retryable {Retryable}; result count {ResultCount}; duration {GenerationDurationMilliseconds} ms.",
+            metadata.AttemptNumber,
+            metadata.LogicalGenerationId,
+            metadata.ProviderId,
+            metadata.ProviderState,
+            metadata.SafeErrorCode,
+            metadata.Retryable,
+            metadata.ResultCount,
+            metadata.GenerationDuration.TotalMilliseconds);
     }
 
     private static string ToContractFailureKind(

@@ -20,6 +20,7 @@ public sealed class CreateStreamingGenerationHandler
     private readonly GenerationUsagePriceCalculator _priceCalculator;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateStreamingGenerationHandler> _logger;
+    private readonly ILogger<StreamingGenerationAttempt> _attemptLogger;
 
     public CreateStreamingGenerationHandler(
         IImageModelRegistry modelRegistry,
@@ -27,7 +28,8 @@ public sealed class CreateStreamingGenerationHandler
         StreamingGenerationRequestValidator requestValidator,
         GenerationUsagePriceCalculator priceCalculator,
         IDateTimeProvider dateTimeProvider,
-        ILogger<CreateStreamingGenerationHandler> logger)
+        ILogger<CreateStreamingGenerationHandler> logger,
+        ILogger<StreamingGenerationAttempt> attemptLogger)
     {
         _modelRegistry = modelRegistry
             ?? throw new ArgumentNullException(nameof(modelRegistry));
@@ -41,6 +43,8 @@ public sealed class CreateStreamingGenerationHandler
             ?? throw new ArgumentNullException(nameof(dateTimeProvider));
         _logger = logger
             ?? throw new ArgumentNullException(nameof(logger));
+        _attemptLogger = attemptLogger
+            ?? throw new ArgumentNullException(nameof(attemptLogger));
     }
 
     public async Task<GenerationAttemptPreparation> Handle(
@@ -107,6 +111,7 @@ public sealed class CreateStreamingGenerationHandler
                 providerStream,
                 _priceCalculator,
                 _dateTimeProvider,
+                _attemptLogger,
                 request,
                 modelDefinition.Metadata,
                 modelDefinition.Metadata.Provider,

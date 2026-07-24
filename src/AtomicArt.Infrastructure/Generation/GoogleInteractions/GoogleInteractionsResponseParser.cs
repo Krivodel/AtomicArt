@@ -52,10 +52,40 @@ internal sealed class GoogleInteractionsResponseParser
 
         using JsonDocument document = JsonDocument.Parse(responseJson);
         JsonElement root = document.RootElement;
+        ImageExtractionResult imageExtraction = ParseResponse(
+            root,
+            ImageDataHandling.ValidateAndRetain);
 
+        return new GoogleInteractionsResult(
+            imageExtraction.Images,
+            ExtractUsage(root));
+    }
+
+    public ProviderGenerationSummary ParseFilteredMetadata(JsonElement root)
+    {
+        ImageExtractionResult imageExtraction = ParseResponse(
+            root,
+            ImageDataHandling.FilteredMetadata);
+        GenerationUsageDto usage = ExtractUsage(root);
+
+        return new ProviderGenerationSummary(
+            ExtractStatus(root),
+            imageExtraction.Images.Count,
+            imageExtraction.Images
+                .Select(image => image.ContentType)
+                .ToList(),
+            usage);
+    }
+
+    private static ImageExtractionResult ParseResponse(
+        JsonElement root,
+        ImageDataHandling imageDataHandling)
+    {
         ValidateStatus(root);
 
-        ImageExtractionResult imageExtraction = ExtractImages(root);
+        ImageExtractionResult imageExtraction = ExtractImages(
+            root,
+            imageDataHandling);
 
         if (imageExtraction.Images.Count == 0)
         {
@@ -65,9 +95,7 @@ internal sealed class GoogleInteractionsResponseParser
                 CreateNoImageDiagnostics(root, imageExtraction));
         }
 
-        GenerationUsageDto usage = ExtractUsage(root);
-
-        return new GoogleInteractionsResult(imageExtraction.Images, usage);
+        return imageExtraction;
     }
 
     private static void ValidateStatus(JsonElement root)
@@ -110,7 +138,9 @@ internal sealed class GoogleInteractionsResponseParser
             "The generation provider returned an unknown status.");
     }
 
-    private static ImageExtractionResult ExtractImages(JsonElement root)
+    private static ImageExtractionResult ExtractImages(
+        JsonElement root,
+        ImageDataHandling imageDataHandling)
     {
         List<GoogleInteractionImageContent> images = [];
 
@@ -118,14 +148,20 @@ internal sealed class GoogleInteractionsResponseParser
             root,
             OutputImageSnakeCasePropertyName,
             OutputImageCamelCasePropertyName,
-            images);
+            images,
+            imageDataHandling);
         bool hasOutputImages = AddImagesFromProperty(
             root,
             OutputImagesSnakeCasePropertyName,
             OutputImagesCamelCasePropertyName,
-            images);
-        bool hasOutput = AddImagesFromProperty(root, OutputPropertyName, images);
-        AddImagesFromSteps(root, images);
+            images,
+            imageDataHandling);
+        bool hasOutput = AddImagesFromProperty(
+            root,
+            OutputPropertyName,
+            images,
+            imageDataHandling);
+        AddImagesFromSteps(root, images, imageDataHandling);
 
         return new ImageExtractionResult(
             images,
@@ -136,7 +172,8 @@ internal sealed class GoogleInteractionsResponseParser
 
     private static void AddImagesFromSteps(
         JsonElement root,
-        List<GoogleInteractionImageContent> images)
+        List<GoogleInteractionImageContent> images,
+        ImageDataHandling imageDataHandling)
     {
         if (!GoogleInteractionsJsonElementReader.TryGetProperty(
             root,
@@ -149,20 +186,28 @@ internal sealed class GoogleInteractionsResponseParser
 
         foreach (JsonElement stepElement in stepsElement.EnumerateArray())
         {
-            AddImagesFromProperty(stepElement, ContentPropertyName, images);
+            AddImagesFromProperty(
+                stepElement,
+                ContentPropertyName,
+                images,
+                imageDataHandling);
             AddImagesFromProperty(
                 stepElement,
                 ModelOutputSnakeCasePropertyName,
                 ModelOutputCamelCasePropertyName,
-                images);
+                images,
+                imageDataHandling);
         }
     }
 
     private static void AddImagesFromElement(
         JsonElement element,
-        List<GoogleInteractionImageContent> images)
+        List<GoogleInteractionImageContent> images,
+        ImageDataHandling imageDataHandling)
     {
-        GoogleInteractionImageContent? image = TryCreateImageContent(element);
+        GoogleInteractionImageContent? image = TryCreateImageContent(
+            element,
+            imageDataHandling);
 
         if (image is not null)
         {
@@ -175,7 +220,10 @@ internal sealed class GoogleInteractionsResponseParser
         {
             foreach (JsonElement itemElement in element.EnumerateArray())
             {
-                AddImagesFromElement(itemElement, images);
+                AddImagesFromElement(
+                    itemElement,
+                    images,
+                    imageDataHandling);
             }
 
             return;
@@ -186,29 +234,41 @@ internal sealed class GoogleInteractionsResponseParser
             return;
         }
 
-        AddImagesFromProperty(element, ContentPropertyName, images);
+        AddImagesFromProperty(
+            element,
+            ContentPropertyName,
+            images,
+            imageDataHandling);
         AddImagesFromProperty(
             element,
             ModelOutputSnakeCasePropertyName,
             ModelOutputCamelCasePropertyName,
-            images);
+            images,
+            imageDataHandling);
         AddImagesFromProperty(
             element,
             OutputImageSnakeCasePropertyName,
             OutputImageCamelCasePropertyName,
-            images);
+            images,
+            imageDataHandling);
         AddImagesFromProperty(
             element,
             OutputImagesSnakeCasePropertyName,
             OutputImagesCamelCasePropertyName,
-            images);
-        AddImagesFromProperty(element, OutputPropertyName, images);
+            images,
+            imageDataHandling);
+        AddImagesFromProperty(
+            element,
+            OutputPropertyName,
+            images,
+            imageDataHandling);
     }
 
     private static bool AddImagesFromProperty(
         JsonElement element,
         string propertyName,
-        List<GoogleInteractionImageContent> images)
+        List<GoogleInteractionImageContent> images,
+        ImageDataHandling imageDataHandling)
     {
         if (!GoogleInteractionsJsonElementReader.TryGetProperty(
             element,
@@ -218,7 +278,7 @@ internal sealed class GoogleInteractionsResponseParser
             return false;
         }
 
-        AddImagesFromElement(propertyElement, images);
+        AddImagesFromElement(propertyElement, images, imageDataHandling);
 
         return true;
     }
@@ -227,36 +287,45 @@ internal sealed class GoogleInteractionsResponseParser
         JsonElement element,
         string firstName,
         string secondName,
-        List<GoogleInteractionImageContent> images)
+        List<GoogleInteractionImageContent> images,
+        ImageDataHandling imageDataHandling)
     {
         if (!TryGetProperty(element, firstName, secondName, out JsonElement propertyElement))
         {
             return false;
         }
 
-        AddImagesFromElement(propertyElement, images);
+        AddImagesFromElement(propertyElement, images, imageDataHandling);
 
         return true;
     }
 
-    private static GoogleInteractionImageContent? TryCreateImageContent(JsonElement contentItemElement)
+    private static GoogleInteractionImageContent? TryCreateImageContent(
+        JsonElement contentItemElement,
+        ImageDataHandling imageDataHandling)
     {
         if (TryGetProperty(contentItemElement, "inline_data", "inlineData", out JsonElement inlineDataElement)
             && inlineDataElement.ValueKind == JsonValueKind.Object)
         {
-            return TryCreateImageContentFromFields(inlineDataElement);
+            return TryCreateImageContentFromFields(
+                inlineDataElement,
+                imageDataHandling);
         }
 
-        return TryCreateImageContentFromFields(contentItemElement);
+        return TryCreateImageContentFromFields(
+            contentItemElement,
+            imageDataHandling);
     }
 
-    private static GoogleInteractionImageContent? TryCreateImageContentFromFields(JsonElement element)
+    private static GoogleInteractionImageContent? TryCreateImageContentFromFields(
+        JsonElement element,
+        ImageDataHandling imageDataHandling)
     {
-        if (!TryGetStringProperty(
-            element,
-            GoogleInteractionsContentContract.DataPropertyName,
-            out string? base64Data)
-            || string.IsNullOrWhiteSpace(base64Data))
+        if (!GoogleInteractionsJsonElementReader.TryGetProperty(
+                element,
+                GoogleInteractionsContentContract.DataPropertyName,
+                out JsonElement dataElement)
+            || dataElement.ValueKind != JsonValueKind.String)
         {
             return null;
         }
@@ -281,7 +350,17 @@ internal sealed class GoogleInteractionsResponseParser
             return null;
         }
 
-        if (!IsValidBase64(base64Data))
+        if (imageDataHandling == ImageDataHandling.FilteredMetadata)
+        {
+            return new GoogleInteractionImageContent(
+                normalizedContentType,
+                string.Empty);
+        }
+
+        string? base64Data = dataElement.GetString();
+
+        if (string.IsNullOrWhiteSpace(base64Data)
+            || !IsValidBase64(base64Data))
         {
             return null;
         }
@@ -656,5 +735,11 @@ internal sealed class GoogleInteractionsResponseParser
                 TextContentLength,
                 TextContentItemCount);
         }
+    }
+
+    private enum ImageDataHandling
+    {
+        ValidateAndRetain,
+        FilteredMetadata
     }
 }

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 using AtomicArt.Application.Common.Interfaces;
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Services;
@@ -15,6 +17,7 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
     private readonly IProviderGenerationStream _providerStream;
     private readonly GenerationUsagePriceCalculator _priceCalculator;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ILogger<StreamingGenerationAttempt> _logger;
     private readonly StreamingImageGenerationRequest _request;
     private readonly GenerationModelMetadataDto _model;
     private readonly string _providerId;
@@ -26,6 +29,7 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
         IProviderGenerationStream providerStream,
         GenerationUsagePriceCalculator priceCalculator,
         IDateTimeProvider dateTimeProvider,
+        ILogger<StreamingGenerationAttempt> logger,
         StreamingImageGenerationRequest request,
         GenerationModelMetadataDto model,
         string providerId,
@@ -36,6 +40,7 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(providerStream);
         ArgumentNullException.ThrowIfNull(priceCalculator);
         ArgumentNullException.ThrowIfNull(dateTimeProvider);
+        ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(model);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerId);
@@ -43,6 +48,7 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
         _providerStream = providerStream;
         _priceCalculator = priceCalculator;
         _dateTimeProvider = dateTimeProvider;
+        _logger = logger;
         _request = request;
         _model = model;
         _providerId = providerId;
@@ -101,6 +107,16 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
             DateTime completedAtUtc = _dateTimeProvider.UtcNow;
             string errorCode = ImageGenerationProviderFailureCatalog.GetErrorCode(
                 exception.FailureKind);
+
+            _logger.LogWarning(
+                exception,
+                "Streaming generation attempt {AttemptNumber} for logical generation {LogicalGenerationId} failed after provider response streaming with provider {ProviderId} and failure {FailureKind}. Safe error code {SafeErrorCode}; retryable {Retryable}.",
+                _request.AttemptNumber,
+                _request.LogicalGenerationId,
+                _providerId,
+                exception.FailureKind,
+                errorCode,
+                exception.Retryable);
 
             return new GenerationAttemptMetadataDto(
                 _request.LogicalGenerationId,

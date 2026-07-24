@@ -17,6 +17,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtomicArt.Desktop", "src\At
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", "{A531222D-1797-4E33-B729-50BAACF57657}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtomicArt.Infrastructure.Benchmarks", "benchmarks\AtomicArt.Infrastructure.Benchmarks\AtomicArt.Infrastructure.Benchmarks.csproj", "{C811982B-D55F-4D13-BDBE-2C993FDB8A32}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtomicArt.Domain.Tests", "tests\AtomicArt.Domain.Tests\AtomicArt.Domain.Tests.csproj", "{DFFFF103-A8EE-4FA7-9F75-52240724E25B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AtomicArt.Application.Tests", "tests\AtomicArt.Application.Tests\AtomicArt.Application.Tests.csproj", "{675AB718-9081-43C9-BF9B-D3DAD29334A5}"
@@ -339,6 +343,18 @@ Global
 		{EB730758-C587-45A3-8F34-54BE23DC053E}.Release|x64.Build.0 = Release|Any CPU
 		{EB730758-C587-45A3-8F34-54BE23DC053E}.Release|x86.ActiveCfg = Release|Any CPU
 		{EB730758-C587-45A3-8F34-54BE23DC053E}.Release|x86.Build.0 = Release|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Debug|x64.Build.0 = Debug|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Debug|x86.Build.0 = Debug|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Release|x64.ActiveCfg = Release|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Release|x64.Build.0 = Release|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Release|x86.ActiveCfg = Release|Any CPU
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -367,5 +383,6 @@ Global
 		{4D33FF4C-0B95-408A-B1EF-624A14287736} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{165C299E-E3C7-4D34-9F75-949D11870ADE} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{EB730758-C587-45A3-8F34-54BE23DC053E} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{C811982B-D55F-4D13-BDBE-2C993FDB8A32} = {A531222D-1797-4E33-B729-50BAACF57657}
 	EndGlobalSection
 EndGlobal

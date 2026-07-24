@@ -1,6 +1,7 @@
+using System.Buffers;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using System.Runtime.InteropServices;
 
 using AtomicArt.Application.Features.Generation.Models;
 
@@ -8,9 +9,17 @@ namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
 internal sealed class GoogleStreamingResponseAnalyzer
 {
-    private static readonly byte[] DataPropertyName = "\"data\""u8.ToArray();
-    private static readonly byte[] ReplacementDataProperty =
-        "\"data\":\"AA==\""u8.ToArray();
+    private static readonly byte[] DataPropertyName = CreateQuotedPropertyName(
+        GoogleInteractionsContentContract.DataPropertyName);
+    private static readonly byte[] SignaturePropertyName =
+        CreateQuotedPropertyName(
+            GoogleInteractionsContentContract.SignaturePropertyName);
+    private static readonly byte[] ReplacementDataValue = "\"AA==\""u8.ToArray();
+    private static readonly byte[] ReplacementSignatureValue = "\"\""u8.ToArray();
+    private static readonly SearchValues<byte> JsonWhitespace =
+        SearchValues.Create(" \t\r\n"u8);
+    private static readonly SearchValues<byte> StringTerminators =
+        SearchValues.Create(new byte[] { (byte)'"', (byte)'\\' });
 
     private readonly GoogleInteractionsResponseParser _responseParser;
     private readonly GoogleInteractionsFailureClassifier _failureClassifier;
@@ -20,6 +29,7 @@ internal sealed class GoogleStreamingResponseAnalyzer
     private readonly MemoryStream _filteredResponse = new();
     private readonly List<byte> _candidate = [];
     private AnalyzerState _state;
+    private SkippedStringProperty _candidateProperty;
     private int _candidateIndex;
     private bool _colonSeen;
 
@@ -52,9 +62,30 @@ internal sealed class GoogleStreamingResponseAnalyzer
 
     public void Append(ReadOnlySpan<byte> content)
     {
-        foreach (byte value in content)
+        int consumedBytes = 0;
+
+        while (consumedBytes < content.Length)
         {
-            ProcessByte(value);
+            ReadOnlySpan<byte> remainingContent = content[consumedBytes..];
+            consumedBytes += _state switch
+            {
+                AnalyzerState.NormalOutsideString
+                    => ProcessOutsideString(remainingContent),
+                AnalyzerState.NormalInsideString
+                    => ProcessInsideString(remainingContent),
+                AnalyzerState.NormalEscape
+                    => ProcessNormalEscape(remainingContent),
+                AnalyzerState.CandidateSkippedKey
+                    => ProcessCandidate(remainingContent),
+                AnalyzerState.AfterSkippedKey
+                    => ProcessAfterSkippedKey(remainingContent),
+                AnalyzerState.SkipStringValue
+                    => SkipStringValue(remainingContent),
+                AnalyzerState.SkipStringEscape
+                    => SkipStringEscape(remainingContent),
+                _ => throw new InvalidOperationException(
+                    "Unknown analyzer state.")
+            };
         }
     }
 
@@ -62,22 +93,21 @@ internal sealed class GoogleStreamingResponseAnalyzer
     {
         FlushCandidate();
 
-        if (_state is AnalyzerState.SkipDataString
-            or AnalyzerState.SkipDataEscape
+        if (_state is AnalyzerState.SkipStringValue
+            or AnalyzerState.SkipStringEscape
             or AnalyzerState.NormalInsideString
             or AnalyzerState.NormalEscape
-            or AnalyzerState.CandidateDataKey
-            or AnalyzerState.AfterDataKey)
+            or AnalyzerState.CandidateSkippedKey
+            or AnalyzerState.AfterSkippedKey)
         {
             throw new GoogleInteractionsException(
                 ImageGenerationProviderFailureKind.InvalidResponse,
                 "The generation provider returned malformed JSON.");
         }
 
-        string filteredJson = Encoding.UTF8.GetString(
-            _filteredResponse.GetBuffer(),
-            0,
-            checked((int)_filteredResponse.Length));
+        ReadOnlyMemory<byte> filteredJson = _filteredResponse
+            .GetBuffer()
+            .AsMemory(0, checked((int)_filteredResponse.Length));
 
         try
         {
@@ -88,17 +118,11 @@ internal sealed class GoogleStreamingResponseAnalyzer
                     MaxDepth = _maximumStructureDepth
                 });
             JsonElement root = document.RootElement;
+
             ThrowIfDiagnosticTextExceedsLimit(root);
             ThrowIfTemporaryInternalError(root);
-            GoogleInteractionsResult result =
-                _responseParser.Parse(filteredJson);
-            string? state = ExtractState(root);
 
-            return new ProviderGenerationSummary(
-                state,
-                result.Images.Count,
-                result.Images.Select(image => image.ContentType).ToList(),
-                result.Usage);
+            return _responseParser.ParseFilteredMetadata(root);
         }
         catch (JsonException exception)
         {
@@ -152,115 +176,207 @@ internal sealed class GoogleStreamingResponseAnalyzer
         }
     }
 
-    private void ProcessByte(byte value)
+    private int ProcessOutsideString(ReadOnlySpan<byte> content)
     {
-        switch (_state)
-        {
-            case AnalyzerState.NormalOutsideString:
-                ProcessOutsideString(value);
-                break;
-            case AnalyzerState.NormalInsideString:
-                WriteByte(value);
-                _state = value switch
-                {
-                    (byte)'\\' => AnalyzerState.NormalEscape,
-                    (byte)'"' => AnalyzerState.NormalOutsideString,
-                    _ => AnalyzerState.NormalInsideString
-                };
-                break;
-            case AnalyzerState.NormalEscape:
-                WriteByte(value);
-                _state = AnalyzerState.NormalInsideString;
-                break;
-            case AnalyzerState.CandidateDataKey:
-                ProcessCandidate(value);
-                break;
-            case AnalyzerState.AfterDataKey:
-                ProcessAfterDataKey(value);
-                break;
-            case AnalyzerState.SkipDataString:
-                _state = value switch
-                {
-                    (byte)'\\' => AnalyzerState.SkipDataEscape,
-                    (byte)'"' => AnalyzerState.NormalOutsideString,
-                    _ => AnalyzerState.SkipDataString
-                };
-                break;
-            case AnalyzerState.SkipDataEscape:
-                _state = AnalyzerState.SkipDataString;
-                break;
-            default:
-                throw new InvalidOperationException("Unknown analyzer state.");
-        }
-    }
+        int quoteIndex = content.IndexOf((byte)'"');
 
-    private void ProcessOutsideString(byte value)
-    {
-        if (value != (byte)'"')
+        if (quoteIndex < 0)
         {
-            WriteByte(value);
-            return;
+            WriteBytes(content);
+
+            return content.Length;
         }
 
-        _candidate.Clear();
-        _candidate.Add(value);
-        _candidateIndex = 1;
-        _state = AnalyzerState.CandidateDataKey;
+        WriteBytes(content[..quoteIndex]);
+        StartCandidate();
+
+        return quoteIndex + 1;
     }
 
-    private void ProcessCandidate(byte value)
+    private int ProcessInsideString(ReadOnlySpan<byte> content)
     {
-        _candidate.Add(value);
+        int terminatorIndex = content.IndexOfAny(StringTerminators);
 
-        if (_candidateIndex < DataPropertyName.Length
-            && value == DataPropertyName[_candidateIndex])
+        if (terminatorIndex < 0)
         {
-            _candidateIndex++;
+            WriteBytes(content);
 
-            if (_candidateIndex == DataPropertyName.Length)
+            return content.Length;
+        }
+
+        int consumedBytes = terminatorIndex + 1;
+        byte terminator = content[terminatorIndex];
+
+        WriteBytes(content[..consumedBytes]);
+        _state = terminator == (byte)'\\'
+            ? AnalyzerState.NormalEscape
+            : AnalyzerState.NormalOutsideString;
+
+        return consumedBytes;
+    }
+
+    private int ProcessNormalEscape(ReadOnlySpan<byte> content)
+    {
+        WriteBytes(content[..1]);
+        _state = AnalyzerState.NormalInsideString;
+
+        return 1;
+    }
+
+    private int ProcessCandidate(ReadOnlySpan<byte> content)
+    {
+        int consumedBytes = 0;
+
+        while (consumedBytes < content.Length
+            && _state == AnalyzerState.CandidateSkippedKey)
+        {
+            byte value = content[consumedBytes];
+            AppendCandidate(content.Slice(consumedBytes, 1));
+            consumedBytes++;
+
+            if (_candidateIndex == 1)
             {
-                _colonSeen = false;
-                _state = AnalyzerState.AfterDataKey;
+                _candidateProperty = value switch
+                {
+                    (byte)'d' => SkippedStringProperty.Data,
+                    (byte)'s' => SkippedStringProperty.Signature,
+                    _ => SkippedStringProperty.None
+                };
             }
 
-            return;
+            ReadOnlySpan<byte> propertyName = GetCandidatePropertyName();
+
+            if (_candidateIndex < propertyName.Length
+                && value == propertyName[_candidateIndex])
+            {
+                _candidateIndex++;
+
+                if (_candidateIndex == propertyName.Length)
+                {
+                    _colonSeen = false;
+                    _state = AnalyzerState.AfterSkippedKey;
+                }
+
+                continue;
+            }
+
+            FlushCandidate();
+            _candidateProperty = SkippedStringProperty.None;
+            _state = value switch
+            {
+                (byte)'\\' => AnalyzerState.NormalEscape,
+                (byte)'"' => AnalyzerState.NormalOutsideString,
+                _ => AnalyzerState.NormalInsideString
+            };
         }
 
-        FlushCandidate();
-        _state = value switch
-        {
-            (byte)'\\' => AnalyzerState.NormalEscape,
-            (byte)'"' => AnalyzerState.NormalOutsideString,
-            _ => AnalyzerState.NormalInsideString
-        };
+        return consumedBytes;
     }
 
-    private void ProcessAfterDataKey(byte value)
+    private int ProcessAfterSkippedKey(ReadOnlySpan<byte> content)
     {
-        if (IsJsonWhitespace(value))
+        int whitespaceLength = content.IndexOfAnyExcept(JsonWhitespace);
+
+        if (whitespaceLength < 0)
         {
-            _candidate.Add(value);
-            return;
+            AppendCandidate(content);
+
+            return content.Length;
         }
+
+        AppendCandidate(content[..whitespaceLength]);
+        byte value = content[whitespaceLength];
+        int consumedBytes = whitespaceLength + 1;
 
         if (!_colonSeen && value == (byte)':')
         {
-            _candidate.Add(value);
+            AppendCandidate(content.Slice(whitespaceLength, 1));
             _colonSeen = true;
-            return;
+
+            return consumedBytes;
         }
 
         if (_colonSeen && value == (byte)'"')
         {
-            WriteBytes(ReplacementDataProperty);
-            _candidate.Clear();
-            _state = AnalyzerState.SkipDataString;
-            return;
+            FlushCandidate();
+            WriteReplacementValue();
+            _candidateProperty = SkippedStringProperty.None;
+            _state = AnalyzerState.SkipStringValue;
+
+            return consumedBytes;
         }
 
-        _candidate.Add(value);
+        AppendCandidate(content.Slice(whitespaceLength, 1));
         FlushCandidate();
+        _candidateProperty = SkippedStringProperty.None;
         _state = AnalyzerState.NormalOutsideString;
+
+        return consumedBytes;
+    }
+
+    private int SkipStringValue(ReadOnlySpan<byte> content)
+    {
+        int terminatorIndex = content.IndexOfAny(StringTerminators);
+
+        if (terminatorIndex < 0)
+        {
+            return content.Length;
+        }
+
+        _state = content[terminatorIndex] == (byte)'\\'
+            ? AnalyzerState.SkipStringEscape
+            : AnalyzerState.NormalOutsideString;
+
+        return terminatorIndex + 1;
+    }
+
+    private int SkipStringEscape(ReadOnlySpan<byte> content)
+    {
+        _state = AnalyzerState.SkipStringValue;
+
+        return 1;
+    }
+
+    private void StartCandidate()
+    {
+        _candidate.Clear();
+        AppendCandidate(DataPropertyName.AsSpan(0, 1));
+        _candidateProperty = SkippedStringProperty.None;
+        _candidateIndex = 1;
+        _state = AnalyzerState.CandidateSkippedKey;
+    }
+
+    private ReadOnlySpan<byte> GetCandidatePropertyName()
+    {
+        return _candidateProperty switch
+        {
+            SkippedStringProperty.Data => DataPropertyName,
+            SkippedStringProperty.Signature => SignaturePropertyName,
+            _ => []
+        };
+    }
+
+    private void WriteReplacementValue()
+    {
+        WriteBytes(_candidateProperty switch
+        {
+            SkippedStringProperty.Data => ReplacementDataValue,
+            SkippedStringProperty.Signature => ReplacementSignatureValue,
+            _ => throw new InvalidOperationException(
+                "Unknown skipped string property.")
+        });
+    }
+
+    private void AppendCandidate(ReadOnlySpan<byte> values)
+    {
+        EnsureCandidateCapacity(values.Length);
+
+        int previousCount = _candidate.Count;
+        int requiredCount = previousCount + values.Length;
+
+        _candidate.EnsureCapacity(requiredCount);
+        CollectionsMarshal.SetCount(_candidate, requiredCount);
+        values.CopyTo(CollectionsMarshal.AsSpan(_candidate)[previousCount..]);
     }
 
     private void FlushCandidate()
@@ -274,50 +390,40 @@ internal sealed class GoogleStreamingResponseAnalyzer
         _candidate.Clear();
     }
 
-    private void WriteByte(byte value)
-    {
-        EnsureCapacity(1);
-        _filteredResponse.WriteByte(value);
-    }
-
     private void WriteBytes(ReadOnlySpan<byte> values)
     {
-        EnsureCapacity(values.Length);
+        EnsureFilteredResponseCapacity(values.Length);
         _filteredResponse.Write(values);
     }
 
-    private void EnsureCapacity(int additionalBytes)
+    private void EnsureCandidateCapacity(int additionalBytes)
+    {
+        if (_filteredResponse.Length + _candidate.Count + additionalBytes
+            > _maximumFilteredResponseBytes)
+        {
+            throw CreateMetadataLimitException();
+        }
+    }
+
+    private void EnsureFilteredResponseCapacity(int additionalBytes)
     {
         if (_filteredResponse.Length + additionalBytes
             > _maximumFilteredResponseBytes)
         {
-            throw new GoogleInteractionsException(
-                ImageGenerationProviderFailureKind.InvalidResponse,
-                "The generation provider response metadata exceeded its limit.");
+            throw CreateMetadataLimitException();
         }
     }
 
-    private static string? ExtractState(JsonElement root)
+    private static GoogleInteractionsException CreateMetadataLimitException()
     {
-        if (GoogleInteractionsJsonElementReader.TryGetStringProperty(
-                root,
-                "status",
-                out string? status))
-        {
-            return status;
-        }
-
-        return GoogleInteractionsJsonElementReader.TryGetStringProperty(
-            root,
-            "state",
-            out string? state)
-            ? state
-            : null;
+        return new GoogleInteractionsException(
+            ImageGenerationProviderFailureKind.InvalidResponse,
+            "The generation provider response metadata exceeded its limit.");
     }
 
-    private static bool IsJsonWhitespace(byte value)
+    private static byte[] CreateQuotedPropertyName(string propertyName)
     {
-        return value is (byte)' ' or (byte)'\t' or (byte)'\r' or (byte)'\n';
+        return Encoding.UTF8.GetBytes(string.Concat("\"", propertyName, "\""));
     }
 
     private enum AnalyzerState
@@ -325,9 +431,16 @@ internal sealed class GoogleStreamingResponseAnalyzer
         NormalOutsideString,
         NormalInsideString,
         NormalEscape,
-        CandidateDataKey,
-        AfterDataKey,
-        SkipDataString,
-        SkipDataEscape
+        CandidateSkippedKey,
+        AfterSkippedKey,
+        SkipStringValue,
+        SkipStringEscape
+    }
+
+    private enum SkippedStringProperty
+    {
+        None,
+        Data,
+        Signature
     }
 }

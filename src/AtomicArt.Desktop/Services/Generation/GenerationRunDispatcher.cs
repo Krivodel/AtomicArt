@@ -267,6 +267,18 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
 
     private void LogBackgroundFailure(Exception exception, Guid correlationId)
     {
+        if (exception is GenerationAttemptException attemptException)
+        {
+            _logger.LogWarning(
+                attemptException,
+                "Background generation run {CorrelationId} failed with safe error code {SafeErrorCode}; retryable {Retryable}.",
+                correlationId,
+                attemptException.SafeErrorCode,
+                attemptException.Retryable);
+
+            return;
+        }
+
         _logger.LogWarning(
             exception,
             "Background generation run {CorrelationId} failed",

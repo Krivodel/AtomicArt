@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -12,7 +13,8 @@ internal static class GenerationRunDispatcherTestFactory
         IImageGenerationApiClient apiClient,
         IGenerationLifecycleEventHub lifecycleEventHub,
         IGenerationConcurrencyLimiter? limiter = null,
-        int maxAutomaticRetries = GenerationClientOptions.DefaultMaxAutomaticRetries)
+        int maxAutomaticRetries = GenerationClientOptions.DefaultMaxAutomaticRetries,
+        ILogger<GenerationRunDispatcher>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(apiClient);
         ArgumentNullException.ThrowIfNull(lifecycleEventHub);
@@ -23,7 +25,7 @@ internal static class GenerationRunDispatcherTestFactory
             new NanoBanana2GenerationLifecyclePublisher(lifecycleEventHub),
             new NullGenerationResultStorage(),
             TestGenerationActivityTrackerFactory.Create(),
-            NullLogger<GenerationRunDispatcher>.Instance,
+            logger ?? NullLogger<GenerationRunDispatcher>.Instance,
             Options.Create(new GenerationClientOptions
             {
                 MaxAutomaticRetries = maxAutomaticRetries

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 using FluentAssertions;
 using Xunit;
 
@@ -151,6 +153,29 @@ public sealed class GenerationRunDispatcherTests
             GenerationLifecycleStatus.Failed);
 
         apiClient.AttemptNumbers.Should().ContainSingle().Which.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_WithTerminalProviderFailure_LogsSafeFailureDetails()
+    {
+        RecordingLogger<GenerationRunDispatcher> logger = new();
+        RetrySequenceImageGenerationApiClient apiClient = new(
+            retryableFailureCount: 1,
+            succeedAfterFailures: false,
+            retryable: false);
+        RunTestContext context = CreateRunContext(
+            apiClient,
+            logger: logger);
+
+        await EnqueueAndWaitForStatusAsync(
+            context,
+            GenerationLifecycleStatus.Failed);
+
+        logger.WarningMessages.Should().ContainSingle(message =>
+            message.Contains(
+                GenerationProviderFailureErrorCodes.InternalError,
+                StringComparison.Ordinal)
+            && message.Contains("retryable False", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -346,13 +371,15 @@ public sealed class GenerationRunDispatcherTests
 
     private static RunTestContext CreateRunContext(
         IImageGenerationApiClient apiClient,
-        IGenerationConcurrencyLimiter? limiter = null)
+        IGenerationConcurrencyLimiter? limiter = null,
+        ILogger<GenerationRunDispatcher>? logger = null)
     {
         TestGenerationLifecycleEventHub lifecycleEventHub = new();
         GenerationRunDispatcher dispatcher = CreateDispatcher(
             apiClient,
             lifecycleEventHub,
-            limiter);
+            limiter,
+            logger);
 
         return new RunTestContext(lifecycleEventHub, dispatcher);
     }
@@ -372,12 +399,14 @@ public sealed class GenerationRunDispatcherTests
     private static GenerationRunDispatcher CreateDispatcher(
         IImageGenerationApiClient apiClient,
         IGenerationLifecycleEventHub lifecycleEventHub,
-        IGenerationConcurrencyLimiter? limiter = null)
+        IGenerationConcurrencyLimiter? limiter = null,
+        ILogger<GenerationRunDispatcher>? logger = null)
     {
         return GenerationRunDispatcherTestFactory.Create(
             apiClient,
             lifecycleEventHub,
-            limiter);
+            limiter,
+            logger: logger);
     }
 
     private static GenerationRunRequest CreateRunRequest()

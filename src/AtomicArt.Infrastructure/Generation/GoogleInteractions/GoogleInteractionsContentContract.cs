@@ -6,6 +6,7 @@ internal static class GoogleInteractionsContentContract
     public const string TextPropertyName = "text";
     public const string MimeTypePropertyName = "mime_type";
     public const string DataPropertyName = "data";
+    public const string SignaturePropertyName = "signature";
     public const string ImageType = "image";
     public const string TextType = "text";
 }
