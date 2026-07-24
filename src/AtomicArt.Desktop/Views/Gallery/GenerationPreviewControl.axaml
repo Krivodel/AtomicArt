@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:generation="using:AtomicArt.Desktop.Controls.Generation"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationPreviewControl"
@@ -32,8 +33,8 @@
             </Border>
         </Grid>
 
-        <Border Classes="generation-card-loading"
-                IsVisible="{Binding ShowsGenerationProgress}" />
+        <generation:AttachmentPixelLoadingControl GridSize="16"
+                                                  IsActive="{Binding ShowsGenerationProgress}" />
 
         <Border Classes="generation-card-empty"
                 IsVisible="{Binding ShowsEmptyPreview}" />

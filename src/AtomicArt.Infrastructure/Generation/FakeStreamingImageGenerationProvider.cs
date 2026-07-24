@@ -74,6 +74,7 @@ internal sealed class FakeStreamingImageGenerationProvider
                     "The test provider response exceeded its limit.");
             }
 
+            await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
             await destination.WriteAsync(prefix, ct).ConfigureAwait(false);
             byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(InputBlockSize);
             byte[] outputBuffer = ArrayPool<byte>.Shared.Rent(OutputBlockSize);

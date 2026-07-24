@@ -74,41 +74,6 @@
                 Value="True" />
     </Style>
 
-    <Style Selector="Border.generation-card-loading">
-        <Setter Property="Background">
-            <Setter.Value>
-                <LinearGradientBrush EndPoint="100%,100%"
-                                     StartPoint="0%,0%">
-                    <GradientStop Color="{DynamicResource SukiPrimaryColor4}"
-                                  Offset="0" />
-                    <GradientStop Color="{DynamicResource SukiAccentColor}"
-                                  Offset="0.45" />
-                    <GradientStop Color="{DynamicResource SukiPrimaryColor3}"
-                                  Offset="1" />
-                </LinearGradientBrush>
-            </Setter.Value>
-        </Setter>
-        <Setter Property="Opacity"
-                Value="0.7" />
-        <Style.Animations>
-            <Animation Duration="0:0:1.6"
-                       IterationCount="Infinite">
-                <KeyFrame Cue="0%">
-                    <Setter Property="Opacity"
-                            Value="0.55" />
-                </KeyFrame>
-                <KeyFrame Cue="50%">
-                    <Setter Property="Opacity"
-                            Value="1" />
-                </KeyFrame>
-                <KeyFrame Cue="100%">
-                    <Setter Property="Opacity"
-                            Value="0.55" />
-                </KeyFrame>
-            </Animation>
-        </Style.Animations>
-    </Style>
-
     <Style Selector="Border.generation-card-empty">
         <Setter Property="Background"
                 Value="{DynamicResource GlassCardBrush}" />

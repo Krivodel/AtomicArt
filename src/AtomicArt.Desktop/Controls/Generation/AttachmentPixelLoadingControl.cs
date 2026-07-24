@@ -5,35 +5,61 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 
+using SkiaSharp;
+
 namespace AtomicArt.Desktop.Controls.Generation;
 
 public sealed class AttachmentPixelLoadingControl : Control
 {
-    private const int GridSize = 6;
-    private const int PixelCount = GridSize * GridSize;
+    public int GridSize
+    {
+        get => GetValue(GridSizeProperty);
+        set => SetValue(GridSizeProperty, value);
+    }
+    public bool IsActive
+    {
+        get => GetValue(IsActiveProperty);
+        set => SetValue(IsActiveProperty, value);
+    }
+
+    private const int DefaultGridSize = 6;
     private const double PixelGap = 2d;
     private const double PixelCornerRadius = 2d;
-    private const double MinimumOpacity = 0.1d;
-    private const double OpacityRange = 0.85d;
-    private const double FlickerDurationSeconds = 1.8d;
-    private const double CompletionStaggerRange = 0.42d;
     private const int FrameIntervalMilliseconds = 40;
     private const int CompletionDurationMilliseconds = 520;
 
-    private static readonly IBrush[] PixelPalette =
+    public static readonly StyledProperty<int> GridSizeProperty =
+        AvaloniaProperty.Register<AttachmentPixelLoadingControl, int>(
+            nameof(GridSize),
+            defaultValue: DefaultGridSize,
+            validate: value => value > 0);
+    public static readonly StyledProperty<bool> IsActiveProperty =
+        AvaloniaProperty.Register<AttachmentPixelLoadingControl, bool>(
+            nameof(IsActive),
+            defaultValue: true);
+
+    private static readonly SKColor[] PixelPalette =
     [
-        new SolidColorBrush(Color.Parse("#5b8dff")),
-        new SolidColorBrush(Color.Parse("#8b6bff")),
-        new SolidColorBrush(Color.Parse("#ff6ea8")),
-        new SolidColorBrush(Color.Parse("#6ea8ff")),
-        new SolidColorBrush(Color.Parse("#a78bff"))
+        new(0x5b, 0x8d, 0xff),
+        new(0x8b, 0x6b, 0xff),
+        new(0xff, 0x6e, 0xa8),
+        new(0x6e, 0xa8, 0xff),
+        new(0xa7, 0x8b, 0xff)
     ];
 
     private readonly DispatcherTimer _timer;
     private readonly Stopwatch _stopwatch = new();
-    private readonly List<AttachmentPixelState> _pixels = [];
+    private PixelLoadingState[] _pixels = [];
     private long _completionStartedAtMilliseconds;
     private bool _isCompleting;
+
+    static AttachmentPixelLoadingControl()
+    {
+        GridSizeProperty.Changed.AddClassHandler<AttachmentPixelLoadingControl>(
+            OnGridSizeChanged);
+        IsActiveProperty.Changed.AddClassHandler<AttachmentPixelLoadingControl>(
+            OnIsActiveChanged);
+    }
 
     public AttachmentPixelLoadingControl()
     {
@@ -47,7 +73,7 @@ public sealed class AttachmentPixelLoadingControl : Control
 
     public void Complete()
     {
-        if (_isCompleting || !IsVisible)
+        if (!IsActive || _isCompleting || !IsVisible)
         {
             return;
         }
@@ -70,18 +96,19 @@ public sealed class AttachmentPixelLoadingControl : Control
     {
         base.Render(context);
 
-        if (!IsVisible || Bounds.Width <= 0d || Bounds.Height <= 0d)
+        if (!IsActive || !IsVisible || Bounds.Width <= 0d || Bounds.Height <= 0d)
         {
             return;
         }
 
         EnsurePixels();
+        int gridSize = GridSize;
         double availableSideLength = Math.Min(Bounds.Width, Bounds.Height);
-        double totalGapLength = PixelGap * (GridSize - 1);
+        double totalGapLength = PixelGap * (gridSize - 1);
         double pixelSideLength = Math.Max(
             0d,
-            (availableSideLength - totalGapLength) / GridSize);
-        double gridSideLength = (pixelSideLength * GridSize) + totalGapLength;
+            (availableSideLength - totalGapLength) / gridSize);
+        double gridSideLength = (pixelSideLength * gridSize) + totalGapLength;
         double originX = (Bounds.Width - gridSideLength) / 2d;
         double originY = (Bounds.Height - gridSideLength) / 2d;
         long elapsedMilliseconds = _stopwatch.ElapsedMilliseconds;
@@ -94,51 +121,25 @@ public sealed class AttachmentPixelLoadingControl : Control
                 1d)
             : 0d;
 
-        for (int index = 0; index < _pixels.Count; index++)
-        {
-            AttachmentPixelState pixel = _pixels[index];
-            int row = index / GridSize;
-            int column = index % GridSize;
-            double pixelX = originX + (column * (pixelSideLength + PixelGap));
-            double pixelY = originY + (row * (pixelSideLength + PixelGap));
-            double opacity = CalculateLoadingOpacity(pixel, elapsedSeconds);
-
-            if (_isCompleting)
-            {
-                double staggerStart = pixel.DisappearOrder * CompletionStaggerRange;
-                double localProgress = Math.Clamp(
-                    (completionProgress - staggerStart) / (1d - staggerStart),
-                    0d,
-                    1d);
-                double smoothProgress = localProgress
-                    * localProgress
-                    * (3d - (2d * localProgress));
-                opacity *= 1d - smoothProgress;
-            }
-
-            Rect pixelBounds = new(
-                pixelX,
-                pixelY,
+        context.Custom(
+            new PixelLoadingDrawOperation(
+                new Rect(Bounds.Size),
+                gridSize,
+                PixelGap,
+                PixelCornerRadius,
                 pixelSideLength,
-                pixelSideLength);
-
-            using (context.PushOpacity(opacity))
-            {
-                context.DrawRectangle(
-                    pixel.Brush,
-                    null,
-                    pixelBounds,
-                    PixelCornerRadius,
-                    PixelCornerRadius);
-            }
-        }
+                originX,
+                originY,
+                elapsedSeconds,
+                completionProgress,
+                _pixels));
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
 
-        if (!_isCompleting)
+        if (IsActive && !_isCompleting)
         {
             Restart();
         }
@@ -152,21 +153,9 @@ public sealed class AttachmentPixelLoadingControl : Control
         base.OnDetachedFromVisualTree(e);
     }
 
-    private static double CalculateLoadingOpacity(
-        AttachmentPixelState pixel,
-        double elapsedSeconds)
-    {
-        double shimmer = 0.5d
-            + (0.5d * Math.Sin(
-                pixel.InitialPhase
-                + (elapsedSeconds * Math.Tau / FlickerDurationSeconds)));
-
-        return MinimumOpacity + (OpacityRange * shimmer);
-    }
-
     private void Restart()
     {
-        _pixels.Clear();
+        _pixels = [];
         EnsurePixels();
         _completionStartedAtMilliseconds = 0L;
         _isCompleting = false;
@@ -177,18 +166,24 @@ public sealed class AttachmentPixelLoadingControl : Control
 
     private void EnsurePixels()
     {
-        if (_pixels.Count > 0)
+        int pixelCount = GridSize * GridSize;
+
+        if (_pixels.Length == pixelCount)
         {
             return;
         }
 
-        for (int index = 0; index < PixelCount; index++)
+        PixelLoadingState[] pixels = new PixelLoadingState[pixelCount];
+
+        for (int index = 0; index < pixelCount; index++)
         {
-            _pixels.Add(new AttachmentPixelState(
+            pixels[index] = new PixelLoadingState(
                 Random.Shared.NextDouble() * Math.PI * 2d,
                 PixelPalette[Random.Shared.Next(PixelPalette.Length)],
-                Random.Shared.NextDouble()));
+                Random.Shared.NextDouble());
         }
+
+        _pixels = pixels;
     }
 
     private void StartTimer()
@@ -216,8 +211,38 @@ public sealed class AttachmentPixelLoadingControl : Control
         InvalidateVisual();
     }
 
-    private sealed record AttachmentPixelState(
-        double InitialPhase,
-        IBrush Brush,
-        double DisappearOrder);
+    private static void OnGridSizeChanged(
+        AttachmentPixelLoadingControl control,
+        AvaloniaPropertyChangedEventArgs args)
+    {
+        _ = args;
+
+        control._pixels = [];
+        control.InvalidateVisual();
+    }
+
+    private static void OnIsActiveChanged(
+        AttachmentPixelLoadingControl control,
+        AvaloniaPropertyChangedEventArgs args)
+    {
+        _ = args;
+
+        control.UpdateAnimationState();
+    }
+
+    private void UpdateAnimationState()
+    {
+        if (IsActive && VisualRoot is not null)
+        {
+            Restart();
+        }
+        else if (!IsActive)
+        {
+            _timer.Stop();
+            _stopwatch.Stop();
+            _isCompleting = false;
+        }
+
+        InvalidateVisual();
+    }
 }
