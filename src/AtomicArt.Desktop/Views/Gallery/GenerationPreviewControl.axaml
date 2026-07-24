@@ -34,6 +34,7 @@
         </Grid>
 
         <generation:AttachmentPixelLoadingControl GridSize="16"
+                                                  AnimationSeed="{Binding Id}"
                                                   IsActive="{Binding ShowsGenerationProgress}" />
 
         <Border Classes="generation-card-empty"

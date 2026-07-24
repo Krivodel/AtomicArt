@@ -39,11 +39,11 @@ internal sealed class FakeStreamingImageGenerationProvider
 
     private sealed class FakeProviderGenerationStream : IProviderGenerationStream
     {
-        private const int InputBlockSize = 49152;
-        private const int OutputBlockSize = 65536;
-
         public string ContentType => "application/json";
         public ProviderGenerationSummary? Summary { get; private set; }
+
+        private const int InputBlockSize = 49152;
+        private const int OutputBlockSize = 65536;
 
         private readonly StreamingPlaceholderImage _image;
 

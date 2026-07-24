@@ -39,6 +39,7 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
                     .OfType<AttachmentPixelLoadingControl>()
                     .Single();
 
+                indicator.AnimationSeed.Should().Be(viewModel.Id);
                 indicator.GridSize.Should().Be(16);
                 indicator.IsActive.Should().BeTrue();
 

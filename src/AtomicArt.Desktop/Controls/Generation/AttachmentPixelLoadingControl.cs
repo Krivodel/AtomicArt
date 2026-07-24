@@ -11,6 +11,11 @@ namespace AtomicArt.Desktop.Controls.Generation;
 
 public sealed class AttachmentPixelLoadingControl : Control
 {
+    public Guid AnimationSeed
+    {
+        get => GetValue(AnimationSeedProperty);
+        set => SetValue(AnimationSeedProperty, value);
+    }
     public int GridSize
     {
         get => GetValue(GridSizeProperty);
@@ -28,6 +33,9 @@ public sealed class AttachmentPixelLoadingControl : Control
     private const int FrameIntervalMilliseconds = 40;
     private const int CompletionDurationMilliseconds = 520;
 
+    public static readonly StyledProperty<Guid> AnimationSeedProperty =
+        AvaloniaProperty.Register<AttachmentPixelLoadingControl, Guid>(
+            nameof(AnimationSeed));
     public static readonly StyledProperty<int> GridSizeProperty =
         AvaloniaProperty.Register<AttachmentPixelLoadingControl, int>(
             nameof(GridSize),
@@ -46,6 +54,7 @@ public sealed class AttachmentPixelLoadingControl : Control
         new(0x6e, 0xa8, 0xff),
         new(0xa7, 0x8b, 0xff)
     ];
+    private static readonly Stopwatch SharedAnimationStopwatch = Stopwatch.StartNew();
 
     private readonly DispatcherTimer _timer;
     private readonly Stopwatch _stopwatch = new();
@@ -55,6 +64,8 @@ public sealed class AttachmentPixelLoadingControl : Control
 
     static AttachmentPixelLoadingControl()
     {
+        AnimationSeedProperty.Changed.AddClassHandler<AttachmentPixelLoadingControl>(
+            OnAnimationSeedChanged);
         GridSizeProperty.Changed.AddClassHandler<AttachmentPixelLoadingControl>(
             OnGridSizeChanged);
         IsActiveProperty.Changed.AddClassHandler<AttachmentPixelLoadingControl>(
@@ -112,7 +123,9 @@ public sealed class AttachmentPixelLoadingControl : Control
         double originX = (Bounds.Width - gridSideLength) / 2d;
         double originY = (Bounds.Height - gridSideLength) / 2d;
         long elapsedMilliseconds = _stopwatch.ElapsedMilliseconds;
-        double elapsedSeconds = elapsedMilliseconds / 1000d;
+        double elapsedSeconds = AnimationSeed == Guid.Empty
+            ? elapsedMilliseconds / 1000d
+            : SharedAnimationStopwatch.Elapsed.TotalSeconds;
         double completionProgress = _isCompleting
             ? Math.Clamp(
                 (elapsedMilliseconds - _completionStartedAtMilliseconds)
@@ -173,17 +186,30 @@ public sealed class AttachmentPixelLoadingControl : Control
             return;
         }
 
-        PixelLoadingState[] pixels = new PixelLoadingState[pixelCount];
+        _pixels = CreatePixelStates(GridSize, AnimationSeed);
+    }
 
-        for (int index = 0; index < pixelCount; index++)
+    internal static PixelLoadingState[] CreatePixelStates(
+        int gridSize,
+        Guid animationSeed)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(gridSize, 1);
+
+        int pixelCount = gridSize * gridSize;
+        PixelLoadingState[] pixels = new PixelLoadingState[pixelCount];
+        Random random = animationSeed == Guid.Empty
+            ? Random.Shared
+            : new Random(CalculateRandomSeed(animationSeed));
+
+        for (int index = 0; index < pixels.Length; index++)
         {
             pixels[index] = new PixelLoadingState(
-                Random.Shared.NextDouble() * Math.PI * 2d,
-                PixelPalette[Random.Shared.Next(PixelPalette.Length)],
-                Random.Shared.NextDouble());
+                random.NextDouble() * Math.PI * 2d,
+                PixelPalette[random.Next(PixelPalette.Length)],
+                random.NextDouble());
         }
 
-        _pixels = pixels;
+        return pixels;
     }
 
     private void StartTimer()
@@ -209,6 +235,30 @@ public sealed class AttachmentPixelLoadingControl : Control
         }
 
         InvalidateVisual();
+    }
+
+    private static int CalculateRandomSeed(Guid animationSeed)
+    {
+        Span<byte> bytes = stackalloc byte[16];
+        animationSeed.TryWriteBytes(bytes);
+        int seed = 17;
+
+        foreach (byte value in bytes)
+        {
+            seed = unchecked((seed * 31) + value);
+        }
+
+        return seed;
+    }
+
+    private static void OnAnimationSeedChanged(
+        AttachmentPixelLoadingControl control,
+        AvaloniaPropertyChangedEventArgs args)
+    {
+        _ = args;
+
+        control._pixels = [];
+        control.InvalidateVisual();
     }
 
     private static void OnGridSizeChanged(

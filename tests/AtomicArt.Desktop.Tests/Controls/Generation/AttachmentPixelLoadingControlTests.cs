@@ -17,6 +17,19 @@ public sealed class AttachmentPixelLoadingControlTests : AnimatedGalleryControlT
     private const int PixelCenterCoordinate = 6;
 
     [Fact]
+    public void CreatePixelStates_WithSameSeed_ReturnsSameStates()
+    {
+        Guid seed = Guid.Parse("12345678-1234-1234-1234-123456789abc");
+
+        PixelLoadingState[] first =
+            AttachmentPixelLoadingControl.CreatePixelStates(16, seed);
+        PixelLoadingState[] second =
+            AttachmentPixelLoadingControl.CreatePixelStates(16, seed);
+
+        first.Should().Equal(second);
+    }
+
+    [Fact]
     public void Render_With16By16Grid_DrawsColoredPixels()
     {
         Dispatch(() =>
