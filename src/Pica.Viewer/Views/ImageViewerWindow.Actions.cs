@@ -119,40 +119,31 @@ public sealed partial class ImageViewerWindow : SukiWindow
             ct);
     }
 
-    private async Task DispatchSelectionActionAsync(
+    private async Task DispatchSelectionActionAndCloseAsync(
         PicaActionDefinition action,
         CancellationToken ct)
     {
         await RunWithFullResolutionSelectionAsync(
             async (bitmap, operationCt) =>
             {
-                if (_currentItem is null)
+                PicaImageItem? item = _currentItem;
+
+                if (item is null)
                 {
                     return;
                 }
 
+                CancelSelection();
+
                 await _imageOperations.DispatchSelectionAsync(
                     action,
-                    _currentItem,
+                    item,
                     bitmap,
                     operationCt);
                 _logger.LogInformation(
                     "Dispatched Pica selection action {ActionId} for image {ItemId}",
                     action.Id,
-                    _currentItem.Id);
-            },
-            ct);
-    }
-
-    private async Task DispatchSelectionActionAndCloseAsync(
-        PicaActionDefinition action,
-        CancellationToken ct)
-    {
-        await RunExclusiveImageOperationAsync(
-            async operationCt =>
-            {
-                await DispatchSelectionActionAsync(action, operationCt);
-                CancelSelection();
+                    item.Id);
             },
             ct);
     }
