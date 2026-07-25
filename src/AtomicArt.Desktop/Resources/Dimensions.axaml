@@ -49,6 +49,7 @@
     <CornerRadius x:Key="AttachmentPreviewCornerRadius">6</CornerRadius>
     <CornerRadius x:Key="AttachmentRemoveButtonCornerRadius">6,0,6,6</CornerRadius>
     <CornerRadius x:Key="GenerationCardCornerRadius">8</CornerRadius>
+    <CornerRadius x:Key="GenerationCardInfoCornerRadius">0,0,8,8</CornerRadius>
     <CornerRadius x:Key="MetadataBoxCornerRadius">9</CornerRadius>
     <CornerRadius x:Key="MetadataChipCornerRadius">8</CornerRadius>
     <CornerRadius x:Key="MetadataStatusCornerRadius">999</CornerRadius>

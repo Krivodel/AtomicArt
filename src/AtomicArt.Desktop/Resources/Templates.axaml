@@ -57,7 +57,7 @@
         <Setter Property="BorderThickness"
                 Value="{StaticResource ZeroThickness}" />
         <Setter Property="ClipToBounds"
-                Value="False" />
+                Value="True" />
         <Setter Property="CornerRadius"
                 Value="{StaticResource GenerationCardCornerRadius}" />
     </Style>
@@ -96,6 +96,8 @@
                 Value="{StaticResource GalleryCardInfoPadding}" />
         <Setter Property="Background"
                 Value="{DynamicResource GlassCardBrush}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource GenerationCardInfoCornerRadius}" />
     </Style>
 
     <Style Selector="Image.generation-card-image">

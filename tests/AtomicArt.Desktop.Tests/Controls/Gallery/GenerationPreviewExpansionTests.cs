@@ -32,10 +32,19 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                 .GetVisualDescendants()
                 .OfType<ScrollContentPresenter>()
                 .Single();
+            Border cardSurface = context.Card
+                .GetVisualDescendants()
+                .OfType<Border>()
+                .Single(border => border.Name == "GenerationCardRoot");
+            Border cardInfo = context.Card
+                .GetVisualDescendants()
+                .OfType<Border>()
+                .Single(border => border.Classes.Contains("generation-card-info"));
             bool originalScrollViewerClipToBounds = context.ScrollViewer.ClipToBounds;
             object? originalScrollViewerClip = context.ScrollViewer.Clip;
             bool originalPresenterClipToBounds = scrollPresenter.ClipToBounds;
             Point previewCenter = GetPointerPosition(context, 110d);
+            cardSurface.ClipToBounds.Should().BeTrue();
             originalScrollViewerClipToBounds.Should().BeFalse();
             originalScrollViewerClip.Should().BeNull();
 
@@ -48,6 +57,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                         originalScrollViewerClipToBounds,
                         originalScrollViewerClip);
                     AssertPreviewIsOpaque(context);
+                    cardInfo.CornerRadius.Should().Be(new CornerRadius(0d, 0d, 8d, 8d));
                     scrollPresenter.ClipToBounds.Should().BeFalse();
                     context.Card.ZIndex.Should().Be(1001);
 
@@ -94,6 +104,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                     context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
                     context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
                     scrollPresenter.ClipToBounds.Should().Be(originalPresenterClipToBounds);
+                    cardSurface.ClipToBounds.Should().BeTrue();
         });
     }
 
