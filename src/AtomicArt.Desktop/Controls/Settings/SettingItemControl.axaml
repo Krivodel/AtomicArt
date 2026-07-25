@@ -4,21 +4,16 @@
              x:Class="AtomicArt.Desktop.Controls.Settings.SettingItemControl"
              x:Name="Root"
              x:DataType="settings:SettingItemControl">
-    <Grid RowDefinitions="Auto,Auto"
-          ColumnDefinitions="*,Auto">
-        <StackPanel>
-            <TextBlock Classes="metadata-label"
-                       Text="{Binding #Root.DisplayName}" />
-            <ContentControl Content="{Binding #Root.Editor}" />
-        </StackPanel>
-        <Button Grid.Column="1"
-                Margin="{StaticResource SettingsActionButtonMargin}"
-                VerticalAlignment="Bottom"
-                Content="{Binding #Root.ActionText}"
-                Command="{Binding #Root.ActionCommand}" />
-        <TextBlock Grid.Row="1"
-                   Grid.ColumnSpan="2"
-                   Classes="metadata-value"
+    <Grid RowDefinitions="Auto,Auto,Auto">
+        <TextBlock Classes="settings-label"
+                   Text="{Binding #Root.DisplayName}" />
+        <ContentControl Grid.Row="1"
+                        Margin="{StaticResource SettingsEditorMargin}"
+                        HorizontalContentAlignment="Stretch"
+                        Content="{Binding #Root.Editor}" />
+        <TextBlock Grid.Row="2"
+                   Margin="{StaticResource SettingsErrorMargin}"
+                   Classes="error-message settings-error"
                    IsVisible="{Binding #Root.HasErrorMessage}"
                    Text="{Binding #Root.ErrorMessage}" />
     </Grid>

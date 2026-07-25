@@ -11,6 +11,5 @@ public sealed class DataRootSettingDefinition :
     public string Key => KeyValue;
     public int Order => 250;
     public string DisplayName => UiStrings.SettingsDataRootLabel;
-    public string ActionText => UiStrings.SettingsDataRootChange;
-    public string Description => UiStrings.SettingsDataRootDescription;
+    public SettingsSection Section => SettingsSections.StorageAndPerformance;
 }

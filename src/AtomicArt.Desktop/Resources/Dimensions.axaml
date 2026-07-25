@@ -42,7 +42,13 @@
     <x:Double x:Key="MetadataRepeatButtonHeight">53</x:Double>
     <x:Double x:Key="MetadataCopyButtonSize">32</x:Double>
     <x:Double x:Key="MetadataIconSize">16</x:Double>
-    <x:Double x:Key="SettingsOverlayWidth">520</x:Double>
+    <x:Double x:Key="SettingsOverlayWidth">600</x:Double>
+    <x:Double x:Key="SettingsOverlayContentMaxHeight">720</x:Double>
+    <x:Double x:Key="SettingsIconButtonSize">36</x:Double>
+    <x:Double x:Key="SettingsIconSize">18</x:Double>
+    <x:Double x:Key="SettingsGroupSpacing">22</x:Double>
+    <x:Double x:Key="SettingsSectionHeaderSpacing">8</x:Double>
+    <x:Double x:Key="SettingsItemSpacing">20</x:Double>
     <x:Int32 x:Key="SettingsModalOverlayOrder">100</x:Int32>
     <x:Int32 x:Key="MetadataModalOverlayOrder">200</x:Int32>
     <CornerRadius x:Key="ShellCornerRadius">8</CornerRadius>
@@ -75,7 +81,11 @@
     <Thickness x:Key="MetadataLabelMargin">0,0,16,10</Thickness>
     <Thickness x:Key="MetadataValueMargin">0,0,0,10</Thickness>
     <Thickness x:Key="SettingsSectionMargin">0,18,0,0</Thickness>
-    <Thickness x:Key="SettingsActionButtonMargin">0,0,12,0</Thickness>
+    <Thickness x:Key="SettingsGroupPadding">16</Thickness>
+    <Thickness x:Key="SettingsEditorMargin">0,8,0,0</Thickness>
+    <Thickness x:Key="SettingsActionButtonMargin">12,0,0,0</Thickness>
+    <Thickness x:Key="SettingsDescriptionMargin">0,8,0,0</Thickness>
+    <Thickness x:Key="SettingsErrorMargin">0,8,0,0</Thickness>
     <Thickness x:Key="ZeroThickness">0</Thickness>
     <Thickness x:Key="ShellBorderThickness">1</Thickness>
 </ResourceDictionary>

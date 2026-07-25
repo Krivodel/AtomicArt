@@ -11,6 +11,6 @@ public sealed class GoogleApiKeySettingDefinition : ISecretSettingDefinition
     public int Order => 100;
     public string SecretName => SecretNameValue;
     public string DisplayName => UiStrings.SettingsGoogleApiKeyLabel;
+    public SettingsSection Section => SettingsSections.Connection;
     public string Placeholder => UiStrings.SettingsGoogleApiKeyPlaceholder;
-    public string SaveButtonText => UiStrings.SettingsSave;
 }

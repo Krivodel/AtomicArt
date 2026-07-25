@@ -1,5 +1,3 @@
-using System.Windows.Input;
-
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
@@ -10,16 +8,6 @@ namespace AtomicArt.Desktop.Controls.Settings;
 
 public partial class SettingItemControl : UserControl
 {
-    public string? ActionText
-    {
-        get => GetValue(ActionTextProperty);
-        set => SetValue(ActionTextProperty, value);
-    }
-    public ICommand? ActionCommand
-    {
-        get => GetValue(ActionCommandProperty);
-        set => SetValue(ActionCommandProperty, value);
-    }
     public string? DisplayName
     {
         get => GetValue(DisplayNameProperty);
@@ -41,10 +29,6 @@ public partial class SettingItemControl : UserControl
         set => SetValue(HasErrorMessageProperty, value);
     }
 
-    public static readonly StyledProperty<string?> ActionTextProperty =
-        AvaloniaProperty.Register<SettingItemControl, string?>(nameof(ActionText));
-    public static readonly StyledProperty<ICommand?> ActionCommandProperty =
-        AvaloniaProperty.Register<SettingItemControl, ICommand?>(nameof(ActionCommand));
     public static readonly StyledProperty<string?> DisplayNameProperty =
         AvaloniaProperty.Register<SettingItemControl, string?>(nameof(DisplayName));
     public static readonly StyledProperty<Control?> EditorProperty =
@@ -56,8 +40,6 @@ public partial class SettingItemControl : UserControl
 
     public SettingItemControl()
     {
-        Bind(ActionTextProperty, new Binding(nameof(ISettingItemViewModel.ActionText)));
-        Bind(ActionCommandProperty, new Binding(nameof(ISettingItemViewModel.ActionCommand)));
         Bind(DisplayNameProperty, new Binding(nameof(ISettingItemViewModel.DisplayName)));
         Bind(ErrorMessageProperty, new Binding(nameof(ISettingItemViewModel.ErrorMessage)));
         Bind(HasErrorMessageProperty, new Binding(nameof(ISettingItemViewModel.HasErrorMessage)));

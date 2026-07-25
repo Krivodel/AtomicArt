@@ -61,7 +61,7 @@ public sealed class SettingsViewModelTests
         await secretSetting.SaveCommand.ExecuteAsync(null);
 
         secretStore.StoredValues[secretSetting.SecretName].Should().Be("value-for-test-only");
-        secretSetting.Value.Should().BeEmpty();
+        secretSetting.Value.Should().Be("value-for-test-only");
         secretSetting.HasErrorMessage.Should().BeFalse();
     }
 
@@ -170,6 +170,23 @@ public sealed class SettingsViewModelTests
 
         secretSettings.Should().NotContain(setting => setting.Key == "generation.nanoBanana2.apiKey");
         secretSettings.Should().NotContain(setting => setting.SecretName == "NanoBanana2ApiKey");
+    }
+
+    [Fact]
+    public void Groups_WithDefaultSettings_GroupsSettingsByDefinitionSection()
+    {
+        SettingsViewModel viewModel = CreateViewModel(
+            new RecordingSecretStore(),
+            new RecordingUiScaleService(),
+            new TestViewModelErrorHandler());
+
+        viewModel.Groups.Should().HaveCount(2);
+        viewModel.Groups[0].Title.Should().Be(UiStrings.SettingsConnectionSection);
+        viewModel.Groups[0].Settings.Should()
+            .ContainSingle(setting => setting.Key == GoogleApiKeySettingDefinition.KeyValue);
+        viewModel.Groups[1].Title.Should().Be(UiStrings.SettingsAppearanceSection);
+        viewModel.Groups[1].Settings.Should()
+            .ContainSingle(setting => setting.Key == UiScaleSettingDefinition.KeyValue);
     }
 
     private sealed class RecordingSecretStore : ISecretStore
@@ -372,8 +389,8 @@ public sealed class SettingsViewModelTests
         public int Order => 150;
         public string SecretName => SecretNameValue;
         public string DisplayName => "Второй ключ";
+        public SettingsSection Section => SettingsSections.Connection;
         public string Placeholder => "Второе значение";
-        public string SaveButtonText => "Сохранить";
     }
 
     private sealed class RecordingSettingsStateService : ISettingsStateService

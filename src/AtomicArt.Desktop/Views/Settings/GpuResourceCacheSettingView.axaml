@@ -8,7 +8,8 @@
     <controls:SettingItemControl>
         <controls:SettingItemControl.Editor>
             <StackPanel>
-                <ComboBox ItemsSource="{Binding Options}"
+                <ComboBox IsEnabled="{Binding !IsLoading}"
+                          ItemsSource="{Binding Options}"
                           SelectedItem="{Binding SelectedOption, Mode=TwoWay}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="models:GpuResourceCacheOption">
@@ -16,7 +17,7 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <TextBlock Classes="metadata-value"
+                <TextBlock Classes="settings-description"
                            Text="{Binding RestartNotice}" />
             </StackPanel>
         </controls:SettingItemControl.Editor>

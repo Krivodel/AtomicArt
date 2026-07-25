@@ -38,6 +38,9 @@ public static class UiStrings
     public static string MetadataUnavailable => "Недоступно";
     public static string MetadataRepeat => "Повторить";
     public static string FileRevealFailed => "Не удалось показать файл в папке.";
+    public static string SettingsConnectionSection => "Подключение";
+    public static string SettingsAppearanceSection => "Интерфейс";
+    public static string SettingsStorageAndPerformanceSection => "Прочее";
     public static string SettingsApiBaseAddressLabel => "Адрес сервера";
     public static string SettingsApiBaseAddressPlaceholder => "http://localhost:5000/";
     public static string SettingsApiBaseAddressInvalid => "Укажи абсолютный адрес HTTP или HTTPS.";
@@ -46,14 +49,8 @@ public static class UiStrings
     public static string SettingsScaleLabel => "Масштаб";
     public static string SettingsPromptTextSizeLabel => "Размер текста промпта";
     public static string SettingsGpuResourceCacheLabel => "GPU-кэш";
-    public static string SettingsSave => "Сохранить";
-    public static string SettingsSaveApiKey => "Сохранить ключ";
-    public static string SettingsApply => "Применить";
     public static string SettingsGpuResourceCacheRestartNotice => "Кэш применится после перезапуска.";
     public static string SettingsDataRootLabel => "Папка сохранений";
-    public static string SettingsDataRootChange => "Изменить…";
-    public static string SettingsDataRootDescription =>
-        "В выбранную папку будут перенесены все сохранения.";
     public static string SettingsDataRootPickerTitle => "Выбор пустой папки для сохранений Atomic Art";
     public static string SettingsDataRootPreparing => "Подготовка…";
     public static string SettingsDataRootCopying => "Копирование…";

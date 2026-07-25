@@ -14,12 +14,18 @@ public abstract class SelectableSettingItemViewModel<TOption> : SettingItemViewM
         {
             if (SetProperty(ref _selectedOption, value))
             {
-                NotifyActionCanExecuteChanged();
+                NotifyOperationCanExecuteChanged();
+
+                if (!_isSynchronizingSelectedOption)
+                {
+                    OnSelectedOptionChanged(value);
+                }
             }
         }
     }
 
     private TOption? _selectedOption;
+    private bool _isSynchronizingSelectedOption;
 
     protected SelectableSettingItemViewModel(
         IDisplaySettingDefinition definition,
@@ -35,4 +41,22 @@ public abstract class SelectableSettingItemViewModel<TOption> : SettingItemViewM
     }
 
     protected bool HasSelectedOption => SelectedOption is not null;
+
+    protected void SynchronizeSelectedOption(TOption? selectedOption)
+    {
+        _isSynchronizingSelectedOption = true;
+
+        try
+        {
+            SelectedOption = selectedOption;
+        }
+        finally
+        {
+            _isSynchronizingSelectedOption = false;
+        }
+    }
+
+    protected virtual void OnSelectedOptionChanged(TOption? selectedOption)
+    {
+    }
 }

@@ -9,10 +9,9 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 public sealed partial class GpuResourceCacheSettingViewModel :
     SelectableSettingItemViewModel<GpuResourceCacheOption>
 {
-    public override string ActionText => SaveButtonText;
-    public override IRelayCommand ActionCommand => SaveCommand;
-    public string SaveButtonText { get; }
     public string RestartNotice { get; }
+
+    protected override IRelayCommand OperationCommand => SaveCommand;
 
     private readonly GpuResourceCacheSettingDefinition _definition;
     private readonly ISettingsStateService _settingsStateService;
@@ -30,8 +29,15 @@ public sealed partial class GpuResourceCacheSettingViewModel :
 
         _definition = definition;
         _settingsStateService = settingsStateService;
-        SaveButtonText = definition.SaveButtonText;
         RestartNotice = definition.RestartNotice;
+    }
+
+    protected override void OnSelectedOptionChanged(GpuResourceCacheOption? selectedOption)
+    {
+        if (selectedOption is not null)
+        {
+            SaveCommand.Execute(null);
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanSave))]

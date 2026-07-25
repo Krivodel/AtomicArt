@@ -7,13 +7,15 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class SecretSettingViewModel : SettingItemViewModel
 {
-    public override string ActionText => SaveButtonText;
-    public override IRelayCommand ActionCommand => SaveCommand;
     public string SecretName { get; }
     public string Placeholder { get; }
-    public string SaveButtonText { get; }
+
+    protected override IRelayCommand OperationCommand => SaveCommand;
 
     private readonly ISecretStore _secretStore;
+    private bool _hasPendingValue;
+    private bool _isLoaded;
+    private bool _isSynchronizingValue;
 
     [ObservableProperty]
     private string _value = string.Empty;
@@ -28,8 +30,39 @@ public sealed partial class SecretSettingViewModel : SettingItemViewModel
 
         SecretName = definition.SecretName;
         Placeholder = definition.Placeholder;
-        SaveButtonText = definition.SaveButtonText;
         _secretStore = secretStore;
+    }
+
+    protected override void NotifyOperationCanExecuteChanged()
+    {
+        base.NotifyOperationCanExecuteChanged();
+        LoadCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanLoad))]
+    private async Task LoadAsync(CancellationToken ct)
+    {
+        await RunOperationAsync(
+            async () =>
+            {
+                string? storedValue = await _secretStore.GetSecretAsync(SecretName, ct);
+                _isSynchronizingValue = true;
+
+                try
+                {
+                    Value = storedValue ?? string.Empty;
+                    _hasPendingValue = false;
+                    _isLoaded = true;
+                }
+                finally
+                {
+                    _isSynchronizingValue = false;
+                }
+
+                NotifyOperationCanExecuteChanged();
+            },
+            ct,
+            nameof(LoadAsync));
     }
 
     [RelayCommand(CanExecute = nameof(CanSave))]
@@ -42,14 +75,33 @@ public sealed partial class SecretSettingViewModel : SettingItemViewModel
                     SecretName,
                     Value,
                     ct);
-                Value = string.Empty;
+                _hasPendingValue = false;
+                _isLoaded = true;
+                NotifyOperationCanExecuteChanged();
             },
             ct,
             nameof(SaveAsync));
     }
 
+    private bool CanLoad()
+    {
+        return !IsLoading && !_isLoaded;
+    }
+
     private bool CanSave()
     {
-        return !IsLoading;
+        return !IsLoading && _hasPendingValue;
+    }
+
+    partial void OnValueChanged(string value)
+    {
+        if (_isSynchronizingValue)
+        {
+            return;
+        }
+
+        _hasPendingValue = true;
+        ErrorMessage = null;
+        NotifyOperationCanExecuteChanged();
     }
 }

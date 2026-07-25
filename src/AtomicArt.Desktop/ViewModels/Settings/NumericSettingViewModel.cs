@@ -10,16 +10,15 @@ public sealed partial class NumericSettingViewModel :
     SelectableSettingItemViewModel<NumericSettingOption>,
     IDisposable
 {
-    public override string ActionText { get; }
-    public override IRelayCommand ActionCommand => ApplyCommand;
+    protected override IRelayCommand OperationCommand => ApplyCommand;
 
-    private readonly IActionSettingDefinition _definition;
+    private readonly IDisplaySettingDefinition _definition;
     private readonly INumericSettingValueSource _valueSource;
     private readonly ISettingsStateService _settingsStateService;
     private readonly IDoubleSettingValueConverter _valueConverter;
 
     public NumericSettingViewModel(
-        IActionSettingDefinition definition,
+        IDisplaySettingDefinition definition,
         IReadOnlyList<NumericSettingOption> options,
         INumericSettingValueSource valueSource,
         ISettingsStateService settingsStateService,
@@ -36,7 +35,6 @@ public sealed partial class NumericSettingViewModel :
         ArgumentNullException.ThrowIfNull(valueConverter);
 
         _definition = definition;
-        ActionText = definition.ActionText;
         _valueSource = valueSource;
         _settingsStateService = settingsStateService;
         _valueConverter = valueConverter;
@@ -46,6 +44,14 @@ public sealed partial class NumericSettingViewModel :
     public void Dispose()
     {
         _valueSource.ValueChanged -= OnValueChanged;
+    }
+
+    protected override void OnSelectedOptionChanged(NumericSettingOption? selectedOption)
+    {
+        if (selectedOption is not null)
+        {
+            ApplyCommand.Execute(null);
+        }
     }
 
     private static NumericSettingOption? FindSelectedOption(
@@ -85,6 +91,6 @@ public sealed partial class NumericSettingViewModel :
 
     private void OnValueChanged(object? sender, EventArgs e)
     {
-        SelectedOption = FindSelectedOption(Options, _valueSource);
+        SynchronizeSelectedOption(FindSelectedOption(Options, _valueSource));
     }
 }

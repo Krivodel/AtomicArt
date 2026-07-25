@@ -10,7 +10,7 @@ public sealed class PromptTextSizeSettingDefinition : IPromptTextSizeSettingDefi
     public string Key => KeyValue;
     public int Order => 225;
     public string DisplayName => UiStrings.SettingsPromptTextSizeLabel;
-    public string ActionText => UiStrings.SettingsApply;
+    public SettingsSection Section => SettingsSections.Appearance;
     public double DefaultValue => DefaultTextSize;
     public IReadOnlyList<NumericSettingOption> Options => TextSizeOptions;
 

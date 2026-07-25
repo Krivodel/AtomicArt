@@ -5,14 +5,45 @@
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.SettingsOverlayView"
              x:DataType="settings:SettingsViewModel">
-    <controls:ModalOverlayControl MaxWidth="{StaticResource SettingsOverlayWidth}"
+    <controls:ModalOverlayControl Width="{StaticResource SettingsOverlayWidth}"
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Top"
                                   Title="{x:Static resources:UiStrings.SettingsTitle}"
                                   CloseCommand="{Binding CloseCommand}">
         <controls:ModalOverlayControl.Body>
-            <ItemsControl Margin="{StaticResource SettingsSectionMargin}"
-                          ItemsSource="{Binding Settings}" />
+            <ScrollViewer MaxHeight="{StaticResource SettingsOverlayContentMaxHeight}"
+                          Margin="{StaticResource SettingsSectionMargin}"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Groups}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="{StaticResource SettingsGroupSpacing}" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="settings:SettingsGroupViewModel">
+                            <StackPanel Spacing="{StaticResource SettingsSectionHeaderSpacing}">
+                                <TextBlock Classes="settings-section-title"
+                                           Text="{Binding Title}" />
+                                <Border Padding="{StaticResource SettingsGroupPadding}"
+                                        Background="{DynamicResource GlassCardBrush}"
+                                        BorderBrush="{DynamicResource GlassBorderBrush}"
+                                        BorderThickness="{StaticResource ShellBorderThickness}"
+                                        CornerRadius="{StaticResource OverlayCornerRadius}">
+                                    <ItemsControl ItemsSource="{Binding Settings}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Spacing="{StaticResource SettingsItemSpacing}" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                    </ItemsControl>
+                                </Border>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </controls:ModalOverlayControl.Body>
     </controls:ModalOverlayControl>
 </UserControl>

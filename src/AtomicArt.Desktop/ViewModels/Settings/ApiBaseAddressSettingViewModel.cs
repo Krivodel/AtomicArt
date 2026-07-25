@@ -12,20 +12,21 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewModel, IDisposable
 {
-    public override string ActionText => SaveButtonText;
-    public override IRelayCommand ActionCommand => SaveCommand;
     public string Placeholder { get; }
-    public string SaveButtonText { get; }
+
+    protected override IRelayCommand OperationCommand => SaveCommand;
 
     private readonly ApiBaseAddressSettingDefinition _definition;
     private readonly IApiEndpointService _apiEndpointService;
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly ISettingsStateService _settingsStateService;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
+    private string _committedValue;
     private bool _isDisposed;
 
     [ObservableProperty]
     [NotifyDataErrorInfo]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     [CustomValidation(
         typeof(ApiBaseAddressSettingViewModel),
         nameof(ValidateBaseAddress))]
@@ -48,8 +49,8 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         _uiThreadDispatcher = uiThreadDispatcher;
         _settingsStateService = settingsStateService;
         _value = apiEndpointService.BaseAddress.ToString();
+        _committedValue = _value;
         Placeholder = definition.Placeholder;
-        SaveButtonText = definition.SaveButtonText;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
     }
 
@@ -95,6 +96,7 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
                 _settingsStateService.ApplyValue(_definition, normalizedValue);
                 await _settingsStateService.SaveValueAsync(_definition, normalizedValue, ct);
                 Value = normalizedValue;
+                _committedValue = normalizedValue;
             },
             ct,
             nameof(SaveAsync));
@@ -102,17 +104,26 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
 
     private bool CanSave()
     {
-        return !IsLoading;
+        return !IsLoading
+            && !string.Equals(Value, _committedValue, StringComparison.Ordinal);
     }
 
     private async Task SynchronizeValueAsync()
     {
         await ViewModelUiDispatch.RunAsync(
             _uiThreadDispatcher,
-            () => Value = _apiEndpointService.BaseAddress.ToString(),
+            SynchronizeValue,
             _disposeCancellationSource.Token,
             ErrorHandler,
             nameof(SynchronizeValueAsync));
+    }
+
+    private void SynchronizeValue()
+    {
+        string value = _apiEndpointService.BaseAddress.ToString();
+        _committedValue = value;
+        Value = value;
+        SaveCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnValueChanged(string value)

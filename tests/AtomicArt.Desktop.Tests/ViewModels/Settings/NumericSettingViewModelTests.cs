@@ -35,22 +35,51 @@ public sealed class NumericSettingViewModelTests
     }
 
     [Fact]
-    public void SelectedOption_WhenValueSourceChanges_UsesCurrentOption()
+    public async Task SelectedOption_WhenChanged_AppliesAndSavesValue()
+    {
+        UiScaleOption firstOption = new UiScale100OptionDefinition().Option;
+        UiScaleOption secondOption = new UiScale125OptionDefinition().Option;
+        RecordingSettingsStateService settingsStateService = new();
+        IDoubleSettingValueConverter valueConverter = new DoubleSettingValueConverter();
+        using NumericSettingViewModel viewModel = new(
+            new UiScaleSettingDefinition(),
+            [firstOption, secondOption],
+            new RecordingNumericSettingValueSource(firstOption.Value),
+            settingsStateService,
+            valueConverter,
+            new TestViewModelErrorHandler());
+
+        viewModel.SelectedOption = secondOption;
+        Task? executionTask = viewModel.ApplyCommand.ExecutionTask;
+
+        if (executionTask is not null)
+        {
+            await executionTask;
+        }
+
+        settingsStateService.AppliedValue.Should().Be(valueConverter.Format(secondOption.Value));
+        settingsStateService.SavedValue.Should().Be(valueConverter.Format(secondOption.Value));
+    }
+
+    [Fact]
+    public void SelectedOption_WhenValueSourceChanges_UsesCurrentOptionWithoutSaving()
     {
         UiScaleOption firstOption = new UiScale100OptionDefinition().Option;
         UiScaleOption secondOption = new UiScale125OptionDefinition().Option;
         RecordingNumericSettingValueSource valueSource = new(firstOption.Value);
+        RecordingSettingsStateService settingsStateService = new();
         using NumericSettingViewModel viewModel = new(
             new UiScaleSettingDefinition(),
             [firstOption, secondOption],
             valueSource,
-            new RecordingSettingsStateService(),
+            settingsStateService,
             new DoubleSettingValueConverter(),
             new TestViewModelErrorHandler());
 
         valueSource.SetValue(secondOption.Value);
 
         viewModel.SelectedOption.Should().Be(secondOption);
+        settingsStateService.SavedValue.Should().BeNull();
     }
 
     [Fact]

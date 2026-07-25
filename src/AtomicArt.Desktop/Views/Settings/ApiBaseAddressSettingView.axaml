@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.ApiBaseAddressSettingView"
@@ -7,7 +8,10 @@
     <controls:SettingItemControl>
         <controls:SettingItemControl.Editor>
             <TextBox PlaceholderText="{Binding Placeholder}"
-                     Text="{Binding Value, Mode=TwoWay}" />
+                     Text="{Binding Value,
+                                    Mode=TwoWay,
+                                    UpdateSourceTrigger=PropertyChanged}"
+                     behaviors:SettingCommitBehavior.Command="{Binding SaveCommand}" />
         </controls:SettingItemControl.Editor>
     </controls:SettingItemControl>
 </UserControl>

@@ -9,9 +9,7 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class DataRootSettingViewModel : SettingItemViewModel
 {
-    public override string ActionText => _definition.ActionText;
-    public override IRelayCommand ActionCommand => ChangeDirectoryCommand;
-    public string Description => _definition.Description;
+    protected override IRelayCommand OperationCommand => ChangeDirectoryCommand;
 
     private readonly DataRootSettingDefinition _definition;
     private readonly IFolderPickerService _folderPickerService;

@@ -9,6 +9,6 @@ public sealed class GpuResourceCacheSettingDefinition : IDisplaySettingDefinitio
     public string Key => SettingKey;
     public int Order => 300;
     public string DisplayName => UiStrings.SettingsGpuResourceCacheLabel;
-    public string SaveButtonText => UiStrings.SettingsSave;
+    public SettingsSection Section => SettingsSections.StorageAndPerformance;
     public string RestartNotice => UiStrings.SettingsGpuResourceCacheRestartNotice;
 }

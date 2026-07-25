@@ -1,5 +1,5 @@
 namespace AtomicArt.Desktop.Services;
 
-public interface IScaleSettingDefinition : IActionSettingDefinition
+public interface IScaleSettingDefinition : IDisplaySettingDefinition
 {
 }

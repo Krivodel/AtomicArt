@@ -7,16 +7,25 @@
     <controls:SettingItemControl>
         <controls:SettingItemControl.Editor>
             <StackPanel Spacing="{StaticResource SmallSpacing}">
-                <TextBox IsReadOnly="True"
-                         Text="{Binding Value}" />
-                <TextBlock Classes="metadata-value"
-                           TextWrapping="Wrap"
-                           Text="{Binding Description}" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox IsReadOnly="True"
+                             Text="{Binding Value}" />
+                    <Button Grid.Column="1"
+                            Width="{StaticResource SettingsIconButtonSize}"
+                            Height="{StaticResource SettingsIconButtonSize}"
+                            Margin="{StaticResource SettingsActionButtonMargin}"
+                            Classes="Icon"
+                            Command="{Binding ChangeDirectoryCommand}">
+                        <PathIcon Width="{StaticResource SettingsIconSize}"
+                                  Height="{StaticResource SettingsIconSize}"
+                                  Data="{StaticResource GalleryFolderIcon}" />
+                    </Button>
+                </Grid>
                 <ProgressBar IsIndeterminate="{Binding IsProgressIndeterminate}"
                              IsVisible="{Binding IsLoading}"
                              Maximum="100"
                              Value="{Binding ProgressPercentage}" />
-                <TextBlock Classes="metadata-value"
+                <TextBlock Classes="settings-description"
                            IsVisible="{Binding IsLoading}"
                            Text="{Binding ProgressText}" />
             </StackPanel>

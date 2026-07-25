@@ -7,11 +7,10 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public abstract class SettingItemViewModel : ObservableValidator, ISettingItemViewModel
 {
-    public abstract string ActionText { get; }
-    public abstract IRelayCommand ActionCommand { get; }
     public string Key { get; }
     public int Order { get; }
     public string DisplayName { get; }
+    public SettingsSection Section { get; }
     public bool IsLoading
     {
         get => _isLoading;
@@ -19,7 +18,7 @@ public abstract class SettingItemViewModel : ObservableValidator, ISettingItemVi
         {
             if (SetProperty(ref _isLoading, value))
             {
-                NotifyActionCanExecuteChanged();
+                NotifyOperationCanExecuteChanged();
             }
         }
     }
@@ -37,6 +36,7 @@ public abstract class SettingItemViewModel : ObservableValidator, ISettingItemVi
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
 
     protected IViewModelErrorHandler ErrorHandler => _errorHandler;
+    protected abstract IRelayCommand OperationCommand { get; }
 
     private readonly IViewModelErrorHandler _errorHandler;
     private bool _isLoading;
@@ -52,6 +52,7 @@ public abstract class SettingItemViewModel : ObservableValidator, ISettingItemVi
         Key = definition.Key;
         Order = definition.Order;
         DisplayName = definition.DisplayName;
+        Section = definition.Section;
         _errorHandler = errorHandler;
     }
 
@@ -72,8 +73,8 @@ public abstract class SettingItemViewModel : ObservableValidator, ISettingItemVi
             value => ErrorMessage = value);
     }
 
-    protected void NotifyActionCanExecuteChanged()
+    protected virtual void NotifyOperationCanExecuteChanged()
     {
-        ActionCommand.NotifyCanExecuteChanged();
+        OperationCommand.NotifyCanExecuteChanged();
     }
 }

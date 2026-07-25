@@ -55,6 +55,16 @@ public sealed class ApiBaseAddressSettingViewModelTests
         context.ViewModel.Value.Should().Be("https://restored.atomicart.test/");
     }
 
+    [Fact]
+    public void SaveCommand_WithUnchangedAddress_CannotExecute()
+    {
+        using ApiBaseAddressSettingTestContext context = new();
+
+        bool canExecute = context.ViewModel.SaveCommand.CanExecute(null);
+
+        canExecute.Should().BeFalse();
+    }
+
     private sealed class ApiBaseAddressSettingTestContext : IDisposable
     {
         public IApiEndpointService EndpointService { get; }
