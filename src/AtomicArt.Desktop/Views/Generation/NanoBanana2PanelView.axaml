@@ -184,18 +184,21 @@
             </Grid>
 
             <TextBox Grid.Row="2"
-                     Classes="prompt-input"
                      MinHeight="{StaticResource PromptHeight}"
                      Margin="{StaticResource GenerationPanelInnerSpacing}"
+                     Padding="{StaticResource ZeroThickness}"
                      VerticalContentAlignment="Top"
+                     Classes="prompt-input"
+                     IsEnabled="{Binding HasLoadedCatalog}"
                      AcceptsReturn="True"
                      behaviors:ClipboardPasteBehavior.IsEnabled="True"
-                     IsEnabled="{Binding HasLoadedCatalog}"
                      LostFocus="OnPromptLostFocus"
                      PlaceholderText="{x:Static resources:UiStrings.PromptPlaceholder}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                      TextWrapping="Wrap"
-                     Text="{Binding Prompt}" />
+                     FontSize="{Binding PromptTextSize}"
+                     Text="{Binding Prompt}"
+                     behaviors:PromptTextSizeWheelBehavior.AdjustCommand="{Binding AdjustPromptTextSizeCommand}" />
 
             <TextBlock Grid.Row="3"
                        Margin="{StaticResource GenerationPanelInnerSpacing}"

@@ -1,3 +1,4 @@
 namespace AtomicArt.Desktop.Models;
 
-public sealed record UiScaleOption(string DisplayName, double Value);
+public sealed record UiScaleOption(string DisplayName, double Value)
+    : NumericSettingOption(DisplayName, Value);

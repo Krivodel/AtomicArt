@@ -3,14 +3,14 @@
              xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
              xmlns:models="using:AtomicArt.Desktop.Models"
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
-             x:Class="AtomicArt.Desktop.Views.Settings.ScaleSettingView"
-             x:DataType="settings:ScaleSettingViewModel">
+             x:Class="AtomicArt.Desktop.Views.Settings.NumericSettingView"
+             x:DataType="settings:NumericSettingViewModel">
     <controls:SettingItemControl>
         <controls:SettingItemControl.Editor>
             <ComboBox ItemsSource="{Binding Options}"
                       SelectedItem="{Binding SelectedOption, Mode=TwoWay}">
                 <ComboBox.ItemTemplate>
-                    <DataTemplate x:DataType="models:UiScaleOption">
+                    <DataTemplate x:DataType="models:NumericSettingOption">
                         <TextBlock Text="{Binding DisplayName}" />
                     </DataTemplate>
                 </ComboBox.ItemTemplate>

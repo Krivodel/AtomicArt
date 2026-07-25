@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace AtomicArt.Desktop.Views.Settings;
 
-public partial class ScaleSettingView : UserControl
+public partial class NumericSettingView : UserControl
 {
-    public ScaleSettingView()
+    public NumericSettingView()
     {
         InitializeComponent();
     }

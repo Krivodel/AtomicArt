@@ -44,10 +44,11 @@ public static class UiStrings
     public static string SettingsGoogleApiKeyLabel => "Google API-ключ";
     public static string SettingsGoogleApiKeyPlaceholder => SettingsGoogleApiKeyLabel;
     public static string SettingsScaleLabel => "Масштаб";
+    public static string SettingsPromptTextSizeLabel => "Размер текста промпта";
     public static string SettingsGpuResourceCacheLabel => "GPU-кэш";
     public static string SettingsSave => "Сохранить";
     public static string SettingsSaveApiKey => "Сохранить ключ";
-    public static string SettingsApplyScale => "Применить";
+    public static string SettingsApply => "Применить";
     public static string SettingsGpuResourceCacheRestartNotice => "Кэш применится после перезапуска.";
     public static string SettingsDataRootLabel => "Папка сохранений";
     public static string SettingsDataRootChange => "Изменить…";

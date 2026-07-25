@@ -20,7 +20,7 @@ public sealed class SettingsViewModelTests
             new RecordingSecretStore(),
             scaleService,
             new TestViewModelErrorHandler());
-        (ScaleSettingViewModel scaleSetting, UiScaleOption scaleOption) =
+        (NumericSettingViewModel scaleSetting, UiScaleOption scaleOption) =
             CreateSelectedScaleSetting(viewModel);
 
         await scaleSetting.ApplyCommand.ExecuteAsync(null);
@@ -37,14 +37,14 @@ public sealed class SettingsViewModelTests
             new RecordingUiScaleService(),
             new TestViewModelErrorHandler(),
             settingsStateService);
-        (ScaleSettingViewModel scaleSetting, UiScaleOption scaleOption) =
+        (NumericSettingViewModel scaleSetting, UiScaleOption scaleOption) =
             CreateSelectedScaleSetting(viewModel);
 
         await scaleSetting.ApplyCommand.ExecuteAsync(null);
 
         settingsStateService.SavedScaleKey.Should().Be(UiScaleSettingDefinition.KeyValue);
         settingsStateService.SavedValue.Should().Be(
-            new UiScaleSettingValueConverter().Format(scaleOption.Value));
+            new DoubleSettingValueConverter().Format(scaleOption.Value));
     }
 
     [Fact]
@@ -111,7 +111,9 @@ public sealed class SettingsViewModelTests
             new RecordingSecretStore(),
             scaleService,
             errorHandler);
-        ScaleSettingViewModel scaleSetting = viewModel.Settings.OfType<ScaleSettingViewModel>().Single();
+        NumericSettingViewModel scaleSetting = viewModel.Settings
+            .OfType<NumericSettingViewModel>()
+            .Single();
 
         await scaleSetting.ApplyCommand.ExecuteAsync(null);
 
@@ -128,7 +130,9 @@ public sealed class SettingsViewModelTests
             new TestViewModelErrorHandler(),
             scaleOptions: []);
 
-        ScaleSettingViewModel scaleSetting = viewModel.Settings.OfType<ScaleSettingViewModel>().Single();
+        NumericSettingViewModel scaleSetting = viewModel.Settings
+            .OfType<NumericSettingViewModel>()
+            .Single();
 
         scaleSetting.Options.Should().BeEmpty();
         scaleSetting.SelectedOption.Should().BeNull();
@@ -207,11 +211,11 @@ public sealed class SettingsViewModelTests
         }
     }
 
-    private static (ScaleSettingViewModel Setting, UiScaleOption Option)
+    private static (NumericSettingViewModel Setting, UiScaleOption Option)
         CreateSelectedScaleSetting(SettingsViewModel viewModel)
     {
-        ScaleSettingViewModel setting = viewModel.Settings
-            .OfType<ScaleSettingViewModel>()
+        NumericSettingViewModel setting = viewModel.Settings
+            .OfType<NumericSettingViewModel>()
             .Single();
         UiScaleOption option = new UiScale125OptionDefinition().Option;
         setting.SelectedOption = setting.Options.Single(currentOption => currentOption == option);
@@ -355,7 +359,7 @@ public sealed class SettingsViewModelTests
                 catalog,
                 uiScaleService,
                 settingsStateService,
-                new UiScaleSettingValueConverter(),
+                new DoubleSettingValueConverter(),
                 errorHandler)
         ];
     }
@@ -397,7 +401,7 @@ public sealed class SettingsViewModelTests
         {
             if (definition is UiScaleSettingDefinition
                 && _uiScaleService is not null
-                && new UiScaleSettingValueConverter().TryParse(value, out double scale))
+                && new DoubleSettingValueConverter().TryParse(value, out double scale))
             {
                 _uiScaleService.SetScale(scale);
             }

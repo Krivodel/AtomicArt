@@ -1550,6 +1550,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
                 generationRunDispatcher),
             generationPanelStateService ?? new RecordingGenerationPanelStateService(),
             imageViewerService ?? new RecordingImageViewerService(),
+            new RecordingPromptTextSizeController(),
             new NanoBanana2QuoteViewModel(new GenerationPricePreviewEstimator()),
             viewModelErrorHandler);
 

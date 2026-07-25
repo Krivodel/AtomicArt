@@ -1,0 +1,14 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <Style Selector="TextBox.prompt-input /template/ TextBlock#PART_Placeholder,
+                     TextBox.prompt-input /template/ TextBlock#PART_FloatingPlaceholder">
+        <Setter Property="FontSize"
+                Value="{ReflectionBinding $self.TemplatedParent.FontSize}" />
+        <Setter Property="Margin"
+                Value="{DynamicResource TextControlThemePadding}" />
+    </Style>
+
+    <Style Selector="TextBox.prompt-input /template/ TextPresenter#PART_TextPresenter">
+        <Setter Property="Margin"
+                Value="{DynamicResource TextControlThemePadding}" />
+    </Style>
+</Styles>

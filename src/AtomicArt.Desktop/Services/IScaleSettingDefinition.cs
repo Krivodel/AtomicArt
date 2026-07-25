@@ -1,6 +1,5 @@
 namespace AtomicArt.Desktop.Services;
 
-public interface IScaleSettingDefinition : IDisplaySettingDefinition
+public interface IScaleSettingDefinition : IActionSettingDefinition
 {
-    string ApplyButtonText { get; }
 }

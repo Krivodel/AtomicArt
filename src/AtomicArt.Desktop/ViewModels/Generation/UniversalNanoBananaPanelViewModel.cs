@@ -47,6 +47,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         AttachedImages.Count,
         SelectedModel?.MaxAttachedImages ?? 0);
     public string GenerateButtonText => Quote.GenerateButtonText;
+    public double PromptTextSize => _promptTextSizeController.CurrentTextSize;
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsAttaching => _attachmentsViewModel.HasPendingAttachments;
     public bool HasLoadedCatalog => _imageModelOptionCatalog.IsLoaded
@@ -89,6 +90,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private readonly INanoBanana2GenerationRunner _generationRunner;
     private readonly IGenerationPanelStateService _generationPanelStateService;
     private readonly IImageViewerService _imageViewerService;
+    private readonly IPromptTextSizeController _promptTextSizeController;
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
     private readonly ObservableCollection<ImageModelOption> _availableModels = [];
@@ -136,6 +138,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         INanoBanana2GenerationRunner generationRunner,
         IGenerationPanelStateService generationPanelStateService,
         IImageViewerService imageViewerService,
+        IPromptTextSizeController promptTextSizeController,
         NanoBanana2QuoteViewModel quote,
         IViewModelErrorHandler errorHandler)
     {
@@ -150,6 +153,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         ArgumentNullException.ThrowIfNull(generationRunner);
         ArgumentNullException.ThrowIfNull(generationPanelStateService);
         ArgumentNullException.ThrowIfNull(imageViewerService);
+        ArgumentNullException.ThrowIfNull(promptTextSizeController);
         ArgumentNullException.ThrowIfNull(quote);
         ArgumentNullException.ThrowIfNull(errorHandler);
 
@@ -166,9 +170,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _generationRunner = generationRunner;
         _generationPanelStateService = generationPanelStateService;
         _imageViewerService = imageViewerService;
+        _promptTextSizeController = promptTextSizeController;
         _errorHandler = errorHandler;
         _attachmentsViewModel.AttachmentStateChanged += OnAttachmentStateChanged;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
+        _promptTextSizeController.TextSizeChanged += OnPromptTextSizeChanged;
         ApplyCatalogSnapshot(imageModelOptionCatalog.GetModels());
     }
 
@@ -256,6 +262,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _isDisposed = true;
         _attachmentsViewModel.AttachmentStateChanged -= OnAttachmentStateChanged;
         _apiEndpointService.BaseAddressChanged -= OnApiBaseAddressChanged;
+        _promptTextSizeController.TextSizeChanged -= OnPromptTextSizeChanged;
         _disposeCancellationSource.Cancel();
         CancelCatalogReload();
         CancelPendingPromptStateSave();
@@ -348,6 +355,17 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private async Task PickImageAsync(CancellationToken ct)
     {
         await ExecuteAttachmentOperationAsync(PickImageAndAttachAsync, nameof(PickImageAsync), ct);
+    }
+
+    [RelayCommand]
+    private async Task AdjustPromptTextSizeAsync(
+        PromptTextSizeAdjustment adjustment,
+        CancellationToken ct)
+    {
+        await ExecuteOperationAsync(
+            operationCt => _promptTextSizeController.AdjustAsync(adjustment, operationCt),
+            nameof(AdjustPromptTextSizeAsync),
+            ct);
     }
 
     [RelayCommand(CanExecute = nameof(CanAttachImages), AllowConcurrentExecutions = true)]
@@ -684,6 +702,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
 
         _ = DispatchCatalogReloadAsync();
+    }
+
+    private void OnPromptTextSizeChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(PromptTextSize));
     }
 
     private void OnSelectedModelChanged(ImageModelOption? value)

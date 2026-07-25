@@ -22,6 +22,7 @@ using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.Tests.ViewModels.Generation;
@@ -189,6 +190,177 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 .GetWheelMultiplier(promptScrollViewer)
                 .Should()
                 .Be(48d);
+        });
+    }
+
+    [Fact]
+    public void PromptTextBox_WhenShown_KeepsThemeInsetInsideFullHeightScrollViewport()
+    {
+        Dispatch(() =>
+        {
+            using ShownPanelContext context = new();
+            TextBox promptTextBox = context.View
+                .GetVisualDescendants()
+                .OfType<TextBox>()
+                .Single();
+            ScrollViewer scrollViewer = promptTextBox
+                .GetVisualDescendants()
+                .OfType<ScrollViewer>()
+                .Single();
+            Control textPresenter = promptTextBox
+                .GetVisualDescendants()
+                .OfType<Control>()
+                .Single(control => string.Equals(
+                    control.Name,
+                    "PART_TextPresenter",
+                    StringComparison.Ordinal));
+            promptTextBox.TryFindResource(
+                    "TextControlThemePadding",
+                    out object? paddingResource)
+                .Should()
+                .BeTrue();
+            Thickness themePadding = paddingResource.Should()
+                .BeOfType<Thickness>()
+                .Subject;
+            Rect scrollViewportBounds = GetTransformedBounds(scrollViewer, promptTextBox);
+            Rect textPresenterBounds = GetTransformedBounds(textPresenter, promptTextBox);
+
+            promptTextBox.Padding.Should().Be(new Thickness(0d));
+            textPresenter.Margin.Should().Be(themePadding);
+            scrollViewportBounds.Top.Should().BeLessThan(themePadding.Top);
+            (textPresenterBounds.Top - scrollViewportBounds.Top)
+                .Should()
+                .BeApproximately(themePadding.Top, 0.01d);
+
+            promptTextBox.Text = string.Join(
+                Environment.NewLine,
+                Enumerable.Range(1, 20).Select(lineNumber => $"Строка {lineNumber}"));
+            context.Window.CaptureRenderedFrame();
+            Rect initialTextBounds = GetTransformedBounds(textPresenter, promptTextBox);
+
+            scrollViewer.Offset = new Vector(0d, themePadding.Top);
+            context.Window.CaptureRenderedFrame();
+            Rect scrolledTextBounds = GetTransformedBounds(textPresenter, promptTextBox);
+
+            scrollViewer.Offset.Y.Should().BeApproximately(themePadding.Top, 0.01d);
+            scrolledTextBounds.Top.Should()
+                .BeApproximately(initialTextBounds.Top - themePadding.Top, 0.01d);
+            scrolledTextBounds.Top.Should()
+                .BeApproximately(scrollViewportBounds.Top, 0.01d);
+
+            double bottomEdgeOffset = scrollViewer.Extent.Height
+                - scrollViewer.Viewport.Height
+                - themePadding.Bottom;
+            bottomEdgeOffset.Should().BeGreaterThan(0d);
+
+            scrollViewer.Offset = new Vector(0d, bottomEdgeOffset);
+            context.Window.CaptureRenderedFrame();
+            Rect bottomEdgeTextBounds = GetTransformedBounds(textPresenter, promptTextBox);
+
+            bottomEdgeTextBounds.Bottom.Should()
+                .BeApproximately(scrollViewportBounds.Bottom, 0.01d);
+        });
+    }
+
+    [Fact]
+    public void PromptTextBox_WithDefaultSetting_PreservesThemeTextSize()
+    {
+        Dispatch(() =>
+        {
+            using ShownPanelContext context = new();
+            TextBox promptTextBox = context.View
+                .GetVisualDescendants()
+                .OfType<TextBox>()
+                .Single();
+            TextBox themeTextBox = new()
+            {
+                Classes = { "prompt-input" }
+            };
+            Window themeWindow = Show(themeTextBox);
+
+            try
+            {
+                promptTextBox.FontSize.Should().Be(themeTextBox.FontSize);
+            }
+            finally
+            {
+                themeWindow.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void PromptTextBox_WhenControlWheelMovesUp_IncreasesBoundTextSize()
+    {
+        Dispatch(() =>
+        {
+            using ShownPanelContext context = new();
+            TextBox promptTextBox = context.View
+                .GetVisualDescendants()
+                .OfType<TextBox>()
+                .Single();
+            double initialTextSize = context.ViewModel.PromptTextSize;
+            Point pointerPosition = GetCenterPoint(promptTextBox, context.Window);
+
+            context.Window.MouseWheel(
+                pointerPosition,
+                new Vector(0d, 1d),
+                RawInputModifiers.Control);
+
+            context.ViewModel.PromptTextSize.Should().Be(initialTextSize + 1d);
+            promptTextBox.FontSize.Should().Be(initialTextSize + 1d);
+        });
+    }
+
+    [Fact]
+    public void PromptPlaceholder_WhenControlWheelMovesUp_MatchesPromptTextSize()
+    {
+        Dispatch(() =>
+        {
+            using ShownPanelContext context = new();
+            TextBox promptTextBox = context.View
+                .GetVisualDescendants()
+                .OfType<TextBox>()
+                .Single();
+            TextBlock placeholder = promptTextBox
+                .GetVisualDescendants()
+                .OfType<TextBlock>()
+                .Single(textBlock => string.Equals(
+                    textBlock.Name,
+                    "PART_Placeholder",
+                    StringComparison.Ordinal));
+            double initialTextSize = context.ViewModel.PromptTextSize;
+            Point pointerPosition = GetCenterPoint(promptTextBox, context.Window);
+
+            context.Window.MouseWheel(
+                pointerPosition,
+                new Vector(0d, 1d),
+                RawInputModifiers.Control);
+
+            placeholder.FontSize.Should().Be(initialTextSize + 1d);
+        });
+    }
+
+    [Fact]
+    public void PromptTextBox_WhenWheelMovesWithoutControl_KeepsBoundTextSize()
+    {
+        Dispatch(() =>
+        {
+            using ShownPanelContext context = new();
+            TextBox promptTextBox = context.View
+                .GetVisualDescendants()
+                .OfType<TextBox>()
+                .Single();
+            double initialTextSize = context.ViewModel.PromptTextSize;
+            Point pointerPosition = GetCenterPoint(promptTextBox, context.Window);
+
+            context.Window.MouseWheel(
+                pointerPosition,
+                new Vector(0d, 1d),
+                RawInputModifiers.None);
+
+            context.ViewModel.PromptTextSize.Should().Be(initialTextSize);
+            promptTextBox.FontSize.Should().Be(initialTextSize);
         });
     }
 
@@ -635,6 +807,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 generationRunDispatcher),
             new NoOpGenerationPanelStateService(),
             new NullImageViewerService(),
+            new RecordingPromptTextSizeController(),
             new NanoBanana2QuoteViewModel(new GenerationPricePreviewEstimator()),
             new TestViewModelErrorHandler());
     }
@@ -653,6 +826,28 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             .GetVisualDescendants()
             .OfType<ComboBox>()
             .Single(comboBox => string.Equals(comboBox.Name, name, StringComparison.Ordinal));
+    }
+
+    private static Point GetCenterPoint(Control control, Visual target)
+    {
+        Point? origin = control.TranslatePoint(new Point(0d, 0d), target);
+
+        if (origin is null)
+        {
+            throw new InvalidOperationException("Control position was not found.");
+        }
+
+        return origin.Value + new Vector(
+            control.Bounds.Width / 2d,
+            control.Bounds.Height / 2d);
+    }
+
+    private static Rect GetTransformedBounds(Control control, Visual target)
+    {
+        Matrix transform = control.TransformToVisual(target)
+            ?? throw new InvalidOperationException("Control transform was not found.");
+
+        return new Rect(control.Bounds.Size).TransformToAABB(transform);
     }
 
     private static Button GetTemperatureButton(NanoBanana2PanelView view)

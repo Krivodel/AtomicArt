@@ -10,14 +10,14 @@ public sealed class ScaleSettingViewModelFactory :
     private readonly ISettingsDefinitionCatalog _settingsDefinitionCatalog;
     private readonly IUiScaleService _uiScaleService;
     private readonly ISettingsStateService _settingsStateService;
-    private readonly IUiScaleSettingValueConverter _valueConverter;
+    private readonly IDoubleSettingValueConverter _valueConverter;
     private readonly IViewModelErrorHandler _errorHandler;
 
     public ScaleSettingViewModelFactory(
         ISettingsDefinitionCatalog settingsDefinitionCatalog,
         IUiScaleService uiScaleService,
         ISettingsStateService settingsStateService,
-        IUiScaleSettingValueConverter valueConverter,
+        IDoubleSettingValueConverter valueConverter,
         IViewModelErrorHandler errorHandler)
         : base("Scale setting definition expected.")
     {
@@ -39,10 +39,10 @@ public sealed class ScaleSettingViewModelFactory :
     {
         IReadOnlyList<UiScaleOption> scaleOptions = _settingsDefinitionCatalog.GetScaleOptions();
 
-        return new ScaleSettingViewModel(
+        return new NumericSettingViewModel(
             definition,
             scaleOptions,
-            UiScaleOptionMatcher.FindByValueOrFirst(scaleOptions, _uiScaleService.CurrentScale),
+            new UiScaleNumericSettingValueSource(_uiScaleService),
             _settingsStateService,
             _valueConverter,
             _errorHandler);

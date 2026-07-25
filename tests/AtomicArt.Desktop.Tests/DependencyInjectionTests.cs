@@ -167,7 +167,7 @@ public sealed class DependencyInjectionTests
             typeof(DataRootSettingViewModel),
             typeof(ApiBaseAddressSettingViewModel),
             typeof(SecretSettingViewModel),
-            typeof(ScaleSettingViewModel),
+            typeof(NumericSettingViewModel),
             typeof(GpuResourceCacheSettingViewModel),
             typeof(GenerationMetadataViewModel)
         ];
@@ -205,6 +205,29 @@ public sealed class DependencyInjectionTests
             .GetSettings();
 
         settings.First().Should().BeOfType<ApiBaseAddressSettingDefinition>();
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithPromptTextSizeSetting_RegistersRuntimeAndEditor()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+        PromptTextSizeSettingDefinition definition = serviceProvider
+            .GetRequiredService<ISettingsDefinitionCatalog>()
+            .GetRequired<PromptTextSizeSettingDefinition>();
+        IPromptTextSizeService textSizeService = serviceProvider
+            .GetRequiredService<IPromptTextSizeService>();
+        IReadOnlyList<ISettingItemViewModel> settingItems = serviceProvider
+            .GetRequiredService<ISettingsItemViewModelProvider>()
+            .CreateSettings();
+
+        textSizeService.CurrentTextSize.Should().Be(definition.DefaultValue);
+        settingItems
+            .OfType<NumericSettingViewModel>()
+            .Should()
+            .ContainSingle(setting => string.Equals(
+                setting.Key,
+                PromptTextSizeSettingDefinition.KeyValue,
+                StringComparison.Ordinal));
     }
 
     [Fact]

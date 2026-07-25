@@ -4,14 +4,14 @@ public sealed class UiScaleSettingsStateApplicator : ISettingsStateApplicator
 {
     private readonly ISettingsDefinitionCatalog _settingsDefinitionCatalog;
     private readonly IUiScaleService _uiScaleService;
-    private readonly IUiScaleSettingValueConverter _valueConverter;
+    private readonly IDoubleSettingValueConverter _valueConverter;
 
     public string SettingKey { get; }
 
     public UiScaleSettingsStateApplicator(
         ISettingsDefinitionCatalog settingsDefinitionCatalog,
         IUiScaleService uiScaleService,
-        IUiScaleSettingValueConverter valueConverter)
+        IDoubleSettingValueConverter valueConverter)
     {
         _settingsDefinitionCatalog = settingsDefinitionCatalog
             ?? throw new ArgumentNullException(nameof(settingsDefinitionCatalog));
@@ -29,7 +29,9 @@ public sealed class UiScaleSettingsStateApplicator : ISettingsStateApplicator
             return;
         }
 
-        if (!UiScaleOptionMatcher.ContainsValue(_settingsDefinitionCatalog.GetScaleOptions(), scale))
+        if (!NumericSettingOptionMatcher.ContainsValue(
+                _settingsDefinitionCatalog.GetScaleOptions(),
+                scale))
         {
             return;
         }

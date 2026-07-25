@@ -186,7 +186,7 @@ public sealed class SettingsStateServiceTests
         SettingsDefinitionCatalog catalog = new(
             settings,
             scaleOptions);
-        IUiScaleSettingValueConverter valueConverter = CreateValueConverter();
+        IDoubleSettingValueConverter valueConverter = CreateValueConverter();
         ISettingsStateApplicator[] applicators =
         [
             new UiScaleSettingsStateApplicator(catalog, scaleService, valueConverter)
@@ -201,9 +201,9 @@ public sealed class SettingsStateServiceTests
             new ImmediateUiThreadDispatcher());
     }
 
-    private static IUiScaleSettingValueConverter CreateValueConverter()
+    private static IDoubleSettingValueConverter CreateValueConverter()
     {
-        return new UiScaleSettingValueConverter();
+        return new DoubleSettingValueConverter();
     }
 
     private static SettingsStateService CreateApiSettingsService(

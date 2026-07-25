@@ -96,7 +96,7 @@ public static class DependencyInjection
         services.AddViewTemplate<DataRootSettingViewModel, DataRootSettingView>();
         services.AddViewTemplate<ApiBaseAddressSettingViewModel, ApiBaseAddressSettingView>();
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
-        services.AddViewTemplate<ScaleSettingViewModel, ScaleSettingView>();
+        services.AddViewTemplate<NumericSettingViewModel, NumericSettingView>();
         services.AddViewTemplate<
             GpuResourceCacheSettingViewModel,
             GpuResourceCacheSettingView>();
@@ -132,7 +132,7 @@ public static class DependencyInjection
             IAtomicArtDataRootMigrationService,
             AtomicArtDataRootMigrationService>();
         services.AddSettingsStateApplicatorsByConvention();
-        services.AddSingleton<IUiScaleSettingValueConverter, UiScaleSettingValueConverter>();
+        services.AddSingleton<IDoubleSettingValueConverter, DoubleSettingValueConverter>();
         services.AddSingleton<ISettingsStateService, SettingsStateService>();
         services.AddSingleton<IGenerationPanelStateService, GenerationPanelStateService>();
         services.AddSingleton<GalleryStatePathConverter>();
@@ -149,6 +149,8 @@ public static class DependencyInjection
             typeof(ITrayService),
             typeof(ITrayAttachmentService));
         services.AddSingleton<IUiScaleService, UiScaleService>();
+        services.AddSingleton<IPromptTextSizeService, PromptTextSizeService>();
+        services.AddSingleton<IPromptTextSizeController, PromptTextSizeController>();
         services.AddSettingsDefinitionsByConvention();
         services.AddSettingsItemViewModelFactoriesByConvention();
         services.AddSingleton<ISettingsDefinitionCatalog, SettingsDefinitionCatalog>();
