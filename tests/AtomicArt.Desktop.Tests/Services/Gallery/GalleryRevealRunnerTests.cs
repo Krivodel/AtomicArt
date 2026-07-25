@@ -21,6 +21,8 @@ public sealed class GalleryRevealRunnerTests : AnimatedGalleryControlTestBase
     private const double CardCellMargin = 16d;
     private const double CardSurfaceCornerRadius = 8d;
     private const double HighlightBorderThickness = 2d;
+    private const double FirstPulseExpandedScale = 1.05d;
+    private const double SecondPulseExpandedScale = 1.10d;
     private const int FirstPulsePeakMilliseconds = 135;
     private const int FirstPulseEndMilliseconds = 270;
     private const int SecondPulsePeakMilliseconds = 480;
@@ -66,7 +68,7 @@ public sealed class GalleryRevealRunnerTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public async Task RunAsync_WithExistingItem_UsesFastThenLongPulseAndRemovesHighlight()
+    public async Task RunAsync_WithExistingItem_UsesFastThenWideLongPulseAndRemovesHighlight()
     {
         await DispatchAsync(async () =>
         {
@@ -89,25 +91,37 @@ public sealed class GalleryRevealRunnerTests : AnimatedGalleryControlTestBase
             context.FrameScheduler.RunNextFrame(
                 TimeSpan.FromMilliseconds(SecondPulseFadeMilliseconds));
             double secondPulseFadeOpacity = highlight.Opacity;
+            TransformGroup transformGroup = highlight
+                .RenderTransform
+                .Should()
+                .BeOfType<TransformGroup>()
+                .Subject;
+            ScaleTransform scale = transformGroup.Children
+                .OfType<ScaleTransform>()
+                .Single();
 
             firstPulseOpacity.Should().BeGreaterThan(0.9d);
             secondPulseOpacity.Should().BeGreaterThan(0.9d);
             secondPulseFadeOpacity.Should().BeGreaterThan(0d);
             secondPulseFadeOpacity.Should().BeLessThan(secondPulseOpacity);
+            scale.ScaleX.Should().Be(FirstPulseExpandedScale);
+            scale.ScaleY.Should().Be(FirstPulseExpandedScale);
 
             context.FrameScheduler.RunNextFrame(
                 TimeSpan.FromMilliseconds(AnimationEndMilliseconds));
 
+            scale.ScaleX.Should().Be(SecondPulseExpandedScale);
+            scale.ScaleY.Should().Be(SecondPulseExpandedScale);
             context.Coordinator.OverlayCanvas.Children.Should().BeEmpty();
         });
     }
 
     [Fact]
-    public async Task RunAsync_WithExistingItem_UsesWarmHighlightPalette()
+    public async Task RunAsync_WithExistingItem_UsesGreenHighlightPalette()
     {
-        const string ExpectedBorderColor = "#F2FFD166";
-        const string ExpectedBackgroundColor = "#24FFB347";
-        const string ExpectedShadowColor = "#FF9F43";
+        const string ExpectedBorderColor = "#F273F2A7";
+        const string ExpectedBackgroundColor = "#2434D399";
+        const string ExpectedShadowColor = "#22C55E";
 
         await DispatchAsync(async () =>
         {

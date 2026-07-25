@@ -15,9 +15,11 @@ internal sealed class GalleryOverlayEffects
     private const double RevealHighlightBorderThickness = 2d;
     private const double RevealHighlightShadowBlurRadius = 18d;
     private const double RevealHighlightShadowOpacity = 0.8d;
-    private const string RevealHighlightBorderColor = "#F2FFD166";
-    private const string RevealHighlightBackgroundColor = "#24FFB347";
-    private const string RevealHighlightShadowColor = "#FF9F43";
+    private const double RevealFirstPulseExpandedScale = 1.05d;
+    private const double RevealSecondPulseExpandedScale = 1.10d;
+    private const string RevealHighlightBorderColor = "#F273F2A7";
+    private const string RevealHighlightBackgroundColor = "#2434D399";
+    private const string RevealHighlightShadowColor = "#22C55E";
 
     private readonly UiAnimationScheduler _animationScheduler;
 
@@ -237,7 +239,7 @@ internal sealed class GalleryOverlayEffects
         [
             new MotionFrame(0d, 0d, 0.985d, 0d, 0d),
             new MotionFrame(0d, 0d, 1d, 0d, 1d),
-            new MotionFrame(0d, 0d, 1.012d, 0d, 0d)
+            new MotionFrame(0d, 0d, RevealFirstPulseExpandedScale, 0d, 0d)
         ];
     }
 
@@ -247,8 +249,8 @@ internal sealed class GalleryOverlayEffects
         [
             new MotionFrame(0d, 0d, 0.99d, 0d, 0d),
             new MotionFrame(0d, 0d, 1.002d, 0d, 0.95d),
-            new MotionFrame(0d, 0d, 1.012d, 0d, 0.58d),
-            new MotionFrame(0d, 0d, 1.025d, 0d, 0d)
+            new MotionFrame(0d, 0d, RevealFirstPulseExpandedScale, 0d, 0.58d),
+            new MotionFrame(0d, 0d, RevealSecondPulseExpandedScale, 0d, 0d)
         ];
     }
 
