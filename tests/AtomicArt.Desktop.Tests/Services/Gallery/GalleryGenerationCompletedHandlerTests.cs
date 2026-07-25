@@ -282,6 +282,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
             new AtomicArtDataPathProvider(rootDirectory),
             GenerationImageFormatRegistryTestFactory.Create(),
             new GenerationImageFileNamePolicy(),
+            new DataRootAccessCoordinator(),
             NullLogger<GenerationResultStorage>.Instance);
     }
 

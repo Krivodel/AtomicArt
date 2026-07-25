@@ -195,6 +195,7 @@ public sealed class AppStateStoreTests
     {
         return new AppStateStore(
             pathProvider,
+            new DataRootAccessCoordinator(),
             logger ?? new RecordingLogger<AppStateStore>());
     }
 

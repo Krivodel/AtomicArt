@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
@@ -15,6 +16,7 @@ public sealed partial class MainWindowViewModel :
     ObservableObject,
     IAppStateRestoreTarget,
     IAppStateFlushTarget,
+    IDataRootMigrationTarget,
     IDisposable
 {
     public GalleryViewModel Gallery { get; }
@@ -112,6 +114,17 @@ public sealed partial class MainWindowViewModel :
         {
             await panel.CommitPendingStateAsync(ct);
         }
+    }
+
+    public Task RebaseDataRootAsync(
+        string sourceRootDirectory,
+        string destinationRootDirectory,
+        CancellationToken ct)
+    {
+        return Gallery.RebaseDataRootAsync(
+            sourceRootDirectory,
+            destinationRootDirectory,
+            ct);
     }
 
     public void Dispose()

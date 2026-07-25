@@ -22,7 +22,7 @@ public sealed class GalleryStateServiceTests
     private static readonly DateTime CompletedAtUtc = new(2026, 7, 6, 9, 0, 5, DateTimeKind.Utc);
 
     [Fact]
-    public async Task SaveAsync_WithCompletedItem_WritesGalleryJsonOutsideArt()
+    public async Task SaveAsync_WithCompletedItem_WritesRelativePathsToGalleryJson()
     {
         string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(GalleryStateServiceTests));
 
@@ -30,16 +30,22 @@ public sealed class GalleryStateServiceTests
         {
             AtomicArtDataPathProvider pathProvider = new(rootDirectory);
             string imagePath = Path.Combine(pathProvider.ArtDirectory, "generation.png");
+            string thumbnailPath = Path.Combine(
+                pathProvider.ThumbnailsDirectory,
+                "generation.png");
             Directory.CreateDirectory(pathProvider.ArtDirectory);
+            Directory.CreateDirectory(pathProvider.ThumbnailsDirectory);
             await File.WriteAllBytesAsync(imagePath, [0x01, 0x02, 0x03]);
+            await File.WriteAllBytesAsync(thumbnailPath, [0x01, 0x02, 0x03]);
             IStateWriteScheduler scheduler = CreateRealScheduler(pathProvider);
             GalleryStateService service = CreateService(
                 new GalleryState(),
                 scheduler,
-                new ExistingFileTrustedImageFileService());
+                new ExistingFileTrustedImageFileService(),
+                pathProvider);
 
             await service.SaveAsync(
-                [CreateGeneratedItem(imagePath)],
+                [CreateGeneratedItem(imagePath, thumbnailPath)],
                 CancellationToken.None);
             await scheduler.FlushAsync(CancellationToken.None);
 
@@ -47,7 +53,10 @@ public sealed class GalleryStateServiceTests
             File.Exists(statePath).Should().BeTrue();
             Directory.GetFiles(pathProvider.ArtDirectory, "*.json").Should().BeEmpty();
             string json = await File.ReadAllTextAsync(statePath);
-            json.Should().Contain(imagePath.Replace("\\", "\\\\"));
+            json.Should().Contain("\"imagePath\": \"Art/generation.png\"");
+            json.Should().Contain("\"thumbnailPath\": \"Thumbnails/generation.png\"");
+            json.Should().NotContain(imagePath.Replace("\\", "\\\\"));
+            json.Should().NotContain(thumbnailPath.Replace("\\", "\\\\"));
             json.Should().NotContain("imageContent");
         }
         finally
@@ -59,8 +68,12 @@ public sealed class GalleryStateServiceTests
     [Fact]
     public async Task LoadAsync_WithExistingMetadata_RecreatesGalleryItems()
     {
-        string imagePath = Path.Combine("D:", "AtomicArt", "Art", "generation.png");
-        GalleryState state = await LoadStateAsync(CreateGeneratedItem(imagePath));
+        AtomicArtDataPathProvider pathProvider = CreatePathProvider();
+        string imagePath = Path.Combine(pathProvider.ArtDirectory, "generation.png");
+        GalleryState state = await LoadStateAsync(
+            CreateGeneratedItem("Art/generation.png"),
+            new PassthroughTrustedImageFileService(),
+            pathProvider);
 
         GalleryItemState item = GetOnlyItem(state);
         item.Id.Should().Be(GeneratedItemId);
@@ -116,22 +129,57 @@ public sealed class GalleryStateServiceTests
         item.GenerationOrdinal.Should().Be(0);
     }
 
+    [Fact]
+    public async Task SaveAsync_WithCompletedItem_CachesAbsoluteRuntimePath()
+    {
+        AtomicArtDataPathProvider pathProvider = CreatePathProvider();
+        string imagePath = Path.Combine(pathProvider.ArtDirectory, "generation.png");
+        RecordingStateWriteScheduler scheduler = new();
+        GalleryStateService service = CreateService(
+            new GalleryState(),
+            scheduler,
+            new PassthroughTrustedImageFileService(),
+            pathProvider);
+
+        await service.SaveAsync(
+            [CreateGeneratedItem(imagePath)],
+            CancellationToken.None);
+        GalleryState loadedState = await service.LoadAsync(CancellationToken.None);
+
+        GalleryState savedState = scheduler.SavedState.Should()
+            .BeOfType<GalleryState>()
+            .Subject;
+        savedState.Items.Should().ContainSingle();
+        savedState.Items[0].ImagePath.Should().Be("Art/generation.png");
+        loadedState.Items.Should().ContainSingle();
+        loadedState.Items[0].ImagePath.Should().Be(imagePath);
+    }
+
     private static GalleryStateService CreateService(
         GalleryState initialState,
         IStateWriteScheduler scheduler,
-        ITrustedImageFileService trustedImageFileService)
+        ITrustedImageFileService trustedImageFileService,
+        AtomicArtDataPathProvider? pathProvider = null)
     {
+        AtomicArtDataPathProvider resolvedPathProvider = pathProvider ?? CreatePathProvider();
+        GalleryStatePathConverter pathConverter = new(
+            resolvedPathProvider,
+            trustedImageFileService,
+            NullLogger<GalleryStatePathConverter>.Instance);
+
         return new GalleryStateService(
             new StubAppStateStore(initialState),
             scheduler,
-            trustedImageFileService,
+            new DataRootAccessCoordinator(),
+            pathConverter,
             new GalleryStateSection(),
             NullLogger<GalleryStateService>.Instance);
     }
 
     private static GalleryStateService CreateLoadService(
         GalleryItemState item,
-        ITrustedImageFileService trustedImageFileService)
+        ITrustedImageFileService trustedImageFileService,
+        AtomicArtDataPathProvider? pathProvider = null)
     {
         GalleryState state = new()
         {
@@ -141,14 +189,19 @@ public sealed class GalleryStateServiceTests
         return CreateService(
             state,
             new RecordingStateWriteScheduler(),
-            trustedImageFileService);
+            trustedImageFileService,
+            pathProvider);
     }
 
     private static async Task<GalleryState> LoadStateAsync(
         GalleryItemState item,
-        ITrustedImageFileService trustedImageFileService)
+        ITrustedImageFileService trustedImageFileService,
+        AtomicArtDataPathProvider? pathProvider = null)
     {
-        GalleryStateService service = CreateLoadService(item, trustedImageFileService);
+        GalleryStateService service = CreateLoadService(
+            item,
+            trustedImageFileService,
+            pathProvider);
 
         return await service.LoadAsync(CancellationToken.None);
     }
@@ -156,6 +209,15 @@ public sealed class GalleryStateServiceTests
     private static Task<GalleryState> LoadStateAsync(GalleryItemState item)
     {
         return LoadStateAsync(item, new PassthroughTrustedImageFileService());
+    }
+
+    private static AtomicArtDataPathProvider CreatePathProvider()
+    {
+        string rootDirectory = Path.Combine(
+            Path.GetTempPath(),
+            nameof(GalleryStateServiceTests));
+
+        return new AtomicArtDataPathProvider(rootDirectory);
     }
 
     private static GalleryItemState GetOnlyItem(GalleryState state)
@@ -169,6 +231,7 @@ public sealed class GalleryStateServiceTests
     {
         AppStateStore stateStore = new(
             pathProvider,
+            new DataRootAccessCoordinator(),
             NullLogger<AppStateStore>.Instance);
 
         return new StateWriteScheduler(
@@ -176,13 +239,16 @@ public sealed class GalleryStateServiceTests
             NullLogger<StateWriteScheduler>.Instance);
     }
 
-    private static GalleryItemState CreateGeneratedItem(string? imagePath)
+    private static GalleryItemState CreateGeneratedItem(
+        string? imagePath,
+        string? thumbnailPath = null)
     {
         return GalleryItemStateTestFactory.CreateGenerated(
             prompt: "Prompt",
             id: GeneratedItemId,
             createdAtUtc: CreatedAtUtc,
             imagePath: imagePath,
+            thumbnailPath: thumbnailPath,
             completedAtUtc: CompletedAtUtc,
             generationDuration: TimeSpan.FromSeconds(5),
             price: new GenerationPriceDto(0.05m, "USD", "actual"),
@@ -207,5 +273,4 @@ public sealed class GalleryStateServiceTests
             GenerationOrdinal = 0
         };
     }
-
 }

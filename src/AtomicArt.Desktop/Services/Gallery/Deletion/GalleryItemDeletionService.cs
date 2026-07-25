@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Services.Gallery.Deletion;
 
@@ -11,25 +12,33 @@ public sealed class GalleryItemDeletionService : IGalleryItemDeletionService
 
     private readonly ITrustedImageFileService _trustedImageFileService;
     private readonly GenerationImageFileNamePolicy _fileNamePolicy;
+    private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly ILogger<GalleryItemDeletionService> _logger;
 
     public GalleryItemDeletionService(
         ITrustedImageFileService trustedImageFileService,
         GenerationImageFileNamePolicy fileNamePolicy,
+        IDataRootAccessCoordinator accessCoordinator,
         ILogger<GalleryItemDeletionService> logger)
     {
         ArgumentNullException.ThrowIfNull(trustedImageFileService);
         ArgumentNullException.ThrowIfNull(fileNamePolicy);
+        ArgumentNullException.ThrowIfNull(accessCoordinator);
         ArgumentNullException.ThrowIfNull(logger);
 
         _trustedImageFileService = trustedImageFileService;
         _fileNamePolicy = fileNamePolicy;
+        _accessCoordinator = accessCoordinator;
         _logger = logger;
     }
 
-    public Task DeleteFilesAsync(GalleryItemDeletionRequest request, CancellationToken ct)
+    public async Task DeleteFilesAsync(
+        GalleryItemDeletionRequest request,
+        CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
+        using DataRootAccessLease accessLease =
+            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
         _logger.LogInformation(
             "Deleting managed gallery files for item {ItemId}",
             request.ItemId);
@@ -40,7 +49,6 @@ public sealed class GalleryItemDeletionService : IGalleryItemDeletionService
             "Completed managed gallery file deletion for item {ItemId}",
             request.ItemId);
 
-        return Task.CompletedTask;
     }
 
     private void DeleteFileIfTrusted(

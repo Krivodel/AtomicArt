@@ -12,6 +12,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
     private readonly IImageGenerationApiClient _apiClient;
     private readonly NanoBanana2GenerationLifecyclePublisher _lifecyclePublisher;
     private readonly IGenerationActivityTracker _generationActivityTracker;
+    private readonly IGenerationAdmissionGate _generationAdmissionGate;
     private readonly ILogger<GenerationRunDispatcher> _logger;
     private readonly IGenerationCancellationService _cancellationService;
     private readonly int _maxAutomaticRetries;
@@ -25,6 +26,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         NanoBanana2GenerationLifecyclePublisher lifecyclePublisher,
         IGenerationResultStorage generationResultStorage,
         IGenerationActivityTracker generationActivityTracker,
+        IGenerationAdmissionGate generationAdmissionGate,
         ILogger<GenerationRunDispatcher> logger)
         : this(
             concurrencyLimiter,
@@ -32,6 +34,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
             lifecyclePublisher,
             generationResultStorage,
             generationActivityTracker,
+            generationAdmissionGate,
             logger,
             Options.Create(new GenerationClientOptions()))
     {
@@ -43,6 +46,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         NanoBanana2GenerationLifecyclePublisher lifecyclePublisher,
         IGenerationResultStorage generationResultStorage,
         IGenerationActivityTracker generationActivityTracker,
+        IGenerationAdmissionGate generationAdmissionGate,
         ILogger<GenerationRunDispatcher> logger,
         IOptions<GenerationClientOptions> options,
         IGenerationCancellationService? cancellationService = null)
@@ -52,6 +56,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         ArgumentNullException.ThrowIfNull(lifecyclePublisher);
         ArgumentNullException.ThrowIfNull(generationResultStorage);
         ArgumentNullException.ThrowIfNull(generationActivityTracker);
+        ArgumentNullException.ThrowIfNull(generationAdmissionGate);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(options);
 
@@ -59,17 +64,20 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         _apiClient = apiClient;
         _lifecyclePublisher = lifecyclePublisher;
         _generationActivityTracker = generationActivityTracker;
+        _generationAdmissionGate = generationAdmissionGate;
         _logger = logger;
         _cancellationService = cancellationService
             ?? NullGenerationCancellationService.Instance;
         _maxAutomaticRetries = options.Value.MaxAutomaticRetries;
     }
 
-    public Task EnqueueAsync(GenerationRunRequest request, CancellationToken ct)
+    public async Task EnqueueAsync(GenerationRunRequest request, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
         ct.ThrowIfCancellationRequested();
 
+        GenerationAdmissionLease admissionLease =
+            await _generationAdmissionGate.EnterAsync(ct).ConfigureAwait(false);
         Guid correlationId = Guid.NewGuid();
         GenerationRunState runState = new();
         ImageGenerationRequestDto generationRequest = request.Request;
@@ -97,17 +105,17 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
                     generationRequest,
                     providerCredential,
                     runState,
-                    runLifetime),
+                    runLifetime,
+                    admissionLease),
                 CancellationToken.None);
         }
         catch
         {
+            admissionLease.Dispose();
             CompleteRunLifetime(correlationId, runLifetime);
 
             throw;
         }
-
-        return Task.CompletedTask;
     }
 
     public void Dispose()
@@ -140,7 +148,8 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         ImageGenerationRequestDto request,
         string providerCredential,
         GenerationRunState runState,
-        GenerationRunLifetime runLifetime)
+        GenerationRunLifetime runLifetime,
+        GenerationAdmissionLease admissionLease)
     {
         bool limiterAcquired = false;
         CancellationToken ct = runLifetime.Token;
@@ -193,6 +202,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
 
             providerCredential = string.Empty;
             CompleteRunLifetime(correlationId, runLifetime);
+            admissionLease.Dispose();
         }
     }
 

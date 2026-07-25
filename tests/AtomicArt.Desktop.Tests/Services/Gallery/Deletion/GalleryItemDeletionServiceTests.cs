@@ -239,6 +239,7 @@ public sealed class GalleryItemDeletionServiceTests
         return new GalleryItemDeletionService(
             trustedImageFileService,
             new GenerationImageFileNamePolicy(),
+            new DataRootAccessCoordinator(),
             logger);
     }
 

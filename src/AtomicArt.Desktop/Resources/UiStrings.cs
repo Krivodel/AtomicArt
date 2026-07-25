@@ -50,6 +50,21 @@ public static class UiStrings
     public static string SettingsSaveApiKey => "Сохранить ключ";
     public static string SettingsApplyScale => "Применить";
     public static string SettingsGpuResourceCacheRestartNotice => "Кэш применится после перезапуска.";
+    public static string SettingsDataRootLabel => "Папка сохранений";
+    public static string SettingsDataRootChange => "Изменить…";
+    public static string SettingsDataRootDescription =>
+        "В выбранную папку будут перенесены все сохранения.";
+    public static string SettingsDataRootPickerTitle => "Выбор пустой папки для сохранений Atomic Art";
+    public static string SettingsDataRootPreparing => "Подготовка…";
+    public static string SettingsDataRootCopying => "Копирование…";
+    public static string SettingsDataRootVerifying => "Проверка…";
+    public static string SettingsDataRootSwitching => "Переключение папки…";
+    public static string SettingsDataRootCleaning => "Очистка прежней папки…";
+    public static string SettingsDataRootCompleted => "Перенос завершён.";
+    public static string SettingsDataRootMigrationFailed =>
+        "Не удалось перенести сохранения. Проверь, что папка пуста, доступна для записи и на диске достаточно места. Прежняя папка продолжает использоваться.";
+    public static string SettingsDataRootCleanupFailed =>
+        "Новая папка уже используется, но прежнюю не удалось полностью очистить. Очистка будет повторена при следующем запуске.";
     public static string SettingsSaveSecretFailed => "Не удалось сохранить ключ.";
     public static string UpdateTitle => "Доступно обновление";
     public static string UpdateAvailableFormat => "Обновление {0} готово к установке.";

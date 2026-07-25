@@ -25,6 +25,7 @@ internal static class GenerationRunDispatcherTestFactory
             new NanoBanana2GenerationLifecyclePublisher(lifecycleEventHub),
             new NullGenerationResultStorage(),
             TestGenerationActivityTrackerFactory.Create(),
+            new GenerationAdmissionGate(),
             logger ?? NullLogger<GenerationRunDispatcher>.Instance,
             Options.Create(new GenerationClientOptions
             {

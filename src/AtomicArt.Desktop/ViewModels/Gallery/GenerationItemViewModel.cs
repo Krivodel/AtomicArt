@@ -5,6 +5,7 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -252,6 +253,24 @@ public sealed partial class GenerationItemViewModel :
 
         int fullYears = fullMonths / 12;
         ElapsedText = $"{fullYears}г";
+    }
+
+    public void RebaseDataRootPaths(
+        string sourceRootDirectory,
+        string destinationRootDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceRootDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationRootDirectory);
+
+        ImagePath = DataRootPathRebaser.RebaseOrOriginal(
+            ImagePath,
+            sourceRootDirectory,
+            destinationRootDirectory);
+        ThumbnailPath = DataRootPathRebaser.RebaseOrOriginal(
+            ThumbnailPath,
+            sourceRootDirectory,
+            destinationRootDirectory);
+        RefreshComputedState();
     }
 
     private void ApplyItem(GenerationItemDto item)

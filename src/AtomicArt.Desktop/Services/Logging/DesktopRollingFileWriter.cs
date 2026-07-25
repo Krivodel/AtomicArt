@@ -17,19 +17,24 @@ internal sealed class DesktopRollingFileWriter : IDisposable
     private const int MaxMessageLength = 8 * 1024;
     private const int MaxExceptionDepth = 5;
     private const int MaxStackFrameCount = 64;
+    private const int MaxPausedBufferBytes = 4 * 1024 * 1024;
 
-    private readonly string _directoryPath;
     private readonly LogLevel _minimumLevel;
     private readonly long _maxFileSizeBytes;
     private readonly int _retainedFileCount;
     private readonly int _retentionDays;
     private readonly object _syncRoot = new();
+    private readonly Queue<BufferedEntry> _pausedEntries = [];
+    private string _directoryPath;
     private StreamWriter? _writer;
     private DateOnly _currentDate;
     private int _currentSequence;
     private long _currentFileSizeBytes;
     private bool _isDisposed;
     private bool _isAvailable;
+    private bool _isPaused;
+    private int _pausedBufferBytes;
+    private int _droppedPausedEntryCount;
 
     public DesktopRollingFileWriter(
         IAtomicArtDataPathProvider pathProvider,
@@ -88,12 +93,15 @@ internal sealed class DesktopRollingFileWriter : IDisposable
                 return;
             }
 
+            if (_isPaused)
+            {
+                BufferEntry(entry, entrySizeBytes);
+                return;
+            }
+
             try
             {
-                EnsureWriter(entrySizeBytes);
-                _writer?.Write(entry);
-                _writer?.Flush();
-                _currentFileSizeBytes += entrySizeBytes;
+                WriteEntry(entry, entrySizeBytes);
             }
             catch (IOException)
             {
@@ -108,6 +116,52 @@ internal sealed class DesktopRollingFileWriter : IDisposable
                 Disable();
             }
             catch (ObjectDisposedException)
+            {
+                Disable();
+            }
+        }
+    }
+
+    public void Pause()
+    {
+        lock (_syncRoot)
+        {
+            ObjectDisposedException.ThrowIf(_isDisposed, this);
+
+            _isPaused = true;
+            DisposeWriterSilently();
+        }
+    }
+
+    public void Resume(IAtomicArtDataPathProvider pathProvider)
+    {
+        ArgumentNullException.ThrowIfNull(pathProvider);
+
+        lock (_syncRoot)
+        {
+            ObjectDisposedException.ThrowIf(_isDisposed, this);
+
+            _directoryPath = pathProvider.LogsDirectory;
+            _currentDate = default;
+            _currentSequence = 0;
+            _currentFileSizeBytes = 0;
+
+            try
+            {
+                pathProvider.EnsureDirectoryExists(_directoryPath);
+                _isAvailable = true;
+                _isPaused = false;
+                FlushPausedEntries();
+            }
+            catch (IOException)
+            {
+                Disable();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Disable();
+            }
+            catch (NotSupportedException)
             {
                 Disable();
             }
@@ -258,6 +312,57 @@ internal sealed class DesktopRollingFileWriter : IDisposable
         DeleteExpiredFiles(filePath);
     }
 
+    private void WriteEntry(string entry, int entrySizeBytes)
+    {
+        EnsureWriter(entrySizeBytes);
+        _writer?.Write(entry);
+        _writer?.Flush();
+        _currentFileSizeBytes += entrySizeBytes;
+    }
+
+    private void BufferEntry(string entry, int entrySizeBytes)
+    {
+        while (_pausedEntries.Count > 0
+            && _pausedBufferBytes + entrySizeBytes > MaxPausedBufferBytes)
+        {
+            BufferedEntry removedEntry = _pausedEntries.Dequeue();
+            _pausedBufferBytes -= removedEntry.SizeBytes;
+            _droppedPausedEntryCount++;
+        }
+
+        if (entrySizeBytes > MaxPausedBufferBytes)
+        {
+            _droppedPausedEntryCount++;
+            return;
+        }
+
+        _pausedEntries.Enqueue(new BufferedEntry(entry, entrySizeBytes));
+        _pausedBufferBytes += entrySizeBytes;
+    }
+
+    private void FlushPausedEntries()
+    {
+        if (_droppedPausedEntryCount > 0)
+        {
+            string message =
+                $"{_droppedPausedEntryCount} log entries were dropped while data storage was moving.";
+            string entry = FormatEntry(
+                LogLevel.Warning,
+                typeof(DesktopRollingFileWriter).FullName ?? nameof(DesktopRollingFileWriter),
+                default,
+                message,
+                null);
+            WriteEntry(entry, Encoding.UTF8.GetByteCount(entry));
+            _droppedPausedEntryCount = 0;
+        }
+
+        while (_pausedEntries.TryDequeue(out BufferedEntry? bufferedEntry))
+        {
+            _pausedBufferBytes -= bufferedEntry.SizeBytes;
+            WriteEntry(bufferedEntry.Content, bufferedEntry.SizeBytes);
+        }
+    }
+
     private int FindNextSequence(DateOnly date)
     {
         string prefix = $"{FileNamePrefix}{date:yyyyMMdd}-";
@@ -354,4 +459,6 @@ internal sealed class DesktopRollingFileWriter : IDisposable
 
         _writer = null;
     }
+
+    private sealed record BufferedEntry(string Content, int SizeBytes);
 }

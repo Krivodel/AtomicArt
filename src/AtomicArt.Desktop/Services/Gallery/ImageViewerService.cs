@@ -4,21 +4,31 @@ using Pica.Protocol;
 using Pica.Viewer.Services;
 using Pica.Viewer.Views;
 
+using AtomicArt.Desktop.Services.Paths;
+
 namespace AtomicArt.Desktop.Services.Gallery;
 
-public sealed class ImageViewerService : IImageViewerService
+public sealed class ImageViewerService :
+    IImageViewerService,
+    IDataRootViewerPreparationService
 {
     private readonly IImageViewerWindowFactory _windowFactory;
     private readonly PicaViewerSessionFactory _sessionFactory;
+    private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly ILogger<ImageViewerService> _logger;
+    private readonly object _syncRoot = new();
+    private readonly HashSet<PicaViewerSession> _sessions = [];
 
     public ImageViewerService(
         IImageViewerWindowFactory windowFactory,
         PicaViewerSessionFactory sessionFactory,
+        IDataRootAccessCoordinator accessCoordinator,
         ILogger<ImageViewerService> logger)
     {
         _windowFactory = windowFactory ?? throw new ArgumentNullException(nameof(windowFactory));
         _sessionFactory = sessionFactory ?? throw new ArgumentNullException(nameof(sessionFactory));
+        _accessCoordinator = accessCoordinator
+            ?? throw new ArgumentNullException(nameof(accessCoordinator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -26,11 +36,14 @@ public sealed class ImageViewerService : IImageViewerService
     {
         ArgumentNullException.ThrowIfNull(request);
         ct.ThrowIfCancellationRequested();
+        using DataRootAccessLease accessLease =
+            await _accessCoordinator.AcquireAccessAsync(ct);
         _logger.LogInformation(
             "Preparing an embedded Pica viewer session for selected item {ItemId}",
             request.SelectedItemId);
 
         PicaViewerSession session = _sessionFactory.Create();
+        TrackSession(session);
 
         try
         {
@@ -67,6 +80,44 @@ public sealed class ImageViewerService : IImageViewerService
                 "Embedded Pica viewer session failed during preparation or window creation");
             await session.DisposeAsync();
             throw;
+        }
+    }
+
+    public async Task CloseAllAsync(CancellationToken ct)
+    {
+        IReadOnlyList<PicaViewerSession> sessions;
+
+        lock (_syncRoot)
+        {
+            sessions = _sessions.ToList();
+        }
+
+        foreach (PicaViewerSession session in sessions)
+        {
+            await session.CloseAsync(ct);
+        }
+    }
+
+    private void TrackSession(PicaViewerSession session)
+    {
+        lock (_syncRoot)
+        {
+            _sessions.Add(session);
+            session.Disposed += OnSessionDisposed;
+        }
+    }
+
+    private void OnSessionDisposed(object? sender, EventArgs e)
+    {
+        if (sender is not PicaViewerSession session)
+        {
+            return;
+        }
+
+        lock (_syncRoot)
+        {
+            session.Disposed -= OnSessionDisposed;
+            _sessions.Remove(session);
         }
     }
 }

@@ -10,6 +10,7 @@ using AtomicArt.Desktop;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
@@ -145,6 +146,7 @@ public sealed class DependencyInjectionTests
             typeof(GalleryViewModel),
             typeof(IModelPanelViewModel),
             typeof(SettingsViewModel),
+            typeof(DataRootSettingViewModel),
             typeof(ApiBaseAddressSettingViewModel),
             typeof(SecretSettingViewModel),
             typeof(ScaleSettingViewModel),
@@ -197,6 +199,22 @@ public sealed class DependencyInjectionTests
 
         firstService.Should().BeSameAs(secondService);
         firstService.BaseAddress.ToString().Should().Be(TestApiConfiguration.BaseAddress);
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithDataRootMigration_ResolvesSharedServices()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+
+        IAtomicArtDataRootMigrationService migrationService =
+            serviceProvider.GetRequiredService<IAtomicArtDataRootMigrationService>();
+        IAtomicArtDataPathProvider pathProvider =
+            serviceProvider.GetRequiredService<IAtomicArtDataPathProvider>();
+        IAtomicArtDataPathSwitcher pathSwitcher =
+            serviceProvider.GetRequiredService<IAtomicArtDataPathSwitcher>();
+
+        migrationService.Should().NotBeNull();
+        pathSwitcher.Should().BeSameAs(pathProvider);
     }
 
     [Fact]

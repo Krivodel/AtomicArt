@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 using SukiUI.Toasts;
@@ -39,7 +40,10 @@ public static class DependencyInjection
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddSingleton<ILoggerProvider, DesktopFileLoggerProvider>();
+        services.TryAddSingleton<AtomicArtDataPathProvider>();
+        services.TryAddSingleton<DesktopFileLoggerProvider>();
+        services.AddSingleton<ILoggerProvider>(
+            provider => provider.GetRequiredService<DesktopFileLoggerProvider>());
         services.AddDesktopServicesCore();
 
         return services;
@@ -47,12 +51,16 @@ public static class DependencyInjection
 
     public static IServiceCollection AddDesktopServices(
         this IServiceCollection services,
-        ILoggerProvider loggerProvider)
+        AtomicArtDataPathProvider pathProvider,
+        DesktopFileLoggerProvider loggerProvider)
     {
         ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(pathProvider);
         ArgumentNullException.ThrowIfNull(loggerProvider);
 
+        services.AddSingleton(pathProvider);
         services.AddSingleton(loggerProvider);
+        services.AddSingleton<ILoggerProvider>(loggerProvider);
         services.AddDesktopServicesCore();
 
         return services;
@@ -60,7 +68,13 @@ public static class DependencyInjection
 
     private static void AddDesktopServicesCore(this IServiceCollection services)
     {
-        services.AddSingleton<IAtomicArtDataPathProvider, AtomicArtDataPathProvider>();
+        services.TryAddSingleton<AtomicArtDataPathProvider>();
+        services.AddSingleton<IAtomicArtDataPathProvider>(
+            provider => provider.GetRequiredService<AtomicArtDataPathProvider>());
+        services.AddSingleton<IAtomicArtDataPathSwitcher>(
+            provider => provider.GetRequiredService<AtomicArtDataPathProvider>());
+        services.AddSingleton<IDataRootLogRelocationService>(
+            provider => provider.GetRequiredService<DesktopFileLoggerProvider>());
         services.AddSingleton<DesktopFileLoggingOptions>();
         services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Debug));
         services.AddShellServices();
@@ -78,6 +92,7 @@ public static class DependencyInjection
         services.AddViewTemplate<GalleryViewModel, GalleryView>();
         services.AddViewTemplate<IModelPanelViewModel, GenerationPanelView>();
         services.AddViewTemplate<SettingsViewModel, SettingsOverlayView>();
+        services.AddViewTemplate<DataRootSettingViewModel, DataRootSettingView>();
         services.AddViewTemplate<ApiBaseAddressSettingViewModel, ApiBaseAddressSettingView>();
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
         services.AddViewTemplate<ScaleSettingViewModel, ScaleSettingView>();
@@ -105,10 +120,21 @@ public static class DependencyInjection
         services.AddSingleton<IStateWriteScheduler, StateWriteScheduler>();
         services.AddSingleton<IAppStateBootstrapper, AppStateBootstrapper>();
         services.AddSingleton<IApplicationStateFlushService, ApplicationStateFlushService>();
+        services.AddSingleton<IDataRootAccessCoordinator, DataRootAccessCoordinator>();
+        services.AddSingleton<AtomicArtDataRootBootstrapStore>();
+        services.AddSingleton<DataRootMigrationJournalStore>();
+        services.AddSingleton<DataRootMigrationPlanner>();
+        services.AddSingleton<DataRootFileTransfer>();
+        services.AddSharedSingletonAliases<DataRootMigrationTargetAttachmentService>(
+            typeof(IDataRootMigrationTargetAttachmentService));
+        services.AddSingleton<
+            IAtomicArtDataRootMigrationService,
+            AtomicArtDataRootMigrationService>();
         services.AddSettingsStateApplicatorsByConvention();
         services.AddSingleton<IUiScaleSettingValueConverter, UiScaleSettingValueConverter>();
         services.AddSingleton<ISettingsStateService, SettingsStateService>();
         services.AddSingleton<IGenerationPanelStateService, GenerationPanelStateService>();
+        services.AddSingleton<GalleryStatePathConverter>();
         services.AddSingleton<IGalleryStateService, GalleryStateService>();
         return services;
     }
@@ -138,6 +164,7 @@ public static class DependencyInjection
             typeof(ITextClipboardService));
         services.AddSharedSingletonAliases<FilePickerService>(
             typeof(IFilePickerService),
+            typeof(IFolderPickerService),
             typeof(IFilePickerAttachmentService));
         services.AddSingleton<IDragDropImageService, DragDropImageService>();
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
@@ -145,7 +172,9 @@ public static class DependencyInjection
         services.AddPicaViewer();
         services.AddSingleton<PicaViewerSessionDependencies>();
         services.AddSingleton<PicaViewerSessionFactory>();
-        services.AddSingleton<IImageViewerService, ImageViewerService>();
+        services.AddSharedSingletonAliases<ImageViewerService>(
+            typeof(IImageViewerService),
+            typeof(IDataRootViewerPreparationService));
         services.AddSingleton<IUiFrameSchedulerFactory, AvaloniaUiFrameSchedulerFactory>();
 
         return services;
@@ -194,6 +223,7 @@ public static class DependencyInjection
         services.AddSingleton<IPanelAttachmentStore, PanelAttachmentStore>();
         services.AddSingleton<IGenerationLifecycleEventHub, GenerationLifecycleEventHub>();
         services.AddSingleton<IGenerationActivityTracker, GenerationActivityTracker>();
+        services.AddSingleton<IGenerationAdmissionGate, GenerationAdmissionGate>();
         services.AddSingleton<IGenerationCancellationService, GenerationCancellationService>();
         services.AddSingleton<IGenerationConcurrencyLimiter, GenerationConcurrencyLimiter>();
         services.AddSingleton<AttachedImagePreparationConcurrencyLimiter>();

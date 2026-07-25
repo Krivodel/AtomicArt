@@ -19,14 +19,18 @@ public sealed class AppStateStore : IAppStateStore
             AtomicArtPathNames.StateDirectory);
 
     private readonly IAtomicArtDataPathProvider _pathProvider;
+    private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly ILogger<AppStateStore> _logger;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _writeLocks;
 
     public AppStateStore(
         IAtomicArtDataPathProvider pathProvider,
+        IDataRootAccessCoordinator accessCoordinator,
         ILogger<AppStateStore> logger)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
+        _accessCoordinator = accessCoordinator
+            ?? throw new ArgumentNullException(nameof(accessCoordinator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _writeLocks = new ConcurrentDictionary<string, SemaphoreSlim>(StringComparer.Ordinal);
     }
@@ -36,6 +40,8 @@ public sealed class AppStateStore : IAppStateStore
         ArgumentNullException.ThrowIfNull(section);
         EnsureRequestedTypeMatchesSection<TState>(section);
 
+        using DataRootAccessLease accessLease =
+            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
         string path = GetStatePath(section);
 
         try
@@ -164,6 +170,8 @@ public sealed class AppStateStore : IAppStateStore
         ArgumentNullException.ThrowIfNull(state);
         EnsurePayloadMatchesSection(section, state);
 
+        using DataRootAccessLease accessLease =
+            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
         TrustedPathGuard.EnsureTrustedDirectoryExists(
             _pathProvider,
             _pathProvider.StateDirectory,

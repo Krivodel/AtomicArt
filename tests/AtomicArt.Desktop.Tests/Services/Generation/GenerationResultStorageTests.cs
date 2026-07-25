@@ -48,6 +48,35 @@ public sealed class GenerationResultStorageTests
     }
 
     [Fact]
+    public async Task SaveAsync_AfterRootSwitch_WritesFileInsideNewResultsDirectory()
+    {
+        string initialRootDirectory = DesktopTestDirectories.CreateCleanDirectory(
+            nameof(SaveAsync_AfterRootSwitch_WritesFileInsideNewResultsDirectory));
+        string nextRootDirectory = DesktopTestDirectories.CreateCleanDirectory(
+            $"{nameof(SaveAsync_AfterRootSwitch_WritesFileInsideNewResultsDirectory)}-next");
+        AtomicArtDataPathProvider pathProvider = new(initialRootDirectory);
+        GenerationResultStorage storage = CreateStorage(pathProvider);
+        GenerationImageContentValidationResult content = CreateValidPngContent();
+        pathProvider.SwitchRootDirectory(nextRootDirectory);
+
+        await storage.SaveAsync(
+            BatchId,
+            ItemId,
+            content,
+            CancellationToken.None);
+
+        string? resultPath = storage.GetExpectedResultPathOrDefault(
+            BatchId,
+            ItemId,
+            content.ContentType);
+        resultPath.Should().NotBeNull();
+        Path.GetDirectoryName(resultPath).Should().Be(
+            Path.GetFullPath(pathProvider.ArtDirectory));
+        File.Exists(resultPath).Should().BeTrue();
+        Directory.Exists(Path.Combine(initialRootDirectory, "Art")).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task SaveAsync_WhenResultsDirectoryIsFile_ThrowsAndDoesNotWriteFile()
     {
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
@@ -157,6 +186,7 @@ public sealed class GenerationResultStorageTests
             pathProvider,
             GenerationImageFormatRegistryTestFactory.Create(),
             fileNamePolicy,
+            new DataRootAccessCoordinator(),
             NullLogger<GenerationResultStorage>.Instance);
     }
 

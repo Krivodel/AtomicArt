@@ -14,24 +14,26 @@ public sealed class GenerationResultStorage : IGenerationResultStorage
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly GenerationImageFileNamePolicy _fileNamePolicy;
     private readonly IAtomicArtDataPathProvider _pathProvider;
-    private readonly string _resultsDirectory;
+    private readonly IDataRootAccessCoordinator _accessCoordinator;
 
     public GenerationResultStorage(
         IAtomicArtDataPathProvider pathProvider,
         IGenerationImageFormatRegistry formatRegistry,
         GenerationImageFileNamePolicy fileNamePolicy,
+        IDataRootAccessCoordinator accessCoordinator,
         ILogger<GenerationResultStorage> logger)
     {
         ArgumentNullException.ThrowIfNull(pathProvider);
         ArgumentNullException.ThrowIfNull(formatRegistry);
         ArgumentNullException.ThrowIfNull(fileNamePolicy);
+        ArgumentNullException.ThrowIfNull(accessCoordinator);
         ArgumentNullException.ThrowIfNull(logger);
 
         _formatRegistry = formatRegistry;
         _fileNamePolicy = fileNamePolicy;
         _logger = logger;
         _pathProvider = pathProvider;
-        _resultsDirectory = Path.GetFullPath(pathProvider.ArtDirectory);
+        _accessCoordinator = accessCoordinator;
     }
 
     public async Task SaveAsync(
@@ -44,7 +46,14 @@ public sealed class GenerationResultStorage : IGenerationResultStorage
 
         try
         {
-            string? resultPath = GetExpectedResultPathOrDefault(batchId, itemId, content.ContentType);
+            using DataRootAccessLease accessLease =
+                await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+            string resultsDirectory = Path.GetFullPath(_pathProvider.ArtDirectory);
+            string? resultPath = GetExpectedResultPathOrDefault(
+                resultsDirectory,
+                batchId,
+                itemId,
+                content.ContentType);
 
             if (resultPath is null)
             {
@@ -53,13 +62,17 @@ public sealed class GenerationResultStorage : IGenerationResultStorage
 
             TrustedPathGuard.EnsureTrustedDirectoryExists(
                 _pathProvider,
-                _resultsDirectory,
+                resultsDirectory,
                 TrustedPathFailureMessage);
             TrustedPathGuard.EnsureTrustedWriteTarget(
-                _resultsDirectory,
+                resultsDirectory,
                 resultPath,
                 TrustedPathFailureMessage);
-            await WriteVerifiedResultFileAsync(resultPath, content.Bytes, ct).ConfigureAwait(false);
+            await WriteVerifiedResultFileAsync(
+                resultsDirectory,
+                resultPath,
+                content.Bytes,
+                ct).ConfigureAwait(false);
         }
         catch (ArgumentException ex)
         {
@@ -107,6 +120,21 @@ public sealed class GenerationResultStorage : IGenerationResultStorage
         Guid itemId,
         string contentType)
     {
+        string resultsDirectory = Path.GetFullPath(_pathProvider.ArtDirectory);
+
+        return GetExpectedResultPathOrDefault(
+            resultsDirectory,
+            batchId,
+            itemId,
+            contentType);
+    }
+
+    private string? GetExpectedResultPathOrDefault(
+        string resultsDirectory,
+        Guid batchId,
+        Guid itemId,
+        string contentType)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
 
         if (batchId == Guid.Empty
@@ -120,9 +148,9 @@ public sealed class GenerationResultStorage : IGenerationResultStorage
         }
 
         string fileName = _fileNamePolicy.BuildFileName(batchId, itemId, format.Extension);
-        string resultPath = Path.GetFullPath(Path.Combine(_resultsDirectory, fileName));
+        string resultPath = Path.GetFullPath(Path.Combine(resultsDirectory, fileName));
 
-        if (!TrustedPathGuard.IsInsideDirectory(_resultsDirectory, resultPath))
+        if (!TrustedPathGuard.IsInsideDirectory(resultsDirectory, resultPath))
         {
             return null;
         }
@@ -131,12 +159,13 @@ public sealed class GenerationResultStorage : IGenerationResultStorage
     }
 
     private async Task WriteVerifiedResultFileAsync(
+        string resultsDirectory,
         string resultPath,
         ReadOnlyMemory<byte> bytes,
         CancellationToken ct)
     {
         await using FileStream stream = TrustedPathGuard.CreateTrustedNewFileForWrite(
-            _resultsDirectory,
+            resultsDirectory,
             resultPath,
             TrustedPathFailureMessage);
         await stream.WriteAsync(bytes, ct).ConfigureAwait(false);

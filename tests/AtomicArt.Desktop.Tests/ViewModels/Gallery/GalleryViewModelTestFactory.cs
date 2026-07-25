@@ -54,6 +54,7 @@ internal static class GalleryViewModelTestFactory
                     DesktopTestDirectories.CreateUniqueDirectoryPath()),
                 GenerationImageFormatRegistryTestFactory.Create(),
                 new GenerationImageFileNamePolicy(),
+                new DataRootAccessCoordinator(),
                 NullLogger<GenerationResultStorage>.Instance);
         IGenerationImageContentValidator contentValidator =
             generationImageContentValidator ?? GenerationImageFormatRegistryTestFactory.CreateValidator();

@@ -5,6 +5,7 @@ using Xunit;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Paths;
 
 using Pica.Protocol;
 using Pica.Viewer.Services;
@@ -37,6 +38,7 @@ public sealed class ImageViewerServiceTests
         ImageViewerService service = new(
             windowFactoryMock.Object,
             sessionFactory,
+            new DataRootAccessCoordinator(),
             NullLogger<ImageViewerService>.Instance);
         GalleryImageViewerRequest request = new(
             new GalleryStaticImageViewerItemsSource(

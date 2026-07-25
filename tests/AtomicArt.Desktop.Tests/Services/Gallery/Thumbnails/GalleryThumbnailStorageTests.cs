@@ -189,6 +189,7 @@ public sealed class GalleryThumbnailStorageTests
             fileNamePolicy,
             thumbnailImageFormat,
             thumbnailGenerator,
+            new DataRootAccessCoordinator(),
             logger);
     }
 

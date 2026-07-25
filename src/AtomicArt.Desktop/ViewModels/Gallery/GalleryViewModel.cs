@@ -146,6 +146,24 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         return _viewStateController.RestoreAsync(items, ct);
     }
 
+    public async Task RebaseDataRootAsync(
+        string sourceRootDirectory,
+        string destinationRootDirectory,
+        CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceRootDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationRootDirectory);
+
+        SelectedMetadata = null;
+        IsMetadataOpen = false;
+        await _viewStateController.RebaseDataRootPathsAsync(
+            sourceRootDirectory,
+            destinationRootDirectory,
+            ct);
+        IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
+        await _galleryStateService.SaveAsync(snapshot, ct);
+    }
+
     public void Dispose()
     {
         SelectedMetadata = null;

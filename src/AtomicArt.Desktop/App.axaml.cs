@@ -7,6 +7,8 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Logging;
+using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.ViewModels;
@@ -18,7 +20,8 @@ namespace AtomicArt.Desktop;
 public class App : Avalonia.Application
 {
     private static IConfiguration? s_bootstrapConfiguration;
-    private static ILoggerProvider? s_bootstrapLoggerProvider;
+    private static AtomicArtDataPathProvider? s_bootstrapPathProvider;
+    private static DesktopFileLoggerProvider? s_bootstrapLoggerProvider;
 
     private ServiceProvider? _serviceProvider;
     private ILogger<App>? _logger;
@@ -42,7 +45,10 @@ public class App : Avalonia.Application
         }
         else
         {
-            services.AddDesktopServices(s_bootstrapLoggerProvider);
+            AtomicArtDataPathProvider pathProvider = s_bootstrapPathProvider
+                ?? throw new InvalidOperationException(
+                    "The bootstrap data path provider is unavailable.");
+            services.AddDesktopServices(pathProvider, s_bootstrapLoggerProvider);
         }
 
         _serviceProvider = services.BuildServiceProvider();
@@ -59,10 +65,13 @@ public class App : Avalonia.Application
 
     internal static void ConfigureBootstrap(
         IConfiguration configuration,
-        ILoggerProvider loggerProvider)
+        AtomicArtDataPathProvider pathProvider,
+        DesktopFileLoggerProvider loggerProvider)
     {
         s_bootstrapConfiguration = configuration
             ?? throw new ArgumentNullException(nameof(configuration));
+        s_bootstrapPathProvider = pathProvider
+            ?? throw new ArgumentNullException(nameof(pathProvider));
         s_bootstrapLoggerProvider = loggerProvider
             ?? throw new ArgumentNullException(nameof(loggerProvider));
     }
@@ -70,6 +79,7 @@ public class App : Avalonia.Application
     internal static void ClearBootstrap()
     {
         s_bootstrapConfiguration = null;
+        s_bootstrapPathProvider = null;
         s_bootstrapLoggerProvider = null;
     }
 
@@ -149,6 +159,9 @@ public class App : Avalonia.Application
             IApplicationUpdateRestartAttachmentService updateRestartAttachmentService =
                 GetRequiredService<IApplicationUpdateRestartAttachmentService>();
             updateRestartAttachmentService.Attach(viewModel);
+            IDataRootMigrationTargetAttachmentService migrationTargetAttachmentService =
+                GetRequiredService<IDataRootMigrationTargetAttachmentService>();
+            migrationTargetAttachmentService.Attach(viewModel);
         }
 
         StartMainWindowInitialization(mainWindow);

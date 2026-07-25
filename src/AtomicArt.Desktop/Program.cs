@@ -18,7 +18,26 @@ internal sealed class Program
         VelopackApp.Build().Run();
 
         IConfiguration bootstrapConfiguration = CreateBootstrapConfiguration();
-        AtomicArtDataPathProvider pathProvider = new();
+        AtomicArtDataRootBootstrapStore bootstrapStore = new();
+        DataRootMigrationJournalStore journalStore = new(bootstrapStore);
+        Exception? bootstrapLoadFailure = null;
+        string rootDirectory;
+
+        try
+        {
+            rootDirectory = bootstrapStore.LoadRootDirectory();
+        }
+        catch (Exception ex) when (ex is IOException
+            or UnauthorizedAccessException
+            or NotSupportedException
+            or System.Text.Json.JsonException
+            or ArgumentException)
+        {
+            bootstrapLoadFailure = ex;
+            rootDirectory = AtomicArtDataRootBootstrapStore.GetDefaultRootDirectory();
+        }
+
+        AtomicArtDataPathProvider pathProvider = new(rootDirectory);
         DesktopFileLoggingOptions loggingOptions = new(bootstrapConfiguration);
         DesktopFileLoggerProvider loggerProvider = new(pathProvider, loggingOptions);
         using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
@@ -30,12 +49,20 @@ internal sealed class Program
 
         try
         {
+            if (bootstrapLoadFailure is not null)
+            {
+                throw new InvalidDataException(
+                    "Atomic Art data root bootstrap state could not be loaded safely.",
+                    bootstrapLoadFailure);
+            }
+
+            TryRecoverDataRootMigration(bootstrapStore, journalStore, logger);
             IConfiguration configuration = App.CreateConfiguration();
-            App.ConfigureBootstrap(configuration, loggerProvider);
+            App.ConfigureBootstrap(configuration, pathProvider, loggerProvider);
             logger.LogInformation("Atomic Art desktop process is starting.");
 
             long maxGpuResourceSizeBytes =
-                GpuResourceCacheStartupSettingsReader.LoadMaxGpuResourceSizeBytes();
+                GpuResourceCacheStartupSettingsReader.LoadMaxGpuResourceSizeBytes(pathProvider);
             logger.LogInformation(
                 "Early GPU resource cache setting resolved to {MaxGpuResourceSizeBytes} bytes.",
                 maxGpuResourceSizeBytes);
@@ -56,8 +83,13 @@ internal sealed class Program
 
     public static AppBuilder BuildAvaloniaApp()
     {
-        return BuildAvaloniaApp(
-            GpuResourceCacheStartupSettingsReader.LoadMaxGpuResourceSizeBytes());
+        IConfiguration configuration = CreateBootstrapConfiguration();
+        AtomicArtDataRootBootstrapStore bootstrapStore = new();
+        AtomicArtDataPathProvider pathProvider = new(bootstrapStore.LoadRootDirectory());
+        long maxGpuResourceSizeBytes =
+            GpuResourceCacheStartupSettingsReader.LoadMaxGpuResourceSizeBytes(pathProvider);
+
+        return BuildAvaloniaApp(maxGpuResourceSizeBytes);
     }
 
     private static AppBuilder BuildAvaloniaApp(long maxGpuResourceSizeBytes)
@@ -76,5 +108,26 @@ internal sealed class Program
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile(DesktopConfigurationFile.Name, optional: true)
             .Build();
+    }
+
+    private static void TryRecoverDataRootMigration(
+        AtomicArtDataRootBootstrapStore bootstrapStore,
+        DataRootMigrationJournalStore journalStore,
+        ILogger<Program> logger)
+    {
+        try
+        {
+            DataRootMigrationRecovery.Recover(bootstrapStore, journalStore);
+        }
+        catch (Exception ex) when (ex is IOException
+            or UnauthorizedAccessException
+            or NotSupportedException
+            or System.Text.Json.JsonException
+            or ArgumentException)
+        {
+            logger.LogWarning(
+                ex,
+                "An interrupted Atomic Art data root migration could not be fully recovered during startup.");
+        }
     }
 }

@@ -14,6 +14,16 @@ public sealed class GalleryStateSectionTests
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 7, 9, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public void SchemaVersion_WithRelativePathFormat_ReturnsVersionTwo()
+    {
+        GalleryStateSection section = new();
+
+        int schemaVersion = section.SchemaVersion;
+
+        schemaVersion.Should().Be(2);
+    }
+
+    [Fact]
     public void SerializePayload_WithThumbnailPath_WritesThumbnailPath()
     {
         JsonSerializerOptions options = new(JsonSerializerDefaults.Web);

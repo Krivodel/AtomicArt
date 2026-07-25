@@ -19,20 +19,28 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
             AtomicArtPathNames.SecretsDirectory);
     private readonly ConcurrentDictionary<string, string> _temporarySecrets = new();
     private readonly IAtomicArtDataPathProvider? _pathProvider;
-    private readonly string _secretsDirectory;
+    private readonly IDataRootAccessCoordinator? _accessCoordinator;
+    private readonly string? _fixedSecretsDirectory;
     private readonly ILogger<ProtectedDesktopSecretStore> _logger;
 
-    public ProtectedDesktopSecretStore(IAtomicArtDataPathProvider pathProvider)
-        : this(pathProvider, NullLogger<ProtectedDesktopSecretStore>.Instance)
+    public ProtectedDesktopSecretStore(
+        IAtomicArtDataPathProvider pathProvider,
+        IDataRootAccessCoordinator accessCoordinator)
+        : this(
+            pathProvider,
+            accessCoordinator,
+            NullLogger<ProtectedDesktopSecretStore>.Instance)
     {
     }
 
     public ProtectedDesktopSecretStore(
         IAtomicArtDataPathProvider pathProvider,
+        IDataRootAccessCoordinator accessCoordinator,
         ILogger<ProtectedDesktopSecretStore> logger)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
-        _secretsDirectory = pathProvider.SecretsDirectory;
+        _accessCoordinator = accessCoordinator
+            ?? throw new ArgumentNullException(nameof(accessCoordinator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -40,13 +48,16 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(secretsDirectory);
 
-        _secretsDirectory = Path.GetFullPath(secretsDirectory);
+        _fixedSecretsDirectory = Path.GetFullPath(secretsDirectory);
         _logger = NullLogger<ProtectedDesktopSecretStore>.Instance;
     }
 
     public async Task<string?> GetSecretAsync(string key, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        using DataRootAccessLease? accessLease = _accessCoordinator is null
+            ? null
+            : await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
 
         if (!OperatingSystem.IsWindows())
         {
@@ -61,12 +72,13 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
         try
         {
             string path = GetSecretPath(key);
-            string[] trustedDirectories = [Path.GetFullPath(_secretsDirectory)];
+            string secretsDirectory = GetSecretsDirectory();
+            string[] trustedDirectories = [secretsDirectory];
 
             if (!TrustedPathGuard.TryOpenTrustedExistingFileForRead(
                 path,
                 trustedDirectories,
-                _secretsDirectory,
+                secretsDirectory,
                 TrustedPathFailureMessage,
                 out FileStream? stream,
                 out string? _))
@@ -107,6 +119,9 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(value);
+        using DataRootAccessLease? accessLease = _accessCoordinator is null
+            ? null
+            : await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
 
         if (!OperatingSystem.IsWindows())
         {
@@ -122,13 +137,16 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
             byte[] bytes = Encoding.UTF8.GetBytes(value);
             byte[] protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
             string path = GetSecretPath(key);
-            string tempPath = AtomicFileWriteTempPath.CreateHidden(_secretsDirectory, "secret");
+            string secretsDirectory = GetSecretsDirectory();
+            string tempPath = AtomicFileWriteTempPath.CreateHidden(
+                secretsDirectory,
+                "secret");
             bool secretFileReplaced = false;
 
             try
             {
                 await using (FileStream stream = TrustedPathGuard.CreateTrustedNewFileForWrite(
-                    _secretsDirectory,
+                    secretsDirectory,
                     tempPath,
                     TrustedPathFailureMessage))
                 {
@@ -137,7 +155,7 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
                 }
 
                 TrustedPathGuard.ReplaceTrustedFile(
-                    _secretsDirectory,
+                    secretsDirectory,
                     tempPath,
                     path,
                     TrustedPathFailureMessage);
@@ -163,7 +181,7 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
     {
         string fileName = string.Concat(SafeFileNameKeyEncoder.EncodeSha256Hex(key), ".bin");
 
-        return Path.Combine(_secretsDirectory, fileName);
+        return Path.Combine(GetSecretsDirectory(), fileName);
     }
 
     private void EnsureSecretsDirectory()
@@ -172,13 +190,13 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
         {
             TrustedPathGuard.EnsureTrustedDirectoryExists(
                 _pathProvider,
-                _secretsDirectory,
+                GetSecretsDirectory(),
                 TrustedPathFailureMessage);
             return;
         }
 
         TrustedPathGuard.EnsureTrustedDirectoryExists(
-            _secretsDirectory,
+            GetSecretsDirectory(),
             directory => Directory.CreateDirectory(directory),
             TrustedPathFailureMessage);
     }
@@ -199,5 +217,17 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
     private static void DeleteTempFile(string tempPath)
     {
         FileDeletion.DeleteIfExists(tempPath);
+    }
+
+    private string GetSecretsDirectory()
+    {
+        if (_pathProvider is not null)
+        {
+            return Path.GetFullPath(_pathProvider.SecretsDirectory);
+        }
+
+        return _fixedSecretsDirectory
+            ?? throw new InvalidOperationException(
+                "A protected secret directory has not been configured.");
     }
 }

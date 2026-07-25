@@ -27,6 +27,21 @@ public sealed class AtomicArtDataPathProviderTests
     }
 
     [Fact]
+    public void SwitchRootDirectory_WithNewRoot_ReturnsDirectoriesUnderNewRoot()
+    {
+        string initialRootDirectory = TestDirectories.GetUniqueDirectoryPath(
+            typeof(AtomicArtDataPathProviderTests));
+        string nextRootDirectory = string.Concat(initialRootDirectory, "-next");
+        AtomicArtDataPathProvider provider = new(initialRootDirectory);
+
+        provider.SwitchRootDirectory(nextRootDirectory);
+
+        provider.RootDirectory.Should().Be(Path.GetFullPath(nextRootDirectory));
+        provider.ArtDirectory.Should().Be(Path.Combine(provider.RootDirectory, "Art"));
+        provider.StateDirectory.Should().Be(Path.Combine(provider.RootDirectory, "State"));
+    }
+
+    [Fact]
     public void EnsureDirectoryExists_WithKnownDirectory_CreatesDirectory()
     {
         string rootDirectory = TestDirectories.GetUniqueDirectoryPath(typeof(AtomicArtDataPathProviderTests));
@@ -57,5 +72,4 @@ public sealed class AtomicArtDataPathProviderTests
         act.Should().Throw<InvalidOperationException>();
         Directory.Exists(unknownDirectory).Should().BeFalse();
     }
-
 }

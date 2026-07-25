@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Logging;
+
+using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 
 namespace AtomicArt.Desktop.Services.Gallery.State;
@@ -7,7 +9,8 @@ public sealed class GalleryStateService : IGalleryStateService
 {
     private readonly IAppStateStore _stateStore;
     private readonly IStateWriteScheduler _writeScheduler;
-    private readonly ITrustedImageFileService _trustedImageFileService;
+    private readonly IDataRootAccessCoordinator _accessCoordinator;
+    private readonly GalleryStatePathConverter _pathConverter;
     private readonly GalleryStateSection _section;
     private readonly ILogger<GalleryStateService> _logger;
     private readonly SemaphoreSlim _stateLock;
@@ -16,14 +19,16 @@ public sealed class GalleryStateService : IGalleryStateService
     public GalleryStateService(
         IAppStateStore stateStore,
         IStateWriteScheduler writeScheduler,
-        ITrustedImageFileService trustedImageFileService,
+        IDataRootAccessCoordinator accessCoordinator,
+        GalleryStatePathConverter pathConverter,
         GalleryStateSection section,
         ILogger<GalleryStateService> logger)
     {
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
         _writeScheduler = writeScheduler ?? throw new ArgumentNullException(nameof(writeScheduler));
-        _trustedImageFileService = trustedImageFileService
-            ?? throw new ArgumentNullException(nameof(trustedImageFileService));
+        _accessCoordinator = accessCoordinator
+            ?? throw new ArgumentNullException(nameof(accessCoordinator));
+        _pathConverter = pathConverter ?? throw new ArgumentNullException(nameof(pathConverter));
         _section = section ?? throw new ArgumentNullException(nameof(section));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _stateLock = new SemaphoreSlim(1, 1);
@@ -35,6 +40,9 @@ public sealed class GalleryStateService : IGalleryStateService
 
         try
         {
+            using DataRootAccessLease accessLease =
+                await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+
             if (_currentState is not null)
             {
                 _logger.LogDebug(
@@ -68,16 +76,19 @@ public sealed class GalleryStateService : IGalleryStateService
 
         try
         {
-            GalleryState nextState = NormalizeStorageState(
+            using DataRootAccessLease accessLease =
+                await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+            GalleryState runtimeState = NormalizeRuntimeState(
                 new GalleryState
                 {
                     Items = items.ToList()
                 });
-            _currentState = nextState;
-            _writeScheduler.ScheduleWrite(_section, nextState);
+            GalleryState storageState = CreateStorageState(runtimeState);
+            _currentState = runtimeState;
+            _writeScheduler.ScheduleWrite(_section, storageState);
             _logger.LogInformation(
                 "Scheduled gallery state snapshot with {ItemCount} items",
-                nextState.Items.Count);
+                storageState.Items.Count);
         }
         finally
         {
@@ -85,23 +96,15 @@ public sealed class GalleryStateService : IGalleryStateService
         }
     }
 
-    private GalleryState NormalizeStorageState(GalleryState state)
-    {
-        return NormalizeState(state, GalleryItemStateMapper.NormalizeForStorage);
-    }
-
-    private GalleryState NormalizeRestoredState(GalleryState state)
-    {
-        return NormalizeState(state, GalleryItemStateMapper.NormalizeForRestore);
-    }
-
-    private GalleryState NormalizeState(
+    private static GalleryState NormalizeState(
         GalleryState state,
         Func<
             GalleryItemState,
             Func<GalleryItemState, string?>,
             Func<GalleryItemState, string?>,
-            GalleryItemState> normalizeItem)
+            GalleryItemState> normalizeItem,
+        Func<GalleryItemState, string?> resolveImagePath,
+        Func<GalleryItemState, string?> resolveThumbnailPath)
     {
         IReadOnlyList<GalleryItemState> items = state.Items ?? [];
 
@@ -111,23 +114,74 @@ public sealed class GalleryStateService : IGalleryStateService
                 .Where(GalleryItemStateMapper.IsValid)
                 .Select(item => normalizeItem(
                     item,
-                    ResolveTrustedImagePath,
-                    ResolveTrustedThumbnailPath))
+                    resolveImagePath,
+                    resolveThumbnailPath))
                 .ToList()
         };
     }
 
-    private string? ResolveTrustedImagePath(GalleryItemState item)
+    private GalleryState NormalizeRuntimeState(GalleryState state)
     {
-        return _trustedImageFileService.GetTrustedImagePathOrDefault(
+        return NormalizeState(
+            state,
+            GalleryItemStateMapper.NormalizeForStorage,
+            ResolveValidatedImagePath,
+            ResolveValidatedThumbnailPath);
+    }
+
+    private GalleryState CreateStorageState(GalleryState state)
+    {
+        return NormalizeState(
+            state,
+            GalleryItemStateMapper.NormalizeForStorage,
+            ResolveStorageImagePath,
+            ResolveStorageThumbnailPath);
+    }
+
+    private GalleryState NormalizeRestoredState(GalleryState state)
+    {
+        return NormalizeState(
+            state,
+            GalleryItemStateMapper.NormalizeForRestore,
+            ResolveRuntimeImagePath,
+            ResolveRuntimeThumbnailPath);
+    }
+
+    private string? ResolveRuntimeImagePath(GalleryItemState item)
+    {
+        return _pathConverter.GetRuntimeImagePath(
             item.ImagePath,
             item.ModelId);
     }
 
-    private string? ResolveTrustedThumbnailPath(GalleryItemState item)
+    private string? ResolveRuntimeThumbnailPath(GalleryItemState item)
     {
-        return _trustedImageFileService.GetTrustedImagePathOrDefault(
+        return _pathConverter.GetRuntimeThumbnailPath(
             item.ThumbnailPath,
             item.ModelId);
+    }
+
+    private string? ResolveValidatedImagePath(GalleryItemState item)
+    {
+        return _pathConverter.GetValidatedRuntimePath(
+            item.ImagePath,
+            item.ModelId);
+    }
+
+    private string? ResolveValidatedThumbnailPath(GalleryItemState item)
+    {
+        return _pathConverter.GetValidatedRuntimePath(
+            item.ThumbnailPath,
+            item.ModelId);
+    }
+
+    private string? ResolveStorageImagePath(GalleryItemState item)
+    {
+        return _pathConverter.GetStoragePath(item.ImagePath);
+    }
+
+    private string? ResolveStorageThumbnailPath(GalleryItemState item)
+    {
+        return _pathConverter.GetStoragePath(item.ThumbnailPath);
     }
 }

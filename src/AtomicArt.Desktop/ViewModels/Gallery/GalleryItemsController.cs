@@ -205,6 +205,21 @@ public sealed class GalleryItemsController
         NotifyIsEmptyChanged(wasEmpty);
     }
 
+    public void RebaseDataRootPaths(
+        string sourceRootDirectory,
+        string destinationRootDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceRootDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationRootDirectory);
+
+        foreach (GenerationItemViewModel item in _items)
+        {
+            item.RebaseDataRootPaths(
+                sourceRootDirectory,
+                destinationRootDirectory);
+        }
+    }
+
     private GenerationItemViewModel CreateGeneratedItem(
         GenerationItemDto item,
         int attachedImagesCount)

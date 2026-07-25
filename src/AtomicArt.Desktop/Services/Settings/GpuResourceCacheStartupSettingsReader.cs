@@ -11,16 +11,27 @@ public static class GpuResourceCacheStartupSettingsReader
 
     public static long LoadMaxGpuResourceSizeBytes()
     {
-        string? value = LoadSavedValueOrDefault();
+        return LoadMaxGpuResourceSizeBytes(new AtomicArtDataPathProvider());
+    }
+
+    public static long LoadMaxGpuResourceSizeBytes(IAtomicArtDataPathProvider pathProvider)
+    {
+        string? value = LoadSavedValueOrDefault(pathProvider);
 
         return GpuResourceCacheSettingOptions.ResolveBytes(value);
     }
 
     public static string? LoadSavedValueOrDefault()
     {
+        return LoadSavedValueOrDefault(new AtomicArtDataPathProvider());
+    }
+
+    public static string? LoadSavedValueOrDefault(IAtomicArtDataPathProvider pathProvider)
+    {
+        ArgumentNullException.ThrowIfNull(pathProvider);
+
         try
         {
-            AtomicArtDataPathProvider pathProvider = new();
             string settingsPath = Path.Combine(pathProvider.StateDirectory, SettingsStateSection.SectionFileName);
 
             if (!File.Exists(settingsPath))

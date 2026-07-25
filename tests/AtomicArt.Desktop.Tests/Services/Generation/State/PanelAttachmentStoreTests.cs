@@ -149,6 +149,7 @@ public sealed class PanelAttachmentStoreTests
             pathProvider,
             new FixedStatePathKeyEncoder(),
             new TestGenerationImageFormatRegistry(),
+            new DataRootAccessCoordinator(),
             logger ?? NullLogger<PanelAttachmentStore>.Instance);
     }
 

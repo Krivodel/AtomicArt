@@ -6,7 +6,10 @@ using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Services.Logging;
 
-public sealed class DesktopFileLoggerProvider : ILoggerProvider, ISupportExternalScope
+public sealed class DesktopFileLoggerProvider :
+    ILoggerProvider,
+    ISupportExternalScope,
+    IDataRootLogRelocationService
 {
     private readonly ConcurrentDictionary<string, DesktopFileLogger> _loggers;
     private readonly DesktopRollingFileWriter _writer;
@@ -35,6 +38,18 @@ public sealed class DesktopFileLoggerProvider : ILoggerProvider, ISupportExterna
     public void SetScopeProvider(IExternalScopeProvider scopeProvider)
     {
         _scopeProvider = scopeProvider ?? throw new ArgumentNullException(nameof(scopeProvider));
+    }
+
+    public void Pause()
+    {
+        _writer.Pause();
+    }
+
+    public void Resume(IAtomicArtDataPathProvider pathProvider)
+    {
+        ArgumentNullException.ThrowIfNull(pathProvider);
+
+        _writer.Resume(pathProvider);
     }
 
     public void Dispose()

@@ -119,6 +119,21 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
         return _animatedGalleryOperations.RemoveAsync(itemId, ct);
     }
 
+    public Task RebaseDataRootPathsAsync(
+        string sourceRootDirectory,
+        string destinationRootDirectory,
+        CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceRootDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationRootDirectory);
+
+        return _uiThreadDispatcher.InvokeAsync(
+            () => _itemsController.RebaseDataRootPaths(
+                sourceRootDirectory,
+                destinationRootDirectory),
+            ct);
+    }
+
     private void ApplyCompleted(
         Guid correlationId,
         IReadOnlyList<GalleryCompletedItemUpdate> itemUpdates)

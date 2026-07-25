@@ -7,7 +7,10 @@ using AtomicArt.Desktop.Resources;
 
 namespace AtomicArt.Desktop.Services;
 
-public sealed class FilePickerService : IFilePickerService, IFilePickerAttachmentService
+public sealed class FilePickerService :
+    IFilePickerService,
+    IFolderPickerService,
+    IFilePickerAttachmentService
 {
     private readonly AttachedImageFileReader _fileReader;
     private readonly ILogger<FilePickerService> _logger;
@@ -66,5 +69,32 @@ public sealed class FilePickerService : IFilePickerService, IFilePickerAttachmen
             files.Count);
 
         return _fileReader.CreateInputs(files, maxInputBytes);
+    }
+
+    public async Task<string?> PickFolderAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        if (_storageProvider is null || !_storageProvider.CanPickFolder)
+        {
+            _logger.LogWarning("Folder picker is unavailable.");
+            return null;
+        }
+
+        FolderPickerOpenOptions options = new()
+        {
+            AllowMultiple = false,
+            Title = UiStrings.SettingsDataRootPickerTitle
+        };
+        IReadOnlyList<IStorageFolder> folders = await _storageProvider
+            .OpenFolderPickerAsync(options)
+            .ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        string? selectedPath = folders.FirstOrDefault()?.TryGetLocalPath();
+        _logger.LogInformation(
+            "Folder picker returned a local data directory: {HasLocalDirectory}.",
+            !string.IsNullOrWhiteSpace(selectedPath));
+
+        return selectedPath;
     }
 }

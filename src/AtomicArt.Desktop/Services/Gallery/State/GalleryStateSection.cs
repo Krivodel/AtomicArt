@@ -7,7 +7,7 @@ public sealed class GalleryStateSection : StateSection<GalleryState>
     public const string KeyValue = "gallery";
 
     private const string SectionFileName = "gallery.json";
-    private const int CurrentSchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
 
     public GalleryStateSection()
         : base(KeyValue, SectionFileName, CurrentSchemaVersion)

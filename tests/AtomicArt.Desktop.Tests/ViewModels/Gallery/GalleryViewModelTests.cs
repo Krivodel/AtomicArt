@@ -105,6 +105,7 @@ public sealed class GalleryViewModelTests
                 GenerationImageFormatRegistryTestFactory.Create(),
                 NullLogger<TrustedImageFileService>.Instance),
             fileNamePolicy,
+            new DataRootAccessCoordinator(),
             NullLogger<GalleryItemDeletionService>.Instance);
         RecordingGalleryStateService galleryStateService = new();
         TestViewModelErrorHandler errorHandler = new();
@@ -129,7 +130,7 @@ public sealed class GalleryViewModelTests
         ];
         viewModel.AddGeneratedItems(items, 0);
         GenerationItemViewModel deletedItem = viewModel.Items.Single(item => item.Id == itemId);
-        
+
         await using FileStream lockedImage = new(
             imagePath,
             FileMode.Open,

@@ -237,6 +237,12 @@ public sealed class SettingsStateService : ISettingsStateService
                 "Secret settings must be stored through the protected secret store.");
         }
 
+        if (registeredDefinition is IExternallyStoredSettingDefinition)
+        {
+            throw new InvalidOperationException(
+                "Externally stored settings must be managed by their owning service.");
+        }
+
         return registeredDefinition;
     }
 
@@ -250,7 +256,8 @@ public sealed class SettingsStateService : ISettingsStateService
     private IReadOnlyList<ISettingsDefinition> GetAllowedNonSecretDefinitions()
     {
         return _settingsDefinitionCatalog.GetSettings()
-            .Where(setting => setting is not ISecretSettingDefinition)
+            .Where(setting => setting is not ISecretSettingDefinition
+                && setting is not IExternallyStoredSettingDefinition)
             .ToList();
     }
 

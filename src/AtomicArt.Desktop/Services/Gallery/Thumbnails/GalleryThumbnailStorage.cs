@@ -20,7 +20,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
     private readonly GenerationImageFileNamePolicy _fileNamePolicy;
     private readonly GalleryThumbnailImageFormat _thumbnailImageFormat;
     private readonly IGalleryThumbnailGenerator _thumbnailGenerator;
-    private readonly string _thumbnailsDirectory;
+    private readonly IDataRootAccessCoordinator _accessCoordinator;
 
     public GalleryThumbnailStorage(
         IAtomicArtDataPathProvider pathProvider,
@@ -28,6 +28,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
         GenerationImageFileNamePolicy fileNamePolicy,
         GalleryThumbnailImageFormat thumbnailImageFormat,
         IGalleryThumbnailGenerator thumbnailGenerator,
+        IDataRootAccessCoordinator accessCoordinator,
         ILogger<GalleryThumbnailStorage> logger)
     {
         ArgumentNullException.ThrowIfNull(pathProvider);
@@ -35,6 +36,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
         ArgumentNullException.ThrowIfNull(fileNamePolicy);
         ArgumentNullException.ThrowIfNull(thumbnailImageFormat);
         ArgumentNullException.ThrowIfNull(thumbnailGenerator);
+        ArgumentNullException.ThrowIfNull(accessCoordinator);
         ArgumentNullException.ThrowIfNull(logger);
 
         _pathProvider = pathProvider;
@@ -42,8 +44,8 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
         _fileNamePolicy = fileNamePolicy;
         _thumbnailImageFormat = thumbnailImageFormat;
         _thumbnailGenerator = thumbnailGenerator;
+        _accessCoordinator = accessCoordinator;
         _logger = logger;
-        _thumbnailsDirectory = Path.GetFullPath(pathProvider.ThumbnailsDirectory);
     }
 
     public string? GetThumbnailPathOrDefault(
@@ -53,7 +55,11 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
     {
         try
         {
-            string thumbnailPath = BuildThumbnailPath(batchId, itemId);
+            string thumbnailsDirectory = Path.GetFullPath(_pathProvider.ThumbnailsDirectory);
+            string thumbnailPath = BuildThumbnailPath(
+                thumbnailsDirectory,
+                batchId,
+                itemId);
 
             return _trustedImageFileService.GetTrustedImagePathOrDefault(
                 thumbnailPath,
@@ -110,12 +116,22 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
 
         try
         {
+            using DataRootAccessLease accessLease =
+                await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+            string thumbnailsDirectory = Path.GetFullPath(_pathProvider.ThumbnailsDirectory);
             byte[] thumbnailBytes = await _thumbnailGenerator
                 .CreateThumbnailAsync(trustedFullImagePath, ct)
                 .ConfigureAwait(false);
-            string thumbnailPath = GetTrustedThumbnailWritePath(batchId, itemId);
+            string thumbnailPath = GetTrustedThumbnailWritePath(
+                thumbnailsDirectory,
+                batchId,
+                itemId);
 
-            await WriteThumbnailAsync(thumbnailPath, thumbnailBytes, ct).ConfigureAwait(false);
+            await WriteThumbnailAsync(
+                thumbnailsDirectory,
+                thumbnailPath,
+                thumbnailBytes,
+                ct).ConfigureAwait(false);
             _logger.LogInformation(
                 "Saved gallery thumbnail for batch {BatchId} item {ItemId} with {ByteCount} bytes",
                 batchId,
@@ -162,32 +178,41 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
         }
     }
 
-    private string BuildThumbnailPath(Guid batchId, Guid itemId)
+    private string BuildThumbnailPath(
+        string thumbnailsDirectory,
+        Guid batchId,
+        Guid itemId)
     {
         string fileName = _fileNamePolicy.BuildFileName(
             batchId,
             itemId,
             _thumbnailImageFormat.Extension);
-        string thumbnailPath = Path.GetFullPath(Path.Combine(_thumbnailsDirectory, fileName));
+        string thumbnailPath = Path.GetFullPath(Path.Combine(thumbnailsDirectory, fileName));
 
         TrustedPathGuard.EnsureInsideDirectory(
-            _thumbnailsDirectory,
+            thumbnailsDirectory,
             thumbnailPath,
             TrustedPathFailureMessage);
 
         return thumbnailPath;
     }
 
-    private string GetTrustedThumbnailWritePath(Guid batchId, Guid itemId)
+    private string GetTrustedThumbnailWritePath(
+        string thumbnailsDirectory,
+        Guid batchId,
+        Guid itemId)
     {
-        string thumbnailPath = BuildThumbnailPath(batchId, itemId);
+        string thumbnailPath = BuildThumbnailPath(
+            thumbnailsDirectory,
+            batchId,
+            itemId);
 
         TrustedPathGuard.EnsureTrustedDirectoryExists(
             _pathProvider,
-            _thumbnailsDirectory,
+            thumbnailsDirectory,
             TrustedPathFailureMessage);
         TrustedPathGuard.EnsureTrustedWriteTarget(
-            _thumbnailsDirectory,
+            thumbnailsDirectory,
             thumbnailPath,
             TrustedPathFailureMessage);
 
@@ -195,18 +220,19 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
     }
 
     private async Task WriteThumbnailAsync(
+        string thumbnailsDirectory,
         string thumbnailPath,
         ReadOnlyMemory<byte> thumbnailBytes,
         CancellationToken ct)
     {
         string tempPath = AtomicFileWriteTempPath.CreateSibling(
-            _thumbnailsDirectory,
+            thumbnailsDirectory,
             Path.GetFileName(thumbnailPath));
 
         try
         {
             await using (FileStream stream = TrustedPathGuard.CreateTrustedNewFileForWrite(
-                _thumbnailsDirectory,
+                thumbnailsDirectory,
                 tempPath,
                 TrustedPathFailureMessage))
             {
@@ -215,7 +241,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
             }
 
             TrustedPathGuard.ReplaceTrustedFile(
-                _thumbnailsDirectory,
+                thumbnailsDirectory,
                 tempPath,
                 thumbnailPath,
                 TrustedPathFailureMessage);

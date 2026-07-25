@@ -18,8 +18,6 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
     private readonly ILogger<TrustedImageFileService> _logger;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly IAtomicArtDataPathProvider _pathProvider;
-    private readonly string _trustedRootDirectory;
-    private readonly string[] _trustedDirectories;
 
     public TrustedImageFileService(
         IAtomicArtDataPathProvider pathProvider,
@@ -33,12 +31,6 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
         _formatRegistry = formatRegistry;
         _logger = logger;
         _pathProvider = pathProvider;
-        _trustedRootDirectory = Path.GetFullPath(pathProvider.RootDirectory);
-        _trustedDirectories =
-        [
-            Path.GetFullPath(pathProvider.ArtDirectory),
-            Path.GetFullPath(pathProvider.ThumbnailsDirectory)
-        ];
         EnsureTrustedDirectories();
     }
 
@@ -69,6 +61,8 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
         Action<string> validateResolvedPath)
     {
         ArgumentNullException.ThrowIfNull(validateResolvedPath);
+        string trustedRootDirectory = Path.GetFullPath(_pathProvider.RootDirectory);
+        string[] trustedDirectories = GetTrustedDirectories();
 
         if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(modelId))
         {
@@ -77,8 +71,8 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
 
         TrustedPathGuard.DeleteTrustedFileIfExists(
             path,
-            _trustedDirectories,
-            _trustedRootDirectory,
+            trustedDirectories,
+            trustedRootDirectory,
             validateResolvedPath);
     }
 
@@ -102,10 +96,13 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
 
         try
         {
+            string trustedRootDirectory = Path.GetFullPath(_pathProvider.RootDirectory);
+            string[] trustedDirectories = GetTrustedDirectories();
+
             if (!TrustedPathGuard.TryOpenTrustedExistingFileForRead(
                 path,
-                _trustedDirectories,
-                _trustedRootDirectory,
+                trustedDirectories,
+                trustedRootDirectory,
                 TrustedPathFailureMessage,
                 out FileStream? stream,
                 out string? trustedFullPath)
@@ -199,12 +196,21 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
 
     private void EnsureTrustedDirectories()
     {
-        foreach (string trustedDirectory in _trustedDirectories)
+        foreach (string trustedDirectory in GetTrustedDirectories())
         {
             TrustedPathGuard.EnsureTrustedDirectoryExists(
                 _pathProvider,
                 trustedDirectory,
                 TrustedPathFailureMessage);
         }
+    }
+
+    private string[] GetTrustedDirectories()
+    {
+        return
+        [
+            Path.GetFullPath(_pathProvider.ArtDirectory),
+            Path.GetFullPath(_pathProvider.ThumbnailsDirectory)
+        ];
     }
 }

@@ -76,6 +76,37 @@ public sealed class GalleryItemsControllerTests
         item.DisplayThumbnailPath.Should().Be("generation.png");
     }
 
+    [Fact]
+    public void RebaseDataRootPaths_WithManagedPaths_UpdatesExistingItems()
+    {
+        string sourceRootDirectory = Path.GetFullPath(Path.Combine("Root", "Source"));
+        string destinationRootDirectory = Path.GetFullPath(Path.Combine("Root", "Destination"));
+        string imagePath = Path.Combine(sourceRootDirectory, "Art", "generation.png");
+        string thumbnailPath = Path.Combine(
+            sourceRootDirectory,
+            "Thumbnails",
+            "generation.png");
+        (
+            GalleryItemsController controller,
+            GenerationItemViewModel item) = RestoreSingleItem(
+                new PassthroughTrustedImageFileService(),
+                imagePath,
+                thumbnailPath);
+
+        controller.RebaseDataRootPaths(
+            sourceRootDirectory,
+            destinationRootDirectory);
+
+        item.ImagePath.Should().Be(Path.Combine(
+            destinationRootDirectory,
+            "Art",
+            "generation.png"));
+        item.ThumbnailPath.Should().Be(Path.Combine(
+            destinationRootDirectory,
+            "Thumbnails",
+            "generation.png"));
+    }
+
     private static GalleryItemsController CreateController(ITrustedImageFileService trustedImageFileService)
     {
         return new GalleryItemsController(

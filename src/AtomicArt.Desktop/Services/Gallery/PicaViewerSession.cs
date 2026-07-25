@@ -15,6 +15,8 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 {
     public PicaViewerRequest? Request { get; private set; }
 
+    internal event EventHandler? Disposed;
+
     private readonly PicaViewerSessionDependencies _dependencies;
     private readonly HashSet<string> _allowedImagePaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<Guid> _galleryItemIds = [];
@@ -208,7 +210,23 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         }
 
         _dependencies.Logger.LogInformation("Embedded Pica viewer session disposed");
+        Disposed?.Invoke(this, EventArgs.Empty);
         return ValueTask.CompletedTask;
+    }
+
+    internal async Task CloseAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        if (_window is not null)
+        {
+            _window.Closed -= OnWindowClosed;
+            _window.Close();
+            _window = null;
+        }
+
+        await _dependencies.ClipboardImageWriter.FlushAsync(ct).ConfigureAwait(false);
+        await DisposeAsync();
     }
 
     private async Task<PicaImageItem> MaterializeItemAsync(

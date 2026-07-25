@@ -15,20 +15,22 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly IStatePathKeyEncoder _keyEncoder;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
+    private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly ILogger<PanelAttachmentStore> _logger;
-    private readonly string _attachmentsRootDirectory;
 
     public PanelAttachmentStore(
         IAtomicArtDataPathProvider pathProvider,
         IStatePathKeyEncoder keyEncoder,
         IGenerationImageFormatRegistry formatRegistry,
+        IDataRootAccessCoordinator accessCoordinator,
         ILogger<PanelAttachmentStore> logger)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _keyEncoder = keyEncoder ?? throw new ArgumentNullException(nameof(keyEncoder));
         _formatRegistry = formatRegistry ?? throw new ArgumentNullException(nameof(formatRegistry));
+        _accessCoordinator = accessCoordinator
+            ?? throw new ArgumentNullException(nameof(accessCoordinator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _attachmentsRootDirectory = Path.GetFullPath(pathProvider.StateAttachmentsDirectory);
     }
 
     public PanelAttachmentState CreateState(AttachedImageDto image)
@@ -73,6 +75,8 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
         ArgumentNullException.ThrowIfNull(attachment);
         ArgumentNullException.ThrowIfNull(image);
         ArgumentNullException.ThrowIfNull(image.Content);
+        using DataRootAccessLease accessLease =
+            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
 
         if (!PanelAttachmentStateSanitizer.IsValid(attachment))
         {
@@ -129,16 +133,19 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(panelId);
         ArgumentNullException.ThrowIfNull(attachment);
+        using DataRootAccessLease accessLease =
+            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
 
         try
         {
             string path = GetAttachmentPath(panelId, attachment.InternalFileName);
-            string[] trustedDirectories = [Path.GetFullPath(_attachmentsRootDirectory)];
+            string attachmentsRootDirectory = GetAttachmentsRootDirectory();
+            string[] trustedDirectories = [attachmentsRootDirectory];
 
             if (!TrustedPathGuard.TryOpenTrustedExistingFileForRead(
                 path,
                 trustedDirectories,
-                _attachmentsRootDirectory,
+                attachmentsRootDirectory,
                 TrustedPathFailureMessage,
                 out FileStream? stream,
                 out string? _))
@@ -196,7 +203,7 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
         }
     }
 
-    public Task DeleteAsync(
+    public async Task DeleteAsync(
         string panelId,
         PanelAttachmentState attachment,
         CancellationToken ct)
@@ -204,6 +211,8 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
         ArgumentException.ThrowIfNullOrWhiteSpace(panelId);
         ArgumentNullException.ThrowIfNull(attachment);
         ct.ThrowIfCancellationRequested();
+        using DataRootAccessLease accessLease =
+            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
 
         string path = GetAttachmentPath(panelId, attachment.InternalFileName);
         DeleteFileIfExists(path);
@@ -211,7 +220,6 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
             "Managed panel attachment {AttachmentId} deletion completed.",
             attachment.Id);
 
-        return Task.CompletedTask;
     }
 
     private string GetAttachmentPath(string panelId, string internalFileName)
@@ -228,11 +236,14 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
 
     private string GetPanelDirectory(string panelId)
     {
+        string attachmentsRootDirectory = GetAttachmentsRootDirectory();
         string safePanelKey = _keyEncoder.Encode(panelId);
-        string panelDirectory = Path.GetFullPath(Path.Combine(_attachmentsRootDirectory, safePanelKey));
+        string panelDirectory = Path.GetFullPath(Path.Combine(
+            attachmentsRootDirectory,
+            safePanelKey));
 
         TrustedPathGuard.EnsureInsideDirectory(
-            _attachmentsRootDirectory,
+            attachmentsRootDirectory,
             panelDirectory,
             TrustedPathFailureMessage);
 
@@ -247,7 +258,7 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
             TrustedPathFailureMessage);
         TrustedPathGuard.EnsureTrustedDirectoryExists(
             _pathProvider,
-            _attachmentsRootDirectory,
+            GetAttachmentsRootDirectory(),
             TrustedPathFailureMessage);
         TrustedPathGuard.EnsureTrustedDirectoryExists(
             panelDirectory,
@@ -281,13 +292,15 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
     {
         try
         {
-            if (!TrustedPathGuard.IsInsideDirectory(_attachmentsRootDirectory, path))
+            string attachmentsRootDirectory = GetAttachmentsRootDirectory();
+
+            if (!TrustedPathGuard.IsInsideDirectory(attachmentsRootDirectory, path))
             {
                 throw new IOException(TrustedPathFailureMessage);
             }
 
             TrustedPathGuard.EnsureTrustedWriteTarget(
-                _attachmentsRootDirectory,
+                attachmentsRootDirectory,
                 path,
                 TrustedPathFailureMessage);
 
@@ -305,5 +318,10 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
         {
             _logger.LogWarning(ex, "Managed panel attachment path is not supported during deletion.");
         }
+    }
+
+    private string GetAttachmentsRootDirectory()
+    {
+        return Path.GetFullPath(_pathProvider.StateAttachmentsDirectory);
     }
 }
