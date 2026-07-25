@@ -30,19 +30,25 @@ internal static class GalleryOperationCoordinatorTestFactory
 
     internal static GalleryOperationCoordinator CreateAttached(
         IUiFrameScheduler frameScheduler,
-        IList<object> items)
+        IList<object> items,
+        Func<object, Control>? controlFactory = null)
     {
         List<IGalleryOperationRunner> runners = [];
         IGalleryOperationRunnerRegistry runnerRegistry =
             new GalleryOperationRunnerRegistry(runners);
 
-        return CreateAttached(frameScheduler, runnerRegistry, items);
+        return CreateAttached(
+            frameScheduler,
+            runnerRegistry,
+            items,
+            controlFactory);
     }
 
     internal static GalleryOperationCoordinator CreateAttached(
         IUiFrameScheduler frameScheduler,
         IGalleryOperationRunnerRegistry runnerRegistry,
-        IList<object> items)
+        IList<object> items,
+        Func<object, Control>? controlFactory = null)
     {
         ArgumentNullException.ThrowIfNull(items);
 
@@ -53,7 +59,7 @@ internal static class GalleryOperationCoordinatorTestFactory
             new Canvas(),
             items,
             item => (Guid)item,
-            _ => new Border(),
+            controlFactory ?? (_ => new Border()),
             () => Task.CompletedTask);
 
         return context;

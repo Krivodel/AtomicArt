@@ -1,3 +1,5 @@
+using Avalonia.Controls;
+
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.UiAnimation;
@@ -24,7 +26,8 @@ internal sealed class GalleryMotionTestScene
         Context = context;
     }
 
-    public static GalleryMotionTestScene Create()
+    public static GalleryMotionTestScene Create(
+        Func<object, Control>? controlFactory = null)
     {
         TestUiFrameScheduler frameScheduler = new();
         List<AppliedMotionFrame> appliedFrames = [];
@@ -38,7 +41,8 @@ internal sealed class GalleryMotionTestScene
             galleryLayout);
         GalleryOperationCoordinator context = GalleryOperationCoordinatorTestFactory.CreateAttached(
             frameScheduler,
-            new List<object>());
+            new List<object>(),
+            controlFactory);
 
         return new GalleryMotionTestScene(
             frameScheduler,

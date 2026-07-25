@@ -15,6 +15,7 @@ namespace AtomicArt.Desktop.Tests.Controls.Generation;
 public sealed class AttachmentPixelLoadingControlTests : AnimatedGalleryControlTestBase
 {
     private const int PixelCenterCoordinate = 6;
+    private const int RemovalFadeDurationMilliseconds = 160;
 
     [Fact]
     public void CreatePixelStates_WithSameSeed_ReturnsSameStates()
@@ -64,6 +65,71 @@ public sealed class AttachmentPixelLoadingControlTests : AnimatedGalleryControlT
             {
                 window.Close();
             }
+        });
+    }
+
+    [Fact]
+    public async Task FadeOut_WithRemovalDuration_RemainsVisibleUntilRemovalEnds()
+    {
+        await DispatchAsync(async () =>
+        {
+            AttachmentPixelLoadingControl control = new()
+            {
+                AnimationSeed = Guid.Parse("12345678-1234-1234-1234-123456789abc"),
+                GridSize = 16
+            };
+            Border host = new()
+            {
+                Width = 220d,
+                Height = 220d,
+                Background = Brushes.Black,
+                Child = control
+            };
+            Window window = Show(host, 220d, 220d);
+
+            try
+            {
+                control.FadeOut(RemovalFadeDurationMilliseconds);
+
+                control.IsVisible.Should().BeTrue();
+
+                await Task.Delay(RemovalFadeDurationMilliseconds / 2);
+
+                control.IsVisible.Should().BeTrue();
+
+                await Task.Delay(RemovalFadeDurationMilliseconds);
+
+                control.IsVisible.Should().BeFalse();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task FadeOut_BeforeAttached_RemainsVisibleUntilRemovalEnds()
+    {
+        await DispatchAsync(async () =>
+        {
+            AttachmentPixelLoadingControl control = new()
+            {
+                AnimationSeed = Guid.Parse("12345678-1234-1234-1234-123456789abc"),
+                GridSize = 16
+            };
+
+            control.FadeOut(RemovalFadeDurationMilliseconds);
+
+            control.IsVisible.Should().BeTrue();
+
+            await Task.Delay(RemovalFadeDurationMilliseconds / 2);
+
+            control.IsVisible.Should().BeTrue();
+
+            await Task.Delay(RemovalFadeDurationMilliseconds);
+
+            control.IsVisible.Should().BeFalse();
         });
     }
 

@@ -395,6 +395,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         MotionFrameApplier.Apply(entry.Control, MotionFrame.Identity);
 
         _animationScheduler.Cancel(GetEntryAnimationControls(entry));
+        entry.LoadingIndicator.FadeOut(RemoveDurationMilliseconds);
         _ = _animationScheduler.AnimateAsync(
             entry.Control,
             CreateRemoveFrames(entry.Item.Id),

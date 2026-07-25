@@ -10,7 +10,9 @@ using AtomicArt.Desktop.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.Views.Gallery;
 
-public partial class GenerationCardControl : UserControl
+public partial class GenerationCardControl :
+    UserControl,
+    IGalleryRemovalAnimationParticipant
 {
     public IRelayCommand? RevealInFolderCommand
     {
@@ -56,6 +58,12 @@ public partial class GenerationCardControl : UserControl
     {
         InitializeComponent();
         GenerationPreview.OverflowOwner = this;
+    }
+
+    void IGalleryRemovalAnimationParticipant.BeginRemovalAnimation(
+        int durationMilliseconds)
+    {
+        GenerationPreview.BeginRemovalAnimation(durationMilliseconds);
     }
 
     internal static string? GetImageDragPathOrDefault(GenerationItemViewModel item)

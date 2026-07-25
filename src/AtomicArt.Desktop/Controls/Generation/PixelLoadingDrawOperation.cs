@@ -24,6 +24,7 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
     private readonly double _originY;
     private readonly double _elapsedSeconds;
     private readonly double _completionProgress;
+    private readonly bool _usesUniformCompletionFade;
     private readonly PixelLoadingState[] _pixels;
 
     public PixelLoadingDrawOperation(
@@ -36,6 +37,7 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
         double originY,
         double elapsedSeconds,
         double completionProgress,
+        bool usesUniformCompletionFade,
         PixelLoadingState[] pixels)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(gridSize, 1);
@@ -50,6 +52,7 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
         _originY = originY;
         _elapsedSeconds = elapsedSeconds;
         _completionProgress = completionProgress;
+        _usesUniformCompletionFade = usesUniformCompletionFade;
         _pixels = pixels;
     }
 
@@ -70,6 +73,7 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
             && operation._originY == _originY
             && operation._elapsedSeconds == _elapsedSeconds
             && operation._completionProgress == _completionProgress
+            && operation._usesUniformCompletionFade == _usesUniformCompletionFade
             && ReferenceEquals(operation._pixels, _pixels);
     }
 
@@ -127,6 +131,11 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
             return opacity;
         }
 
+        if (_usesUniformCompletionFade)
+        {
+            return opacity * (1d - _completionProgress);
+        }
+
         double staggerStart = pixel.DisappearOrder * CompletionStaggerRange;
         double localProgress = Math.Clamp(
             (_completionProgress - staggerStart) / (1d - staggerStart),
@@ -144,8 +153,3 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
         return (byte)Math.Round(Math.Clamp(opacity, 0d, 1d) * byte.MaxValue);
     }
 }
-
-internal readonly record struct PixelLoadingState(
-    double InitialPhase,
-    SKColor Color,
-    double DisappearOrder);

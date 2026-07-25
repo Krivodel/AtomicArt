@@ -54,6 +54,11 @@ public partial class GenerationPreviewControl : UserControl
             PreviewDragSource);
     }
 
+    internal void BeginRemovalAnimation(int durationMilliseconds)
+    {
+        PixelLoadingIndicator.FadeOut(durationMilliseconds);
+    }
+
     internal static string? GetImageDragPathOrDefault(GenerationItemViewModel item)
     {
         ArgumentNullException.ThrowIfNull(item);

@@ -33,7 +33,8 @@
             </Border>
         </Grid>
 
-        <generation:AttachmentPixelLoadingControl GridSize="16"
+        <generation:AttachmentPixelLoadingControl x:Name="PixelLoadingIndicator"
+                                                  GridSize="16"
                                                   AnimationSeed="{Binding Id}"
                                                   IsActive="{Binding ShowsGenerationProgress}" />
 

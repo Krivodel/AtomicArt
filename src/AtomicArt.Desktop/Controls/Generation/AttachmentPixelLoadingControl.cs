@@ -60,7 +60,9 @@ public sealed class AttachmentPixelLoadingControl : Control
     private readonly Stopwatch _stopwatch = new();
     private PixelLoadingState[] _pixels = [];
     private long _completionStartedAtMilliseconds;
+    private int _completionDurationMilliseconds = CompletionDurationMilliseconds;
     private bool _isCompleting;
+    private bool _usesUniformCompletionFade;
 
     static AttachmentPixelLoadingControl()
     {
@@ -89,7 +91,9 @@ public sealed class AttachmentPixelLoadingControl : Control
             return;
         }
 
+        _completionDurationMilliseconds = CompletionDurationMilliseconds;
         _isCompleting = true;
+        _usesUniformCompletionFade = false;
         _completionStartedAtMilliseconds = _stopwatch.ElapsedMilliseconds;
         StartTimer();
     }
@@ -99,7 +103,9 @@ public sealed class AttachmentPixelLoadingControl : Control
         _timer.Stop();
         _stopwatch.Reset();
         _completionStartedAtMilliseconds = 0L;
+        _completionDurationMilliseconds = CompletionDurationMilliseconds;
         _isCompleting = true;
+        _usesUniformCompletionFade = false;
         IsVisible = false;
     }
 
@@ -129,7 +135,7 @@ public sealed class AttachmentPixelLoadingControl : Control
         double completionProgress = _isCompleting
             ? Math.Clamp(
                 (elapsedMilliseconds - _completionStartedAtMilliseconds)
-                / (double)CompletionDurationMilliseconds,
+                / (double)_completionDurationMilliseconds,
                 0d,
                 1d)
             : 0d;
@@ -145,7 +151,32 @@ public sealed class AttachmentPixelLoadingControl : Control
                 originY,
                 elapsedSeconds,
                 completionProgress,
+                _usesUniformCompletionFade,
                 _pixels));
+    }
+
+    internal void FadeOut(int durationMilliseconds)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(durationMilliseconds, 1);
+
+        if (!IsVisible)
+        {
+            return;
+        }
+
+        if (!_stopwatch.IsRunning)
+        {
+            _pixels = [];
+            EnsurePixels();
+            _stopwatch.Restart();
+        }
+
+        _completionDurationMilliseconds = durationMilliseconds;
+        _isCompleting = true;
+        _usesUniformCompletionFade = true;
+        _completionStartedAtMilliseconds = _stopwatch.ElapsedMilliseconds;
+        StartTimer();
+        InvalidateVisual();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -171,7 +202,9 @@ public sealed class AttachmentPixelLoadingControl : Control
         _pixels = [];
         EnsurePixels();
         _completionStartedAtMilliseconds = 0L;
+        _completionDurationMilliseconds = CompletionDurationMilliseconds;
         _isCompleting = false;
+        _usesUniformCompletionFade = false;
         IsVisible = true;
         _stopwatch.Restart();
         StartTimer();
@@ -227,7 +260,7 @@ public sealed class AttachmentPixelLoadingControl : Control
 
         if (_isCompleting
             && _stopwatch.ElapsedMilliseconds - _completionStartedAtMilliseconds
-            >= CompletionDurationMilliseconds)
+            >= _completionDurationMilliseconds)
         {
             _timer.Stop();
             IsVisible = false;

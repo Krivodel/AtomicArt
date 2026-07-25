@@ -1,11 +1,14 @@
 using Avalonia;
 using Avalonia.Controls;
+
 using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryRemoveAnimator : GalleryOverlayAnimator
 {
+    private const int RemoveDurationMilliseconds = 520;
+
     public GalleryRemoveAnimator(
         UiAnimationScheduler animationScheduler,
         GalleryOverlayEffects overlayEffects)
@@ -25,15 +28,24 @@ internal sealed class GalleryRemoveAnimator : GalleryOverlayAnimator
 
         Control ghost = OverlayEffects.CreateOverlayCard(context, item, rect);
         deleteOverlays.Add(ghost);
+        BeginRemovalAnimation(ghost);
         double sign = rect.Center.X > (context.OverlayCanvas.Bounds.Width / 2d) ? 1d : -1d;
 
         return AnimationScheduler.AnimateAsync(
             ghost,
             CreateRemoveFrames(sign),
-            520,
+            RemoveDurationMilliseconds,
             0,
             MotionEasing.EaseMaterial,
             () => CompleteRemoveAnimation(context, deleteOverlays, ghost));
+    }
+
+    private static void BeginRemovalAnimation(Control control)
+    {
+        if (control is IGalleryRemovalAnimationParticipant participant)
+        {
+            participant.BeginRemovalAnimation(RemoveDurationMilliseconds);
+        }
     }
 
     private static List<MotionFrame> CreateRemoveFrames(double sign)
