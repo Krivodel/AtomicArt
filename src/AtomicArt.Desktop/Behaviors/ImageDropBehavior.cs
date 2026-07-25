@@ -120,6 +120,7 @@ public static class ImageDropBehavior
         }
 
         return dataTransfer.Contains(DataFormat.File)
+            || VirtualFileDataTransferFormats.ContainsVirtualFiles(dataTransfer)
             || ImageDataTransferFormats.ContainsEncodedImage(dataTransfer)
             || dataTransfer.Contains(DataFormat.Bitmap)
             || ImageDataTransferUriExtractor.ContainsPotentialImageUri(

@@ -109,7 +109,51 @@ public sealed class DragDropImageServiceTests
         actualImage.Content.Should().Equal(content);
     }
 
+    [Fact]
+    public async Task ExtractImagesAsync_WithVirtualFile_PrefersVirtualFile()
+    {
+        byte[] virtualContent = GenerationImageFileSignatures.Png.ToArray();
+        ImageAttachmentInput virtualInput = ImageAttachmentInput.FromImage(
+            new AttachedImageDto(
+                "virtual.png",
+                GenerationImageContentTypes.Png,
+                virtualContent));
+        VirtualFileDropInputSession session = new();
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.Create(
+            DataFormat.CreateBytesPlatformFormat(
+                GenerationImageContentTypes.Webp),
+            CreateWebpContent()));
+        DragDropImageService service = CreateService(
+            new ImageHttpMessageHandler(virtualContent),
+            session);
+
+        using IDisposable scope = session.Begin(
+            new ImageAttachmentInput[] { virtualInput });
+        IReadOnlyList<ImageAttachmentInput> inputs = await service.ExtractImagesAsync(
+            dataTransfer,
+            MaxInputBytes,
+            CancellationToken.None);
+        AttachedImageDto? image = await inputs.Single().ReadAsync(
+            CancellationToken.None);
+
+        AttachedImageDto actualImage = image
+            ?? throw new InvalidOperationException(
+                "The virtual image should be available.");
+        actualImage.FileName.Should().Be("virtual.png");
+        actualImage.Content.Should().Equal(virtualContent);
+    }
+
     private static DragDropImageService CreateService(HttpMessageHandler handler)
+    {
+        return CreateService(
+            handler,
+            new VirtualFileDropInputSession());
+    }
+
+    private static DragDropImageService CreateService(
+        HttpMessageHandler handler,
+        IVirtualFileDropInputProvider virtualFileInputProvider)
     {
         AttachedImageSignatureValidator signatureValidator = new();
         ExternalImageAttachmentReader externalImageReader = new(
@@ -119,7 +163,9 @@ public sealed class DragDropImageServiceTests
 
         return new DragDropImageService(
             new AttachedImageFileReader(signatureValidator),
-            externalImageReader);
+            externalImageReader,
+            virtualFileInputProvider,
+            NullLogger<DragDropImageService>.Instance);
     }
 
     private static byte[] CreateWebpContent()

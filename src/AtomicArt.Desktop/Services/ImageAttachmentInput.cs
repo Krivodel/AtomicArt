@@ -37,6 +37,23 @@ public sealed class ImageAttachmentInput : IDisposable
             });
     }
 
+    internal static ImageAttachmentInput FromError(
+        string fileName,
+        Exception error)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentNullException.ThrowIfNull(error);
+
+        return new ImageAttachmentInput(
+            fileName,
+            ct =>
+            {
+                ct.ThrowIfCancellationRequested();
+
+                return Task.FromException<AttachedImageDto?>(error);
+            });
+    }
+
     public async Task<AttachedImageDto?> ReadAsync(CancellationToken ct)
     {
         if (Interlocked.Exchange(ref _readStarted, 1) != 0)

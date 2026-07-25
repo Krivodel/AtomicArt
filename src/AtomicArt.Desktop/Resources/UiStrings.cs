@@ -20,7 +20,6 @@ public static class UiStrings
     public static string GenerationFailed => "Не удалось сгенерировать.";
     public static string GoogleApiKeyMissing => "Укажи Google API-ключ в настройках.";
     public static string ModelCatalogLoadFailed => "Не удалось загрузить список моделей.";
-    public static string AttachImageButtonGlyph => "+";
     public static string ImageDropLabel => "ДРОП";
     public static string DeleteGlyph => "×";
     public static string CancelGlyph => "■";

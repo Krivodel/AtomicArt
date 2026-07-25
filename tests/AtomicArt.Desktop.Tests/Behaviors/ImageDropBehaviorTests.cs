@@ -71,6 +71,25 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
     }
 
     [Theory]
+    [InlineData("FileGroupDescriptor")]
+    [InlineData("FileGroupDescriptorW")]
+    public void AcceptsData_WithWindowsVirtualFile_AcceptsOnlyExternalTargetOnWindows(
+        string descriptorFormatName)
+    {
+        DataFormat<byte[]> descriptorFormat =
+            DataFormat.CreateBytesPlatformFormat(descriptorFormatName);
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.Create(
+            descriptorFormat,
+            [1, 0, 0, 0]));
+
+        AssertAcceptedTargets(
+            dataTransfer,
+            OperatingSystem.IsWindows(),
+            false);
+    }
+
+    [Theory]
     [InlineData(160d, 90d, true)]
     [InlineData(20d, 20d, false)]
     public void DragOver_WithHandledSibling_ActivatesOnlyInsideConfiguredDropArea(

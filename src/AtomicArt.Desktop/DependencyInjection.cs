@@ -18,6 +18,7 @@ using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Services.Updates;
+using AtomicArt.Desktop.Services.Windows;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
@@ -170,7 +171,19 @@ public static class DependencyInjection
         {
             httpClient.Timeout = TimeSpan.FromSeconds(30);
         });
-        services.AddTransient<IDragDropImageService, DragDropImageService>();
+        services.AddSingleton<VirtualFileDropInputSession>();
+        services.AddSingleton<IVirtualFileDropInputProvider>(
+            provider => provider.GetRequiredService<VirtualFileDropInputSession>());
+        services.AddSingleton<WindowsVirtualFileReader>();
+        services.AddSingleton<
+            IVirtualFileDropAttachmentService,
+            WindowsVirtualFileDropAttachmentService>();
+        services.AddTransient<IDragDropImageService>(provider =>
+            new DragDropImageService(
+                provider.GetRequiredService<AttachedImageFileReader>(),
+                provider.GetRequiredService<ExternalImageAttachmentReader>(),
+                provider.GetRequiredService<IVirtualFileDropInputProvider>(),
+                provider.GetRequiredService<ILogger<DragDropImageService>>()));
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
         services.AddSingleton<IFileRevealService, FileRevealService>();
         services.AddPicaViewer();

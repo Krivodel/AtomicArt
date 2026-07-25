@@ -14,8 +14,6 @@ public sealed class ExternalImageAttachmentReader
         "External image exceeds the safe input size limit.";
     private const string InvalidDataImageMessage =
         "Dropped data URI does not contain a valid image.";
-    private const int MaximumDisplayedFileNameLength = 128;
-
     private readonly HttpClient _httpClient;
     private readonly IAttachedImageSignatureValidator _signatureValidator;
     private readonly ILogger<ExternalImageAttachmentReader> _logger;
@@ -184,9 +182,12 @@ public sealed class ExternalImageAttachmentReader
         string? declaredContentType,
         byte[] content)
     {
-        if (_signatureValidator.MatchesSignature(declaredContentType ?? string.Empty, content))
+        if (!string.IsNullOrWhiteSpace(declaredContentType)
+            && _signatureValidator.MatchesSignature(
+                declaredContentType,
+                content))
         {
-            return declaredContentType!.Trim();
+            return declaredContentType.Trim();
         }
 
         if (_signatureValidator.TryDetectContentType(content, out string detectedContentType))
@@ -228,12 +229,8 @@ public sealed class ExternalImageAttachmentReader
             return ExternalImageFileName;
         }
 
-        char[] invalidCharacters = Path.GetInvalidFileNameChars();
-        string sanitizedName = string.Concat(candidate.Select(character =>
-            invalidCharacters.Contains(character) ? '_' : character));
-
-        return sanitizedName.Length <= MaximumDisplayedFileNameLength
-            ? sanitizedName
-            : sanitizedName[..MaximumDisplayedFileNameLength];
+        return TransferredImageFileName.Sanitize(
+            candidate,
+            ExternalImageFileName);
     }
 }

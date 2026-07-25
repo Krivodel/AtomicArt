@@ -193,6 +193,30 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
+    public void AttachImageButton_WhenPanelIsShown_CentersVectorIcon()
+    {
+        Dispatch(() =>
+        {
+            using ShownPanelContext context = new();
+            Button button = context.View
+                .GetVisualDescendants()
+                .OfType<Button>()
+                .Single(candidate => candidate.Command == context.ViewModel.PickImageCommand);
+            PathIcon icon = button.Content.Should()
+                .BeOfType<PathIcon>()
+                .Subject;
+            button.TryFindResource("AppAddIcon", out object? addGeometry).Should().BeTrue();
+            Matrix transform = icon.TransformToVisual(button)
+                ?? throw new InvalidOperationException("Attachment icon transform was not found.");
+            Rect iconBounds = new Rect(icon.Bounds.Size).TransformToAABB(transform);
+
+            icon.Data.Should().BeSameAs(addGeometry);
+            iconBounds.Center.X.Should().BeApproximately(button.Bounds.Width / 2d, 0.01d);
+            iconBounds.Center.Y.Should().BeApproximately(button.Bounds.Height / 2d, 0.01d);
+        });
+    }
+
+    [Fact]
     public void TemperatureButton_WhenPanelIsShown_ContainsCatalogConfiguredSliderAndResetButton()
     {
         Dispatch(() =>

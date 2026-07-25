@@ -125,6 +125,24 @@ public sealed class DependencyInjectionTests
     }
 
     [Fact]
+    public void AddDesktopServices_WithVirtualFileDrop_RegistersExpectedLifetimes()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+
+        IVirtualFileDropAttachmentService firstAttachmentService =
+            serviceProvider.GetRequiredService<IVirtualFileDropAttachmentService>();
+        IVirtualFileDropAttachmentService secondAttachmentService =
+            serviceProvider.GetRequiredService<IVirtualFileDropAttachmentService>();
+        IDragDropImageService firstImageService =
+            serviceProvider.GetRequiredService<IDragDropImageService>();
+        IDragDropImageService secondImageService =
+            serviceProvider.GetRequiredService<IDragDropImageService>();
+
+        firstAttachmentService.Should().BeSameAs(secondAttachmentService);
+        firstImageService.Should().NotBeSameAs(secondImageService);
+    }
+
+    [Fact]
     public void AddDesktopServices_WithGenerationRunDispatcher_RegistersTransientDispatcher()
     {
         using ServiceProvider serviceProvider = CreateServiceProvider();

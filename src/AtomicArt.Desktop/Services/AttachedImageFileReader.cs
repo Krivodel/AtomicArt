@@ -59,6 +59,24 @@ public sealed class AttachedImageFileReader
             .ToList();
     }
 
+    internal ImageAttachmentInput CreateBufferedInput(
+        string fileName,
+        byte[] content)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentNullException.ThrowIfNull(content);
+
+        return new ImageAttachmentInput(
+            fileName,
+            ct =>
+            {
+                ct.ThrowIfCancellationRequested();
+
+                return Task.FromResult<AttachedImageDto?>(
+                    CreateImage(fileName, content));
+            });
+    }
+
     private async Task<AttachedImageDto?> ReadFileAsync(
         IStorageFile file,
         int maxInputBytes,
@@ -84,23 +102,27 @@ public sealed class AttachedImageFileReader
                 AttachedImageTooLargeMessage,
                 ct)
             .ConfigureAwait(false);
+        AttachedImageDto image = CreateImage(file.Name, content);
+        _logger.LogInformation(
+            "Selected attachment read with {SizeBytes} bytes, recognized signature {SignatureRecognized}, and content type {ContentType}.",
+            content.LongLength,
+            image.ContentType != UnknownImageContentType,
+            image.ContentType);
+
+        return image;
+    }
+
+    private AttachedImageDto CreateImage(string fileName, byte[] content)
+    {
         bool signatureRecognized = _signatureValidator.TryGetContentType(
-            file.Name,
+            fileName,
             content,
             out string detectedContentType);
         string contentType = signatureRecognized
             ? detectedContentType
             : UnknownImageContentType;
-        _logger.LogInformation(
-            "Selected attachment read with {SizeBytes} bytes, recognized signature {SignatureRecognized}, and content type {ContentType}.",
-            content.LongLength,
-            signatureRecognized,
-            contentType);
 
-        return new AttachedImageDto(
-            file.Name,
-            contentType,
-            content);
+        return new AttachedImageDto(fileName, contentType, content);
     }
 
     private static async Task<bool> IsFileTooLargeAsync(IStorageFile file, int maxInputBytes)

@@ -121,6 +121,13 @@
                 Value="Center" />
     </Style>
 
+    <Style Selector="Button.attach-image PathIcon">
+        <Setter Property="Width"
+                Value="{StaticResource AttachmentAddIconSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource AttachmentAddIconSize}" />
+    </Style>
+
     <Style Selector="Button.remove-attachment">
         <Setter Property="Width"
                 Value="{StaticResource AttachmentRemoveButtonSize}" />

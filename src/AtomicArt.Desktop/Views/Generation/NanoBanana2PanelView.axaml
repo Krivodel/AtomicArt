@@ -165,8 +165,9 @@
                 <Button Grid.Column="0"
                         Classes="attach-image"
                         IsEnabled="{Binding HasLoadedCatalog}"
-                        Content="{x:Static resources:UiStrings.AttachImageButtonGlyph}"
-                        Command="{Binding PickImageCommand}" />
+                        Command="{Binding PickImageCommand}">
+                    <PathIcon Data="{StaticResource AppAddIcon}" />
+                </Button>
                 <TextBlock Grid.Column="1"
                            Margin="{StaticResource AttachmentListMargin}"
                            MinWidth="36"

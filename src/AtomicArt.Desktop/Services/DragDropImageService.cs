@@ -11,6 +11,7 @@ public sealed class DragDropImageService : IDragDropImageService
 {
     private readonly AttachedImageFileReader _fileReader;
     private readonly ExternalImageAttachmentReader _externalImageReader;
+    private readonly IVirtualFileDropInputProvider _virtualFileInputProvider;
     private readonly ILogger<DragDropImageService> _logger;
 
     public DragDropImageService(
@@ -19,6 +20,7 @@ public sealed class DragDropImageService : IDragDropImageService
         : this(
             fileReader,
             externalImageReader,
+            EmptyVirtualFileDropInputProvider.Instance,
             NullLogger<DragDropImageService>.Instance)
     {
     }
@@ -27,13 +29,28 @@ public sealed class DragDropImageService : IDragDropImageService
         AttachedImageFileReader fileReader,
         ExternalImageAttachmentReader externalImageReader,
         ILogger<DragDropImageService> logger)
+        : this(
+            fileReader,
+            externalImageReader,
+            EmptyVirtualFileDropInputProvider.Instance,
+            logger)
+    {
+    }
+
+    internal DragDropImageService(
+        AttachedImageFileReader fileReader,
+        ExternalImageAttachmentReader externalImageReader,
+        IVirtualFileDropInputProvider virtualFileInputProvider,
+        ILogger<DragDropImageService> logger)
     {
         ArgumentNullException.ThrowIfNull(fileReader);
         ArgumentNullException.ThrowIfNull(externalImageReader);
+        ArgumentNullException.ThrowIfNull(virtualFileInputProvider);
         ArgumentNullException.ThrowIfNull(logger);
 
         _fileReader = fileReader;
         _externalImageReader = externalImageReader;
+        _virtualFileInputProvider = virtualFileInputProvider;
         _logger = logger;
     }
 
@@ -63,6 +80,14 @@ public sealed class DragDropImageService : IDragDropImageService
 
                 return Task.FromResult(fileInputs);
             }
+        }
+
+        if (_virtualFileInputProvider.TryTakeInputs(
+                out IReadOnlyList<ImageAttachmentInput> virtualFileInputs))
+        {
+            LogExtractedInputs(virtualFileInputs.Count, "virtual files");
+
+            return Task.FromResult(virtualFileInputs);
         }
 
         TransferredImageContent? encodedImage =
@@ -112,7 +137,8 @@ public sealed class DragDropImageService : IDragDropImageService
         _logger.LogDebug(
             "Drag-and-drop data contained no supported image representation.");
 
-        return Task.FromResult<IReadOnlyList<ImageAttachmentInput>>([]);
+        return Task.FromResult<IReadOnlyList<ImageAttachmentInput>>(
+            Array.Empty<ImageAttachmentInput>());
     }
 
     private void LogExtractedInputs(int count, string sourceKind)
@@ -121,5 +147,18 @@ public sealed class DragDropImageService : IDragDropImageService
             "Drag-and-drop {SourceKind} produced {AttachmentCount} image attachment inputs.",
             sourceKind,
             count);
+    }
+
+    private sealed class EmptyVirtualFileDropInputProvider
+        : IVirtualFileDropInputProvider
+    {
+        public static EmptyVirtualFileDropInputProvider Instance { get; } = new();
+
+        public bool TryTakeInputs(
+            out IReadOnlyList<ImageAttachmentInput> inputs)
+        {
+            inputs = Array.Empty<ImageAttachmentInput>();
+            return false;
+        }
     }
 }
