@@ -15,6 +15,7 @@ internal sealed class GalleryOverlayEffects
     private const double RevealHighlightBorderThickness = 2d;
     private const double RevealHighlightShadowBlurRadius = 18d;
     private const double RevealHighlightShadowOpacity = 0.8d;
+    private const double TargetFlashExpandedScale = 1.10d;
     private const double RevealFirstPulseExpandedScale = 1.05d;
     private const double RevealSecondPulseExpandedScale = 1.10d;
     private const string RevealHighlightBorderColor = "#F273F2A7";
@@ -229,7 +230,7 @@ internal sealed class GalleryOverlayEffects
         [
             new MotionFrame(0d, 0d, 0.96d, 0d, 0d),
             new MotionFrame(0d, 0d, 1d, 0d, 0.75d),
-            new MotionFrame(0d, 0d, 1.025d, 0d, 0d)
+            new MotionFrame(0d, 0d, TargetFlashExpandedScale, 0d, 0d)
         ];
     }
 

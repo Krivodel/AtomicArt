@@ -10,6 +10,8 @@ namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
 public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestBase
 {
+    private const double TargetFlashExpandedScale = 1.10d;
+
     [Fact]
     public void AnimateSpawnRetargetAsync_WhenTargetsProvided_CreatesTemporaryCopiesAndReferenceFirstFrames()
     {
@@ -75,6 +77,34 @@ public sealed class GalleryMotionSpawnAnimatorTests : GalleryMotionAnimatorTestB
         await animationTask;
 
         animationTask.IsCompletedSuccessfully.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task AnimateSpawnRetargetAsync_WhenTargetFlashCompletes_ExpandsBeyondCard()
+    {
+        GalleryMotionTestScene scene = GalleryMotionTestScene.Create();
+        GalleryOperationCoordinator context = scene.Context;
+        List<object> items = CreatePositionedItems(context, 1);
+        GalleryFrontGenerationRunState state = CreateFrontState(items);
+
+        Task animationTask = scene.Animator.AnimateSpawnRetargetAsync(
+            context,
+            new Dictionary<Guid, Rect>(),
+            state);
+        Control targetFlash = scene.AppliedFrames
+            .Single(frame => frame.Frame == new MotionFrame(0d, 0d, 0.96d, 0d, 0d))
+            .Control;
+
+        scene.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+        scene.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(950d));
+        await animationTask;
+
+        MotionFrame finalFrame = scene.AppliedFrames
+            .Last(frame => frame.Control == targetFlash)
+            .Frame;
+        finalFrame.Scale.Should().Be(TargetFlashExpandedScale);
+        finalFrame.Opacity.Should().Be(0d);
+        context.OverlayCanvas.Children.Should().NotContain(targetFlash);
     }
 
     [Fact]
