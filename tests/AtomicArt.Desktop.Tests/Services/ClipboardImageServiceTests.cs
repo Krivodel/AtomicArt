@@ -17,6 +17,7 @@ public sealed class ClipboardImageServiceTests
     private const string FileName = "copied.png";
 
     private static readonly byte[] PngContent = GenerationImageFileSignatures.Png.ToArray();
+    private static readonly byte[] JpegContent = GenerationImageFileSignatures.Jpeg.ToArray();
 
     [Fact]
     public async Task TryGetImageAsync_WithFileAndPngFormats_ReturnsFileInput()
@@ -50,6 +51,47 @@ public sealed class ClipboardImageServiceTests
         actualImage.FileName.Should().Be("clipboard.png");
         actualImage.ContentType.Should().Be(PicaImageFormats.PngContentType);
         actualImage.Content.Should().Equal(PngContent);
+    }
+
+    [Fact]
+    public async Task TryGetImageAsync_WithJpegMimeFormat_ReturnsJpegInput()
+    {
+        DataFormat<byte[]> jpegFormat = DataFormat.CreateBytesPlatformFormat(
+            GenerationImageContentTypes.Jpeg);
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.Create(jpegFormat, JpegContent));
+
+        ImageAttachmentInput actualInput = await GetRequiredImageInputAsync(
+            dataTransfer,
+            "Clipboard JPEG input should be created.");
+        AttachedImageDto? image = await actualInput.ReadAsync(CancellationToken.None);
+
+        AttachedImageDto actualImage = image
+            ?? throw new InvalidOperationException("Clipboard JPEG should be read.");
+        actualImage.FileName.Should().Be("clipboard.jpg");
+        actualImage.ContentType.Should().Be(GenerationImageContentTypes.Jpeg);
+        actualImage.Content.Should().Equal(JpegContent);
+    }
+
+    [Fact]
+    public async Task TryGetImageAsync_WithOtherImageMimeFormat_ReturnsConvertibleInput()
+    {
+        const string contentType = "image/vnd.atomicart-test";
+        byte[] content = [0x01, 0x02, 0x03];
+        DataFormat<byte[]> format = DataFormat.CreateBytesPlatformFormat(contentType);
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.Create(format, content));
+
+        ImageAttachmentInput actualInput = await GetRequiredImageInputAsync(
+            dataTransfer,
+            "Clipboard MIME image input should be created.");
+        AttachedImageDto? image = await actualInput.ReadAsync(CancellationToken.None);
+
+        AttachedImageDto actualImage = image
+            ?? throw new InvalidOperationException("Clipboard MIME image should be read.");
+        actualImage.FileName.Should().Be("clipboard.img");
+        actualImage.ContentType.Should().Be(contentType);
+        actualImage.Content.Should().Equal(content);
     }
 
     private static DataTransferItem CreatePngTransferItem()

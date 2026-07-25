@@ -6,9 +6,6 @@ using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 
-using AtomicArt.Contracts.Generation;
-using Pica.Viewer.Services;
-
 namespace AtomicArt.Desktop.Services;
 
 public sealed class ClipboardImageService :
@@ -17,15 +14,6 @@ public sealed class ClipboardImageService :
     ITextClipboardService
 {
     private const string ClipboardImageFileName = "clipboard.png";
-    private const string ClipboardImageTooLargeMessage =
-        "Clipboard image exceeds the safe input size limit.";
-
-    private static readonly DataFormat<byte[]>[] PngClipboardFormats =
-    [
-        DataFormat.CreateBytesPlatformFormat(PicaClipboardFormats.WindowsPng),
-        DataFormat.CreateBytesPlatformFormat(PicaClipboardFormats.PngMime),
-        DataFormat.CreateBytesPlatformFormat(PicaClipboardFormats.MacOsPng)
-    ];
 
     private readonly AttachedImageFileReader _fileReader;
     private readonly ILogger<ClipboardImageService> _logger;
@@ -99,28 +87,22 @@ public sealed class ClipboardImageService :
             return _fileReader.CreateInput(file, maxInputBytes);
         }
 
-        byte[]? pngContent = await TryGetPngContentAsync(dataTransfer)
+        TransferredImageContent? encodedImage = await ImageDataTransferContentReader
+            .TryGetEncodedImageAsync(dataTransfer)
             .ConfigureAwait(false);
 
-        if (pngContent is not null)
+        if (encodedImage is not null)
         {
-            if (pngContent.LongLength > maxInputBytes)
-            {
-                _logger.LogWarning(
-                    "Clipboard PNG content with {SizeBytes} bytes exceeded the input limit of {MaxInputBytes} bytes.",
-                    pngContent.LongLength,
-                    maxInputBytes);
-                throw new InvalidDataException(
-                    ClipboardImageTooLargeMessage);
-            }
-
             _logger.LogInformation(
-                "Clipboard PNG content read with {SizeBytes} bytes.",
-                pngContent.LongLength);
-            return ImageAttachmentInput.FromImage(new AttachedImageDto(
-                ClipboardImageFileName,
-                PicaImageFormats.PngContentType,
-                pngContent));
+                "Clipboard encoded image content read with {SizeBytes} bytes and content type {ContentType}.",
+                encodedImage.Content.LongLength,
+                encodedImage.Format.ContentType);
+
+            return ImageAttachmentInputFactory.CreateEncoded(
+                Path.GetFileNameWithoutExtension(ClipboardImageFileName),
+                encodedImage.Format,
+                encodedImage.Content,
+                maxInputBytes);
         }
 
         Bitmap? bitmap = await dataTransfer
@@ -134,65 +116,9 @@ public sealed class ClipboardImageService :
         }
 
         _logger.LogInformation("Clipboard bitmap image will be encoded on demand.");
-        return new ImageAttachmentInput(
+        return ImageAttachmentInputFactory.CreateBitmap(
             ClipboardImageFileName,
-            read: readCt => EncodeAsync(bitmap, maxInputBytes, readCt),
-            ownedResource: bitmap);
-    }
-
-    private static async Task<byte[]?> TryGetPngContentAsync(
-        IAsyncDataTransfer dataTransfer)
-    {
-        foreach (DataFormat<byte[]> pngFormat in PngClipboardFormats)
-        {
-            byte[]? content = await dataTransfer
-                .TryGetValueAsync(pngFormat)
-                .ConfigureAwait(false);
-
-            if (content is not null)
-            {
-                return content;
-            }
-        }
-
-        return null;
-    }
-
-    private static async Task<AttachedImageDto?> EncodeAsync(
-        Bitmap bitmap,
-        int maxInputBytes,
-        CancellationToken ct)
-    {
-        return await Task.Run(
-                () => Encode(bitmap, maxInputBytes, ct),
-                ct)
-            .ConfigureAwait(false);
-    }
-
-    private static AttachedImageDto Encode(
-        Bitmap bitmap,
-        int maxInputBytes,
-        CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        using LimitedMemoryStream stream = new(maxInputBytes);
-
-        try
-        {
-            bitmap.Save(stream);
-        }
-        catch (InvalidOperationException ex)
-        {
-            throw new InvalidDataException(
-                ClipboardImageTooLargeMessage,
-                ex);
-        }
-
-        ct.ThrowIfCancellationRequested();
-
-        return new AttachedImageDto(
-            ClipboardImageFileName,
-            PicaImageFormats.PngContentType,
-            stream.ToArray());
+            bitmap,
+            maxInputBytes);
     }
 }

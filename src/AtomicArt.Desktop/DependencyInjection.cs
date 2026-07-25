@@ -166,7 +166,11 @@ public static class DependencyInjection
             typeof(IFilePickerService),
             typeof(IFolderPickerService),
             typeof(IFilePickerAttachmentService));
-        services.AddSingleton<IDragDropImageService, DragDropImageService>();
+        services.AddHttpClient<ExternalImageAttachmentReader>(httpClient =>
+        {
+            httpClient.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddTransient<IDragDropImageService, DragDropImageService>();
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
         services.AddSingleton<IFileRevealService, FileRevealService>();
         services.AddPicaViewer();

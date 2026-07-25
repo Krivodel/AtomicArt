@@ -42,6 +42,18 @@ public sealed class AttachedImageSignatureValidatorTests
         contentType.Should().BeEmpty();
     }
 
+    [Fact]
+    public void TryDetectContentType_WithSignatureAndNoFileName_ReturnsContentType()
+    {
+        AttachedImageSignatureValidator validator = new();
+        byte[] content = CreateContent(GenerationImageContentTypes.Webp);
+
+        bool result = validator.TryDetectContentType(content, out string contentType);
+
+        result.Should().BeTrue();
+        contentType.Should().Be(GenerationImageContentTypes.Webp);
+    }
+
     private static byte[] CreateContent(string contentType)
     {
         return contentType switch

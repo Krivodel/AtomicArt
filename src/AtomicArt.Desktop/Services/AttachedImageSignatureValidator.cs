@@ -29,6 +29,21 @@ public sealed class AttachedImageSignatureValidator : IAttachedImageSignatureVal
         return true;
     }
 
+    public bool TryDetectContentType(ReadOnlySpan<byte> content, out string contentType)
+    {
+        foreach (GenerationImageFileFormatDescriptor format in GenerationImageFileFormats.All)
+        {
+            if (MatchesSignature(format, content))
+            {
+                contentType = format.ContentType;
+                return true;
+            }
+        }
+
+        contentType = string.Empty;
+        return false;
+    }
+
     public bool MatchesSignature(string contentType, ReadOnlySpan<byte> content)
     {
         if (string.IsNullOrWhiteSpace(contentType))

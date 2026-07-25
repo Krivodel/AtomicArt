@@ -107,19 +107,23 @@ public static class ImageDropBehavior
     {
         ArgumentNullException.ThrowIfNull(dataTransfer);
 
-        if (!dataTransfer.Contains(DataFormat.File))
+        bool isGalleryImage = GalleryImageDragData.IsGalleryImage(dataTransfer);
+
+        if (targetKind == ImageDropTargetKind.GalleryImage)
+        {
+            return dataTransfer.Contains(DataFormat.File) && isGalleryImage;
+        }
+
+        if (targetKind != ImageDropTargetKind.ExternalFiles || isGalleryImage)
         {
             return false;
         }
 
-        bool isGalleryImage = GalleryImageDragData.IsGalleryImage(dataTransfer);
-
-        return targetKind switch
-        {
-            ImageDropTargetKind.ExternalFiles => !isGalleryImage,
-            ImageDropTargetKind.GalleryImage => isGalleryImage,
-            _ => false
-        };
+        return dataTransfer.Contains(DataFormat.File)
+            || ImageDataTransferFormats.ContainsEncodedImage(dataTransfer)
+            || dataTransfer.Contains(DataFormat.Bitmap)
+            || ImageDataTransferUriExtractor.ContainsPotentialImageUri(
+                dataTransfer);
     }
 
     internal static void ScheduleOverlayHide(Control control)

@@ -77,7 +77,12 @@ public sealed class AttachedImageFileReader
 
         await using Stream input = await file.OpenReadAsync()
             .ConfigureAwait(false);
-        byte[] content = await ReadLimitedContentAsync(input, maxInputBytes, ct)
+        byte[] content = await LimitedContentReader
+            .ReadAsync(
+                input,
+                maxInputBytes,
+                AttachedImageTooLargeMessage,
+                ct)
             .ConfigureAwait(false);
         bool signatureRecognized = _signatureValidator.TryGetContentType(
             file.Name,
@@ -117,24 +122,4 @@ public sealed class AttachedImageFileReader
         return false;
     }
 
-    private static async Task<byte[]> ReadLimitedContentAsync(
-        Stream input,
-        int maxInputBytes,
-        CancellationToken ct)
-    {
-        await using LimitedMemoryStream output = new(maxInputBytes);
-
-        try
-        {
-            await input.CopyToAsync(output, ct).ConfigureAwait(false);
-        }
-        catch (InvalidOperationException ex)
-        {
-            throw new InvalidDataException(
-                AttachedImageTooLargeMessage,
-                ex);
-        }
-
-        return output.ToArray();
-    }
 }

@@ -38,6 +38,38 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
         AssertAcceptedTargets(dataTransfer, false, true);
     }
 
+    [Fact]
+    public void AcceptsData_WithBrowserImageUrl_AcceptsOnlyExternalTarget()
+    {
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.CreateText(
+            "https://images.atomicart.test/reference.png"));
+
+        AssertAcceptedTargets(dataTransfer, true, false);
+    }
+
+    [Fact]
+    public void AcceptsData_WithPlainText_RejectsAllTargets()
+    {
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.CreateText("not an image"));
+
+        AssertAcceptedTargets(dataTransfer, false, false);
+    }
+
+    [Fact]
+    public void AcceptsData_WithBrowserHtmlFormat_AcceptsOnlyExternalTarget()
+    {
+        DataFormat<byte[]> htmlFormat = DataFormat.CreateBytesPlatformFormat(
+            "HTML Format");
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.Create(
+            htmlFormat,
+            "<img src=\"https://images.atomicart.test/reference.png\">"u8.ToArray()));
+
+        AssertAcceptedTargets(dataTransfer, true, false);
+    }
+
     [Theory]
     [InlineData(160d, 90d, true)]
     [InlineData(20d, 20d, false)]
