@@ -5,5 +5,6 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 internal sealed record GalleryCardCommands(
     IRelayCommand? OpenViewer,
     IRelayCommand? RevealInFolder,
+    IRelayCommand? RevealInNewFolderWindow,
     IRelayCommand? OpenMetadata,
     IRelayCommand? DeleteOrCancel);

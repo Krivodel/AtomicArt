@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 
+using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 
 namespace AtomicArt.Desktop.Views.Gallery;
@@ -57,11 +58,7 @@ internal sealed class GenerationPreviewExpansionController
 
     internal static bool HasExpansionModifier(KeyModifiers modifiers)
     {
-        KeyModifiers expansionModifiers = KeyModifiers.Shift
-            | KeyModifiers.Control
-            | KeyModifiers.Alt;
-
-        return (modifiers & expansionModifiers) != KeyModifiers.None;
+        return AlternateActionModifierPolicy.IsActive(modifiers);
     }
 
     internal static KeyModifiers GetExpansionModifier(Key key)

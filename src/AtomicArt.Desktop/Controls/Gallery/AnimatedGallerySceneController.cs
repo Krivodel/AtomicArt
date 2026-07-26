@@ -248,6 +248,7 @@ internal sealed class AnimatedGallerySceneController
         return new GalleryCardCommands(
             _owner.OpenViewerCommand,
             _owner.RevealInFolderCommand,
+            _owner.RevealInNewFolderWindowCommand,
             _owner.OpenMetadataCommand,
             _owner.DeleteOrCancelCommand);
     }

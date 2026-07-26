@@ -1,10 +1,12 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 
 using CommunityToolkit.Mvvm.Input;
 
+using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -19,6 +21,11 @@ public partial class GenerationCardControl :
     {
         get => GetValue(RevealInFolderCommandProperty);
         set => SetValue(RevealInFolderCommandProperty, value);
+    }
+    public IRelayCommand? RevealInNewFolderWindowCommand
+    {
+        get => GetValue(RevealInNewFolderWindowCommandProperty);
+        set => SetValue(RevealInNewFolderWindowCommandProperty, value);
     }
     public IRelayCommand? OpenViewerCommand
     {
@@ -39,6 +46,9 @@ public partial class GenerationCardControl :
     public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(RevealInFolderCommand));
+    public static readonly StyledProperty<IRelayCommand?> RevealInNewFolderWindowCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(RevealInNewFolderWindowCommand));
     public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(OpenViewerCommand));
@@ -88,6 +98,16 @@ public partial class GenerationCardControl :
         return GenerationPreviewControl.CreateImageFileDataTransfer(file);
     }
 
+    internal static IRelayCommand? ResolveFileRevealCommand(
+        KeyModifiers modifiers,
+        IRelayCommand? defaultCommand,
+        IRelayCommand? openNewWindowCommand)
+    {
+        return AlternateActionModifierPolicy.IsActive(modifiers)
+            ? openNewWindowCommand
+            : defaultCommand;
+    }
+
     internal void SetPreviewBitmapServices(
         IGalleryPreviewBitmapProvider previewBitmapProvider,
         GalleryPreviewSourceScheduler previewSourceScheduler)
@@ -95,5 +115,28 @@ public partial class GenerationCardControl :
         GenerationPreview.SetPreviewBitmapServices(
             previewBitmapProvider,
             previewSourceScheduler);
+    }
+
+    private void OnRevealInFolderClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+
+        if (DataContext is not GenerationItemViewModel item)
+        {
+            return;
+        }
+
+        KeyModifiers modifiers = PreviewExpansionHost?.CurrentKeyModifiers
+            ?? KeyModifiers.None;
+        IRelayCommand? command = ResolveFileRevealCommand(
+            modifiers,
+            RevealInFolderCommand,
+            RevealInNewFolderWindowCommand);
+
+        if (command?.CanExecute(item) == true)
+        {
+            command.Execute(item);
+            e.Handled = true;
+        }
     }
 }

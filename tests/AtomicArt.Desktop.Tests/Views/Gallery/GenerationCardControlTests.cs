@@ -1,5 +1,8 @@
 using Avalonia;
 using Avalonia.Input;
+
+using CommunityToolkit.Mvvm.Input;
+
 using FluentAssertions;
 using Xunit;
 
@@ -34,6 +37,28 @@ public sealed class GenerationCardControlTests
         bool result = GenerationPreviewExpansionController.HasExpansionModifier(modifiers);
 
         result.Should().Be(expectedResult);
+    }
+
+    [Theory]
+    [InlineData(KeyModifiers.None, false)]
+    [InlineData(KeyModifiers.Meta, false)]
+    [InlineData(KeyModifiers.Shift, true)]
+    [InlineData(KeyModifiers.Control, true)]
+    [InlineData(KeyModifiers.Alt, true)]
+    public void ResolveFileRevealCommand_WithModifiers_SelectsExpectedCommand(
+        KeyModifiers modifiers,
+        bool expectsNewWindowCommand)
+    {
+        RelayCommand defaultCommand = new(() => { });
+        RelayCommand newWindowCommand = new(() => { });
+
+        IRelayCommand? result = GenerationCardControl.ResolveFileRevealCommand(
+            modifiers,
+            defaultCommand,
+            newWindowCommand);
+
+        result.Should().BeSameAs(
+            expectsNewWindowCommand ? newWindowCommand : defaultCommand);
     }
 
     [Fact]

@@ -355,6 +355,26 @@ public sealed class GalleryViewModelTests
         fileRevealService.CallCount.Should().Be(1);
         fileRevealService.RevealedPath.Should().Be("image.png");
         fileRevealService.RevealedModelId.Should().Be(item.ModelId);
+        fileRevealService.WindowMode.Should()
+            .Be(FileRevealWindowMode.ReuseExisting);
+    }
+
+    [Fact]
+    public async Task RevealInNewFolderWindowCommand_WhenImagePathExists_RequestsNewWindow()
+    {
+        SuccessfulFileRevealService fileRevealService = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            fileRevealService: fileRevealService);
+        List<GenerationItemDto> items =
+            [GalleryViewModelTestFactory.CreateItem(imagePath: "image.png")];
+        viewModel.AddGeneratedItems(items, 0);
+        GenerationItemViewModel item = viewModel.Items[0];
+
+        await viewModel.RevealInNewFolderWindowCommand.ExecuteAsync(item);
+
+        fileRevealService.CallCount.Should().Be(1);
+        fileRevealService.WindowMode.Should()
+            .Be(FileRevealWindowMode.OpenNew);
     }
 
     [Fact]

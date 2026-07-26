@@ -6,13 +6,19 @@ internal sealed class SuccessfulFileRevealService : IFileRevealService
 {
     public string? RevealedModelId { get; private set; }
     public string? RevealedPath { get; private set; }
+    public FileRevealWindowMode? WindowMode { get; private set; }
     public int CallCount { get; private set; }
 
-    public Task RevealAsync(string? path, string modelId, CancellationToken ct)
+    public Task RevealAsync(
+        string? path,
+        string modelId,
+        FileRevealWindowMode windowMode,
+        CancellationToken ct)
     {
         CallCount++;
         RevealedPath = path;
         RevealedModelId = modelId;
+        WindowMode = windowMode;
 
         return Task.CompletedTask;
     }

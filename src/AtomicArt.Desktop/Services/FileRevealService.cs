@@ -1,7 +1,5 @@
 using System.ComponentModel;
 
-using Pica.Viewer.Services;
-
 namespace AtomicArt.Desktop.Services;
 
 public sealed class FileRevealService : IFileRevealService
@@ -9,32 +7,37 @@ public sealed class FileRevealService : IFileRevealService
     private const string RevealFailedMessage = "File reveal failed.";
 
     private readonly ITrustedImageFileService _trustedImageFileService;
+    private readonly IFileRevealPlatform _fileRevealPlatform;
 
-    public FileRevealService(ITrustedImageFileService trustedImageFileService)
+    public FileRevealService(
+        ITrustedImageFileService trustedImageFileService,
+        IFileRevealPlatform fileRevealPlatform)
     {
         ArgumentNullException.ThrowIfNull(trustedImageFileService);
+        ArgumentNullException.ThrowIfNull(fileRevealPlatform);
 
         _trustedImageFileService = trustedImageFileService;
+        _fileRevealPlatform = fileRevealPlatform;
     }
 
-    public Task RevealAsync(string? path, string modelId, CancellationToken ct)
+    public async Task RevealAsync(
+        string? path,
+        string modelId,
+        FileRevealWindowMode windowMode,
+        CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-
         string fullPath = _trustedImageFileService.GetTrustedImagePath(path, modelId);
 
-        if (OperatingSystem.IsWindows())
+        try
         {
-            try
-            {
-                WindowsFileReveal.Reveal(fullPath);
-            }
-            catch (Win32Exception ex)
-            {
-                throw new FileRevealException(RevealFailedMessage, ex);
-            }
+            await _fileRevealPlatform
+                .RevealAsync(fullPath, windowMode, ct)
+                .ConfigureAwait(false);
         }
-
-        return Task.CompletedTask;
+        catch (Win32Exception ex)
+        {
+            throw new FileRevealException(RevealFailedMessage, ex);
+        }
     }
 }

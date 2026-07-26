@@ -56,6 +56,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     private string? _errorMessage;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RevealInFolderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RevealInNewFolderWindowCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenViewerCommand))]
     [NotifyCanExecuteChangedFor(nameof(DeleteOrCancelCommand))]
     private bool _isLoading;
@@ -198,7 +199,34 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand(CanExecute = nameof(CanRunCommand))]
-    private async Task RevealInFolderAsync(GenerationItemViewModel? item, CancellationToken ct)
+    private Task RevealInFolderAsync(
+        GenerationItemViewModel? item,
+        CancellationToken ct)
+    {
+        return RevealInFolderCoreAsync(
+            item,
+            FileRevealWindowMode.ReuseExisting,
+            nameof(RevealInFolderAsync),
+            ct);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunCommand))]
+    private Task RevealInNewFolderWindowAsync(
+        GenerationItemViewModel? item,
+        CancellationToken ct)
+    {
+        return RevealInFolderCoreAsync(
+            item,
+            FileRevealWindowMode.OpenNew,
+            nameof(RevealInNewFolderWindowAsync),
+            ct);
+    }
+
+    private async Task RevealInFolderCoreAsync(
+        GenerationItemViewModel? item,
+        FileRevealWindowMode windowMode,
+        string operationName,
+        CancellationToken ct)
     {
         if (IsLoading)
         {
@@ -209,8 +237,9 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             operationCt => _fileRevealService.RevealAsync(
                 item?.ImagePath,
                 item?.ModelId ?? string.Empty,
+                windowMode,
                 operationCt),
-            nameof(RevealInFolderAsync),
+            operationName,
             ct);
     }
 

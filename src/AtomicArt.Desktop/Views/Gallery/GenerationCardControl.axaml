@@ -49,9 +49,8 @@
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
                     Classes="Icon card-action card-action-left"
-                    ZIndex="20"
-                    Command="{Binding $parent[controls:GenerationCardControl].RevealInFolderCommand}"
-                    CommandParameter="{Binding}">
+                    Click="OnRevealInFolderClick"
+                    ZIndex="20">
                 <PathIcon Classes="card-action-icon"
                           Data="{StaticResource GalleryFolderIcon}" />
             </Button>

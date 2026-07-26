@@ -1,10 +1,9 @@
 namespace AtomicArt.Desktop.Services;
 
-public interface IFileRevealService
+public interface IFileRevealPlatform
 {
     Task RevealAsync(
-        string? path,
-        string modelId,
+        string filePath,
         FileRevealWindowMode windowMode,
         CancellationToken ct);
 }

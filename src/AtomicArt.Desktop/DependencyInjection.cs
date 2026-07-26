@@ -7,6 +7,7 @@ using SukiUI.Toasts;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.FileReveal;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
@@ -192,6 +193,15 @@ public static class DependencyInjection
                 provider.GetRequiredService<IVirtualFileDropInputProvider>(),
                 provider.GetRequiredService<ILogger<DragDropImageService>>()));
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
+        services.AddSingleton<IStandardFileRevealer, StandardFileRevealer>();
+        services.AddSingleton<IFileRevealProcessLauncher, FileRevealProcessLauncher>();
+        services.AddSingleton<
+            IWindowsExplorerWindowLocator,
+            WindowsExplorerWindowLocator>();
+        services.AddSingleton<WindowsFileRevealHandler>();
+        services.AddSingleton<MacOsFileRevealHandler>();
+        services.AddSingleton<LinuxFileRevealHandler>();
+        services.AddSingleton<IFileRevealPlatform, FileRevealPlatform>();
         services.AddSingleton<IFileRevealService, FileRevealService>();
         services.AddPicaViewer();
         services.AddSingleton<PicaViewerSessionDependencies>();

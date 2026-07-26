@@ -18,7 +18,8 @@
                                          DeleteOrCancelCommand="{Binding DeleteOrCancelCommand}"
                                          OpenMetadataCommand="{Binding OpenMetadataCommand}"
                                          OpenViewerCommand="{Binding OpenViewerCommand}"
-                                         RevealInFolderCommand="{Binding RevealInFolderCommand}" />
+                                         RevealInFolderCommand="{Binding RevealInFolderCommand}"
+                                         RevealInNewFolderWindowCommand="{Binding RevealInNewFolderWindowCommand}" />
 
         <TextBlock Margin="0,12,0,0"
                    HorizontalAlignment="Center"

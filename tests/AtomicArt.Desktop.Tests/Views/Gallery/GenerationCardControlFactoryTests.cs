@@ -36,7 +36,12 @@ public sealed class GenerationCardControlFactoryTests : AnimatedGalleryControlTe
                 provider,
                 sourceScheduler,
                 animationScheduler);
-            GalleryCardCommands commands = new(null, null, null, null);
+            GalleryCardCommands commands = new(
+                null,
+                null,
+                null,
+                null,
+                null);
             StandaloneGenerationPreviewExpansionHost expansionHost = new(new Border());
             Control firstControl = factory.Create(
                 new object(),

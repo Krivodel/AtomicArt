@@ -31,6 +31,11 @@ public partial class AnimatedGalleryControl : UserControl
         get => GetValue(RevealInFolderCommandProperty);
         set => SetValue(RevealInFolderCommandProperty, value);
     }
+    public IRelayCommand? RevealInNewFolderWindowCommand
+    {
+        get => GetValue(RevealInNewFolderWindowCommandProperty);
+        set => SetValue(RevealInNewFolderWindowCommandProperty, value);
+    }
     public IRelayCommand? OpenViewerCommand
     {
         get => GetValue(OpenViewerCommandProperty);
@@ -58,6 +63,9 @@ public partial class AnimatedGalleryControl : UserControl
     public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(RevealInFolderCommand));
+    public static readonly StyledProperty<IRelayCommand?> RevealInNewFolderWindowCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(RevealInNewFolderWindowCommand));
     public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(OpenViewerCommand));
@@ -297,6 +305,7 @@ public partial class AnimatedGalleryControl : UserControl
     private static bool IsCommandProperty(AvaloniaProperty property)
     {
         return (property == RevealInFolderCommandProperty)
+               || (property == RevealInNewFolderWindowCommandProperty)
                || (property == OpenViewerCommandProperty)
                || (property == OpenMetadataCommandProperty)
                || (property == DeleteOrCancelCommandProperty);

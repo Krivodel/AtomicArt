@@ -59,10 +59,12 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
         Dispatch(() =>
         {
             RelayCommand revealCommand = new(() => { });
+            RelayCommand revealInNewWindowCommand = new(() => { });
             RelayCommand metadataCommand = new(() => { });
             RelayCommand deleteCommand = new(() => { });
             AnimatedGalleryControl control = CreateControlWithCommands(
                 revealCommand,
+                revealInNewWindowCommand,
                 metadataCommand,
                 deleteCommand);
 
@@ -71,6 +73,8 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
                 GenerationCardControl card = GetSingleCard(control);
 
                 card.RevealInFolderCommand.Should().BeSameAs(revealCommand);
+                card.RevealInNewFolderWindowCommand.Should()
+                    .BeSameAs(revealInNewWindowCommand);
                 card.OpenMetadataCommand.Should().BeSameAs(metadataCommand);
                 card.DeleteOrCancelCommand.Should().BeSameAs(deleteCommand);
             });
@@ -110,11 +114,13 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
 
     private static AnimatedGalleryControl CreateControlWithCommands(
         RelayCommand revealCommand,
+        RelayCommand revealInNewWindowCommand,
         RelayCommand metadataCommand,
         RelayCommand deleteCommand)
     {
         AnimatedGalleryControl control = CreateControlWithItem(CreateItem());
         control.RevealInFolderCommand = revealCommand;
+        control.RevealInNewFolderWindowCommand = revealInNewWindowCommand;
         control.OpenMetadataCommand = metadataCommand;
         control.DeleteOrCancelCommand = deleteCommand;
 
