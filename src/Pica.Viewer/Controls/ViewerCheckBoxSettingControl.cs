@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
@@ -20,17 +21,20 @@ internal sealed class ViewerCheckBoxSettingControl : ViewerSettingControl
         string content,
         bool initialValue,
         Func<bool, Task> changed,
-        bool isEnabled = true)
+        bool isEnabled = true,
+        double topSpacing = 0d)
         : base(null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        ArgumentOutOfRangeException.ThrowIfNegative(topSpacing);
         _changed = changed ?? throw new ArgumentNullException(nameof(changed));
 
         CheckBox = new CheckBox
         {
             Content = content,
             IsChecked = initialValue,
-            IsEnabled = isEnabled
+            IsEnabled = isEnabled,
+            Margin = new Thickness(0d, topSpacing, 0d, 0d)
         };
         CheckBox.IsCheckedChanged += OnIsCheckedChanged;
     }

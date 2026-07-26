@@ -426,11 +426,12 @@ public sealed partial class ImageViewerWindow : SukiWindow
         PixelSize sourcePixelSize)
     {
         Bitmap? previousBitmap = _bitmap;
+        PicaImageItem displayedItem = item with { FilePath = fullPath };
         _bitmap = bitmap;
-        _currentItem = item with { FilePath = fullPath };
+        _currentItem = displayedItem;
         _sourcePixelSize = sourcePixelSize;
         _view.Image.Source = bitmap;
-        UpdateImageInformation(item, sourcePixelSize);
+        UpdateImageInformation(displayedItem, sourcePixelSize);
         previousBitmap?.Dispose();
     }
 
@@ -438,7 +439,17 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         if (TryGetSelectedItem(out PicaImageItem? item) && (item is not null))
         {
-            UpdateImageInformation(item, new PixelSize());
+            PicaImageItem informationItem = item;
+            PixelSize sourcePixelSize = new();
+
+            if (_currentItem is { } currentItem
+                && currentItem.Id == item.Id)
+            {
+                informationItem = currentItem;
+                sourcePixelSize = _sourcePixelSize;
+            }
+
+            UpdateImageInformation(informationItem, sourcePixelSize);
         }
     }
 
@@ -446,11 +457,37 @@ public sealed partial class ImageViewerWindow : SukiWindow
         PicaImageItem item,
         PixelSize sourcePixelSize)
     {
+        ImageViewerInformationOptions options = new(
+            _settings.ShowImageName,
+            _settings.ShowImageFormat,
+            _settings.ShowImageResolution,
+            _settings.ShowImageModificationDate);
         string information = ImageViewerInformationFormatter.Format(
             item.FileName,
-            sourcePixelSize);
+            sourcePixelSize,
+            _settings.ShowImageModificationDate
+                ? GetModificationDate(item.FilePath)
+                : null,
+            options);
         Title = information;
         _view.UpdateImageInformation(information);
+        UpdateImageInformationPanelVisibility();
+    }
+
+    private static DateTime? GetModificationDate(string filePath)
+    {
+        try
+        {
+            return File.Exists(filePath)
+                ? File.GetLastWriteTime(filePath)
+                : null;
+        }
+        catch (Exception ex) when (ex is IOException
+            or UnauthorizedAccessException
+            or NotSupportedException)
+        {
+            return null;
+        }
     }
 
     private void ReleaseDisplayedBitmap()

@@ -30,6 +30,10 @@ public sealed class ImageViewerStateServiceTests
         restoredState.IsPanningInertiaEnabled.Should().BeTrue();
         restoredState.ResizeBehavior.Should().Be(WindowResizeBehavior.FitWhenWindowed);
         restoredState.RememberWindowPlacement.Should().BeTrue();
+        restoredState.ShowImageName.Should().BeFalse();
+        restoredState.ShowImageFormat.Should().BeFalse();
+        restoredState.ShowImageResolution.Should().BeFalse();
+        restoredState.ShowImageModificationDate.Should().BeTrue();
         restoredState.IsWindowed.Should().BeTrue();
         restoredState.WindowX.Should().Be(-1200);
         restoredState.WindowY.Should().Be(80);
@@ -86,6 +90,10 @@ public sealed class ImageViewerStateServiceTests
         restoredState.IsFastLoadingEnabled.Should().BeFalse();
         restoredState.AllowFreeZoomOut.Should().BeFalse();
         restoredState.IsPanningInertiaEnabled.Should().BeTrue();
+        restoredState.ShowImageName.Should().BeFalse();
+        restoredState.ShowImageFormat.Should().BeTrue();
+        restoredState.ShowImageResolution.Should().BeTrue();
+        restoredState.ShowImageModificationDate.Should().BeTrue();
     }
 
     [Fact]

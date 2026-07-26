@@ -153,7 +153,7 @@ internal sealed class ImageViewerView : IDisposable
 
     internal void UpdateImageInformation(string information)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(information);
+        ArgumentNullException.ThrowIfNull(information);
         ImageInformationText.Text = information;
     }
 

@@ -11,6 +11,8 @@ namespace Pica.Viewer.Views;
 
 public sealed partial class ImageViewerWindow : SukiWindow
 {
+    private const double ImageInformationSettingsTopSpacing = 10d;
+
     private void OnFloatingMenuPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         _ = sender;
@@ -70,7 +72,24 @@ public sealed partial class ImageViewerWindow : SukiWindow
             new ViewerCheckBoxSettingControl(
                 "Быстрая загрузка",
                 _settings.IsFastLoadingEnabled,
-                ChangeFastLoadingAsync)
+                ChangeFastLoadingAsync),
+            new ViewerCheckBoxSettingControl(
+                "Показывать название",
+                _settings.ShowImageName,
+                ChangeShowImageNameAsync,
+                topSpacing: ImageInformationSettingsTopSpacing),
+            new ViewerCheckBoxSettingControl(
+                "Показывать формат",
+                _settings.ShowImageFormat,
+                ChangeShowImageFormatAsync),
+            new ViewerCheckBoxSettingControl(
+                "Показывать разрешение",
+                _settings.ShowImageResolution,
+                ChangeShowImageResolutionAsync),
+            new ViewerCheckBoxSettingControl(
+                "Показывать дату изменения",
+                _settings.ShowImageModificationDate,
+                ChangeShowImageModificationDateAsync)
         ];
 
         return settingControls;
@@ -166,6 +185,41 @@ public sealed partial class ImageViewerWindow : SukiWindow
             ResetRememberedWindowPlacement();
         }
 
+        await SaveCurrentStateAsync();
+    }
+
+    private Task ChangeShowImageNameAsync(bool showImageName)
+    {
+        _settings.ShowImageName = showImageName;
+
+        return ApplyImageInformationSettingsAsync();
+    }
+
+    private Task ChangeShowImageFormatAsync(bool showImageFormat)
+    {
+        _settings.ShowImageFormat = showImageFormat;
+
+        return ApplyImageInformationSettingsAsync();
+    }
+
+    private Task ChangeShowImageResolutionAsync(bool showImageResolution)
+    {
+        _settings.ShowImageResolution = showImageResolution;
+
+        return ApplyImageInformationSettingsAsync();
+    }
+
+    private Task ChangeShowImageModificationDateAsync(
+        bool showImageModificationDate)
+    {
+        _settings.ShowImageModificationDate = showImageModificationDate;
+
+        return ApplyImageInformationSettingsAsync();
+    }
+
+    private async Task ApplyImageInformationSettingsAsync()
+    {
+        UpdateSelectedImageInformation();
         await SaveCurrentStateAsync();
     }
 

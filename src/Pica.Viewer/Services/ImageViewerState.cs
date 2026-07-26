@@ -11,6 +11,11 @@ public sealed class ImageViewerState
     public bool IsPanningInertiaEnabled { get; set; } = ViewerSettingsDefaults.PanningInertiaEnabled;
     public WindowResizeBehavior ResizeBehavior { get; set; } = ViewerSettingsDefaults.ResizeBehavior;
     public bool RememberWindowPlacement { get; set; } = ViewerSettingsDefaults.RememberWindowPlacement;
+    public bool ShowImageName { get; set; } = ViewerSettingsDefaults.ShowImageName;
+    public bool ShowImageFormat { get; set; } = ViewerSettingsDefaults.ShowImageFormat;
+    public bool ShowImageResolution { get; set; } = ViewerSettingsDefaults.ShowImageResolution;
+    public bool ShowImageModificationDate { get; set; } =
+        ViewerSettingsDefaults.ShowImageModificationDate;
     public bool? IsWindowed { get; set; }
     public int? WindowX { get; set; }
     public int? WindowY { get; set; }

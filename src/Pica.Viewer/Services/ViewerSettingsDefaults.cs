@@ -10,6 +10,10 @@ internal static class ViewerSettingsDefaults
     public const bool AllowFreeZoomOut = false;
     public const bool PanningInertiaEnabled = true;
     public const bool RememberWindowPlacement = true;
+    public const bool ShowImageName = false;
+    public const bool ShowImageFormat = true;
+    public const bool ShowImageResolution = true;
+    public const bool ShowImageModificationDate = true;
     public const WindowResizeBehavior ResizeBehavior = WindowResizeBehavior.AlwaysFitImage;
 
     public static int MinimumSpeed => SpeedValues[0];
