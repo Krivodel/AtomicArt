@@ -136,6 +136,75 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         });
     }
 
+    [Theory]
+    [InlineData(KeyModifiers.Shift)]
+    [InlineData(KeyModifiers.Control)]
+    [InlineData(KeyModifiers.Alt)]
+    public void ModifierPressed_WithStaleHostPointerOutsidePreview_DoesNotExpand(
+        KeyModifiers modifier)
+    {
+        Dispatch(() =>
+        {
+            string imagePath = Path.Combine(
+                Path.GetTempPath(),
+                $"atomic-art-stale-preview-pointer-{Guid.NewGuid():N}.png");
+            File.WriteAllBytes(
+                imagePath,
+                GalleryThumbnailTestImages.CreatePngBytes(440, 220));
+            GenerationItemViewModel item = CreateItem();
+            item.ImagePath = imagePath;
+            GenerationPreviewControl preview = new()
+            {
+                DataContext = item,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top
+            };
+            Grid viewport = new()
+            {
+                Width = 500d,
+                Height = 300d
+            };
+            StalePointerExpansionHost expansionHost = new(viewport);
+            preview.ExpansionHost = expansionHost;
+            preview.OverflowOwner = preview;
+            viewport.Children.Add(preview);
+            Window window = Show(viewport, 500d, 300d);
+
+            try
+            {
+                window.CaptureRenderedFrame();
+                Point pointerInsidePreview = preview
+                    .TranslatePoint(new Point(110d, 110d), viewport)
+                    ?? throw new InvalidOperationException("Preview position was not resolved.");
+                Point windowPointerInsidePreview = preview
+                    .TranslatePoint(new Point(110d, 110d), window)
+                    ?? throw new InvalidOperationException("Preview window position was not resolved.");
+                Grid previewHost = preview.FindControl<Grid>("PreviewExpansionHost")
+                    ?? throw new InvalidOperationException("Preview expansion host was not found.");
+                expansionHost.SetPointerPosition(pointerInsidePreview);
+                expansionHost.NotifyPointerStateChanged();
+
+                window.MouseMove(windowPointerInsidePreview, RawInputModifiers.None);
+                expansionHost.SetModifiersAndNotify(modifier);
+                window.CaptureRenderedFrame();
+
+                previewHost.Width.Should().BeGreaterThan(220d);
+
+                expansionHost.SetModifiersAndNotify(KeyModifiers.None);
+                window.MouseMove(new Point(400d, 100d), RawInputModifiers.None);
+                expansionHost.SetModifiersAndNotify(modifier);
+                window.CaptureRenderedFrame();
+
+                previewHost.Width.Should().Be(220d);
+            }
+            finally
+            {
+                window.Close();
+                File.Delete(imagePath);
+            }
+        });
+    }
+
     private static PreviewTestContext CreateScenarioWithImage(string fileNamePrefix)
     {
         string imagePath = Path.Combine(
@@ -250,6 +319,49 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         {
             Window.Close();
             File.Delete(_imagePath);
+        }
+    }
+
+    private sealed class StalePointerExpansionHost : IGenerationPreviewExpansionHost
+    {
+        public Control Viewport { get; }
+        public KeyModifiers CurrentKeyModifiers { get; private set; }
+        public Point? PointerPosition { get; private set; }
+
+        public event EventHandler? PointerStateChanged;
+        public event EventHandler? ModifiersChanged;
+
+        public StalePointerExpansionHost(Control viewport)
+        {
+            Viewport = viewport ?? throw new ArgumentNullException(nameof(viewport));
+        }
+
+        public void SetPointerPosition(Point pointerPosition)
+        {
+            PointerPosition = pointerPosition;
+        }
+
+        public void NotifyPointerStateChanged()
+        {
+            PointerStateChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void SetModifiersAndNotify(KeyModifiers modifiers)
+        {
+            CurrentKeyModifiers = modifiers;
+            ModifiersChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void EnableOverflow(Control owner, Visual preview)
+        {
+        }
+
+        public void BeginOverflowCollapse(Control owner)
+        {
+        }
+
+        public void DisableOverflow(Control owner)
+        {
         }
     }
 

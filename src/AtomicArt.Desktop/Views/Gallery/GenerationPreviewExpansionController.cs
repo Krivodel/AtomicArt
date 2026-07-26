@@ -302,6 +302,7 @@ internal sealed class GenerationPreviewExpansionController
         }
 
         _expansionHost.PointerStateChanged += OnHostPointerStateChanged;
+        _expansionHost.ModifiersChanged += OnHostModifiersChanged;
         _expansionHost.Viewport.SizeChanged += OnViewportSizeChanged;
     }
 
@@ -313,6 +314,7 @@ internal sealed class GenerationPreviewExpansionController
         if (_expansionHost is not null)
         {
             _expansionHost.PointerStateChanged -= OnHostPointerStateChanged;
+            _expansionHost.ModifiersChanged -= OnHostModifiersChanged;
             _expansionHost.Viewport.SizeChanged -= OnViewportSizeChanged;
         }
 
@@ -360,6 +362,15 @@ internal sealed class GenerationPreviewExpansionController
             && new Rect(triggerPosition.Value, _previewTrigger.Bounds.Size)
                 .Contains(pointerPosition.Value);
         _currentKeyModifiers = expansionHost?.CurrentKeyModifiers ?? KeyModifiers.None;
+        UpdatePreviewExpansionState();
+    }
+
+    private void OnHostModifiersChanged(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        _currentKeyModifiers = _expansionHost?.CurrentKeyModifiers ?? KeyModifiers.None;
         UpdatePreviewExpansionState();
     }
 

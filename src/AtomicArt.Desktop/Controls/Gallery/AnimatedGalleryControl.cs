@@ -73,6 +73,7 @@ public partial class AnimatedGalleryControl : UserControl
     internal IGenerationPreviewExpansionHost PreviewExpansionHost { get; }
 
     internal event EventHandler? PreviewPointerStateChanged;
+    internal event EventHandler? PreviewModifiersChanged;
 
     private AnimatedGalleryResizeController ResizeController =>
         _resizeController ?? throw new InvalidOperationException("Animated gallery resize controller was not created.");
@@ -534,7 +535,7 @@ public partial class AnimatedGalleryControl : UserControl
             PreviewKeyTransition.Up => e.KeyModifiers & ~modifier,
             _ => throw new ArgumentOutOfRangeException(nameof(transition), transition, null)
         };
-        NotifyPreviewPointerStateChanged();
+        PreviewModifiersChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private enum PreviewKeyTransition

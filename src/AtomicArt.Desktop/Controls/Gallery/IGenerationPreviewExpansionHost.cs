@@ -12,6 +12,7 @@ internal interface IGenerationPreviewExpansionHost
     Point? PointerPosition { get; }
 
     event EventHandler? PointerStateChanged;
+    event EventHandler? ModifiersChanged;
 
     void EnableOverflow(Control owner, Visual preview);
 

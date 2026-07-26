@@ -15,6 +15,7 @@ internal sealed class StandaloneGenerationPreviewExpansionHost : IGenerationPrev
     public Point? PointerPosition => _pointerPosition;
 
     public event EventHandler? PointerStateChanged;
+    public event EventHandler? ModifiersChanged;
 
     private readonly Control _owner;
     private readonly Dictionary<Control, int> _originalZIndices = [];
@@ -153,7 +154,7 @@ internal sealed class StandaloneGenerationPreviewExpansionHost : IGenerationPrev
             PreviewKeyTransition.Up => e.KeyModifiers & ~modifier,
             _ => throw new ArgumentOutOfRangeException(nameof(transition), transition, null)
         };
-        PointerStateChanged?.Invoke(this, EventArgs.Empty);
+        ModifiersChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private enum PreviewKeyTransition

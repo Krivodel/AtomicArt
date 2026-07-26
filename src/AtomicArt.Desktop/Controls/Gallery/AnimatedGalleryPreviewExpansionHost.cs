@@ -16,6 +16,11 @@ internal sealed class AnimatedGalleryPreviewExpansionHost : IGenerationPreviewEx
         add => _gallery.PreviewPointerStateChanged += value;
         remove => _gallery.PreviewPointerStateChanged -= value;
     }
+    public event EventHandler? ModifiersChanged
+    {
+        add => _gallery.PreviewModifiersChanged += value;
+        remove => _gallery.PreviewModifiersChanged -= value;
+    }
 
     private readonly AnimatedGalleryControl _gallery;
 
