@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace AtomicArt.Desktop.Services.FileReveal;
+namespace Pica.Viewer.Services.FileReveal;
 
 internal static class WindowsShellAutomation
 {
@@ -39,6 +39,17 @@ internal static class WindowsShellAutomation
             modifiers: null,
             CultureInfo.InvariantCulture,
             namedParameters: null);
+    }
+
+    internal static long GetWindowHandle(object window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+
+        object? windowHandleValue = GetProperty(window, "HWND");
+
+        return Convert.ToInt64(
+            windowHandleValue,
+            CultureInfo.InvariantCulture);
     }
 
     internal static bool IsAutomationException(Exception exception)

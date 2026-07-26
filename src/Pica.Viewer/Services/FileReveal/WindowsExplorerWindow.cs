@@ -1,7 +1,6 @@
-using System.Globalization;
 using System.Runtime.InteropServices;
 
-namespace AtomicArt.Desktop.Services.FileReveal;
+namespace Pica.Viewer.Services.FileReveal;
 
 internal sealed class WindowsExplorerWindow : IWindowsExplorerWindow
 {
@@ -62,18 +61,10 @@ internal sealed class WindowsExplorerWindow : IWindowsExplorerWindow
                 document,
                 "SelectItem",
                 [folderItem, SelectItemFlags]);
-            object? windowHandleValue =
-                WindowsShellAutomation.GetProperty(window, "HWND");
-
-            if (windowHandleValue is not null)
-            {
-                long windowHandle = Convert.ToInt64(
-                    windowHandleValue,
-                    CultureInfo.InvariantCulture);
-                nint nativeWindowHandle = checked((nint)windowHandle);
-                _ = ShowWindow(nativeWindowHandle, RestoreWindowCommand);
-                _ = SetForegroundWindow(nativeWindowHandle);
-            }
+            long windowHandle = WindowsShellAutomation.GetWindowHandle(window);
+            nint nativeWindowHandle = checked((nint)windowHandle);
+            _ = ShowWindow(nativeWindowHandle, RestoreWindowCommand);
+            _ = SetForegroundWindow(nativeWindowHandle);
         }
         finally
         {

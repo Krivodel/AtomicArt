@@ -1,11 +1,11 @@
 using FluentAssertions;
 using Xunit;
 
-using AtomicArt.Desktop.Services;
-using AtomicArt.Desktop.Services.FileReveal;
-using AtomicArt.Desktop.Tests.TestDoubles;
+using Pica.Viewer.Services;
+using Pica.Viewer.Services.FileReveal;
+using Pica.Viewer.Tests.TestDoubles;
 
-namespace AtomicArt.Desktop.Tests.Services.FileReveal;
+namespace Pica.Viewer.Tests.Services.FileReveal;
 
 public sealed class MacOsFileRevealHandlerTests
 {

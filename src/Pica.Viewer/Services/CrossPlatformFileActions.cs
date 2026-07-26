@@ -4,6 +4,14 @@ internal sealed class CrossPlatformFileActions : PlatformFileActions
 {
     public override bool SupportsOpenWith => false;
 
+    private readonly IFileRevealPlatform _fileRevealPlatform;
+
+    public CrossPlatformFileActions(IFileRevealPlatform fileRevealPlatform)
+    {
+        _fileRevealPlatform = fileRevealPlatform
+            ?? throw new ArgumentNullException(nameof(fileRevealPlatform));
+    }
+
     protected override IReadOnlyList<OpenWithApplication> GetOpenWithApplicationsCore(
         string filePath)
     {
@@ -12,11 +20,10 @@ internal sealed class CrossPlatformFileActions : PlatformFileActions
 
     protected override Task RevealInFolderCoreAsync(
         string filePath,
+        FileRevealWindowMode windowMode,
         CancellationToken ct)
     {
-        CrossPlatformFileReveal.Reveal(filePath);
-
-        return Task.CompletedTask;
+        return _fileRevealPlatform.RevealAsync(filePath, windowMode, ct);
     }
 
     protected override Task OpenWithCoreAsync(

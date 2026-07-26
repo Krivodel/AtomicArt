@@ -6,7 +6,10 @@ internal interface IPlatformFileActions
 
     IReadOnlyList<OpenWithApplication> GetOpenWithApplications(string filePath);
 
-    Task RevealInFolderAsync(string filePath, CancellationToken ct);
+    Task RevealInFolderAsync(
+        string filePath,
+        FileRevealWindowMode windowMode,
+        CancellationToken ct);
 
     Task OpenWithAsync(
         string filePath,

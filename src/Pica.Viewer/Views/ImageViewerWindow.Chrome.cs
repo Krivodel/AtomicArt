@@ -11,6 +11,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
     {
         Size viewport = GetViewportSize();
         Rect viewportRect = new(viewport);
+        UpdateImageInformationPanelWidthLimit(viewport);
 
         if (!viewportRect.Contains(pointerPosition) || IsControlModifierActive())
         {
@@ -32,8 +33,20 @@ public sealed partial class ImageViewerWindow : SukiWindow
         SetControlVisibility(_view.LeftNavigationArea, pointerPosition.X <= edgeWidth);
         SetControlVisibility(_view.RightNavigationArea, pointerPosition.X >= viewport.Width - edgeWidth);
         SetControlVisibility(_view.BottomControls, pointerPosition.Y >= viewport.Height - BottomRevealSize);
+        double informationRevealWidth = Math.Max(
+            ImageViewerVisualMetrics.InformationRevealWidth,
+            _view.ImageInformationPanel.Bounds.Width
+                + ImageViewerVisualMetrics.InformationPanelMargin);
+        double informationRevealHeight = Math.Max(
+            ImageViewerVisualMetrics.InformationRevealHeight,
+            _view.ImageInformationPanel.Bounds.Height
+                + ImageViewerVisualMetrics.InformationPanelMargin);
+        bool showsImageInformation =
+            (pointerPosition.X <= informationRevealWidth)
+            && (pointerPosition.Y <= informationRevealHeight);
+        SetInformationVisibility(showsImageInformation);
         bool showsWindowButtons = (pointerPosition.X
-                >= viewport.Width - (ImageViewerVisualMetrics.CloseRevealSize * 3d))
+                >= viewport.Width - ImageViewerVisualMetrics.WindowControlsWidth)
             && (pointerPosition.Y <= ImageViewerVisualMetrics.CloseRevealSize);
         SetControlVisibility(_view.FullscreenSettingsButton, showsWindowButtons);
         SetControlVisibility(_view.WindowModeButton, showsWindowButtons);
@@ -51,6 +64,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         SetControlVisibility(_view.LeftNavigationArea, false);
         SetControlVisibility(_view.RightNavigationArea, false);
         SetControlVisibility(_view.BottomControls, false);
+        SetInformationVisibility(false);
         SetControlVisibility(_view.FullscreenSettingsButton, false);
         SetControlVisibility(_view.WindowModeButton, false);
         SetControlVisibility(_view.CloseButton, false);
@@ -62,6 +76,22 @@ public sealed partial class ImageViewerWindow : SukiWindow
             ? ImageViewerVisualMetrics.VisibleControlsOpacity
             : ImageViewerVisualMetrics.HiddenControlsOpacity;
         control.IsHitTestVisible = isVisible;
+    }
+
+    private void SetInformationVisibility(bool isVisible)
+    {
+        _view.ImageInformationPanel.Opacity = isVisible
+            ? ImageViewerVisualMetrics.VisibleControlsOpacity
+            : ImageViewerVisualMetrics.HiddenControlsOpacity;
+    }
+
+    private void UpdateImageInformationPanelWidthLimit(Size viewport)
+    {
+        _view.ImageInformationPanel.MaxWidth = Math.Max(
+            0d,
+            viewport.Width
+                - ImageViewerVisualMetrics.WindowControlsWidth
+                - (ImageViewerVisualMetrics.InformationPanelMargin * 2d));
     }
 
     private bool IsControlModifierActive()

@@ -1,4 +1,6 @@
-namespace AtomicArt.Desktop.Services.FileReveal;
+using Pica.Viewer.Services;
+
+namespace Pica.Viewer.Services.FileReveal;
 
 internal sealed class FileRevealPlatform : IFileRevealPlatform
 {
@@ -37,9 +39,13 @@ internal sealed class FileRevealPlatform : IFileRevealPlatform
 
         if (OperatingSystem.IsWindows())
         {
-            _windowsHandler.Reveal(filePath, windowMode);
+            return _windowsHandler.RevealAsync(
+                filePath,
+                windowMode,
+                ct);
         }
-        else if (OperatingSystem.IsMacOS())
+
+        if (OperatingSystem.IsMacOS())
         {
             _macOsHandler.Reveal(filePath, windowMode);
         }

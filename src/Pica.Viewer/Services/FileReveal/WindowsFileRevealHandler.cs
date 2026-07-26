@@ -3,10 +3,16 @@ using System.Runtime.InteropServices;
 
 using Microsoft.Extensions.Logging;
 
-namespace AtomicArt.Desktop.Services.FileReveal;
+using Pica.Viewer.Services;
+
+namespace Pica.Viewer.Services.FileReveal;
 
 internal sealed class WindowsFileRevealHandler
 {
+    private const int NewWindowActivationAttemptCount = 20;
+    private static readonly TimeSpan NewWindowActivationRetryDelay =
+        TimeSpan.FromMilliseconds(50d);
+
     private readonly IWindowsExplorerWindowLocator _windowLocator;
     private readonly IStandardFileRevealer _standardFileRevealer;
     private readonly ILogger<WindowsFileRevealHandler> _logger;
@@ -23,26 +29,61 @@ internal sealed class WindowsFileRevealHandler
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public void Reveal(string filePath, FileRevealWindowMode windowMode)
+    public async Task RevealAsync(
+        string filePath,
+        FileRevealWindowMode windowMode,
+        CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ct.ThrowIfCancellationRequested();
 
         if (windowMode == FileRevealWindowMode.ReuseExisting
-            && TryRevealInExistingWindow(filePath))
+            && TryRevealInWindow(filePath))
         {
             return;
         }
 
+        IReadOnlySet<long> existingWindowHandles =
+            _windowLocator.GetWindowHandles();
         _standardFileRevealer.Reveal(filePath);
+        await ActivateNewWindowAsync(
+                filePath,
+                existingWindowHandles,
+                ct)
+            .ConfigureAwait(false);
     }
 
-    private bool TryRevealInExistingWindow(string filePath)
+    private async Task ActivateNewWindowAsync(
+        string filePath,
+        IReadOnlySet<long> existingWindowHandles,
+        CancellationToken ct)
+    {
+        for (int attempt = 0;
+             attempt < NewWindowActivationAttemptCount;
+             attempt++)
+        {
+            if (TryRevealInWindow(filePath, existingWindowHandles))
+            {
+                return;
+            }
+
+            if (attempt < NewWindowActivationAttemptCount - 1)
+            {
+                await Task.Delay(NewWindowActivationRetryDelay, ct)
+                    .ConfigureAwait(false);
+            }
+        }
+    }
+
+    private bool TryRevealInWindow(
+        string filePath,
+        IReadOnlySet<long>? excludedWindowHandles = null)
     {
         string directoryPath = Path.GetDirectoryName(filePath)
             ?? throw new InvalidOperationException(
                 "The image directory could not be determined.");
         using IWindowsExplorerWindow? window =
-            _windowLocator.Find(directoryPath);
+            _windowLocator.Find(directoryPath, excludedWindowHandles);
 
         if (window is null)
         {

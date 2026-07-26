@@ -1,3 +1,5 @@
+using Pica.Viewer.Services;
+
 namespace AtomicArt.Desktop.Services;
 
 public interface IFileRevealService

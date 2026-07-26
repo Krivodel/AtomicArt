@@ -1,4 +1,4 @@
-namespace AtomicArt.Desktop.Services;
+namespace Pica.Viewer.Services;
 
 public enum FileRevealWindowMode
 {

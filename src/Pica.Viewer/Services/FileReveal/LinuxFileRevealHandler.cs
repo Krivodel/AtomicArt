@@ -2,7 +2,9 @@ using System.ComponentModel;
 
 using Microsoft.Extensions.Logging;
 
-namespace AtomicArt.Desktop.Services.FileReveal;
+using Pica.Viewer.Services;
+
+namespace Pica.Viewer.Services.FileReveal;
 
 internal sealed class LinuxFileRevealHandler
 {

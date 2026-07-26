@@ -16,6 +16,9 @@ using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Tests.Common;
+
+using Pica.Viewer.Services;
+
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;

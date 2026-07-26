@@ -222,6 +222,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _openWithMenuHideTimer = CreateOpenWithMenuHideTimer();
 
         ConfigureWindow();
+        UpdateSelectedImageInformation();
         AttachEvents();
     }
 
@@ -350,6 +351,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         ShowInTaskbar = true;
         ShowTitlebarBackground = _isWindowedMode;
         Title = PicaProtocolConstants.ApplicationName;
+        TitleFontWeight = FontWeight.Normal;
         TitleBarAnimationEnabled = false;
         TitleBarVisibilityOnFullScreen = TitleBarVisibilityMode.Hidden;
         WindowState = _isWindowedMode

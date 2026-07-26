@@ -1,5 +1,7 @@
 using System.ComponentModel;
 
+using Pica.Viewer.Services;
+
 namespace AtomicArt.Desktop.Services;
 
 public sealed class FileRevealService : IFileRevealService

@@ -17,6 +17,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
             return;
         }
 
+        UpdateImageInformation(item, new PixelSize());
         ResetPanMotion();
 
         if (_settings.IsFastLoadingEnabled)
@@ -429,7 +430,27 @@ public sealed partial class ImageViewerWindow : SukiWindow
         _currentItem = item with { FilePath = fullPath };
         _sourcePixelSize = sourcePixelSize;
         _view.Image.Source = bitmap;
+        UpdateImageInformation(item, sourcePixelSize);
         previousBitmap?.Dispose();
+    }
+
+    private void UpdateSelectedImageInformation()
+    {
+        if (TryGetSelectedItem(out PicaImageItem? item) && (item is not null))
+        {
+            UpdateImageInformation(item, new PixelSize());
+        }
+    }
+
+    private void UpdateImageInformation(
+        PicaImageItem item,
+        PixelSize sourcePixelSize)
+    {
+        string information = ImageViewerInformationFormatter.Format(
+            item.FileName,
+            sourcePixelSize);
+        Title = information;
+        _view.UpdateImageInformation(information);
     }
 
     private void ReleaseDisplayedBitmap()

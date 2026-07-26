@@ -11,12 +11,23 @@ internal abstract class PlatformFileActions : IPlatformFileActions
         return GetOpenWithApplicationsCore(filePath);
     }
 
-    public Task RevealInFolderAsync(string filePath, CancellationToken ct)
+    public Task RevealInFolderAsync(
+        string filePath,
+        FileRevealWindowMode windowMode,
+        CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ct.ThrowIfCancellationRequested();
 
-        return RevealInFolderCoreAsync(filePath, ct);
+        if (!Enum.IsDefined(windowMode))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(windowMode),
+                windowMode,
+                "Unsupported file reveal window mode.");
+        }
+
+        return RevealInFolderCoreAsync(filePath, windowMode, ct);
     }
 
     public Task OpenWithAsync(
@@ -44,6 +55,7 @@ internal abstract class PlatformFileActions : IPlatformFileActions
 
     protected abstract Task RevealInFolderCoreAsync(
         string filePath,
+        FileRevealWindowMode windowMode,
         CancellationToken ct);
 
     protected abstract Task OpenWithCoreAsync(

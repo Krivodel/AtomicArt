@@ -1,6 +1,6 @@
-using AtomicArt.Desktop.Services.FileReveal;
+using Pica.Viewer.Services.FileReveal;
 
-namespace AtomicArt.Desktop.Tests.TestDoubles;
+namespace Pica.Viewer.Tests.TestDoubles;
 
 internal sealed class RecordingStandardFileRevealer
     : IStandardFileRevealer

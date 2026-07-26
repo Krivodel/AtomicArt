@@ -1,4 +1,4 @@
-namespace AtomicArt.Desktop.Services.FileReveal;
+namespace Pica.Viewer.Services.FileReveal;
 
 internal interface IWindowsExplorerWindow : IDisposable
 {

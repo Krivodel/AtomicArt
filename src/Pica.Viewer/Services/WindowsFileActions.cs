@@ -9,11 +9,16 @@ internal sealed class WindowsFileActions : PlatformFileActions
     public override bool SupportsOpenWith => true;
 
     private readonly WindowsApplicationIconLoader _applicationIconLoader;
+    private readonly IFileRevealPlatform _fileRevealPlatform;
 
-    public WindowsFileActions(WindowsApplicationIconLoader applicationIconLoader)
+    public WindowsFileActions(
+        WindowsApplicationIconLoader applicationIconLoader,
+        IFileRevealPlatform fileRevealPlatform)
     {
         _applicationIconLoader = applicationIconLoader
             ?? throw new ArgumentNullException(nameof(applicationIconLoader));
+        _fileRevealPlatform = fileRevealPlatform
+            ?? throw new ArgumentNullException(nameof(fileRevealPlatform));
     }
 
     protected override IReadOnlyList<OpenWithApplication> GetOpenWithApplicationsCore(
@@ -76,11 +81,10 @@ internal sealed class WindowsFileActions : PlatformFileActions
 
     protected override Task RevealInFolderCoreAsync(
         string filePath,
+        FileRevealWindowMode windowMode,
         CancellationToken ct)
     {
-        WindowsFileReveal.Reveal(filePath);
-
-        return Task.CompletedTask;
+        return _fileRevealPlatform.RevealAsync(filePath, windowMode, ct);
     }
 
     protected override Task OpenWithCoreAsync(

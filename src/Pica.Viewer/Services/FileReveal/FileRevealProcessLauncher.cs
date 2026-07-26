@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 
-namespace AtomicArt.Desktop.Services.FileReveal;
+namespace Pica.Viewer.Services.FileReveal;
 
 internal sealed class FileRevealProcessLauncher : IFileRevealProcessLauncher
 {

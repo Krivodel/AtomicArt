@@ -1,10 +1,10 @@
 using Avalonia.Input;
 
-namespace AtomicArt.Desktop.Controls;
+namespace Pica.Viewer.Services;
 
-internal static class AlternateActionModifierPolicy
+public static class AlternateActionModifierPolicy
 {
-    internal static bool IsActive(KeyModifiers modifiers)
+    public static bool IsActive(KeyModifiers modifiers)
     {
         KeyModifiers alternateActionModifiers = KeyModifiers.Shift
             | KeyModifiers.Control

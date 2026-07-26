@@ -6,10 +6,11 @@ using Avalonia.Platform.Storage;
 
 using CommunityToolkit.Mvvm.Input;
 
-using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.ViewModels.Gallery;
+
+using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.Views.Gallery;
 

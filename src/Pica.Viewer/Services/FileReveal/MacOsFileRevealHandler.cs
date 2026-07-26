@@ -1,4 +1,6 @@
-namespace AtomicArt.Desktop.Services.FileReveal;
+using Pica.Viewer.Services;
+
+namespace Pica.Viewer.Services.FileReveal;
 
 internal sealed class MacOsFileRevealHandler
 {

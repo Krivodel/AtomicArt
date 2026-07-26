@@ -29,6 +29,8 @@ internal sealed class ImageViewerView : IDisposable
     internal Border RightNavigationArea { get; }
     internal PixelFilteringToggleSwitch FilteringToggle { get; }
     internal StackPanel BottomControls { get; }
+    internal Border ImageInformationPanel { get; }
+    internal TextBlock ImageInformationText { get; }
     internal Button FullscreenSettingsButton { get; }
     internal Button WindowModeButton { get; }
     internal Button CloseButton { get; }
@@ -101,6 +103,10 @@ internal sealed class ImageViewerView : IDisposable
             IsFilteringEnabled = isFilteringEnabled
         };
         BottomControls = CreateBottomControls(FilteringToggle, events);
+        ImageInformationPanel = CreateImageInformationPanel(
+            windowMode,
+            out TextBlock imageInformationText);
+        ImageInformationText = imageInformationText;
         FullscreenSettingsButton = CreateFullscreenSettingsButton(events.SettingsClicked);
         WindowModeButton = CreateWindowModeButton(events.WindowModeClicked);
         CloseButton = CreateCloseButton(events.CloseClicked);
@@ -143,6 +149,12 @@ internal sealed class ImageViewerView : IDisposable
             isFilteringEnabled
                 ? BitmapInterpolationMode.HighQuality
                 : BitmapInterpolationMode.None);
+    }
+
+    internal void UpdateImageInformation(string information)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(information);
+        ImageInformationText.Text = information;
     }
 
     internal void UpdateOpenWithApplications(
@@ -447,6 +459,32 @@ internal sealed class ImageViewerView : IDisposable
         controls.Children.Add(filteringToggle);
 
         return controls;
+    }
+
+    private static Border CreateImageInformationPanel(
+        ViewerWindowMode windowMode,
+        out TextBlock informationText)
+    {
+        informationText = new TextBlock
+        {
+            Foreground = Brushes.White,
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        return new Border
+        {
+            Margin = new Thickness(ImageViewerVisualMetrics.InformationPanelMargin),
+            Padding = new Thickness(12d, 8d),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            Background = new SolidColorBrush(Color.FromArgb(192, 24, 24, 24)),
+            Child = informationText,
+            CornerRadius = new CornerRadius(8d),
+            IsHitTestVisible = false,
+            IsVisible = windowMode == ViewerWindowMode.FullScreen,
+            Opacity = ImageViewerVisualMetrics.HiddenControlsOpacity,
+            Transitions = CreateOpacityTransition(ControlsFadeDuration)
+        };
     }
 
     private static Button CreateCloseButton(EventHandler<RoutedEventArgs> clickHandler)
@@ -985,6 +1023,7 @@ internal sealed class ImageViewerView : IDisposable
         ViewerArea.Children.Add(LeftNavigationArea);
         ViewerArea.Children.Add(RightNavigationArea);
         ViewerArea.Children.Add(BottomControls);
+        ViewerArea.Children.Add(ImageInformationPanel);
         ViewerArea.Children.Add(FullscreenSettingsButton);
         ViewerArea.Children.Add(WindowModeButton);
         ViewerArea.Children.Add(CloseButton);

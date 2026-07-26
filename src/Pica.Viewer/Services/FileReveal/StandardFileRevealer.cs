@@ -1,6 +1,4 @@
-using Pica.Viewer.Services;
-
-namespace AtomicArt.Desktop.Services.FileReveal;
+namespace Pica.Viewer.Services.FileReveal;
 
 internal sealed class StandardFileRevealer : IStandardFileRevealer
 {

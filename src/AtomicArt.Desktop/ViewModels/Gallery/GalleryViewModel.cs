@@ -11,6 +11,8 @@ using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Generation;
 
+using Pica.Viewer.Services;
+
 namespace AtomicArt.Desktop.ViewModels.Gallery;
 
 public sealed partial class GalleryViewModel : ObservableObject, IDisposable

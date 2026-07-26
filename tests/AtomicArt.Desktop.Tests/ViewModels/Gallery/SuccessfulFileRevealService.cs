@@ -1,5 +1,7 @@
 using AtomicArt.Desktop.Services;
 
+using Pica.Viewer.Services;
+
 namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
 internal sealed class SuccessfulFileRevealService : IFileRevealService

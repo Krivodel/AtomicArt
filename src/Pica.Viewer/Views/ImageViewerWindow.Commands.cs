@@ -165,9 +165,16 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         string filePath = _currentItem.FilePath;
+        FileRevealWindowMode windowMode =
+            AlternateActionModifierPolicy.IsActive(_activeKeyModifiers)
+                ? FileRevealWindowMode.OpenNew
+                : FileRevealWindowMode.ReuseExisting;
         HideContextMenu();
         await RunPlatformFileActionAsync(
-            ct => _platformFileActions.RevealInFolderAsync(filePath, ct),
+            ct => _platformFileActions.RevealInFolderAsync(
+                filePath,
+                windowMode,
+                ct),
             "Reveal in folder");
     }
 

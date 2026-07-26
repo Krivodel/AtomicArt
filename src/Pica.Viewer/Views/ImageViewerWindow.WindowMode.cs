@@ -158,6 +158,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         IsTitleBarVisible = isWindowed;
         ShowTitlebarBackground = isWindowed;
         _view.WindowResizeOverlay.IsVisible = isWindowed;
+        _view.ImageInformationPanel.IsVisible = !isWindowed;
         _view.FullscreenSettingsButton.IsVisible = !isWindowed;
         _view.WindowModeButton.IsVisible = !isWindowed;
         _view.CloseButton.IsVisible = !isWindowed;
