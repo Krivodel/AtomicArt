@@ -43,9 +43,23 @@ public sealed class GalleryItemsController
             .ToList();
         List<GenerationItemViewModel> addedItems = [];
 
-        foreach (GenerationItemDto item in orderedItems)
+        if (orderedItems.Count == 0)
         {
+            return addedItems;
+        }
+
+        IReadOnlyList<DateTime> galleryOrderTimestamps =
+            GalleryOrderTimestampPolicy.CreateForPrependedItems(
+                orderedItems[^1].CreatedAtUtc,
+                GetCurrentNewestGalleryOrderTimestamp(),
+                orderedItems.Count);
+
+        for (int index = 0; index < orderedItems.Count; index++)
+        {
+            GenerationItemDto item = orderedItems[index];
             GenerationItemViewModel addedItem = CreateGeneratedItem(item, attachedImagesCount);
+            addedItem.SetGalleryOrderTimestamp(
+                galleryOrderTimestamps[index]);
             addedItems.Add(addedItem);
         }
 
@@ -102,6 +116,11 @@ public sealed class GalleryItemsController
         }
 
         List<GenerationItemViewModel> placeholders = [];
+        IReadOnlyList<DateTime> galleryOrderTimestamps =
+            GalleryOrderTimestampPolicy.CreateForPrependedItems(
+                lifecycleEvent.Start.RequestedAtUtc,
+                GetCurrentNewestGalleryOrderTimestamp(),
+                lifecycleEvent.Start.GenerationCount);
 
         for (int index = 0; index < lifecycleEvent.Start.GenerationCount; index++)
         {
@@ -109,6 +128,7 @@ public sealed class GalleryItemsController
                 lifecycleEvent.Start,
                 lifecycleEvent.CorrelationId,
                 index,
+                galleryOrderTimestamps[index],
                 _statusDescriptorRegistry);
             placeholders.Add(placeholder);
         }
@@ -250,6 +270,16 @@ public sealed class GalleryItemsController
             trustedImagePath,
             trustedThumbnailPath,
             _statusDescriptorRegistry);
+    }
+
+    private DateTime? GetCurrentNewestGalleryOrderTimestamp()
+    {
+        return _items.Count == 0
+            ? null
+            : _items
+                .Select(item =>
+                    item.GalleryOrderTimestampUtc ?? item.CreatedAtUtc)
+                .Max();
     }
 
     private void NotifyIsEmptyChanged(bool wasEmpty)

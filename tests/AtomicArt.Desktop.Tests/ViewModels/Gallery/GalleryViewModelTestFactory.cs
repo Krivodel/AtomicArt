@@ -89,6 +89,7 @@ internal static class GalleryViewModelTestFactory
                 statusRegistry,
                 viewStateController,
                 galleryState,
+                new NoOpGalleryFileOrderSynchronizer(),
                 NullLogger<GalleryGenerationCompletedHandler>.Instance),
             new GalleryGenerationFailedHandler(viewStateController),
             new GalleryGenerationStartedHandler(viewStateController, galleryState),
@@ -99,6 +100,7 @@ internal static class GalleryViewModelTestFactory
             viewStateController,
             viewModelErrorHandler,
             TestGenerationActivityTrackerFactory.Create(),
+            new PresentedWindowPresentationService(),
             lifecycleEventHandlers,
             NullLogger<GalleryLifecycleController>.Instance);
 

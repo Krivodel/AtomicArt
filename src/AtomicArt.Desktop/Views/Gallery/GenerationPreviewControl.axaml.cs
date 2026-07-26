@@ -124,6 +124,14 @@ public partial class GenerationPreviewControl : UserControl
         RefreshPreviewBitmap();
     }
 
+    internal void ClearPreviewBitmapServices()
+    {
+        CancelPendingPreviewLoad();
+        ClearPreviewBitmap();
+        _previewBitmapProvider = null;
+        _previewSourceScheduler = null;
+    }
+
     internal void BeginRemovalAnimation(int durationMilliseconds)
     {
         PixelLoadingIndicator.FadeOut(durationMilliseconds);

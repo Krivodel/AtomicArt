@@ -11,6 +11,7 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
 {
     private readonly IAppStateStore _stateStore;
     private readonly IGalleryItemDeletionService _deletionService;
+    private readonly IGalleryFileOrderSynchronizer _fileOrderSynchronizer;
     private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly GalleryStatePathConverter _pathConverter;
     private readonly GalleryStateSection _section;
@@ -19,6 +20,7 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
     public GalleryStateConsistencyService(
         IAppStateStore stateStore,
         IGalleryItemDeletionService deletionService,
+        IGalleryFileOrderSynchronizer fileOrderSynchronizer,
         IDataRootAccessCoordinator accessCoordinator,
         GalleryStatePathConverter pathConverter,
         GalleryStateSection section,
@@ -27,6 +29,8 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
         _deletionService = deletionService
             ?? throw new ArgumentNullException(nameof(deletionService));
+        _fileOrderSynchronizer = fileOrderSynchronizer
+            ?? throw new ArgumentNullException(nameof(fileOrderSynchronizer));
         _accessCoordinator = accessCoordinator
             ?? throw new ArgumentNullException(nameof(accessCoordinator));
         _pathConverter = pathConverter ?? throw new ArgumentNullException(nameof(pathConverter));
@@ -45,11 +49,6 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
             .Where(HasMissingGeneratedImage)
             .ToList();
 
-        if (missingImageItems.Count == 0)
-        {
-            return;
-        }
-
         foreach (GalleryItemState item in missingImageItems)
         {
             GalleryItemDeletionRequest request = new(
@@ -65,16 +64,44 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
         List<GalleryItemState> retainedItems = state.Items
             .Where(item => !HasMissingGeneratedImage(item))
             .ToList();
+        IReadOnlyList<GalleryItemState> normalizedItems =
+            GalleryOrderTimestampNormalizer.Normalize(retainedItems);
+        int galleryOrderChangeCount = normalizedItems
+            .Where((item, index) =>
+                item.GalleryOrderTimestampUtc
+                != retainedItems[index].GalleryOrderTimestampUtc)
+            .Count();
+        bool galleryOrderChanged = galleryOrderChangeCount > 0;
+
+        await _fileOrderSynchronizer
+            .SynchronizeAsync(normalizedItems, ct)
+            .ConfigureAwait(false);
+
+        if (missingImageItems.Count == 0 && !galleryOrderChanged)
+        {
+            return;
+        }
+
         GalleryState reconciledState = new()
         {
-            Items = retainedItems
+            Items = normalizedItems
         };
         await _stateStore
             .SaveAsync(_section, reconciledState, ct)
             .ConfigureAwait(false);
-        _logger.LogInformation(
-            "Removed {ItemCount} gallery items whose generated image files are missing.",
-            missingImageItems.Count);
+        if (missingImageItems.Count > 0)
+        {
+            _logger.LogInformation(
+                "Removed {ItemCount} gallery items whose generated image files are missing.",
+                missingImageItems.Count);
+        }
+
+        if (galleryOrderChanged)
+        {
+            _logger.LogInformation(
+                "Initialized or repaired gallery file ordering metadata for {ItemCount} items.",
+                galleryOrderChangeCount);
+        }
     }
 
     private bool HasMissingGeneratedImage(GalleryItemState item)

@@ -14,6 +14,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Generation;
 
 namespace AtomicArt.Desktop.Views.Generation;
@@ -79,6 +80,7 @@ public partial class NanoBanana2PanelView : UserControl
     private readonly DispatcherTimer _catalogLoadingTimer;
     private readonly DispatcherTimer _aspectRatioHintAutoCycleTimer;
     private readonly DispatcherTimer _temperaturePopupCloseTimer;
+    private readonly TopLevelPresentationObserver _presentationObserver;
     private readonly ScaleTransform _aspectRatioHintScale = new()
     {
         ScaleX = AspectRatioHintHiddenScale,
@@ -119,6 +121,8 @@ public partial class NanoBanana2PanelView : UserControl
         InitializeComponent();
         InitializeAspectRatioHintTransform();
         InitializeTemperatureFlyout();
+        _presentationObserver = new TopLevelPresentationObserver(
+            OnWindowPresentationChanged);
         _catalogLoadingTimer = new DispatcherTimer
         {
             Interval = LoadingIndicatorFrameInterval
@@ -137,8 +141,17 @@ public partial class NanoBanana2PanelView : UserControl
         CatalogLoadingIndicatorHost.PropertyChanged += OnCatalogLoadingIndicatorHostPropertyChanged;
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        _presentationObserver.Attach(this);
+        OnWindowPresentationChanged(_presentationObserver.IsPresented);
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _presentationObserver.Detach();
         UnsubscribeSelectionResetEvents();
         StopCatalogLoadingAnimation();
         StopAspectRatioHintAnimation();
@@ -361,7 +374,16 @@ public partial class NanoBanana2PanelView : UserControl
     private void StartCatalogLoadingAnimation()
     {
         _catalogLoadingStopwatch.Restart();
-        _catalogLoadingTimer.Start();
+
+        if (_presentationObserver.IsPresented)
+        {
+            _catalogLoadingTimer.Start();
+        }
+        else
+        {
+            _catalogLoadingStopwatch.Stop();
+        }
+
         UpdateCatalogLoadingIndicator();
     }
 
@@ -375,6 +397,11 @@ public partial class NanoBanana2PanelView : UserControl
 
     private void UpdateCatalogLoadingIndicator()
     {
+        if (!_presentationObserver.IsPresented)
+        {
+            return;
+        }
+
         double hostWidth = CatalogLoadingIndicatorHost.Bounds.Width;
         if (hostWidth <= 0d)
         {
@@ -849,6 +876,30 @@ public partial class NanoBanana2PanelView : UserControl
         AdvanceAspectRatioHintAutoCycle();
     }
 
+    private void OnWindowPresentationChanged(bool isPresented)
+    {
+        if (!isPresented)
+        {
+            _catalogLoadingTimer.Stop();
+            _catalogLoadingStopwatch.Stop();
+            _aspectRatioHintAutoCycleTimer.Stop();
+            return;
+        }
+
+        if (CatalogLoadingIndicatorHost.IsVisible)
+        {
+            _catalogLoadingStopwatch.Start();
+            _catalogLoadingTimer.Start();
+            UpdateCatalogLoadingIndicator();
+        }
+
+        if (_targetAspectRatioHintVisible
+            && GenerationAspectRatios.IsAuto(_hintAspectRatio))
+        {
+            _aspectRatioHintAutoCycleTimer.Start();
+        }
+    }
+
     private void ShowAspectRatioHint(string? aspectRatio)
     {
         if (!CanShowAspectRatioHint(aspectRatio))
@@ -882,7 +933,11 @@ public partial class NanoBanana2PanelView : UserControl
             }
 
             AdvanceAspectRatioHintAutoCycle();
-            _aspectRatioHintAutoCycleTimer.Start();
+
+            if (_presentationObserver.IsPresented)
+            {
+                _aspectRatioHintAutoCycleTimer.Start();
+            }
         }
         else
         {

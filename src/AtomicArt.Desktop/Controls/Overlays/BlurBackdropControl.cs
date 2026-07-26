@@ -3,6 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 
+using AtomicArt.Desktop.Services.UiAnimation;
+
 namespace AtomicArt.Desktop.Controls.Overlays;
 
 public sealed class BlurBackdropControl : Control
@@ -34,6 +36,7 @@ public sealed class BlurBackdropControl : Control
 
     private const double BlurRadiusToSigmaDivisor = 3d;
 
+    private readonly TopLevelPresentationObserver _presentationObserver;
     private int _animationRevision;
     private int _captureRevision;
     private bool _isFramePending;
@@ -48,6 +51,8 @@ public sealed class BlurBackdropControl : Control
 
     public BlurBackdropControl()
     {
+        _presentationObserver = new TopLevelPresentationObserver(
+            OnWindowPresentationChanged);
         IsHitTestVisible = false;
     }
 
@@ -79,6 +84,7 @@ public sealed class BlurBackdropControl : Control
         base.OnAttachedToVisualTree(e);
 
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
+        _presentationObserver.Attach(this);
         RefreshCapture();
         RestartDynamicFrames();
     }
@@ -86,6 +92,7 @@ public sealed class BlurBackdropControl : Control
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+        _presentationObserver.Detach();
         StopDynamicFrames();
 
         base.OnDetachedFromVisualTree(e);
@@ -136,7 +143,9 @@ public sealed class BlurBackdropControl : Control
 
     private void RequestNextDynamicFrame()
     {
-        if (!IsDynamic || _isFramePending)
+        if (!IsDynamic
+            || !_presentationObserver.IsPresented
+            || _isFramePending)
         {
             return;
         }
@@ -160,13 +169,27 @@ public sealed class BlurBackdropControl : Control
         }
 
         _isFramePending = false;
-        if (!IsDynamic || (VisualRoot is null))
+        if (!IsDynamic
+            || !_presentationObserver.IsPresented
+            || (VisualRoot is null))
         {
             return;
         }
 
         RefreshCapture();
         RequestNextDynamicFrame();
+    }
+
+    private void OnWindowPresentationChanged(bool isPresented)
+    {
+        if (!isPresented)
+        {
+            StopDynamicFrames();
+            return;
+        }
+
+        RefreshCapture();
+        RestartDynamicFrames();
     }
 
     private void OnActualThemeVariantChanged(object? sender, EventArgs e)

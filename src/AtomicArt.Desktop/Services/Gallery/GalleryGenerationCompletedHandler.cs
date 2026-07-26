@@ -18,6 +18,7 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
     private readonly IGenerationItemStatusDescriptorRegistry _statusDescriptorRegistry;
     private readonly IGalleryLifecycleViewState _viewState;
     private readonly IGalleryStateService _galleryStateService;
+    private readonly IGalleryFileOrderSynchronizer _fileOrderSynchronizer;
     private readonly ILogger<GalleryGenerationCompletedHandler> _logger;
 
     public GalleryGenerationCompletedHandler(
@@ -28,6 +29,7 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry,
         IGalleryLifecycleViewState viewState,
         IGalleryStateService galleryStateService,
+        IGalleryFileOrderSynchronizer fileOrderSynchronizer,
         ILogger<GalleryGenerationCompletedHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(trustedImageFileService);
@@ -37,6 +39,7 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         ArgumentNullException.ThrowIfNull(statusDescriptorRegistry);
         ArgumentNullException.ThrowIfNull(viewState);
         ArgumentNullException.ThrowIfNull(galleryStateService);
+        ArgumentNullException.ThrowIfNull(fileOrderSynchronizer);
         ArgumentNullException.ThrowIfNull(logger);
 
         _trustedImageFileService = trustedImageFileService;
@@ -46,6 +49,7 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         _statusDescriptorRegistry = statusDescriptorRegistry;
         _viewState = viewState;
         _galleryStateService = galleryStateService;
+        _fileOrderSynchronizer = fileOrderSynchronizer;
         _logger = logger;
     }
 
@@ -88,9 +92,10 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         await _viewState
             .ApplyCompletedAsync(lifecycleEvent.CorrelationId, itemUpdates, ct)
             .ConfigureAwait(false);
-        await GalleryStateSnapshotSaver.SaveAsync(
+        await GalleryStateSnapshotSaver.SynchronizeFilesAndSaveAsync(
                 _viewState,
                 _galleryStateService,
+                _fileOrderSynchronizer,
                 snapshot => _logger.LogInformation(
                     "Gallery applied completed batch {BatchId}; snapshot contains {ItemCount} items",
                     lifecycleEvent.Batch.BatchId,

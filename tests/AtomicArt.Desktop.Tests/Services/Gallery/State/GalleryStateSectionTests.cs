@@ -14,13 +14,13 @@ public sealed class GalleryStateSectionTests
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 7, 9, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void SchemaVersion_WithRelativePathFormat_ReturnsVersionTwo()
+    public void SchemaVersion_WithGalleryOrderTimestamp_ReturnsVersionThree()
     {
         GalleryStateSection section = new();
 
         int schemaVersion = section.SchemaVersion;
 
-        schemaVersion.Should().Be(2);
+        schemaVersion.Should().Be(3);
     }
 
     [Fact]
@@ -35,6 +35,26 @@ public sealed class GalleryStateSectionTests
         string json = JsonSerializer.Serialize(state, options);
 
         json.Should().Contain("\"thumbnailPath\":\"thumbnail.png\"");
+    }
+
+    [Fact]
+    public void SerializePayload_WithGalleryOrderTimestamp_WritesTimestamp()
+    {
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+        GalleryState state = new()
+        {
+            Items =
+            [
+                GalleryItemStateTestFactory.CreateGenerated(
+                    id: ItemId,
+                    galleryOrderTimestampUtc: CreatedAtUtc)
+            ]
+        };
+
+        string json = JsonSerializer.Serialize(state, options);
+
+        json.Should().Contain(
+            "\"galleryOrderTimestampUtc\":\"2026-07-07T09:00:00Z\"");
     }
 
     [Fact]
@@ -70,6 +90,7 @@ public sealed class GalleryStateSectionTests
         GalleryState state = payload.Should().BeOfType<GalleryState>().Subject;
         state.Items.Should().ContainSingle();
         state.Items[0].ThumbnailPath.Should().BeNull();
+        state.Items[0].GalleryOrderTimestampUtc.Should().BeNull();
     }
 
     [Fact]

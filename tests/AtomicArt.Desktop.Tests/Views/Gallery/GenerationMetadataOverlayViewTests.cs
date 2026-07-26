@@ -234,6 +234,74 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
         });
     }
 
+    [Fact]
+    public void Preview_WhenShown_AttachesLoadingSessionAndBindsImagePath()
+    {
+        Dispatch(() =>
+        {
+            string imagePath = CreateImageFile();
+
+            try
+            {
+                RecordingGenerationPreviewSessionFactory previewSessionFactory =
+                    new();
+                GenerationMetadataOverlayView view = CreateView(
+                    imagePath,
+                    previewSessionFactory: previewSessionFactory);
+                Window window = Show(view, 750d, 780d);
+
+                try
+                {
+                    GenerationPreviewControl preview = view
+                        .GetVisualDescendants()
+                        .OfType<GenerationPreviewControl>()
+                        .Single();
+
+                    preview.PreviewPath.Should().Be(imagePath);
+                    previewSessionFactory.CreatedTopLevel.Should()
+                        .BeSameAs(window);
+                    previewSessionFactory.Session.PreviewControl.Should()
+                        .BeSameAs(preview);
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }
+            finally
+            {
+                File.Delete(imagePath);
+            }
+        });
+    }
+
+    [Fact]
+    public void Preview_WhenClosed_DisposesLoadingSession()
+    {
+        Dispatch(() =>
+        {
+            string imagePath = CreateImageFile();
+
+            try
+            {
+                RecordingGenerationPreviewSessionFactory previewSessionFactory =
+                    new();
+                GenerationMetadataOverlayView view = CreateView(
+                    imagePath,
+                    previewSessionFactory: previewSessionFactory);
+                Window window = Show(view, 750d, 780d);
+
+                window.Close();
+
+                previewSessionFactory.Session.DisposeCount.Should().Be(1);
+            }
+            finally
+            {
+                File.Delete(imagePath);
+            }
+        });
+    }
+
     private static Rect GetBounds(Control control, Control relativeTo)
     {
         Point? position = control.TranslatePoint(new Point(0d, 0d), relativeTo);
@@ -257,7 +325,8 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
 
     private static GenerationMetadataOverlayView CreateView(
         string imagePath,
-        string prompt = "Промпт")
+        string prompt = "Промпт",
+        IGenerationPreviewSessionFactory? previewSessionFactory = null)
     {
         GenerationItemDto itemDto = GenerationItemDtoTestFactory.Create(
             modelDisplayName: "X",
@@ -285,10 +354,42 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             new TestViewModelErrorHandler(),
             new GenerationPriceFormatter(),
             new GenerationDurationFormatter());
+        GenerationMetadataOverlayView view = previewSessionFactory is null
+            ? new GenerationMetadataOverlayView()
+            : new GenerationMetadataOverlayView(previewSessionFactory);
+        view.DataContext = viewModel;
 
-        return new GenerationMetadataOverlayView
+        return view;
+    }
+
+    private sealed class RecordingGenerationPreviewSessionFactory
+        : IGenerationPreviewSessionFactory
+    {
+        public RecordingGenerationPreviewSession Session { get; } = new();
+        public TopLevel? CreatedTopLevel { get; private set; }
+
+        public IGenerationPreviewSession Create(TopLevel topLevel)
         {
-            DataContext = viewModel
-        };
+            CreatedTopLevel = topLevel;
+
+            return Session;
+        }
+    }
+
+    private sealed class RecordingGenerationPreviewSession
+        : IGenerationPreviewSession
+    {
+        public GenerationPreviewControl? PreviewControl { get; private set; }
+        public int DisposeCount { get; private set; }
+
+        public void Attach(GenerationPreviewControl previewControl)
+        {
+            PreviewControl = previewControl;
+        }
+
+        public void Dispose()
+        {
+            DisposeCount++;
+        }
     }
 }

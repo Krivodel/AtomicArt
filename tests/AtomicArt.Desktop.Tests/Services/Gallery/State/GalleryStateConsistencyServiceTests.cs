@@ -95,11 +95,27 @@ public sealed class GalleryStateConsistencyServiceTests
             string fileName = BuildManagedFileName(MissingImageItemId);
             string imagePath = Path.Combine(pathProvider.ArtDirectory, fileName);
             await File.WriteAllBytesAsync(imagePath, [0x01]);
+            DateTime galleryOrderTimestampUtc = new(
+                2026,
+                7,
+                26,
+                12,
+                0,
+                0,
+                DateTimeKind.Utc);
+            File.SetLastWriteTimeUtc(imagePath, galleryOrderTimestampUtc);
+
+            if (OperatingSystem.IsWindows())
+            {
+                File.SetCreationTimeUtc(imagePath, galleryOrderTimestampUtc);
+            }
+
             GalleryItemState generatedItem = CreateItem(
                 MissingImageItemId,
                 GenerationItemStatus.Generated,
                 Path.Combine("Art", fileName),
-                null);
+                null,
+                galleryOrderTimestampUtc);
             RecordingAppStateStore stateStore = new(
                 new GalleryState
                 {
@@ -198,6 +214,92 @@ public sealed class GalleryStateConsistencyServiceTests
         }
     }
 
+    [Fact]
+    public async Task ReconcileAsync_WithLegacyItems_PersistsAndAppliesGalleryOrder()
+    {
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(
+            typeof(GalleryStateConsistencyServiceTests),
+            nameof(ReconcileAsync_WithLegacyItems_PersistsAndAppliesGalleryOrder));
+
+        try
+        {
+            AtomicArtDataPathProvider pathProvider = CreatePathProvider(rootDirectory);
+            Guid topItemId =
+                Guid.Parse("44444444-4444-4444-4444-444444444444");
+            Guid bottomItemId =
+                Guid.Parse("55555555-5555-5555-5555-555555555555");
+            string topFileName = BuildManagedFileName(topItemId);
+            string bottomFileName = BuildManagedFileName(bottomItemId);
+            string topImagePath = Path.Combine(
+                pathProvider.ArtDirectory,
+                topFileName);
+            string bottomImagePath = Path.Combine(
+                pathProvider.ArtDirectory,
+                bottomFileName);
+            await File.WriteAllBytesAsync(
+                topImagePath,
+                GenerationImageTestData.ValidPngBytes);
+            await File.WriteAllBytesAsync(
+                bottomImagePath,
+                GenerationImageTestData.ValidPngBytes);
+            DateTime createdAtUtc = new(
+                2026,
+                7,
+                26,
+                12,
+                0,
+                0,
+                DateTimeKind.Utc);
+            GalleryItemState topItem = CreateItem(
+                topItemId,
+                GenerationItemStatus.Generated,
+                Path.Combine("Art", topFileName),
+                null,
+                createdAtUtc: createdAtUtc);
+            GalleryItemState bottomItem = CreateItem(
+                bottomItemId,
+                GenerationItemStatus.Generated,
+                Path.Combine("Art", bottomFileName),
+                null,
+                createdAtUtc: createdAtUtc);
+            RecordingAppStateStore stateStore = new(
+                new GalleryState
+                {
+                    Items = [topItem, bottomItem]
+                });
+            RecordingDeletionService deletionService = new();
+            DataRootAccessCoordinator accessCoordinator = new();
+            GalleryStateConsistencyService service = CreateService(
+                stateStore,
+                deletionService,
+                accessCoordinator,
+                CreatePathConverter(pathProvider));
+
+            await service.ReconcileAsync(CancellationToken.None);
+
+            GalleryState savedState = stateStore.SavedState
+                ?? throw new InvalidOperationException(
+                    "Expected gallery order metadata to be saved.");
+            DateTime topTimestampUtc =
+                savedState.Items[0].GalleryOrderTimestampUtc
+                ?? throw new InvalidOperationException(
+                    "Expected a top item order timestamp.");
+            DateTime bottomTimestampUtc =
+                savedState.Items[1].GalleryOrderTimestampUtc
+                ?? throw new InvalidOperationException(
+                    "Expected a bottom item order timestamp.");
+            topTimestampUtc.Should().BeAfter(bottomTimestampUtc);
+            File.GetLastWriteTimeUtc(topImagePath).Should()
+                .Be(topTimestampUtc);
+            File.GetLastWriteTimeUtc(bottomImagePath).Should()
+                .Be(bottomTimestampUtc);
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(rootDirectory);
+        }
+    }
+
     private static GalleryStateConsistencyService CreateService(
         IAppStateStore stateStore,
         IGalleryItemDeletionService deletionService,
@@ -205,9 +307,17 @@ public sealed class GalleryStateConsistencyServiceTests
         GalleryStatePathConverter pathConverter,
         GalleryStateSection? section = null)
     {
+        IGalleryFileOrderSynchronizer fileOrderSynchronizer =
+            new GalleryFileOrderSynchronizer(
+                accessCoordinator,
+                pathConverter,
+                new GenerationImageFileNamePolicy(),
+                NullLogger<GalleryFileOrderSynchronizer>.Instance);
+
         return new GalleryStateConsistencyService(
             stateStore,
             deletionService,
+            fileOrderSynchronizer,
             accessCoordinator,
             pathConverter,
             section ?? new GalleryStateSection(),
@@ -243,10 +353,13 @@ public sealed class GalleryStateConsistencyServiceTests
         Guid itemId,
         GenerationItemStatus status,
         string? imagePath,
-        string? thumbnailPath)
+        string? thumbnailPath,
+        DateTime? galleryOrderTimestampUtc = null,
+        DateTime? createdAtUtc = null)
     {
         GalleryItemState generatedItem = GalleryItemStateTestFactory.CreateGenerated(
             id: itemId,
+            createdAtUtc: createdAtUtc,
             imagePath: imagePath,
             thumbnailPath: thumbnailPath);
 
@@ -259,6 +372,7 @@ public sealed class GalleryStateConsistencyServiceTests
             AspectRatio = generatedItem.AspectRatio,
             Resolution = generatedItem.Resolution,
             CreatedAtUtc = generatedItem.CreatedAtUtc,
+            GalleryOrderTimestampUtc = galleryOrderTimestampUtc,
             Status = status,
             ImagePath = generatedItem.ImagePath,
             ThumbnailPath = generatedItem.ThumbnailPath,

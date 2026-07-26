@@ -79,6 +79,20 @@ internal static class GalleryItemStateMapper
         return NormalizeForStorage(item, _ => imagePath, _ => thumbnailPath);
     }
 
+    public static GalleryItemState WithGalleryOrderTimestamp(
+        GalleryItemState item,
+        DateTime galleryOrderTimestampUtc)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        return NormalizeSource(
+            item,
+            source => source.ImagePath,
+            source => source.ThumbnailPath,
+            GalleryItemStateStatusPolicy.PreserveStatus,
+            galleryOrderTimestampUtc);
+    }
+
     public static GenerationItemDto ToGenerationItemDto(GalleryItemState state)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -121,7 +135,8 @@ internal static class GalleryItemStateMapper
         IGalleryItemStateSource source,
         Func<IGalleryItemStateSource, string?> resolveImagePath,
         Func<IGalleryItemStateSource, string?> resolveThumbnailPath,
-        GalleryItemStateStatusPolicy statusPolicy)
+        GalleryItemStateStatusPolicy statusPolicy,
+        DateTime? galleryOrderTimestampUtc = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(resolveImagePath);
@@ -140,6 +155,8 @@ internal static class GalleryItemStateMapper
             AspectRatio = source.AspectRatio ?? string.Empty,
             Resolution = source.Resolution ?? string.Empty,
             CreatedAtUtc = source.CreatedAtUtc,
+            GalleryOrderTimestampUtc =
+                galleryOrderTimestampUtc ?? source.GalleryOrderTimestampUtc,
             Status = status,
             ImagePath = string.IsNullOrWhiteSpace(imagePath) ? null : imagePath,
             ThumbnailPath = string.IsNullOrWhiteSpace(thumbnailPath) ? null : thumbnailPath,

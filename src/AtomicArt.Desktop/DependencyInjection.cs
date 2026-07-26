@@ -137,6 +137,9 @@ public static class DependencyInjection
         services.AddSingleton<IGenerationPanelStateService, GenerationPanelStateService>();
         services.AddSingleton<GalleryStatePathConverter>();
         services.AddSingleton<IGalleryStateService, GalleryStateService>();
+        services.AddSingleton<
+            IGalleryFileOrderSynchronizer,
+            GalleryFileOrderSynchronizer>();
         services.AddSingleton<IGalleryStateConsistencyService, GalleryStateConsistencyService>();
         return services;
     }
@@ -145,7 +148,8 @@ public static class DependencyInjection
     {
         services.AddSharedSingletonAliases<WindowStateService>(
             typeof(IWindowStateService),
-            typeof(IWindowAttachmentService));
+            typeof(IWindowAttachmentService),
+            typeof(IWindowPresentationService));
         services.AddSharedSingletonAliases<TrayService>(
             typeof(ITrayService),
             typeof(ITrayAttachmentService));

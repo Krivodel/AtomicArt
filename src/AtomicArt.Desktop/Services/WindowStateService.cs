@@ -1,16 +1,48 @@
+using Avalonia;
 using Avalonia.Controls;
 
 namespace AtomicArt.Desktop.Services;
 
-public sealed class WindowStateService : IWindowStateService, IWindowAttachmentService
+public sealed class WindowStateService :
+    IWindowStateService,
+    IWindowAttachmentService,
+    IWindowPresentationService,
+    IDisposable
 {
+    public bool IsPresented
+    {
+        get
+        {
+            lock (_presentationLock)
+            {
+                return _isPresented;
+            }
+        }
+    }
+
+    private readonly object _presentationLock = new();
     private Window? _window;
+    private TaskCompletionSource _presentationSource = CreatePresentationSource();
+    private bool _isPresented;
 
     public void Attach(Window window)
     {
         ArgumentNullException.ThrowIfNull(window);
 
+        if (ReferenceEquals(_window, window))
+        {
+            UpdatePresentation();
+            return;
+        }
+
+        if (_window is not null)
+        {
+            _window.PropertyChanged -= OnWindowPropertyChanged;
+        }
+
         _window = window;
+        _window.PropertyChanged += OnWindowPropertyChanged;
+        UpdatePresentation();
     }
 
     public void Minimize()
@@ -48,5 +80,83 @@ public sealed class WindowStateService : IWindowStateService, IWindowAttachmentS
 
         _window.Show();
         _window.Activate();
+    }
+
+    public Task WaitUntilPresentedAsync(CancellationToken ct)
+    {
+        Task presentationTask;
+
+        lock (_presentationLock)
+        {
+            if (_isPresented)
+            {
+                return Task.CompletedTask;
+            }
+
+            presentationTask = _presentationSource.Task;
+        }
+
+        return presentationTask.WaitAsync(ct);
+    }
+
+    public void Dispose()
+    {
+        if (_window is not null)
+        {
+            _window.PropertyChanged -= OnWindowPropertyChanged;
+            _window = null;
+        }
+
+        SetPresentation(false);
+    }
+
+    private static TaskCompletionSource CreatePresentationSource()
+    {
+        return new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
+    private void UpdatePresentation()
+    {
+        SetPresentation(WindowPresentationState.IsPresented(_window));
+    }
+
+    private void SetPresentation(bool isPresented)
+    {
+        TaskCompletionSource? sourceToComplete = null;
+
+        lock (_presentationLock)
+        {
+            if (_isPresented == isPresented)
+            {
+                return;
+            }
+
+            _isPresented = isPresented;
+
+            if (isPresented)
+            {
+                sourceToComplete = _presentationSource;
+            }
+            else
+            {
+                _presentationSource = CreatePresentationSource();
+            }
+        }
+
+        sourceToComplete?.TrySetResult();
+    }
+
+    private void OnWindowPropertyChanged(
+        object? sender,
+        AvaloniaPropertyChangedEventArgs e)
+    {
+        _ = sender;
+
+        if (e.Property == Visual.IsVisibleProperty
+            || e.Property == Window.WindowStateProperty)
+        {
+            UpdatePresentation();
+        }
     }
 }

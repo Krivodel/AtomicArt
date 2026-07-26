@@ -64,6 +64,53 @@ public sealed class GalleryLifecycleControllerTests
         activityTracker.IsActive.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task ElapsedRefresh_WhenWindowIsHidden_WaitsUntilWindowIsPresented()
+    {
+        TestGenerationLifecycleEventHub lifecycleEventHub = new();
+        TaskCompletionSource presentationSource = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource refreshSource = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        bool isPresented = false;
+        Mock<IWindowPresentationService> presentationServiceMock = new();
+        presentationServiceMock
+            .SetupGet(service => service.IsPresented)
+            .Returns(() => isPresented);
+        presentationServiceMock
+            .Setup(service => service.WaitUntilPresentedAsync(
+                It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken ct) => presentationSource.Task.WaitAsync(ct));
+        Mock<IGalleryLifecycleViewState> viewStateMock = new();
+        viewStateMock
+            .Setup(viewState => viewState.RefreshElapsedTextAsync(
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()))
+            .Callback(() => refreshSource.TrySetResult())
+            .Returns(Task.CompletedTask);
+        using GalleryLifecycleController controller = CreateController(
+            lifecycleEventHub,
+            Mock.Of<ILogger<GalleryLifecycleController>>(),
+            viewState: viewStateMock.Object,
+            windowPresentationService: presentationServiceMock.Object);
+
+        viewStateMock.Verify(
+            viewState => viewState.RefreshElapsedTextAsync(
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        isPresented = true;
+        presentationSource.SetResult();
+        await refreshSource.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+        viewStateMock.Verify(
+            viewState => viewState.RefreshElapsedTextAsync(
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static void VerifyWarningCountForStatus(
         GenerationLifecycleStatus status,
         Times expectedCount)
@@ -81,7 +128,9 @@ public sealed class GalleryLifecycleControllerTests
         IGenerationLifecycleEventHub lifecycleEventHub,
         ILogger<GalleryLifecycleController> logger,
         IGenerationActivityTracker? activityTracker = null,
-        IEnumerable<IGalleryLifecycleEventHandler>? lifecycleEventHandlers = null)
+        IEnumerable<IGalleryLifecycleEventHandler>? lifecycleEventHandlers = null,
+        IGalleryLifecycleViewState? viewState = null,
+        IWindowPresentationService? windowPresentationService = null)
     {
         Mock<IGalleryLifecycleViewState> viewStateMock = new();
         viewStateMock
@@ -89,12 +138,21 @@ public sealed class GalleryLifecycleControllerTests
                 It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        Mock<IWindowPresentationService> presentationServiceMock = new();
+        presentationServiceMock
+            .SetupGet(service => service.IsPresented)
+            .Returns(true);
+        presentationServiceMock
+            .Setup(service => service.WaitUntilPresentedAsync(
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         return new GalleryLifecycleController(
             lifecycleEventHub,
-            viewStateMock.Object,
+            viewState ?? viewStateMock.Object,
             Mock.Of<IViewModelErrorHandler>(),
             activityTracker ?? TestGenerationActivityTrackerFactory.Create(),
+            windowPresentationService ?? presentationServiceMock.Object,
             lifecycleEventHandlers ?? [],
             logger);
     }

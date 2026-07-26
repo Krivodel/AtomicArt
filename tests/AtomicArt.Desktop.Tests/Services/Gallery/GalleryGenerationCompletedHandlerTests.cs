@@ -57,6 +57,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
         GalleryLifecycleViewStateController viewStateController =
             GalleryLifecycleTestFactory.CreateViewStateController(statusRegistry);
         RecordingGalleryStateService galleryStateService = new();
+        RecordingGalleryFileOrderSynchronizer fileOrderSynchronizer = new();
         RecordingGalleryThumbnailStorage thumbnailStorage = new("thumbnail.png");
         GalleryGenerationCompletedHandler handler = new(
             new PassthroughTrustedImageFileService(),
@@ -66,6 +67,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
             statusRegistry,
             viewStateController,
             galleryStateService,
+            fileOrderSynchronizer,
             NullLogger<GalleryGenerationCompletedHandler>.Instance);
         GenerationImageContentDto content = new(
             GenerationImageContentTypes.Png,
@@ -89,6 +91,10 @@ public sealed class GalleryGenerationCompletedHandlerTests
         savedItem.ImagePath.Should().Be(resultPath);
         savedItem.ThumbnailPath.Should().Be("thumbnail.png");
         savedItem.ModelId.Should().Be(ApiModelMetadataTestCatalog.NanoBanana2ModelId);
+        savedItem.GalleryOrderTimestampUtc.Should().Be(CreatedAtUtc);
+        fileOrderSynchronizer.CallCount.Should().Be(1);
+        fileOrderSynchronizer.Items.Should().ContainSingle()
+            .Which.GalleryOrderTimestampUtc.Should().Be(CreatedAtUtc);
         GetArtFiles(rootDirectory).Should().ContainSingle();
         thumbnailStorage.FullImagePath.Should().Be(resultPath);
     }
@@ -254,6 +260,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
             statusRegistry,
             viewStateMock.Object,
             new RecordingGalleryStateService(),
+            new NoOpGalleryFileOrderSynchronizer(),
             NullLogger<GalleryGenerationCompletedHandler>.Instance);
     }
 

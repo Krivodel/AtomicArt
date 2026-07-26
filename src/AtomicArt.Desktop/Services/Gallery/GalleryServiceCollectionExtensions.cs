@@ -37,6 +37,33 @@ internal static class GalleryServiceCollectionExtensions
         return scene;
     }
 
+    private static IGenerationPreviewSession CreateGenerationPreviewSession(
+        IServiceScopeFactory scopeFactory,
+        TopLevel topLevel)
+    {
+        ArgumentNullException.ThrowIfNull(scopeFactory);
+        ArgumentNullException.ThrowIfNull(topLevel);
+
+        IServiceScope scope = scopeFactory.CreateScope();
+
+        try
+        {
+            GallerySceneTopLevelContext context =
+                scope.ServiceProvider.GetRequiredService<GallerySceneTopLevelContext>();
+            context.Attach(topLevel);
+            GenerationPreviewSession session =
+                scope.ServiceProvider.GetRequiredService<GenerationPreviewSession>();
+            session.AttachLifetime(scope);
+
+            return session;
+        }
+        catch (Exception)
+        {
+            scope.Dispose();
+            throw;
+        }
+    }
+
     private static IServiceCollection AddGallerySceneServices(this IServiceCollection services)
     {
         services.AddScoped<GallerySceneTopLevelContext>();
@@ -48,6 +75,7 @@ internal static class GalleryServiceCollectionExtensions
                 .GetRequiredService<IUiFrameSchedulerFactory>()
                 .Create(provider.GetRequiredService<GallerySceneTopLevelContext>().TopLevel));
         services.AddScoped<GalleryPreviewSourceScheduler>();
+        services.AddScoped<GenerationPreviewSession>();
         services.AddScoped<GalleryLayoutService>();
         services.AddScoped<UiAnimationScheduler>();
         services.AddScoped<GalleryOverlayEffects>();
@@ -73,6 +101,13 @@ internal static class GalleryServiceCollectionExtensions
     {
         services.AddSingleton<Func<TopLevel, AnimatedGalleryScene>>(provider =>
             topLevel => CreateGalleryScene(provider.GetRequiredService<IServiceScopeFactory>(), topLevel));
+        services.AddSingleton<Func<TopLevel, IGenerationPreviewSession>>(provider =>
+            topLevel => CreateGenerationPreviewSession(
+                provider.GetRequiredService<IServiceScopeFactory>(),
+                topLevel));
+        services.AddSingleton<
+            IGenerationPreviewSessionFactory,
+            GenerationPreviewSessionFactory>();
         services.AddSingleton<IGallerySceneServicesFactory, GallerySceneServicesFactory>();
         services.AddSingleton<IAnimatedGallerySceneFactory, AnimatedGallerySceneFactory>();
         services.AddSingleton<AnimatedGalleryOperations>();

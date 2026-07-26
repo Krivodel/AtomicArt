@@ -11,6 +11,7 @@ public sealed class GalleryItemState : IGalleryItemStateSource
     public string AspectRatio { get; init; } = string.Empty;
     public string Resolution { get; init; } = string.Empty;
     public DateTime CreatedAtUtc { get; init; }
+    public DateTime? GalleryOrderTimestampUtc { get; init; }
     public GenerationItemStatus Status { get; init; }
     public GenerationItemStatus StatusKind => Status;
     public string? ImagePath { get; init; }

@@ -7,6 +7,8 @@ using Avalonia.Threading;
 
 using SkiaSharp;
 
+using AtomicArt.Desktop.Services.UiAnimation;
+
 namespace AtomicArt.Desktop.Controls.Generation;
 
 public sealed class AttachmentPixelLoadingControl : Control
@@ -58,6 +60,7 @@ public sealed class AttachmentPixelLoadingControl : Control
 
     private readonly DispatcherTimer _timer;
     private readonly Stopwatch _stopwatch = new();
+    private readonly TopLevelPresentationObserver _presentationObserver;
     private PixelLoadingState[] _pixels = [];
     private long _completionStartedAtMilliseconds;
     private int _completionDurationMilliseconds = CompletionDurationMilliseconds;
@@ -76,6 +79,8 @@ public sealed class AttachmentPixelLoadingControl : Control
 
     public AttachmentPixelLoadingControl()
     {
+        _presentationObserver = new TopLevelPresentationObserver(
+            OnWindowPresentationChanged);
         _timer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(FrameIntervalMilliseconds)
@@ -182,8 +187,9 @@ public sealed class AttachmentPixelLoadingControl : Control
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        _presentationObserver.Attach(this);
 
-        if (IsActive && !_isCompleting)
+        if (IsActive && !_isCompleting && CanAnimate())
         {
             Restart();
         }
@@ -191,6 +197,7 @@ public sealed class AttachmentPixelLoadingControl : Control
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _presentationObserver.Detach();
         _timer.Stop();
         _stopwatch.Stop();
 
@@ -247,16 +254,29 @@ public sealed class AttachmentPixelLoadingControl : Control
 
     private void StartTimer()
     {
-        if (!_timer.IsEnabled)
+        if (CanAnimate() && !_timer.IsEnabled)
         {
             _timer.Start();
         }
+    }
+
+    private bool CanAnimate()
+    {
+        return !_presentationObserver.IsAttached
+            || _presentationObserver.IsPresented;
     }
 
     private void OnTimerTick(object? sender, EventArgs e)
     {
         _ = sender;
         _ = e;
+
+        if (!CanAnimate())
+        {
+            _timer.Stop();
+            _stopwatch.Stop();
+            return;
+        }
 
         if (_isCompleting
             && _stopwatch.ElapsedMilliseconds - _completionStartedAtMilliseconds
@@ -268,6 +288,30 @@ public sealed class AttachmentPixelLoadingControl : Control
         }
 
         InvalidateVisual();
+    }
+
+    private void OnWindowPresentationChanged(bool isPresented)
+    {
+        if (!isPresented)
+        {
+            _timer.Stop();
+            _stopwatch.Stop();
+            return;
+        }
+
+        if (!IsActive)
+        {
+            return;
+        }
+
+        if (_isCompleting)
+        {
+            _stopwatch.Start();
+            StartTimer();
+            return;
+        }
+
+        Restart();
     }
 
     private static int CalculateRandomSeed(Guid animationSeed)
@@ -315,7 +359,7 @@ public sealed class AttachmentPixelLoadingControl : Control
 
     private void UpdateAnimationState()
     {
-        if (IsActive && VisualRoot is not null)
+        if (IsActive && VisualRoot is not null && CanAnimate())
         {
             Restart();
         }

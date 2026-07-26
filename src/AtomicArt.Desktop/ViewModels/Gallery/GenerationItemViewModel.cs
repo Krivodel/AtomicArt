@@ -16,6 +16,7 @@ public sealed partial class GenerationItemViewModel :
 {
     public Guid? CorrelationId { get; private set; }
     public int? GenerationOrdinal { get; private set; }
+    public DateTime? GalleryOrderTimestampUtc { get; private set; }
     public string DisplayImagePath => ImagePath ?? string.Empty;
     public string DisplayThumbnailPath =>
         string.IsNullOrWhiteSpace(ThumbnailPath) ? DisplayImagePath : ThumbnailPath;
@@ -92,6 +93,7 @@ public sealed partial class GenerationItemViewModel :
         _statusDescriptorRegistry = statusDescriptorRegistry;
 
         ApplyItem(item);
+        GalleryOrderTimestampUtc = item.CreatedAtUtc;
         ImagePath = imagePath;
         AttachedImagesCount = attachedImagesCount;
         RefreshElapsedText(DateTime.UtcNow);
@@ -101,6 +103,7 @@ public sealed partial class GenerationItemViewModel :
         GenerationStartSnapshot start,
         Guid correlationId,
         int generationOrdinal,
+        DateTime galleryOrderTimestampUtc,
         IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry)
     {
         ArgumentNullException.ThrowIfNull(statusDescriptorRegistry);
@@ -113,6 +116,7 @@ public sealed partial class GenerationItemViewModel :
         Resolution = start.Resolution;
         AspectRatio = start.AspectRatio;
         CreatedAtUtc = start.RequestedAtUtc;
+        GalleryOrderTimestampUtc = galleryOrderTimestampUtc;
         CompletedAtUtc = null;
         GenerationDuration = null;
         Price = null;
@@ -128,6 +132,7 @@ public sealed partial class GenerationItemViewModel :
         GenerationStartSnapshot start,
         Guid correlationId,
         int generationOrdinal,
+        DateTime galleryOrderTimestampUtc,
         IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry)
     {
         ArgumentNullException.ThrowIfNull(start);
@@ -137,6 +142,7 @@ public sealed partial class GenerationItemViewModel :
             start,
             correlationId,
             generationOrdinal,
+            galleryOrderTimestampUtc,
             statusDescriptorRegistry);
     }
 
@@ -162,6 +168,7 @@ public sealed partial class GenerationItemViewModel :
         {
             CorrelationId = normalizedState.CorrelationId,
             GenerationOrdinal = normalizedState.GenerationOrdinal,
+            GalleryOrderTimestampUtc = normalizedState.GalleryOrderTimestampUtc,
             ThumbnailPath = normalizedState.ThumbnailPath
         };
 
@@ -271,6 +278,11 @@ public sealed partial class GenerationItemViewModel :
             sourceRootDirectory,
             destinationRootDirectory);
         RefreshComputedState();
+    }
+
+    internal void SetGalleryOrderTimestamp(DateTime galleryOrderTimestampUtc)
+    {
+        GalleryOrderTimestampUtc = galleryOrderTimestampUtc;
     }
 
     private void ApplyItem(GenerationItemDto item)

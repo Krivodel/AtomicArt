@@ -26,6 +26,7 @@
                                                 VerticalAlignment="Top"
                                                 PreviewSize="{StaticResource MetadataPreviewSize}"
                                                 DataContext="{Binding Item}"
+                                                PreviewPath="{Binding DisplayThumbnailPath}"
                                                 OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}" />
 
                 <Grid Grid.Row="0"

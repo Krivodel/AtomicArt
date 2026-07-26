@@ -11,6 +11,7 @@ public sealed class GalleryLifecycleController : IDisposable
     private readonly IGalleryLifecycleViewState _viewState;
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly IGenerationActivityTracker _generationActivityTracker;
+    private readonly IWindowPresentationService _windowPresentationService;
     private readonly ILogger<GalleryLifecycleController> _logger;
     private readonly IReadOnlyDictionary<GenerationLifecycleStatus, IGalleryLifecycleEventHandler> _handlersByStatus;
     private readonly IDisposable _lifecycleSubscription;
@@ -22,6 +23,7 @@ public sealed class GalleryLifecycleController : IDisposable
         IGalleryLifecycleViewState viewState,
         IViewModelErrorHandler errorHandler,
         IGenerationActivityTracker generationActivityTracker,
+        IWindowPresentationService windowPresentationService,
         IEnumerable<IGalleryLifecycleEventHandler> lifecycleEventHandlers,
         ILogger<GalleryLifecycleController> logger)
     {
@@ -29,12 +31,14 @@ public sealed class GalleryLifecycleController : IDisposable
         ArgumentNullException.ThrowIfNull(viewState);
         ArgumentNullException.ThrowIfNull(errorHandler);
         ArgumentNullException.ThrowIfNull(generationActivityTracker);
+        ArgumentNullException.ThrowIfNull(windowPresentationService);
         ArgumentNullException.ThrowIfNull(lifecycleEventHandlers);
         ArgumentNullException.ThrowIfNull(logger);
 
         _viewState = viewState;
         _errorHandler = errorHandler;
         _generationActivityTracker = generationActivityTracker;
+        _windowPresentationService = windowPresentationService;
         _logger = logger;
         _handlersByStatus = lifecycleEventHandlers.ToDictionary(handler => handler.Status);
         _lifecycleSubscription = lifecycleEventHub.Subscribe(OnGenerationLifecycleEvent);
@@ -65,12 +69,17 @@ public sealed class GalleryLifecycleController : IDisposable
     {
         try
         {
-            await RefreshElapsedTextAsync(ct);
-
             while (!ct.IsCancellationRequested)
             {
-                await Task.Delay(ElapsedRefreshInterval, ct);
+                await _windowPresentationService.WaitUntilPresentedAsync(ct);
+
+                if (!_windowPresentationService.IsPresented)
+                {
+                    continue;
+                }
+
                 await RefreshElapsedTextAsync(ct);
+                await Task.Delay(ElapsedRefreshInterval, ct);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

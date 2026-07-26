@@ -11,6 +11,7 @@ public interface IGalleryItemStateSource
     string AspectRatio { get; }
     string Resolution { get; }
     DateTime CreatedAtUtc { get; }
+    DateTime? GalleryOrderTimestampUtc { get; }
     GenerationItemStatus StatusKind { get; }
     string? ImagePath { get; }
     string? ThumbnailPath { get; }

@@ -2,16 +2,15 @@ using Avalonia;
 
 using SkiaSharp;
 
-using AtomicArt.Desktop.Services;
-
 namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
 public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
 {
-    private const string UnsupportedSourceImageMessage =
-        "Thumbnail source image format is not supported.";
+    private const int MaximumConcurrentCreations = 1;
 
     private readonly GalleryThumbnailImageFormat _thumbnailImageFormat;
+    private readonly SemaphoreSlim _creationSemaphore =
+        new(MaximumConcurrentCreations, MaximumConcurrentCreations);
 
     public GalleryThumbnailGenerator(GalleryThumbnailImageFormat thumbnailImageFormat)
     {
@@ -23,23 +22,18 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
     public async Task<byte[]> CreateThumbnailAsync(string imagePath, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(imagePath);
+        await _creationSemaphore.WaitAsync(ct).ConfigureAwait(false);
 
-        EnsureSourceImageSizeIsAllowed(imagePath);
-        byte[] sourceBytes = await File.ReadAllBytesAsync(imagePath, ct).ConfigureAwait(false);
-        ct.ThrowIfCancellationRequested();
-
-        using SKBitmap sourceBitmap = DecodeSourceBitmap(sourceBytes);
-        PixelSize thumbnailSize = GalleryThumbnailSizeCalculator.Calculate(
-            sourceBitmap.Width,
-            sourceBitmap.Height);
-        using SKBitmap thumbnailBitmap = CreateThumbnailBitmap(sourceBitmap, thumbnailSize);
-        using SKImage image = SKImage.FromBitmap(thumbnailBitmap);
-        using SKData encodedImage = image.Encode(
-            _thumbnailImageFormat.EncodedFormat,
-            _thumbnailImageFormat.EncodingQuality)
-            ?? throw new InvalidOperationException("Thumbnail image could not be encoded.");
-
-        return encodedImage.ToArray();
+        try
+        {
+            return await Task
+                .Run(() => CreateThumbnail(imagePath, ct), ct)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            _creationSemaphore.Release();
+        }
     }
 
     private static void EnsureSourceImageSizeIsAllowed(string imagePath)
@@ -52,47 +46,41 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
         }
     }
 
-    private static SKBitmap DecodeSourceBitmap(byte[] sourceBytes)
+    private byte[] CreateThumbnail(string imagePath, CancellationToken ct)
     {
-        try
-        {
-            return SKBitmap.Decode(sourceBytes)
-                ?? throw new InvalidDataException(UnsupportedSourceImageMessage);
-        }
-        catch (ArgumentNullException ex) when (SkiaImageDecodeFailure.IsInvalidImage(ex))
-        {
-            throw new InvalidDataException(UnsupportedSourceImageMessage, ex);
-        }
-    }
+        EnsureSourceImageSizeIsAllowed(imagePath);
+        ct.ThrowIfCancellationRequested();
 
-    private static SKBitmap CreateThumbnailBitmap(
-        SKBitmap sourceBitmap,
-        PixelSize thumbnailSize)
-    {
-        SKBitmap thumbnailBitmap = new(
+        using FileStream sourceStream = File.OpenRead(imagePath);
+        using SKImage sourceImage = SKImage.FromEncodedData(sourceStream)
+            ?? throw new InvalidDataException(
+                "Thumbnail source image format is not supported.");
+        PixelSize thumbnailSize = GalleryThumbnailSizeCalculator.Calculate(
+            sourceImage.Width,
+            sourceImage.Height);
+        using SKBitmap thumbnailBitmap = new(
             thumbnailSize.Width,
             thumbnailSize.Height,
-            sourceBitmap.ColorType,
-            sourceBitmap.AlphaType);
+            SKColorType.Rgba8888,
+            sourceImage.AlphaType);
+        using SKCanvas canvas = new(thumbnailBitmap);
+        SKRect destination = SKRect.Create(
+            thumbnailSize.Width,
+            thumbnailSize.Height);
+        SKSamplingOptions samplingOptions = new(
+            SKFilterMode.Linear,
+            SKMipmapMode.Linear);
+        canvas.Clear(SKColors.Transparent);
+        canvas.DrawImage(sourceImage, destination, samplingOptions);
+        canvas.Flush();
+        ct.ThrowIfCancellationRequested();
+        using SKImage thumbnailImage = SKImage.FromBitmap(thumbnailBitmap);
+        using SKData encodedImage = thumbnailImage.Encode(
+            _thumbnailImageFormat.EncodedFormat,
+            _thumbnailImageFormat.EncodingQuality)
+            ?? throw new InvalidOperationException(
+                "Thumbnail image could not be encoded.");
 
-        if ((sourceBitmap.Width == thumbnailSize.Width)
-            && (sourceBitmap.Height == thumbnailSize.Height))
-        {
-            using SKCanvas canvas = new(thumbnailBitmap);
-            canvas.DrawBitmap(sourceBitmap, 0, 0);
-            canvas.Flush();
-
-            return thumbnailBitmap;
-        }
-
-        SKSamplingOptions samplingOptions = new(SKFilterMode.Linear, SKMipmapMode.Linear);
-
-        if (sourceBitmap.ScalePixels(thumbnailBitmap, samplingOptions))
-        {
-            return thumbnailBitmap;
-        }
-
-        thumbnailBitmap.Dispose();
-        throw new InvalidOperationException("Thumbnail image could not be resized.");
+        return encodedImage.ToArray();
     }
 }
