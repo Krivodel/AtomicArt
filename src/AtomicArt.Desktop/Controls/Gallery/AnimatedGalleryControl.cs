@@ -8,6 +8,8 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 
+using CommunityToolkit.Mvvm.Input;
+
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -24,22 +26,22 @@ public partial class AnimatedGalleryControl : UserControl
         get => GetValue(ItemsProperty);
         set => SetValue(ItemsProperty, value);
     }
-    public object? RevealInFolderCommand
+    public IRelayCommand? RevealInFolderCommand
     {
         get => GetValue(RevealInFolderCommandProperty);
         set => SetValue(RevealInFolderCommandProperty, value);
     }
-    public object? OpenViewerCommand
+    public IRelayCommand? OpenViewerCommand
     {
         get => GetValue(OpenViewerCommandProperty);
         set => SetValue(OpenViewerCommandProperty, value);
     }
-    public object? OpenMetadataCommand
+    public IRelayCommand? OpenMetadataCommand
     {
         get => GetValue(OpenMetadataCommandProperty);
         set => SetValue(OpenMetadataCommandProperty, value);
     }
-    public object? DeleteOrCancelCommand
+    public IRelayCommand? DeleteOrCancelCommand
     {
         get => GetValue(DeleteOrCancelCommandProperty);
         set => SetValue(DeleteOrCancelCommandProperty, value);
@@ -53,17 +55,17 @@ public partial class AnimatedGalleryControl : UserControl
     public static readonly StyledProperty<IEnumerable<IGalleryItemViewModel>?> ItemsProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IEnumerable<IGalleryItemViewModel>?>(
             nameof(Items));
-    public static readonly StyledProperty<object?> RevealInFolderCommandProperty =
-        AvaloniaProperty.Register<AnimatedGalleryControl, object?>(
+    public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(RevealInFolderCommand));
-    public static readonly StyledProperty<object?> OpenViewerCommandProperty =
-        AvaloniaProperty.Register<AnimatedGalleryControl, object?>(
+    public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(OpenViewerCommand));
-    public static readonly StyledProperty<object?> OpenMetadataCommandProperty =
-        AvaloniaProperty.Register<AnimatedGalleryControl, object?>(
+    public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(OpenMetadataCommand));
-    public static readonly StyledProperty<object?> DeleteOrCancelCommandProperty =
-        AvaloniaProperty.Register<AnimatedGalleryControl, object?>(
+    public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(DeleteOrCancelCommand));
     public static readonly StyledProperty<IAnimatedGalleryOperations?> OperationsProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IAnimatedGalleryOperations?>(

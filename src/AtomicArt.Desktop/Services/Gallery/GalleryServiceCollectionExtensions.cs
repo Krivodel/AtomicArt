@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views.Gallery;
@@ -39,10 +40,14 @@ internal static class GalleryServiceCollectionExtensions
     private static IServiceCollection AddGallerySceneServices(this IServiceCollection services)
     {
         services.AddScoped<GallerySceneTopLevelContext>();
+        services.AddScoped<IGalleryPreviewBitmapLoader, GalleryPreviewBitmapLoader>();
+        services.AddScoped<IGalleryPreviewBitmapProvider, GalleryPreviewBitmapProvider>();
+        services.AddScoped<IGalleryCardControlFactory, GenerationCardControlFactory>();
         services.AddScoped<IUiFrameScheduler>(provider =>
             provider
                 .GetRequiredService<IUiFrameSchedulerFactory>()
                 .Create(provider.GetRequiredService<GallerySceneTopLevelContext>().TopLevel));
+        services.AddScoped<GalleryPreviewSourceScheduler>();
         services.AddScoped<GalleryLayoutService>();
         services.AddScoped<UiAnimationScheduler>();
         services.AddScoped<GalleryOverlayEffects>();
@@ -66,7 +71,6 @@ internal static class GalleryServiceCollectionExtensions
 
     private static IServiceCollection AddGalleryComposition(this IServiceCollection services)
     {
-        services.AddSingleton<IGalleryCardControlFactory, GenerationCardControlFactory>();
         services.AddSingleton<Func<TopLevel, AnimatedGalleryScene>>(provider =>
             topLevel => CreateGalleryScene(provider.GetRequiredService<IServiceScopeFactory>(), topLevel));
         services.AddSingleton<IGallerySceneServicesFactory, GallerySceneServicesFactory>();

@@ -18,6 +18,8 @@ internal sealed class GalleryLayoutService
     private static readonly AttachedProperty<bool> HiddenByLayoutProperty =
         AvaloniaProperty.RegisterAttached<GalleryLayoutService, Control, bool>("HiddenByLayout");
 
+    private VirtualizedRange? _renderedRange;
+
     public void RenderCards(
         GalleryOperationCoordinator context,
         IReadOnlySet<Guid>? hiddenItemIds = null)
@@ -34,6 +36,7 @@ internal sealed class GalleryLayoutService
             }
         }
 
+        _renderedRange = null;
         RefreshGalleryVirtualization(context);
         context.NotifyStateChanged();
     }
@@ -43,29 +46,48 @@ internal sealed class GalleryLayoutService
         ArgumentNullException.ThrowIfNull(context);
         context.EnsureSceneAttached();
         SynchronizeCardControlIdsCore(context);
+        IList<object> items = context.Items;
 
-        if (context.Items.Count == 0)
+        if (items.Count == 0)
         {
-            context.GalleryPanel.Children.Clear();
-            context.CardControls.Clear();
+            RecycleAllControls(context);
             context.GalleryPanel.Width = 0d;
             context.GalleryPanel.Height = OverscanPixels;
+            _renderedRange = null;
             return;
         }
 
         int columns = CalculateColumnCount(GetViewportWidth(context.ScrollViewer));
-        UpdatePanelSize(context, columns);
-        ClampScrollOffset(context);
-        (int start, int end) = GetVisibleIndexRange(context, columns);
+        bool layoutChanged = _renderedRange is not VirtualizedRange renderedRange
+            || renderedRange.Columns != columns
+            || renderedRange.ItemCount != items.Count;
+
+        if (layoutChanged)
+        {
+            UpdatePanelSize(context, columns, items.Count);
+            ClampScrollOffset(context);
+        }
+
+        (int start, int end) = GetVisibleIndexRange(context, columns, items.Count);
+        VirtualizedRange currentRange = new(start, end, columns, items.Count);
+
+        int expectedControlCount = end - start;
+        if ((_renderedRange == currentRange)
+            && (context.CardControls.Count == expectedControlCount))
+        {
+            return;
+        }
+
         HashSet<Guid> desiredIds = [];
 
         for (int i = start; i < end; i++)
         {
-            desiredIds.Add(context.GetItemId(context.Items[i]));
+            desiredIds.Add(context.GetItemId(items[i]));
         }
 
         RemoveInvisibleControls(context, desiredIds);
-        EnsureVisibleControls(context, start, end, columns);
+        EnsureVisibleControls(context, items, start, end, columns);
+        _renderedRange = currentRange;
     }
 
     public Dictionary<Guid, Rect> TakeSnapshot(GalleryOperationCoordinator context)
@@ -113,7 +135,7 @@ internal sealed class GalleryLayoutService
     {
         ArgumentNullException.ThrowIfNull(context);
         context.EnsureSceneAttached();
-        IReadOnlyList<object> items = context.Items;
+        IList<object> items = context.Items;
 
         for (int index = 0; index < items.Count; index++)
         {
@@ -253,26 +275,38 @@ internal sealed class GalleryLayoutService
 
     private static void SynchronizeCardControlIdsCore(GalleryOperationCoordinator context)
     {
-        IReadOnlyList<object> items = context.Items;
-        if ((items.Count == 0) || (context.CardControls.Count == 0))
+        if (context.CardControls.Count == 0)
         {
             return;
         }
 
-        foreach (object item in items)
+        List<(Guid PreviousId, Guid CurrentId, Control Control)>? remaps = null;
+
+        foreach (KeyValuePair<Guid, Control> pair in context.CardControls)
         {
+            object? item = pair.Value.DataContext;
+            if (item is null)
+            {
+                continue;
+            }
+
             Guid currentId = context.GetItemId(item);
-            if (context.CardControls.ContainsKey(currentId))
+            if ((currentId == pair.Key) || context.CardControls.ContainsKey(currentId))
             {
                 continue;
             }
 
-            if (!TryFindCardControlByItem(context, item, out Guid previousId, out Control? control)
-                || (control is null))
-            {
-                continue;
-            }
+            remaps ??= new List<(Guid PreviousId, Guid CurrentId, Control Control)>();
+            remaps.Add((pair.Key, currentId, pair.Value));
+        }
 
+        if (remaps is null)
+        {
+            return;
+        }
+
+        foreach ((Guid previousId, Guid currentId, Control control) in remaps)
+        {
             context.CardControls.Remove(previousId);
             context.CardControls[currentId] = control;
             if (context.HiddenItemIds.Remove(previousId))
@@ -282,27 +316,14 @@ internal sealed class GalleryLayoutService
         }
     }
 
-    private static bool TryFindCardControlByItem(
-        GalleryOperationCoordinator context,
-        object item,
-        out Guid id,
-        out Control? control)
+    private static void RecycleAllControls(GalleryOperationCoordinator context)
     {
-        foreach (KeyValuePair<Guid, Control> pair in context.CardControls)
+        foreach (Control control in context.CardControls.Values)
         {
-            if (!ReferenceEquals(pair.Value.DataContext, item))
-            {
-                continue;
-            }
-
-            id = pair.Key;
-            control = pair.Value;
-            return true;
+            RecycleControl(context, control);
         }
 
-        id = Guid.Empty;
-        control = null;
-        return false;
+        context.CardControls.Clear();
     }
 
     private static double GetViewportHeight(ScrollViewer scrollViewer)
@@ -358,12 +379,15 @@ internal sealed class GalleryLayoutService
         control.Opacity = wasHiddenByLayout ? 1d : Math.Clamp(control.Opacity, 0d, 1d);
     }
 
-    private void UpdatePanelSize(GalleryOperationCoordinator context, int columns)
+    private void UpdatePanelSize(
+        GalleryOperationCoordinator context,
+        int columns,
+        int itemCount)
     {
         double pitchX = CardWidth + CardGap;
         double pitchY = CardHeight + CardGap;
-        int usedColumns = Math.Min(columns, context.Items.Count);
-        int rows = (int)Math.Ceiling(context.Items.Count / (double)columns);
+        int usedColumns = Math.Min(columns, itemCount);
+        int rows = (int)Math.Ceiling(itemCount / (double)columns);
 
         context.GalleryPanel.Width = (usedColumns * pitchX) - CardGap;
         context.GalleryPanel.Height = Math.Max(OverscanPixels, CardTopPadding + (rows * pitchY) - CardGap);
@@ -384,10 +408,13 @@ internal sealed class GalleryLayoutService
         context.ScrollViewer.Offset = new Vector(offset.X, clampedOffsetY);
     }
 
-    private (int Start, int End) GetVisibleIndexRange(GalleryOperationCoordinator context, int columns)
+    private (int Start, int End) GetVisibleIndexRange(
+        GalleryOperationCoordinator context,
+        int columns,
+        int itemCount)
     {
         return CalculateVisibleIndexRange(
-            context.Items.Count,
+            itemCount,
             columns,
             context.ScrollViewer.Offset.Y,
             GetViewportHeight(context.ScrollViewer));
@@ -406,30 +433,53 @@ internal sealed class GalleryLayoutService
 
             Control control = context.CardControls[id];
 
-            context.GalleryPanel.Children.Remove(control);
             context.CardControls.Remove(id);
+            RecycleControl(context, control);
         }
     }
 
     private void EnsureVisibleControls(
         GalleryOperationCoordinator context,
+        IList<object> items,
         int start,
         int end,
         int columns)
     {
         for (int i = start; i < end; i++)
         {
-            object item = context.Items[i];
+            object item = items[i];
             Guid id = context.GetItemId(item);
             if (!context.CardControls.TryGetValue(id, out Control? control))
             {
                 control = context.CreateControl(item);
                 control.IsVisible = true;
                 context.CardControls[id] = control;
-                context.GalleryPanel.Children.Add(control);
+
+                if (!context.GalleryPanel.Children.Contains(control))
+                {
+                    context.GalleryPanel.Children.Add(control);
+                }
             }
 
             PositionControl(control, GetLogicalCardRect(i, columns), context.HiddenItemIds.Contains(id));
         }
     }
+
+    private static void RecycleControl(
+        GalleryOperationCoordinator context,
+        Control control)
+    {
+        if (!context.CanRetainRecycledControl(control))
+        {
+            context.GalleryPanel.Children.Remove(control);
+        }
+
+        context.RecycleControl(control);
+    }
+
+    private readonly record struct VirtualizedRange(
+        int Start,
+        int End,
+        int Columns,
+        int ItemCount);
 }

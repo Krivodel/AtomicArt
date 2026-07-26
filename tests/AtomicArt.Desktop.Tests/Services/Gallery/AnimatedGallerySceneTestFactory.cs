@@ -4,6 +4,7 @@ using Avalonia.Controls;
 
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Views.Gallery;
 
@@ -59,13 +60,25 @@ internal static class AnimatedGallerySceneTestFactory
             GalleryOperationCoordinatorTestFactory.Create(
                 frameScheduler,
                 runnerRegistry);
-
-        return new AnimatedGalleryScene(
+        GalleryPreviewBitmapLoader previewBitmapLoader =
+            new(NullLogger<GalleryPreviewBitmapLoader>.Instance);
+        GalleryPreviewBitmapProvider previewBitmapProvider = new(
+            previewBitmapLoader,
+            NullLogger<GalleryPreviewBitmapProvider>.Instance);
+        GalleryPreviewSourceScheduler previewSourceScheduler =
+            new(frameScheduler);
+        AnimatedGalleryScene scene = new(
             galleryLayout,
             animationScheduler,
             motionAnimator,
             operationCoordinator,
-            new GenerationCardControlFactory(),
+            new GenerationCardControlFactory(
+                previewBitmapProvider,
+                previewSourceScheduler,
+                animationScheduler),
             NullLogger<AnimatedGalleryResizeController>.Instance);
+        scene.AttachLifetime(previewBitmapProvider);
+
+        return scene;
     }
 }

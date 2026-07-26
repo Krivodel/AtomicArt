@@ -7,8 +7,10 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop;
+using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Tests.Services;
@@ -153,6 +155,26 @@ public sealed class DependencyInjectionTests
             serviceProvider.GetRequiredService<IGenerationRunDispatcher>();
 
         firstDispatcher.Should().NotBeSameAs(secondDispatcher);
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithGalleryPreviewPipeline_RegistersSceneScopedServices()
+    {
+        ServiceCollection services = CreateServices();
+
+        ServiceDescriptor previewLoader = services.Single(descriptor =>
+            descriptor.ServiceType == typeof(IGalleryPreviewBitmapLoader));
+        ServiceDescriptor previewProvider = services.Single(descriptor =>
+            descriptor.ServiceType == typeof(IGalleryPreviewBitmapProvider));
+        ServiceDescriptor previewSourceScheduler = services.Single(descriptor =>
+            descriptor.ServiceType == typeof(GalleryPreviewSourceScheduler));
+        ServiceDescriptor cardControlFactory = services.Single(descriptor =>
+            descriptor.ServiceType == typeof(IGalleryCardControlFactory));
+
+        previewLoader.Lifetime.Should().Be(ServiceLifetime.Scoped);
+        previewProvider.Lifetime.Should().Be(ServiceLifetime.Scoped);
+        previewSourceScheduler.Lifetime.Should().Be(ServiceLifetime.Scoped);
+        cardControlFactory.Lifetime.Should().Be(ServiceLifetime.Scoped);
     }
 
     [Fact]

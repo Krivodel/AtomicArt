@@ -27,9 +27,8 @@
                     CornerRadius="{StaticResource GenerationCardCornerRadius}">
                 <Image x:Name="PreviewImage"
                        Classes="generation-card-image"
-                       IsVisible="{Binding ShowsGeneratedImage}"
-                       Source="{Binding DisplayThumbnailPath,
-                                        Converter={StaticResource ImagePathToBitmapConverter}}" />
+                       RenderOptions.BitmapInterpolationMode="MediumQuality"
+                       IsVisible="{Binding ShowsGeneratedImage}" />
             </Border>
         </Grid>
 

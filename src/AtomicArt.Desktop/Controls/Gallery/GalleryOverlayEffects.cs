@@ -34,7 +34,7 @@ internal sealed class GalleryOverlayEffects
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(item);
 
-        Control clone = context.CreateControl(item);
+        Control clone = context.CreateTransientControl(item);
         clone.Width = rect.Width;
         clone.Height = rect.Height;
         clone.IsHitTestVisible = false;

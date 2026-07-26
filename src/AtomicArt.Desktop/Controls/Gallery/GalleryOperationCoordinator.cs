@@ -7,7 +7,7 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
 {
-    internal IReadOnlyList<object> Items => RequireAttached(_items).ToList();
+    internal IList<object> Items => RequireAttached(_items);
     internal ScrollViewer ScrollViewer => RequireAttached(_scrollViewer);
     internal Canvas GalleryPanel => RequireAttached(_galleryPanel);
     internal Canvas OverlayCanvas => RequireAttached(_overlayCanvas);
@@ -25,6 +25,9 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
     private Canvas? _overlayCanvas;
     private Func<object, Guid>? _itemIdSelector;
     private Func<object, Control>? _controlFactory;
+    private Func<object, Control>? _transientControlFactory;
+    private Action<Control>? _controlRecycler;
+    private Func<Control, bool>? _canRetainRecycledControl;
     private Func<Task>? _waitForLayoutAsync;
     private Action? _stateChanged;
 
@@ -100,7 +103,10 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         Func<object, Guid>? itemIdSelector = null,
         Func<object, Control>? controlFactory = null,
         Func<Task>? waitForLayoutAsync = null,
-        Action? stateChanged = null)
+        Action? stateChanged = null,
+        Action<Control>? controlRecycler = null,
+        Func<Control, bool>? canRetainRecycledControl = null,
+        Func<object, Control>? transientControlFactory = null)
     {
         _scrollViewer = scrollViewer ?? throw new ArgumentNullException(nameof(scrollViewer));
         _galleryPanel = galleryPanel ?? throw new ArgumentNullException(nameof(galleryPanel));
@@ -108,6 +114,10 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         _items = items ?? throw new ArgumentNullException(nameof(items));
         _itemIdSelector = itemIdSelector ?? MissingItemIdSelector;
         _controlFactory = controlFactory ?? DefaultControlFactory;
+        _transientControlFactory = transientControlFactory ?? _controlFactory;
+        _controlRecycler = controlRecycler ?? DiscardControl;
+        _canRetainRecycledControl =
+            canRetainRecycledControl ?? CannotRetainRecycledControl;
         _waitForLayoutAsync = waitForLayoutAsync ?? WaitForLayoutCoreAsync;
         _stateChanged = stateChanged;
     }
@@ -137,6 +147,48 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         control.DataContext = item;
 
         return control;
+    }
+
+    internal Control CreateTransientControl(object item)
+    {
+        EnsureSceneAttached();
+        ArgumentNullException.ThrowIfNull(item);
+
+        if (_transientControlFactory is null)
+        {
+            throw new InvalidOperationException(SceneNotAttachedMessage);
+        }
+
+        Control control = _transientControlFactory(item);
+        control.DataContext = item;
+
+        return control;
+    }
+
+    internal void RecycleControl(Control control)
+    {
+        EnsureSceneAttached();
+        ArgumentNullException.ThrowIfNull(control);
+
+        if (_controlRecycler is null)
+        {
+            throw new InvalidOperationException(SceneNotAttachedMessage);
+        }
+
+        _controlRecycler(control);
+    }
+
+    internal bool CanRetainRecycledControl(Control control)
+    {
+        EnsureSceneAttached();
+        ArgumentNullException.ThrowIfNull(control);
+
+        if (_canRetainRecycledControl is null)
+        {
+            throw new InvalidOperationException(SceneNotAttachedMessage);
+        }
+
+        return _canRetainRecycledControl(control);
     }
 
     internal void AddItemsToEnd(IReadOnlyList<object> items)
@@ -212,6 +264,9 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
             || (_overlayCanvas is null)
             || (_itemIdSelector is null)
             || (_controlFactory is null)
+            || (_transientControlFactory is null)
+            || (_controlRecycler is null)
+            || (_canRetainRecycledControl is null)
             || (_waitForLayoutAsync is null))
         {
             throw new InvalidOperationException(SceneNotAttachedMessage);
@@ -223,6 +278,18 @@ internal sealed class GalleryOperationCoordinator : IAnimatedGalleryOperations
         ArgumentNullException.ThrowIfNull(item);
 
         return new ContentControl();
+    }
+
+    private static void DiscardControl(Control control)
+    {
+        ArgumentNullException.ThrowIfNull(control);
+    }
+
+    private static bool CannotRetainRecycledControl(Control control)
+    {
+        ArgumentNullException.ThrowIfNull(control);
+
+        return false;
     }
 
     private static Guid MissingItemIdSelector(object item)

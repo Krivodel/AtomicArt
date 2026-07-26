@@ -107,9 +107,106 @@ public sealed class GalleryLayoutServiceTests
         context.GalleryPanel.Width.Should().Be(GalleryLayoutService.CardWidth * 2d);
     }
 
+    [Fact]
+    public void RefreshGalleryVirtualization_WithUnchangedRange_VisitsOnlyRealizedItems()
+    {
+        GalleryLayoutService service = new();
+        List<object> items = Enumerable
+            .Range(1, 1000)
+            .Select(index => (object)new Guid(index, 0, 0, new byte[8]))
+            .ToList();
+        ScrollViewer scrollViewer = new();
+        scrollViewer.Arrange(new Rect(0d, 0d, 560d, 420d));
+        int itemIdSelectionCount = 0;
+        int createdControlCount = 0;
+        GalleryOperationCoordinator context = CreateContext(
+            scrollViewer,
+            items,
+            item =>
+            {
+                itemIdSelectionCount++;
+
+                return (Guid)item;
+            },
+            _ =>
+            {
+                createdControlCount++;
+
+                return new Border();
+            });
+        service.RenderCards(context);
+        int realizedControlCount = context.CardControls.Count;
+        itemIdSelectionCount = 0;
+
+        service.RefreshGalleryVirtualization(context);
+
+        itemIdSelectionCount.Should().Be(realizedControlCount);
+        createdControlCount.Should().Be(realizedControlCount);
+    }
+
+    [Fact]
+    public void RefreshGalleryVirtualization_WhenRangeMoves_ReusesAttachedControls()
+    {
+        GalleryLayoutService service = new();
+        List<object> items = Enumerable
+            .Range(1, 100)
+            .Select(index => (object)new Guid(index, 0, 0, new byte[8]))
+            .ToList();
+        ScrollViewer scrollViewer = new();
+        scrollViewer.Arrange(new Rect(0d, 0d, 560d, 420d));
+        scrollViewer.Offset = new Vector(0d, 1200d);
+        Stack<Control> pooledControls = [];
+        DiscardingUiFrameScheduler frameScheduler = new();
+        GalleryOperationCoordinator context = GalleryOperationCoordinatorTestFactory.Create(
+            frameScheduler,
+            new GalleryOperationRunnerRegistry(new List<IGalleryOperationRunner>()));
+        context.AttachScene(
+            scrollViewer,
+            new Canvas(),
+            new Canvas(),
+            items,
+            item => (Guid)item,
+            _ => pooledControls.Count > 0
+                ? pooledControls.Pop()
+                : new Border(),
+            () => Task.CompletedTask,
+            controlRecycler: control =>
+            {
+                control.DataContext = null;
+                control.IsVisible = false;
+                pooledControls.Push(control);
+            },
+            canRetainRecycledControl: _ => true);
+        service.RenderCards(context);
+        HashSet<Control> initialControls =
+            context.GalleryPanel.Children.ToHashSet();
+
+        scrollViewer.Offset = new Vector(0d, 1538d);
+        service.RefreshGalleryVirtualization(context);
+
+        context.GalleryPanel.Children.Should().HaveCount(initialControls.Count);
+        context.GalleryPanel.Children.Should()
+            .OnlyContain(control => initialControls.Contains(control));
+        context.CardControls.Values.Should().OnlyContain(control => control.IsVisible);
+        pooledControls.Should().BeEmpty();
+    }
+
     private static GalleryOperationCoordinator CreateContext(
         ScrollViewer scrollViewer,
         IList<object> items)
+    {
+        return CreateContext(
+            scrollViewer,
+            items,
+            item => (Guid)item,
+            _ => new Border());
+    }
+
+    private static GalleryOperationCoordinator CreateContext(
+        ScrollViewer scrollViewer,
+        IList<object> items,
+        Func<object, Guid> itemIdSelector,
+        Func<object, Control> controlFactory)
     {
         DiscardingUiFrameScheduler frameScheduler = new();
         GalleryOperationCoordinator context = GalleryOperationCoordinatorTestFactory.Create(
@@ -121,8 +218,8 @@ public sealed class GalleryLayoutServiceTests
             new Canvas(),
             new Canvas(),
             items,
-            item => (Guid)item,
-            _ => new Border(),
+            itemIdSelector,
+            controlFactory,
             () => Task.CompletedTask);
 
         return context;

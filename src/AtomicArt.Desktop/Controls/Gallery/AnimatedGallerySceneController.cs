@@ -115,7 +115,6 @@ internal sealed class AnimatedGallerySceneController
 
         _scene.GalleryLayout.RefreshGalleryVirtualization(_scene.OperationCoordinator);
         HasRenderedScene = true;
-        UpdateCardCommands();
     }
 
     internal void RegisterSceneOperations()
@@ -202,7 +201,11 @@ internal sealed class AnimatedGallerySceneController
             _sceneItems,
             _owner.GetItemId,
             CreateCard,
-            WaitForLayoutAsync);
+            WaitForLayoutAsync,
+            controlRecycler: _scene.CardControlFactory.Recycle,
+            canRetainRecycledControl:
+                _scene.CardControlFactory.CanRetainRecycledControl,
+            transientControlFactory: CreateTransientCard);
     }
 
     private IAnimatedGallerySceneFactory GetSceneFactory()
@@ -225,6 +228,16 @@ internal sealed class AnimatedGallerySceneController
         AnimatedGalleryScene scene = AnimatedGallerySceneController.RequireScene(_scene);
 
         return scene.CardControlFactory.Create(
+            item,
+            CreateCardCommands(),
+            _owner.PreviewExpansionHost);
+    }
+
+    private Control CreateTransientCard(object item)
+    {
+        AnimatedGalleryScene scene = AnimatedGallerySceneController.RequireScene(_scene);
+
+        return scene.CardControlFactory.CreateTransient(
             item,
             CreateCardCommands(),
             _owner.PreviewExpansionHost);

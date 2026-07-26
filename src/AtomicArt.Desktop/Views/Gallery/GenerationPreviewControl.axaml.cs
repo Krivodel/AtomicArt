@@ -3,12 +3,14 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.Views.Gallery;
@@ -25,6 +27,11 @@ public partial class GenerationPreviewControl : UserControl
         get => GetValue(PreviewSizeProperty);
         set => SetValue(PreviewSizeProperty, value);
     }
+    public string? PreviewPath
+    {
+        get => GetValue(PreviewPathProperty);
+        set => SetValue(PreviewPathProperty, value);
+    }
 
     public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
         AvaloniaProperty.Register<GenerationPreviewControl, IRelayCommand?>(
@@ -33,6 +40,9 @@ public partial class GenerationPreviewControl : UserControl
         AvaloniaProperty.Register<GenerationPreviewControl, double>(
             nameof(PreviewSize),
             DefaultPreviewSize);
+    public static readonly StyledProperty<string?> PreviewPathProperty =
+        AvaloniaProperty.Register<GenerationPreviewControl, string?>(
+            nameof(PreviewPath));
 
     internal IGenerationPreviewExpansionHost? ExpansionHost { get; set; }
     internal Control? OverflowOwner { get; set; }
@@ -41,7 +51,12 @@ public partial class GenerationPreviewControl : UserControl
     private const double DefaultPreviewSize = 220d;
 
     private readonly GenerationPreviewExpansionController _previewExpansionController;
+    private IGalleryPreviewBitmapProvider? _previewBitmapProvider;
+    private GalleryPreviewSourceScheduler? _previewSourceScheduler;
+    private GalleryPreviewBitmapLease? _previewBitmapLease;
+    private CancellationTokenSource? _previewLoadCancellation;
     private GalleryImageDragCandidate? _imageDragCandidate;
+    private bool _isAttached;
 
     public GenerationPreviewControl()
     {
@@ -52,11 +67,6 @@ public partial class GenerationPreviewControl : UserControl
             PreviewShadow,
             PreviewImage,
             PreviewDragSource);
-    }
-
-    internal void BeginRemovalAnimation(int durationMilliseconds)
-    {
-        PixelLoadingIndicator.FadeOut(durationMilliseconds);
     }
 
     internal static string? GetImageDragPathOrDefault(GenerationItemViewModel item)
@@ -94,6 +104,94 @@ public partial class GenerationPreviewControl : UserControl
         ArgumentNullException.ThrowIfNull(file);
 
         return GalleryImageDragData.Create(file);
+    }
+
+    internal void SetPreviewBitmapServices(
+        IGalleryPreviewBitmapProvider previewBitmapProvider,
+        GalleryPreviewSourceScheduler previewSourceScheduler)
+    {
+        ArgumentNullException.ThrowIfNull(previewBitmapProvider);
+        ArgumentNullException.ThrowIfNull(previewSourceScheduler);
+
+        if (ReferenceEquals(_previewBitmapProvider, previewBitmapProvider)
+            && ReferenceEquals(_previewSourceScheduler, previewSourceScheduler))
+        {
+            return;
+        }
+
+        _previewBitmapProvider = previewBitmapProvider;
+        _previewSourceScheduler = previewSourceScheduler;
+        RefreshPreviewBitmap();
+    }
+
+    internal void BeginRemovalAnimation(int durationMilliseconds)
+    {
+        PixelLoadingIndicator.FadeOut(durationMilliseconds);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        _isAttached = true;
+        RefreshPreviewBitmap();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        _isAttached = false;
+        CancelPendingPreviewLoad();
+        ClearPreviewBitmap();
+
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == PreviewPathProperty)
+        {
+            RefreshPreviewBitmap();
+        }
+    }
+
+    private static GenerationDragPreviewWindow? CreateDragPreviewWindowOrDefault(
+        string previewPath)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return null;
+        }
+
+        Bitmap? bitmap = CreateDragPreviewBitmapOrDefault(previewPath);
+        if (bitmap is null)
+        {
+            return null;
+        }
+
+        return new GenerationDragPreviewWindow(bitmap);
+    }
+
+    private static Bitmap? CreateDragPreviewBitmapOrDefault(string previewPath)
+    {
+        try
+        {
+            using FileStream stream = File.OpenRead(previewPath);
+
+            return Bitmap.DecodeToWidth(
+                stream,
+                DragPreviewWidth,
+                BitmapInterpolationMode.HighQuality);
+        }
+        catch (Exception ex) when (ex is IOException
+            or UnauthorizedAccessException
+            or ArgumentException
+            or InvalidOperationException
+            or NotSupportedException)
+        {
+            return null;
+        }
     }
 
     private void OnPreviewDragSourcePointerPressed(object? sender, PointerPressedEventArgs e)
@@ -214,42 +312,92 @@ public partial class GenerationPreviewControl : UserControl
         await DragDrop.DoDragDropAsync(e, dataTransfer, DragDropEffects.Copy);
     }
 
-    private static GenerationDragPreviewWindow? CreateDragPreviewWindowOrDefault(
-        string previewPath)
+    private void RefreshPreviewBitmap()
     {
-        if (!OperatingSystem.IsWindows())
+        CancelPendingPreviewLoad();
+        ClearPreviewBitmap();
+
+        IGalleryPreviewBitmapProvider? provider = _previewBitmapProvider;
+        GalleryPreviewSourceScheduler? sourceScheduler = _previewSourceScheduler;
+        string? previewPath = PreviewPath;
+
+        if (!_isAttached
+            || provider is null
+            || sourceScheduler is null
+            || string.IsNullOrWhiteSpace(previewPath))
         {
-            return null;
+            return;
         }
 
-        Bitmap? bitmap = CreateDragPreviewBitmapOrDefault(previewPath);
-        if (bitmap is null)
-        {
-            return null;
-        }
-
-        return new GenerationDragPreviewWindow(bitmap);
+        CancellationTokenSource cancellation = new();
+        _previewLoadCancellation = cancellation;
+        _ = LoadPreviewBitmapAsync(
+            provider,
+            sourceScheduler,
+            previewPath,
+            cancellation);
     }
 
-    private static Bitmap? CreateDragPreviewBitmapOrDefault(string previewPath)
+    private async Task LoadPreviewBitmapAsync(
+        IGalleryPreviewBitmapProvider provider,
+        GalleryPreviewSourceScheduler sourceScheduler,
+        string previewPath,
+        CancellationTokenSource cancellation)
     {
+        GalleryPreviewBitmapLease? lease = null;
+
         try
         {
-            using FileStream stream = File.OpenRead(previewPath);
+            lease = await provider.AcquireAsync(previewPath, cancellation.Token);
 
-            return Bitmap.DecodeToWidth(
-                stream,
-                DragPreviewWidth,
-                BitmapInterpolationMode.HighQuality);
+            if (lease is null
+                || cancellation.IsCancellationRequested
+                || !ReferenceEquals(_previewLoadCancellation, cancellation)
+                || !_isAttached
+                || !string.Equals(PreviewPath, previewPath, StringComparison.OrdinalIgnoreCase))
+            {
+                lease?.Dispose();
+                return;
+            }
+
+            await sourceScheduler.PresentAsync(
+                () => PresentPreviewBitmap(lease),
+                cancellation.Token);
+            lease = null;
         }
-        catch (Exception ex) when (ex is IOException
-            or UnauthorizedAccessException
-            or ArgumentException
-            or InvalidOperationException
-            or NotSupportedException)
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
-            return null;
+            lease?.Dispose();
         }
+        finally
+        {
+            if (ReferenceEquals(_previewLoadCancellation, cancellation))
+            {
+                _previewLoadCancellation = null;
+            }
+
+            cancellation.Dispose();
+        }
+    }
+
+    private void CancelPendingPreviewLoad()
+    {
+        CancellationTokenSource? cancellation = _previewLoadCancellation;
+        _previewLoadCancellation = null;
+        cancellation?.Cancel();
+    }
+
+    private void ClearPreviewBitmap()
+    {
+        PreviewImage.Source = null;
+        _previewBitmapLease?.Dispose();
+        _previewBitmapLease = null;
+    }
+
+    private void PresentPreviewBitmap(GalleryPreviewBitmapLease lease)
+    {
+        _previewBitmapLease = lease;
+        PreviewImage.Source = lease.Bitmap;
     }
 
     private void ExecuteOpenViewer(GenerationItemViewModel item)

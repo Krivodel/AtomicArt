@@ -58,6 +58,28 @@ internal sealed class UiAnimationScheduler
         }
     }
 
+    public void Cancel(Control control)
+    {
+        ArgumentNullException.ThrowIfNull(control);
+
+        for (int i = _animations.Count - 1; i >= 0; i--)
+        {
+            ActiveAnimation animation = _animations[i];
+            if (!ReferenceEquals(animation.Control, control))
+            {
+                continue;
+            }
+
+            _animations.RemoveAt(i);
+            animation.Completion.TrySetResult();
+        }
+
+        if (_animations.Count == 0)
+        {
+            _isRunning = false;
+        }
+    }
+
     public void RequestAnimationFrame(Action<TimeSpan> frameAction)
     {
         ArgumentNullException.ThrowIfNull(frameAction);

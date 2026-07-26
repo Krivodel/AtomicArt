@@ -1,7 +1,9 @@
+using CommunityToolkit.Mvvm.Input;
+
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed record GalleryCardCommands(
-    object? OpenViewer,
-    object? RevealInFolder,
-    object? OpenMetadata,
-    object? DeleteOrCancel);
+    IRelayCommand? OpenViewer,
+    IRelayCommand? RevealInFolder,
+    IRelayCommand? OpenMetadata,
+    IRelayCommand? DeleteOrCancel);

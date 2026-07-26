@@ -1,4 +1,7 @@
+using Avalonia;
+
 using SkiaSharp;
+
 using AtomicArt.Desktop.Services;
 
 namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
@@ -26,7 +29,9 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
         ct.ThrowIfCancellationRequested();
 
         using SKBitmap sourceBitmap = DecodeSourceBitmap(sourceBytes);
-        SKSizeI thumbnailSize = CalculateThumbnailSize(sourceBitmap.Width, sourceBitmap.Height);
+        PixelSize thumbnailSize = GalleryThumbnailSizeCalculator.Calculate(
+            sourceBitmap.Width,
+            sourceBitmap.Height);
         using SKBitmap thumbnailBitmap = CreateThumbnailBitmap(sourceBitmap, thumbnailSize);
         using SKImage image = SKImage.FromBitmap(thumbnailBitmap);
         using SKData encodedImage = image.Encode(
@@ -47,27 +52,6 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
         }
     }
 
-    private static SKSizeI CalculateThumbnailSize(int width, int height)
-    {
-        if (width <= 0 || height <= 0)
-        {
-            throw new InvalidDataException("Thumbnail source image dimensions must be positive.");
-        }
-
-        int shortSide = Math.Min(width, height);
-
-        if (shortSide <= GalleryThumbnailSpecification.ShortSidePixels)
-        {
-            return new SKSizeI(width, height);
-        }
-
-        double scale = (double)GalleryThumbnailSpecification.ShortSidePixels / shortSide;
-        int thumbnailWidth = Math.Max(1, (int)Math.Round(width * scale, MidpointRounding.AwayFromZero));
-        int thumbnailHeight = Math.Max(1, (int)Math.Round(height * scale, MidpointRounding.AwayFromZero));
-
-        return new SKSizeI(thumbnailWidth, thumbnailHeight);
-    }
-
     private static SKBitmap DecodeSourceBitmap(byte[] sourceBytes)
     {
         try
@@ -81,7 +65,9 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
         }
     }
 
-    private static SKBitmap CreateThumbnailBitmap(SKBitmap sourceBitmap, SKSizeI thumbnailSize)
+    private static SKBitmap CreateThumbnailBitmap(
+        SKBitmap sourceBitmap,
+        PixelSize thumbnailSize)
     {
         SKBitmap thumbnailBitmap = new(
             thumbnailSize.Width,
@@ -89,7 +75,8 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
             sourceBitmap.ColorType,
             sourceBitmap.AlphaType);
 
-        if (sourceBitmap.Width == thumbnailSize.Width && sourceBitmap.Height == thumbnailSize.Height)
+        if ((sourceBitmap.Width == thumbnailSize.Width)
+            && (sourceBitmap.Height == thumbnailSize.Height))
         {
             using SKCanvas canvas = new(thumbnailBitmap);
             canvas.DrawBitmap(sourceBitmap, 0, 0);

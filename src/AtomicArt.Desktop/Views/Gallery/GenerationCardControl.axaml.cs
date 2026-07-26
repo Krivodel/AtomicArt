@@ -6,6 +6,7 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Controls.Gallery;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.Views.Gallery;
@@ -85,5 +86,14 @@ public partial class GenerationCardControl :
         ArgumentNullException.ThrowIfNull(file);
 
         return GenerationPreviewControl.CreateImageFileDataTransfer(file);
+    }
+
+    internal void SetPreviewBitmapServices(
+        IGalleryPreviewBitmapProvider previewBitmapProvider,
+        GalleryPreviewSourceScheduler previewSourceScheduler)
+    {
+        GenerationPreview.SetPreviewBitmapServices(
+            previewBitmapProvider,
+            previewSourceScheduler);
     }
 }
