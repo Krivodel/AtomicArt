@@ -1,9 +1,12 @@
 using Avalonia.Controls;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 
 namespace AtomicArt.Desktop.Tests.Services;
@@ -15,7 +18,7 @@ public sealed class WindowStateServiceTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            using WindowStateService service = new();
+            using WindowStateService service = CreateService();
             Window window = Show(new Border());
 
             try
@@ -44,7 +47,7 @@ public sealed class WindowStateServiceTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            using WindowStateService service = new();
+            using WindowStateService service = CreateService();
             Window window = Show(new Border());
 
             try
@@ -68,5 +71,16 @@ public sealed class WindowStateServiceTests : AnimatedGalleryControlTestBase
                 window.Close();
             }
         });
+    }
+
+    private static WindowStateService CreateService()
+    {
+        WindowPlacementTracker placementTracker = new(
+            new StubAppStateStore(new WindowPlacementState()),
+            new RecordingStateWriteScheduler(),
+            new WindowPlacementStateSection(),
+            NullLogger<WindowPlacementTracker>.Instance);
+
+        return new WindowStateService(placementTracker);
     }
 }

@@ -19,6 +19,7 @@ using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Services.Windows;
+using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
@@ -146,6 +147,7 @@ public static class DependencyInjection
 
     private static IServiceCollection AddPlatformServices(this IServiceCollection services)
     {
+        services.AddSingleton<WindowPlacementTracker>();
         services.AddSharedSingletonAliases<WindowStateService>(
             typeof(IWindowStateService),
             typeof(IWindowAttachmentService),

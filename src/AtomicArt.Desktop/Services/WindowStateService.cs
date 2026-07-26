@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
 
+using AtomicArt.Desktop.Services.Windowing;
+
 namespace AtomicArt.Desktop.Services;
 
 public sealed class WindowStateService :
@@ -21,9 +23,16 @@ public sealed class WindowStateService :
     }
 
     private readonly object _presentationLock = new();
+    private readonly WindowPlacementTracker _placementTracker;
     private Window? _window;
     private TaskCompletionSource _presentationSource = CreatePresentationSource();
     private bool _isPresented;
+
+    public WindowStateService(WindowPlacementTracker placementTracker)
+    {
+        _placementTracker = placementTracker
+            ?? throw new ArgumentNullException(nameof(placementTracker));
+    }
 
     public void Attach(Window window)
     {
@@ -40,6 +49,7 @@ public sealed class WindowStateService :
             _window.PropertyChanged -= OnWindowPropertyChanged;
         }
 
+        _placementTracker.Attach(window);
         _window = window;
         _window.PropertyChanged += OnWindowPropertyChanged;
         UpdatePresentation();
@@ -101,6 +111,8 @@ public sealed class WindowStateService :
 
     public void Dispose()
     {
+        _placementTracker.Dispose();
+
         if (_window is not null)
         {
             _window.PropertyChanged -= OnWindowPropertyChanged;

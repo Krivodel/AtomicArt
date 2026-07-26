@@ -13,6 +13,8 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
@@ -25,6 +27,25 @@ namespace AtomicArt.Desktop.Tests;
 
 public sealed class DependencyInjectionTests
 {
+    [Fact]
+    public void AddDesktopServices_WithWindowPlacement_RegistersSharedServicesAndStateSection()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+
+        WindowStateService windowStateService =
+            serviceProvider.GetRequiredService<WindowStateService>();
+        IWindowAttachmentService attachmentService =
+            serviceProvider.GetRequiredService<IWindowAttachmentService>();
+        IStateSectionRegistry stateSectionRegistry =
+            serviceProvider.GetRequiredService<IStateSectionRegistry>();
+
+        attachmentService.Should().BeSameAs(windowStateService);
+        stateSectionRegistry
+            .GetRequired<WindowPlacementState>()
+            .Should()
+            .BeOfType<WindowPlacementStateSection>();
+    }
+
     [Fact]
     public void AddDesktopServices_WithGenerationStatusRegistry_ResolvesRegistry()
     {
