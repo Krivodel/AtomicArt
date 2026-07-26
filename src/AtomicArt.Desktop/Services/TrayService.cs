@@ -41,7 +41,7 @@ public sealed class TrayService : ITrayService, ITrayAttachmentService, IDisposa
 
     public void HideToTray()
     {
-        _window?.Hide();
+        _windowStateService.Hide();
     }
 
     public void ShowWindow()

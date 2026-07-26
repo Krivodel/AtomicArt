@@ -7,6 +7,7 @@ using Velopack;
 using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.Settings;
+using AtomicArt.Desktop.Services.SingleInstance;
 
 namespace AtomicArt.Desktop;
 
@@ -49,6 +50,19 @@ internal sealed class Program
 
         try
         {
+            SingleInstanceIdentity singleInstanceIdentity =
+                SingleInstanceIdentity.CreateDefault();
+            using SingleInstanceCoordinator singleInstanceCoordinator = new(
+                singleInstanceIdentity,
+                loggerFactory.CreateLogger<SingleInstanceCoordinator>());
+
+            if (!singleInstanceCoordinator.TryStartOrNotifyExisting())
+            {
+                logger.LogInformation(
+                    "Another Atomic Art process is already running; this process will exit.");
+                return;
+            }
+
             if (bootstrapLoadFailure is not null)
             {
                 throw new InvalidDataException(
@@ -58,7 +72,11 @@ internal sealed class Program
 
             TryRecoverDataRootMigration(bootstrapStore, journalStore, logger);
             IConfiguration configuration = App.CreateConfiguration();
-            App.ConfigureBootstrap(configuration, pathProvider, loggerProvider);
+            App.ConfigureBootstrap(
+                configuration,
+                pathProvider,
+                loggerProvider,
+                singleInstanceCoordinator);
             logger.LogInformation("Atomic Art desktop process is starting.");
 
             long maxGpuResourceSizeBytes =

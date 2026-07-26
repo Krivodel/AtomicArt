@@ -27,6 +27,7 @@ public sealed class WindowStateService :
     private Window? _window;
     private TaskCompletionSource _presentationSource = CreatePresentationSource();
     private bool _isPresented;
+    private WindowState _lastVisibleWindowState = WindowState.Normal;
 
     public WindowStateService(WindowPlacementTracker placementTracker)
     {
@@ -51,8 +52,20 @@ public sealed class WindowStateService :
 
         _placementTracker.Attach(window);
         _window = window;
+        CaptureCurrentWindowState();
         _window.PropertyChanged += OnWindowPropertyChanged;
         UpdatePresentation();
+    }
+
+    public void Hide()
+    {
+        if (_window is null)
+        {
+            return;
+        }
+
+        CaptureCurrentWindowState();
+        _window.Hide();
     }
 
     public void Minimize()
@@ -62,6 +75,7 @@ public sealed class WindowStateService :
             return;
         }
 
+        CaptureCurrentWindowState();
         _window.WindowState = WindowState.Minimized;
     }
 
@@ -86,6 +100,12 @@ public sealed class WindowStateService :
         if (_window is null)
         {
             return;
+        }
+
+        if (!_window.IsVisible
+            || _window.WindowState == WindowState.Minimized)
+        {
+            _window.WindowState = _lastVisibleWindowState;
         }
 
         _window.Show();
@@ -168,7 +188,22 @@ public sealed class WindowStateService :
         if (e.Property == Visual.IsVisibleProperty
             || e.Property == Window.WindowStateProperty)
         {
+            if (e.Property == Window.WindowStateProperty
+                && _window?.IsVisible == true)
+            {
+                CaptureCurrentWindowState();
+            }
+
             UpdatePresentation();
+        }
+    }
+
+    private void CaptureCurrentWindowState()
+    {
+        if (_window is not null
+            && _window.WindowState != WindowState.Minimized)
+        {
+            _lastVisibleWindowState = _window.WindowState;
         }
     }
 }

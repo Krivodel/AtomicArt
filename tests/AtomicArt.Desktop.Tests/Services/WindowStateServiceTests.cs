@@ -73,6 +73,67 @@ public sealed class WindowStateServiceTests : AnimatedGalleryControlTestBase
         });
     }
 
+    [Theory]
+    [InlineData(WindowState.Normal)]
+    [InlineData(WindowState.Maximized)]
+    public void ShowAndActivate_WhenWindowIsHiddenAndMinimized_RestoresPreviousState(
+        WindowState restorableState)
+    {
+        Dispatch(() =>
+        {
+            using WindowStateService service = CreateService();
+            Window window = Show(new Border());
+
+            try
+            {
+                service.Attach(window);
+                window.WindowState = restorableState;
+                window.WindowState = WindowState.Minimized;
+                window.Hide();
+
+                service.ShowAndActivate();
+
+                window.IsVisible.Should().BeTrue();
+                window.WindowState.Should().Be(restorableState);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(WindowState.Normal, WindowState.Maximized)]
+    [InlineData(WindowState.Maximized, WindowState.Normal)]
+    public void ShowAndActivate_AfterHide_RestoresStateCapturedBeforeHiding(
+        WindowState hiddenState,
+        WindowState stateChangedWhileHidden)
+    {
+        Dispatch(() =>
+        {
+            using WindowStateService service = CreateService();
+            Window window = Show(new Border());
+
+            try
+            {
+                service.Attach(window);
+                window.WindowState = hiddenState;
+
+                service.Hide();
+                window.WindowState = stateChangedWhileHidden;
+                service.ShowAndActivate();
+
+                window.IsVisible.Should().BeTrue();
+                window.WindowState.Should().Be(hiddenState);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     private static WindowStateService CreateService()
     {
         WindowPlacementTracker placementTracker = new(

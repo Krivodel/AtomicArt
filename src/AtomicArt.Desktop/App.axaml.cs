@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Desktop.Services.SingleInstance;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.ViewModels;
@@ -22,6 +23,7 @@ public class App : Avalonia.Application
     private static IConfiguration? s_bootstrapConfiguration;
     private static AtomicArtDataPathProvider? s_bootstrapPathProvider;
     private static DesktopFileLoggerProvider? s_bootstrapLoggerProvider;
+    private static SingleInstanceCoordinator? s_singleInstanceCoordinator;
 
     private ServiceProvider? _serviceProvider;
     private ILogger<App>? _logger;
@@ -66,7 +68,8 @@ public class App : Avalonia.Application
     internal static void ConfigureBootstrap(
         IConfiguration configuration,
         AtomicArtDataPathProvider pathProvider,
-        DesktopFileLoggerProvider loggerProvider)
+        DesktopFileLoggerProvider loggerProvider,
+        SingleInstanceCoordinator singleInstanceCoordinator)
     {
         s_bootstrapConfiguration = configuration
             ?? throw new ArgumentNullException(nameof(configuration));
@@ -74,6 +77,9 @@ public class App : Avalonia.Application
             ?? throw new ArgumentNullException(nameof(pathProvider));
         s_bootstrapLoggerProvider = loggerProvider
             ?? throw new ArgumentNullException(nameof(loggerProvider));
+        s_singleInstanceCoordinator = singleInstanceCoordinator
+            ?? throw new ArgumentNullException(
+                nameof(singleInstanceCoordinator));
     }
 
     internal static void ClearBootstrap()
@@ -81,6 +87,7 @@ public class App : Avalonia.Application
         s_bootstrapConfiguration = null;
         s_bootstrapPathProvider = null;
         s_bootstrapLoggerProvider = null;
+        s_singleInstanceCoordinator = null;
     }
 
     internal static IConfiguration CreateConfiguration()
@@ -136,6 +143,8 @@ public class App : Avalonia.Application
 
         MainWindow mainWindow = GetRequiredService<MainWindow>();
 
+        IWindowStateService windowStateService =
+            GetRequiredService<IWindowStateService>();
         IWindowAttachmentService windowAttachmentService = GetRequiredService<IWindowAttachmentService>();
         ITrayAttachmentService trayAttachmentService = GetRequiredService<ITrayAttachmentService>();
         IDialogWindowAttachmentService dialogAttachmentService = GetRequiredService<IDialogWindowAttachmentService>();
@@ -149,6 +158,8 @@ public class App : Avalonia.Application
         dialogAttachmentService.Attach(mainWindow);
         filePickerAttachmentService.Attach(mainWindow.StorageProvider);
         virtualFileDropAttachmentService.Attach(mainWindow);
+        s_singleInstanceCoordinator?.AttachActivationHandler(
+            () => ActivateMainWindowAsync(windowStateService));
 
         if (mainWindow.Clipboard is not null)
         {
@@ -171,6 +182,14 @@ public class App : Avalonia.Application
         desktopLifetime.ShutdownRequested += OnDesktopLifetimeShutdownRequested;
         desktopLifetime.Exit += OnDesktopLifetimeExit;
         _logger?.LogInformation("Atomic Art main window and desktop lifetime were configured.");
+    }
+
+    private static async Task ActivateMainWindowAsync(
+        IWindowStateService windowStateService)
+    {
+        await Dispatcher.UIThread.InvokeAsync(
+            windowStateService.ShowAndActivate,
+            DispatcherPriority.Send);
     }
 
     private TService GetRequiredService<TService>()
@@ -239,6 +258,8 @@ public class App : Avalonia.Application
 
     private void OnDesktopLifetimeExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
+        s_singleInstanceCoordinator?.DetachActivationHandler();
+
         if (_serviceProvider is not null)
         {
             _logger?.LogInformation("Atomic Art desktop process is exiting.");
