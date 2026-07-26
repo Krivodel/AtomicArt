@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Avalonia.Controls;
+
 using FluentAssertions;
 using Xunit;
 
@@ -18,7 +20,12 @@ public sealed class GalleryRemoveRunnerTests
 
         await context.RunAsync(CancellationToken.None);
 
-        context.Coordinator.OverlayCanvas.Children.Should().ContainSingle();
+        context.Coordinator.OverlayCanvas.Children
+            .Should()
+            .ContainSingle()
+            .Which
+            .Should()
+            .BeSameAs(context.RemovedCard);
         context.Operation.Completion.Task.IsCompletedSuccessfully.Should().BeTrue();
 
         context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
@@ -85,12 +92,14 @@ public sealed class GalleryRemoveRunnerTests
             items);
         GalleryOperation operation = new RemoveGalleryOperation(itemId);
         layout.RenderCards(coordinator);
+        Control removedCard = coordinator.CardControls[itemId];
 
         return new RemoveTestContext(
             frameScheduler,
             runner,
             coordinator,
-            operation);
+            operation,
+            removedCard);
     }
 
     private sealed class RemoveTestContext
@@ -99,17 +108,20 @@ public sealed class GalleryRemoveRunnerTests
         public GalleryRemoveRunner Runner { get; }
         public GalleryOperationCoordinator Coordinator { get; }
         public GalleryOperation Operation { get; }
+        public Control RemovedCard { get; }
 
         public RemoveTestContext(
             TestUiFrameScheduler frameScheduler,
             GalleryRemoveRunner runner,
             GalleryOperationCoordinator coordinator,
-            GalleryOperation operation)
+            GalleryOperation operation,
+            Control removedCard)
         {
             FrameScheduler = frameScheduler;
             Runner = runner;
             Coordinator = coordinator;
             Operation = operation;
+            RemovedCard = removedCard;
         }
 
         public Task RunAsync(CancellationToken ct)

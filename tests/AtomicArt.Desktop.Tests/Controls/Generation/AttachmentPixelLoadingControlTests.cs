@@ -133,6 +133,67 @@ public sealed class AttachmentPixelLoadingControlTests : AnimatedGalleryControlT
         });
     }
 
+    [Fact]
+    public async Task Complete_BeforeAttached_HidesAfterCompletionDuration()
+    {
+        await DispatchAsync(async () =>
+        {
+            AttachmentPixelLoadingControl control = new();
+
+            control.Complete();
+
+            control.IsVisible.Should().BeTrue();
+
+            await WaitUntilHiddenAsync(control);
+
+            control.IsVisible.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task Complete_WhenControlIsReattached_ResumesCompletion()
+    {
+        await DispatchAsync(async () =>
+        {
+            AttachmentPixelLoadingControl control = new();
+            Border host = new()
+            {
+                Width = 220d,
+                Height = 220d,
+                Child = control
+            };
+            Window window = Show(host, 220d, 220d);
+
+            try
+            {
+                control.Complete();
+                await Task.Delay(100);
+
+                host.Child = null;
+                await Task.Delay(600);
+
+                control.IsVisible.Should().BeTrue();
+
+                host.Child = control;
+                await WaitUntilHiddenAsync(control);
+
+                control.IsVisible.Should().BeFalse();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    private static async Task WaitUntilHiddenAsync(Control control)
+    {
+        for (int attempt = 0; attempt < 100 && control.IsVisible; attempt++)
+        {
+            await Task.Delay(20);
+        }
+    }
+
     private static SKBitmap CaptureRenderedBitmap(Window window)
     {
         using Bitmap frame = window.CaptureRenderedFrame()

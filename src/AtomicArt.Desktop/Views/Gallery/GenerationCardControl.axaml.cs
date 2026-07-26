@@ -72,6 +72,11 @@ public partial class GenerationCardControl :
         GenerationPreview.OverflowOwner = this;
     }
 
+    void IGalleryRemovalAnimationParticipant.PrepareForRemovalTransfer()
+    {
+        GenerationPreview.PrepareForRemovalTransfer();
+    }
+
     void IGalleryRemovalAnimationParticipant.BeginRemovalAnimation(
         int durationMilliseconds)
     {

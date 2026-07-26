@@ -37,6 +37,7 @@ public sealed class BlurBackdropControl : Control
     private const double BlurRadiusToSigmaDivisor = 3d;
 
     private readonly TopLevelPresentationObserver _presentationObserver;
+    private IUiFrameScheduler? _frameScheduler;
     private int _animationRevision;
     private int _captureRevision;
     private bool _isFramePending;
@@ -85,6 +86,10 @@ public sealed class BlurBackdropControl : Control
 
         ActualThemeVariantChanged += OnActualThemeVariantChanged;
         _presentationObserver.Attach(this);
+        TopLevel? topLevel = TopLevel.GetTopLevel(this);
+        _frameScheduler = topLevel is null
+            ? null
+            : new AvaloniaUiFrameScheduler(topLevel);
         RefreshCapture();
         RestartDynamicFrames();
     }
@@ -94,6 +99,7 @@ public sealed class BlurBackdropControl : Control
         ActualThemeVariantChanged -= OnActualThemeVariantChanged;
         _presentationObserver.Detach();
         StopDynamicFrames();
+        _frameScheduler = null;
 
         base.OnDetachedFromVisualTree(e);
     }
@@ -150,15 +156,15 @@ public sealed class BlurBackdropControl : Control
             return;
         }
 
-        TopLevel? topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel is null)
+        IUiFrameScheduler? frameScheduler = _frameScheduler;
+        if (frameScheduler is null)
         {
             return;
         }
 
         int revision = _animationRevision;
         _isFramePending = true;
-        topLevel.RequestAnimationFrame(_ => OnDynamicFrame(revision));
+        frameScheduler.RequestAnimationFrame(_ => OnDynamicFrame(revision));
     }
 
     private void OnDynamicFrame(int revision)

@@ -20,7 +20,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         ArgumentNullException.ThrowIfNull(applyFrame);
 
         DateTimeOffset startedAt = DateTimeOffset.UtcNow;
-        RequestAnimationFrame(OnFrame);
+        RequestViewerAnimationFrame(OnFrame);
 
         void OnFrame(TimeSpan frameTime)
         {
@@ -38,7 +38,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
 
             if (progress < 1d)
             {
-                RequestAnimationFrame(OnFrame);
+                RequestViewerAnimationFrame(OnFrame);
                 return;
             }
 

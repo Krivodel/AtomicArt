@@ -127,6 +127,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         IGenerationPreviewExpansionHost previewExpansionHost)
     {
         control.IsVisible = true;
+        control.IsHitTestVisible = true;
         control.PreviewExpansionHost = previewExpansionHost;
         control.SetPreviewBitmapServices(
             _previewBitmapProvider,

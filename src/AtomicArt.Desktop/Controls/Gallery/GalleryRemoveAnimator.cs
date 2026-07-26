@@ -16,28 +16,72 @@ internal sealed class GalleryRemoveAnimator : GalleryOverlayAnimator
     {
     }
 
-    internal Task AnimateRemovedItemAsync(
+    internal Control? PrepareRemovedItem(
         GalleryOperationCoordinator context,
-        object item,
+        Guid itemId,
         Rect rect,
         GalleryAnimationTracker deleteOverlays)
     {
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(deleteOverlays);
 
-        Control ghost = OverlayEffects.CreateOverlayCard(context, item, rect);
-        deleteOverlays.Add(ghost);
-        BeginRemovalAnimation(ghost);
+        if (!context.CardControls.TryGetValue(itemId, out Control? control))
+        {
+            return null;
+        }
+
+        PrepareForRemovalTransfer(control);
+        OverlayEffects.MoveCardToOverlay(context, control, rect);
+        context.CardControls.Remove(itemId);
+        deleteOverlays.Add(control);
+
+        return control;
+    }
+
+    internal Task AnimateRemovedItemAsync(
+        GalleryOperationCoordinator context,
+        Control control,
+        Rect rect,
+        GalleryAnimationTracker deleteOverlays)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(control);
+        ArgumentNullException.ThrowIfNull(deleteOverlays);
+
+        BeginRemovalAnimation(control);
         double sign = rect.Center.X > (context.OverlayCanvas.Bounds.Width / 2d) ? 1d : -1d;
 
         return AnimationScheduler.AnimateAsync(
-            ghost,
+            control,
             CreateRemoveFrames(sign),
             RemoveDurationMilliseconds,
             0,
             MotionEasing.EaseMaterial,
-            () => CompleteRemoveAnimation(context, deleteOverlays, ghost));
+            () => ReleaseRemovedItem(context, deleteOverlays, control));
+    }
+
+    internal void ReleaseRemovedItems(
+        GalleryOperationCoordinator context,
+        GalleryAnimationTracker deleteOverlays)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(deleteOverlays);
+
+        List<Control> controls = deleteOverlays.ToList();
+        AnimationScheduler.Cancel(controls);
+
+        foreach (Control control in controls)
+        {
+            ReleaseRemovedItem(context, deleteOverlays, control);
+        }
+    }
+
+    private static void PrepareForRemovalTransfer(Control control)
+    {
+        if (control is IGalleryRemovalAnimationParticipant participant)
+        {
+            participant.PrepareForRemovalTransfer();
+        }
     }
 
     private static void BeginRemovalAnimation(Control control)
@@ -61,12 +105,18 @@ internal sealed class GalleryRemoveAnimator : GalleryOverlayAnimator
         return frames;
     }
 
-    private static void CompleteRemoveAnimation(
+    private static void ReleaseRemovedItem(
         GalleryOperationCoordinator context,
         GalleryAnimationTracker deleteOverlays,
-        Control ghost)
+        Control control)
     {
-        context.OverlayCanvas.Children.Remove(ghost);
-        deleteOverlays.Remove(ghost);
+        if (!deleteOverlays.Contains(control))
+        {
+            return;
+        }
+
+        deleteOverlays.Remove(control);
+        context.OverlayCanvas.Children.Remove(control);
+        context.RecycleControl(control);
     }
 }

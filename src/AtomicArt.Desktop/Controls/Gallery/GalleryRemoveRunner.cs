@@ -63,12 +63,13 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
         return operations;
     }
 
-    private static List<(object Item, Rect Rect)> MaterializeOperations(
+    private List<(Control Control, Rect Rect)> MaterializeOperations(
         GalleryOperationCoordinator context,
         IReadOnlyList<GalleryOperation> operations,
-        IReadOnlyDictionary<Guid, Rect> first)
+        IReadOnlyDictionary<Guid, Rect> first,
+        GalleryAnimationTracker deleteOverlays)
     {
-        List<(object Item, Rect Rect)> removedItems = [];
+        List<(Control Control, Rect Rect)> removedItems = [];
         HashSet<Guid> removedIds = [];
 
         foreach (GalleryOperation operation in operations)
@@ -86,7 +87,15 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
 
             if (removedIds.Add(itemId) && first.TryGetValue(itemId, out Rect rect))
             {
-                removedItems.Add((item, rect));
+                Control? control = MotionAnimator.PrepareRemovedItem(
+                    context,
+                    itemId,
+                    rect,
+                    deleteOverlays);
+                if (control is not null)
+                {
+                    removedItems.Add((control, rect));
+                }
             }
         }
 
@@ -110,7 +119,11 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        Dictionary<Guid, Rect> first = PrepareRemoval(context, operations, out List<(object Item, Rect Rect)> removedItems);
+        Dictionary<Guid, Rect> first = PrepareRemoval(
+            context,
+            operations,
+            deleteOverlays,
+            out List<(Control Control, Rect Rect)> removedItems);
         await RenderCardsAsync(context);
         StartRemovalAnimations(context, first, removedItems, deleteOverlays, runningMoveControls);
         ct.ThrowIfCancellationRequested();
@@ -119,14 +132,19 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
     private Dictionary<Guid, Rect> PrepareRemoval(
         GalleryOperationCoordinator context,
         IReadOnlyList<GalleryOperation> operations,
-        out List<(object Item, Rect Rect)> removedItems)
+        GalleryAnimationTracker deleteOverlays,
+        out List<(Control Control, Rect Rect)> removedItems)
     {
         GalleryLayout.SynchronizeCardControlIds(context);
         Dictionary<Guid, Rect> first = GalleryLayout.TakeSnapshot(context);
         List<Control> interruptedControls = context.CardControls.Values.ToList();
         _animationScheduler.Cancel(interruptedControls);
         ResetControls(interruptedControls);
-        removedItems = MaterializeOperations(context, operations, first);
+        removedItems = MaterializeOperations(
+            context,
+            operations,
+            first,
+            deleteOverlays);
 
         return first;
     }
@@ -134,7 +152,7 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
     private void StartRemovalAnimations(
         GalleryOperationCoordinator context,
         Dictionary<Guid, Rect> first,
-        List<(object Item, Rect Rect)> removedItems,
+        List<(Control Control, Rect Rect)> removedItems,
         GalleryAnimationTracker deleteOverlays,
         GalleryAnimationTracker runningMoveControls)
     {
@@ -150,17 +168,17 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
     private void CancelAnimations(
         GalleryOperationCoordinator context,
         IEnumerable<Control> runningMoveControls,
-        IEnumerable<Control> deleteOverlays)
+        GalleryAnimationTracker deleteOverlays)
     {
         _animationScheduler.Cancel(runningMoveControls.Concat(deleteOverlays));
-        GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, deleteOverlays);
+        MotionAnimator.ReleaseRemovedItems(context, deleteOverlays);
     }
 
     private void HandleCancellation(
         GalleryOperationCoordinator context,
         IEnumerable<GalleryOperation> operations,
         IEnumerable<Control> runningMoveControls,
-        IEnumerable<Control> deleteOverlays,
+        GalleryAnimationTracker deleteOverlays,
         CancellationToken ct)
     {
         CancelAnimations(context, runningMoveControls, deleteOverlays);
@@ -171,7 +189,7 @@ internal sealed class GalleryRemoveRunner : GalleryAnimatedOperationRunner
         GalleryOperationCoordinator context,
         IEnumerable<GalleryOperation> operations,
         IEnumerable<Control> runningMoveControls,
-        IEnumerable<Control> deleteOverlays,
+        GalleryAnimationTracker deleteOverlays,
         Exception exception)
     {
         Logger.LogError(exception, "Failed to remove gallery items.");

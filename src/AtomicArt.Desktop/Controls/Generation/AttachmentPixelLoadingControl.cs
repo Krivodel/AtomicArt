@@ -100,7 +100,7 @@ public sealed class AttachmentPixelLoadingControl : Control
         _isCompleting = true;
         _usesUniformCompletionFade = false;
         _completionStartedAtMilliseconds = _stopwatch.ElapsedMilliseconds;
-        StartTimer();
+        ResumeCompletion();
     }
 
     public void ShowCompleted()
@@ -189,7 +189,16 @@ public sealed class AttachmentPixelLoadingControl : Control
         base.OnAttachedToVisualTree(e);
         _presentationObserver.Attach(this);
 
-        if (IsActive && !_isCompleting && CanAnimate())
+        if (!IsActive || !CanAnimate())
+        {
+            return;
+        }
+
+        if (_isCompleting)
+        {
+            ResumeCompletion();
+        }
+        else
         {
             Restart();
         }
@@ -260,6 +269,18 @@ public sealed class AttachmentPixelLoadingControl : Control
         }
     }
 
+    private void ResumeCompletion()
+    {
+        if (!IsVisible || !CanAnimate())
+        {
+            return;
+        }
+
+        _stopwatch.Start();
+        StartTimer();
+        InvalidateVisual();
+    }
+
     private bool CanAnimate()
     {
         return !_presentationObserver.IsAttached
@@ -306,8 +327,7 @@ public sealed class AttachmentPixelLoadingControl : Control
 
         if (_isCompleting)
         {
-            _stopwatch.Start();
-            StartTimer();
+            ResumeCompletion();
             return;
         }
 

@@ -48,6 +48,7 @@ public sealed class GenerationCardControlFactoryTests : AnimatedGalleryControlTe
                 commands,
                 expansionHost);
             firstControl.IsVisible = true;
+            firstControl.IsHitTestVisible = false;
             factory.Recycle(firstControl);
             firstControl.IsVisible.Should().BeFalse();
 
@@ -63,6 +64,7 @@ public sealed class GenerationCardControlFactoryTests : AnimatedGalleryControlTe
             transientControl.Should().NotBeSameAs(firstControl);
             secondControl.Should().BeSameAs(firstControl);
             secondControl.IsVisible.Should().BeTrue();
+            secondControl.IsHitTestVisible.Should().BeTrue();
         });
     }
 }

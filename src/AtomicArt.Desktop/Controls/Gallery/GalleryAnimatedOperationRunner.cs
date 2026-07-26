@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using Avalonia;
+using Avalonia.Controls;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
@@ -22,18 +23,18 @@ internal abstract class GalleryAnimatedOperationRunner : GalleryOperationRunner
 
     protected void StartRemovedItemAnimations(
         GalleryOperationCoordinator context,
-        IEnumerable<(object Item, Rect Rect)> removedItems,
+        IEnumerable<(Control Control, Rect Rect)> removedItems,
         GalleryAnimationTracker deleteOverlays,
         Action<Task> animationStarted)
     {
         ArgumentNullException.ThrowIfNull(removedItems);
         ArgumentNullException.ThrowIfNull(animationStarted);
 
-        foreach ((object item, Rect rect) in removedItems)
+        foreach ((Control control, Rect rect) in removedItems)
         {
             Task animation = MotionAnimator.AnimateRemovedItemAsync(
                 context,
-                item,
+                control,
                 rect,
                 deleteOverlays);
             animationStarted(animation);

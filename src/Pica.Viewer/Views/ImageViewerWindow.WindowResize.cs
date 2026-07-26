@@ -148,7 +148,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         _isWindowResizeLayoutPending = true;
-        RequestAnimationFrame(OnWindowResizeAnimationFrame);
+        RequestViewerAnimationFrame(OnWindowResizeAnimationFrame);
     }
 
     private void OnLeftNavigationPressed(object? sender, PointerPressedEventArgs e)

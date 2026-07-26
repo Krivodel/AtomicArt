@@ -160,6 +160,71 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
         });
     }
 
+    [Fact]
+    public async Task RemovalTransfer_WithLoadedBitmap_PreservesBitmapUntilFinalDetach()
+    {
+        await DispatchAsync(async () =>
+        {
+            using Bitmap bitmap = CreateBitmap();
+            int acquireCount = 0;
+            int releaseCount = 0;
+            StubGalleryPreviewBitmapProvider provider = new(
+                (_, _) =>
+                {
+                    acquireCount++;
+
+                    return Task.FromResult<GalleryPreviewBitmapLease?>(
+                        new GalleryPreviewBitmapLease(
+                            bitmap,
+                            () => releaseCount++));
+                });
+            TestUiFrameScheduler frameScheduler = new();
+            GalleryPreviewSourceScheduler sourceScheduler =
+                new(frameScheduler);
+            GenerationPreviewControl control = new()
+            {
+                PreviewPath = FirstImagePath
+            };
+            control.SetPreviewBitmapServices(provider, sourceScheduler);
+            Canvas galleryPanel = new();
+            Canvas overlayCanvas = new();
+            Grid root = new();
+            root.Children.Add(galleryPanel);
+            root.Children.Add(overlayCanvas);
+            galleryPanel.Children.Add(control);
+            Window window = Show(root);
+
+            try
+            {
+                Image image = control
+                    .GetVisualDescendants()
+                    .OfType<Image>()
+                    .Single();
+                frameScheduler.RunNextFrame(TimeSpan.Zero);
+                await Task.Yield();
+
+                control.PrepareForRemovalTransfer();
+                galleryPanel.Children.Remove(control);
+                overlayCanvas.Children.Add(control);
+                window.CaptureRenderedFrame();
+
+                image.Source.Should().BeSameAs(bitmap);
+                acquireCount.Should().Be(1);
+                releaseCount.Should().Be(0);
+
+                overlayCanvas.Children.Remove(control);
+                window.CaptureRenderedFrame();
+
+                image.Source.Should().BeNull();
+                releaseCount.Should().Be(1);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     private static Bitmap CreateBitmap()
     {
         byte[] bytes = GalleryThumbnailTestImages.CreatePngBytes(2, 2);

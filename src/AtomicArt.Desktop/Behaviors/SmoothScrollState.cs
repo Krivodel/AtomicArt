@@ -2,6 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using Avalonia;
 
+using AtomicArt.Desktop.Services.UiAnimation;
+
 namespace AtomicArt.Desktop.Behaviors;
 
 internal sealed class SmoothScrollState
@@ -23,6 +25,8 @@ internal sealed class SmoothScrollState
 
     private readonly ScrollViewer _scrollViewer;
     private readonly DispatcherTimer _fallbackTimer;
+    private IUiFrameScheduler? _frameScheduler;
+    private TopLevel? _frameSchedulerTopLevel;
     private Vector _targetOffset;
     private Vector _velocity;
     private TimeSpan _lastFrameTime;
@@ -200,9 +204,11 @@ internal sealed class SmoothScrollState
 
         if (topLevel is not null)
         {
+            IUiFrameScheduler frameScheduler = GetFrameScheduler(topLevel);
             _isFrameRequested = true;
             int frameRequestVersion = ++_frameRequestVersion;
-            topLevel.RequestAnimationFrame(frameTime => OnAnimationFrame(frameTime, frameRequestVersion));
+            frameScheduler.RequestAnimationFrame(
+                frameTime => OnAnimationFrame(frameTime, frameRequestVersion));
             return;
         }
 
@@ -210,6 +216,20 @@ internal sealed class SmoothScrollState
         {
             _fallbackTimer.Start();
         }
+    }
+
+    private IUiFrameScheduler GetFrameScheduler(TopLevel topLevel)
+    {
+        if (ReferenceEquals(_frameSchedulerTopLevel, topLevel)
+            && (_frameScheduler is not null))
+        {
+            return _frameScheduler;
+        }
+
+        _frameSchedulerTopLevel = topLevel;
+        _frameScheduler = new AvaloniaUiFrameScheduler(topLevel);
+
+        return _frameScheduler;
     }
 
     private void Step(TimeSpan frameTime)

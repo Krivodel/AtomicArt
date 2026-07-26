@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using Avalonia;
+using Avalonia.Controls;
 using AtomicArt.Desktop.Services.Gallery;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
@@ -39,7 +40,7 @@ internal sealed class GalleryMixedMutationRunner : GalleryAnimatedOperationRunne
         }
         finally
         {
-            GalleryOverlayCollection.RemoveAll(context.OverlayCanvas, deleteOverlays);
+            MotionAnimator.ReleaseRemovedItems(context, deleteOverlays);
             context.NotifyStateChanged();
         }
     }
@@ -57,7 +58,11 @@ internal sealed class GalleryMixedMutationRunner : GalleryAnimatedOperationRunne
     {
         GalleryLayout.SynchronizeCardControlIds(context);
         Dictionary<Guid, Rect> first = GalleryLayout.TakeSnapshot(context);
-        List<(object Item, Rect Rect)> removedItems = MaterializeOperations(context, operations, first);
+        List<(Control Control, Rect Rect)> removedItems = MaterializeOperations(
+            context,
+            operations,
+            first,
+            deleteOverlays);
         await RenderCardsAsync(context);
         await Task.WhenAll(CreateAnimations(context, first, removedItems, deleteOverlays));
     }
@@ -65,7 +70,7 @@ internal sealed class GalleryMixedMutationRunner : GalleryAnimatedOperationRunne
     private List<Task> CreateAnimations(
         GalleryOperationCoordinator context,
         Dictionary<Guid, Rect> first,
-        IEnumerable<(object Item, Rect Rect)> removedItems,
+        IEnumerable<(Control Control, Rect Rect)> removedItems,
         GalleryAnimationTracker deleteOverlays)
     {
         HashSet<Guid> newIds = [];
@@ -78,16 +83,17 @@ internal sealed class GalleryMixedMutationRunner : GalleryAnimatedOperationRunne
         return animations;
     }
 
-    private List<(object Item, Rect Rect)> MaterializeOperations(
+    private List<(Control Control, Rect Rect)> MaterializeOperations(
         GalleryOperationCoordinator context,
         IReadOnlyList<GalleryOperation> operations,
-        IReadOnlyDictionary<Guid, Rect> first)
+        IReadOnlyDictionary<Guid, Rect> first,
+        GalleryAnimationTracker deleteOverlays)
     {
         List<object> finalItems = GetFinalItems(operations);
         HashSet<Guid> finalIds = finalItems
             .Select(context.GetItemId)
             .ToHashSet();
-        List<(object Item, Rect Rect)> removedItems = [];
+        List<(Control Control, Rect Rect)> removedItems = [];
 
         foreach (object currentItem in context.Items)
         {
@@ -99,7 +105,15 @@ internal sealed class GalleryMixedMutationRunner : GalleryAnimatedOperationRunne
 
             if (first.TryGetValue(id, out Rect rect))
             {
-                removedItems.Add((currentItem, rect));
+                Control? control = MotionAnimator.PrepareRemovedItem(
+                    context,
+                    id,
+                    rect,
+                    deleteOverlays);
+                if (control is not null)
+                {
+                    removedItems.Add((control, rect));
+                }
             }
         }
 

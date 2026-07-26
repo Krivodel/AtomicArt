@@ -46,6 +46,23 @@ internal sealed class GalleryOverlayEffects
         return clone;
     }
 
+    internal void MoveCardToOverlay(
+        GalleryOperationCoordinator context,
+        Control control,
+        Rect rect)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(control);
+
+        context.GalleryPanel.Children.Remove(control);
+        control.Width = rect.Width;
+        control.Height = rect.Height;
+        control.IsHitTestVisible = false;
+        Canvas.SetLeft(control, rect.Left);
+        Canvas.SetTop(control, rect.Top);
+        context.OverlayCanvas.Children.Add(control);
+    }
+
     internal Task AnimateWakeAsync(
         Canvas overlayCanvas,
         Rect last,

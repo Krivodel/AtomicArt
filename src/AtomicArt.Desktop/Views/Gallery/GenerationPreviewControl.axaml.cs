@@ -57,6 +57,7 @@ public partial class GenerationPreviewControl : UserControl
     private CancellationTokenSource? _previewLoadCancellation;
     private GalleryImageDragCandidate? _imageDragCandidate;
     private bool _isAttached;
+    private bool _preservePreviewOnNextDetach;
 
     public GenerationPreviewControl()
     {
@@ -126,6 +127,7 @@ public partial class GenerationPreviewControl : UserControl
 
     internal void ClearPreviewBitmapServices()
     {
+        _preservePreviewOnNextDetach = false;
         CancelPendingPreviewLoad();
         ClearPreviewBitmap();
         _previewBitmapProvider = null;
@@ -137,19 +139,35 @@ public partial class GenerationPreviewControl : UserControl
         PixelLoadingIndicator.FadeOut(durationMilliseconds);
     }
 
+    internal void PrepareForRemovalTransfer()
+    {
+        _preservePreviewOnNextDetach = _isAttached;
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
 
         _isAttached = true;
-        RefreshPreviewBitmap();
+        if (_previewBitmapLease is null)
+        {
+            RefreshPreviewBitmap();
+        }
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _isAttached = false;
         CancelPendingPreviewLoad();
-        ClearPreviewBitmap();
+
+        if (_preservePreviewOnNextDetach)
+        {
+            _preservePreviewOnNextDetach = false;
+        }
+        else
+        {
+            ClearPreviewBitmap();
+        }
 
         base.OnDetachedFromVisualTree(e);
     }

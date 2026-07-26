@@ -137,7 +137,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         }
 
         _isPanAnimationFramePending = true;
-        RequestAnimationFrame(OnPanAnimationFrame);
+        RequestViewerAnimationFrame(OnPanAnimationFrame);
     }
 
     private void OnPanAnimationFrame(TimeSpan frameTime)

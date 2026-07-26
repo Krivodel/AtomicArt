@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using FluentAssertions;
 using Xunit;
 
@@ -19,16 +20,28 @@ public sealed class GalleryMotionRemoveAnimatorTests : GalleryMotionAnimatorTest
         context.OverlayCanvas.Arrange(new Rect(0d, 0d, 800d, 600d));
         Guid itemId = Guid.NewGuid();
         GalleryAnimationTracker deleteOverlays = [];
+        Border card = AddRenderedCard(context, itemId);
+        Rect cardRect = new(
+            600d,
+            20d,
+            GalleryLayoutService.CardWidth,
+            GalleryLayoutService.CardHeight);
+        Control? removedCard = scene.Animator.PrepareRemovedItem(
+            context,
+            itemId,
+            cardRect,
+            deleteOverlays);
 
         Task animationTask = scene.Animator.AnimateRemovedItemAsync(
             context,
-            itemId,
-            new Rect(600d, 20d, GalleryLayoutService.CardWidth, GalleryLayoutService.CardHeight),
+            removedCard!,
+            cardRect,
             deleteOverlays);
 
+        removedCard.Should().BeSameAs(card);
         animationTask.IsCompleted.Should().BeFalse();
-        deleteOverlays.Should().ContainSingle();
-        context.OverlayCanvas.Children.Should().ContainSingle();
+        deleteOverlays.Should().ContainSingle().Which.Should().BeSameAs(card);
+        context.OverlayCanvas.Children.Should().ContainSingle().Which.Should().BeSameAs(card);
         scene.AppliedFrames.Should().ContainSingle();
         scene.AppliedFrames[0].Frame.Should().Be(new MotionFrame(0d, 0d, 1d, 0d, 1d));
 
@@ -44,14 +57,46 @@ public sealed class GalleryMotionRemoveAnimatorTests : GalleryMotionAnimatorTest
         RecordingGalleryRemovalAnimationParticipantControl participant = new();
         GalleryMotionTestScene scene = GalleryMotionTestScene.Create(_ => participant);
         GalleryOperationCoordinator context = scene.Context;
+        Guid itemId = Guid.Parse("12345678-1234-1234-1234-123456789abc");
         GalleryAnimationTracker deleteOverlays = [];
+        AddRenderedCard(context, itemId, participant);
+        Rect cardRect = new(
+            20d,
+            20d,
+            GalleryLayoutService.CardWidth,
+            GalleryLayoutService.CardHeight);
+        Control? removedCard = scene.Animator.PrepareRemovedItem(
+            context,
+            itemId,
+            cardRect,
+            deleteOverlays);
 
         _ = scene.Animator.AnimateRemovedItemAsync(
             context,
-            Guid.Parse("12345678-1234-1234-1234-123456789abc"),
-            new Rect(20d, 20d, GalleryLayoutService.CardWidth, GalleryLayoutService.CardHeight),
+            removedCard!,
+            cardRect,
             deleteOverlays);
 
+        participant.WasPreparedForRemovalTransfer.Should().BeTrue();
         participant.RemovalDurationMilliseconds.Should().Be(RemovalDurationMilliseconds);
+    }
+
+    private static Border AddRenderedCard(
+        GalleryOperationCoordinator context,
+        Guid itemId)
+    {
+        Border card = new();
+        AddRenderedCard(context, itemId, card);
+
+        return card;
+    }
+
+    private static void AddRenderedCard(
+        GalleryOperationCoordinator context,
+        Guid itemId,
+        Control card)
+    {
+        context.CardControls.Add(itemId, card);
+        context.GalleryPanel.Children.Add(card);
     }
 }

@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
@@ -87,14 +88,34 @@ internal sealed class GalleryMotionAnimator
 
     internal Task AnimateRemovedItemAsync(
         GalleryOperationCoordinator context,
-        object item,
+        Control control,
         Rect rect,
         GalleryAnimationTracker deleteOverlays)
     {
         return _removeAnimator.AnimateRemovedItemAsync(
             context,
-            item,
+            control,
             rect,
             deleteOverlays);
+    }
+
+    internal Control? PrepareRemovedItem(
+        GalleryOperationCoordinator context,
+        Guid itemId,
+        Rect rect,
+        GalleryAnimationTracker deleteOverlays)
+    {
+        return _removeAnimator.PrepareRemovedItem(
+            context,
+            itemId,
+            rect,
+            deleteOverlays);
+    }
+
+    internal void ReleaseRemovedItems(
+        GalleryOperationCoordinator context,
+        GalleryAnimationTracker deleteOverlays)
+    {
+        _removeAnimator.ReleaseRemovedItems(context, deleteOverlays);
     }
 }

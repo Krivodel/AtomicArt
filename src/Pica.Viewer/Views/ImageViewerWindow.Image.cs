@@ -204,7 +204,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
     private async Task WaitForNextRenderFrameAsync(CancellationToken ct)
     {
         TaskCompletionSource frameRendered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        RequestAnimationFrame(_ => frameRendered.TrySetResult());
+        RequestViewerAnimationFrame(_ => frameRendered.TrySetResult());
 
         await frameRendered.Task.WaitAsync(ct);
     }

@@ -67,6 +67,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
     private readonly ViewerImageOperations _imageOperations;
     private readonly ImageDoubleClickTracker _imageDoubleClickTracker;
     private readonly ImagePanMotion _panMotion;
+    private readonly ViewerAnimationFrameScheduler _animationFrameScheduler;
     private readonly Bitmap _logoBitmap;
     private readonly ImageViewerView _view;
     private readonly DispatcherTimer _cursorTimer;
@@ -182,6 +183,8 @@ public sealed partial class ImageViewerWindow : SukiWindow
             Math.Max(1d, initialWindowedClientSize.Height - WindowedTitleBarHeight));
         _imageDoubleClickTracker = new ImageDoubleClickTracker();
         _panMotion = new ImagePanMotion();
+        _animationFrameScheduler = new ViewerAnimationFrameScheduler(
+            RequestAnimationFrame);
         _previewCache = new ImagePreviewCache();
         _logoBitmap = LoadBitmap(AppIconAssetUri);
         ImageViewerViewEvents viewEvents = new()
@@ -235,6 +238,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        UpdateAnimationFramePresentation();
         _logger.LogInformation(
             "Pica viewer opened with {ItemCount} images in {WindowMode} mode",
             _request.Items.Count,
@@ -301,6 +305,7 @@ public sealed partial class ImageViewerWindow : SukiWindow
         StopScaleAnimation();
         StopPanMotion();
         CancelPendingImageLoad();
+        _animationFrameScheduler.CancelPendingFrames();
         CancelSelectionClipboardPreparation();
         _view.Dispose();
         _temporarySelectionFileStore.Dispose();
@@ -312,6 +317,12 @@ public sealed partial class ImageViewerWindow : SukiWindow
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+
+        if ((change.Property == IsVisibleProperty)
+            || (change.Property == WindowStateProperty))
+        {
+            UpdateAnimationFramePresentation();
+        }
 
         if ((change.Property != WindowStateProperty) || _isChangingWindowMode)
         {
@@ -326,6 +337,19 @@ public sealed partial class ImageViewerWindow : SukiWindow
         {
             EnterWindowedMode();
         }
+    }
+
+    private void UpdateAnimationFramePresentation()
+    {
+        ViewerAnimationFrameScheduler? animationFrameScheduler =
+            _animationFrameScheduler;
+        animationFrameScheduler?.SetPresentation(
+            IsVisible && (WindowState != WindowState.Minimized));
+    }
+
+    private void RequestViewerAnimationFrame(Action<TimeSpan> frameAction)
+    {
+        _animationFrameScheduler.RequestAnimationFrame(frameAction);
     }
 
     private void ConfigureWindow()
