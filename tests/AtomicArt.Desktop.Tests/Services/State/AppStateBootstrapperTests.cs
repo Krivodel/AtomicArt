@@ -77,6 +77,7 @@ public sealed class AppStateBootstrapperTests
         calls.Should().Equal(
             "settings.apply",
             "panel.restore:nano-banana",
+            "gallery.reconcile",
             "gallery.load",
             "gallery.restore");
     }
@@ -98,6 +99,7 @@ public sealed class AppStateBootstrapperTests
             UiThreadDispatcher = new ImmediateUiThreadDispatcher();
             Bootstrapper = new AppStateBootstrapper(
                 SettingsStateService,
+                new RecordingGalleryStateConsistencyService(Calls),
                 galleryStateService,
                 new NoOpStateWriteScheduler(),
                 UiThreadDispatcher,
@@ -123,6 +125,7 @@ public sealed class AppStateBootstrapperTests
             _section = new NonDeserializingTestStateSection();
             Bootstrapper = new AppStateBootstrapper(
                 new RecordingSettingsStateService([]),
+                new RecordingGalleryStateConsistencyService([]),
                 new RecordingGalleryStateService([]),
                 _scheduler,
                 new ImmediateUiThreadDispatcher(),
@@ -229,6 +232,22 @@ public sealed class AppStateBootstrapperTests
         public Task SaveAsync(IReadOnlyList<GalleryItemState> items, CancellationToken ct)
         {
             throw new NotSupportedException("Gallery state saving is not used by this test.");
+        }
+    }
+
+    private sealed class RecordingGalleryStateConsistencyService
+        : CallRecordingTestDouble, IGalleryStateConsistencyService
+    {
+        public RecordingGalleryStateConsistencyService(List<string> calls)
+            : base(calls)
+        {
+        }
+
+        public Task ReconcileAsync(CancellationToken ct)
+        {
+            Calls.Add("gallery.reconcile");
+
+            return Task.CompletedTask;
         }
     }
 

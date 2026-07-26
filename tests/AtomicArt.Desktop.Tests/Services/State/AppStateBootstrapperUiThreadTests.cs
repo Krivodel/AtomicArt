@@ -30,6 +30,7 @@ public sealed class AppStateBootstrapperUiThreadTests : AnimatedGalleryControlTe
             Window window = Show(button);
             AppStateBootstrapper bootstrapper = new(
                 new BackgroundCompletingSettingsStateService(),
+                new NoOpGalleryStateConsistencyService(),
                 new EmptyGalleryStateService(),
                 new NoOpStateWriteScheduler(),
                 new AvaloniaUiThreadDispatcher(),
@@ -128,6 +129,14 @@ public sealed class AppStateBootstrapperUiThreadTests : AnimatedGalleryControlTe
         public Task SaveAsync(IReadOnlyList<GalleryItemState> items, CancellationToken ct)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class NoOpGalleryStateConsistencyService : IGalleryStateConsistencyService
+    {
+        public Task ReconcileAsync(CancellationToken ct)
+        {
+            return Task.CompletedTask;
         }
     }
 

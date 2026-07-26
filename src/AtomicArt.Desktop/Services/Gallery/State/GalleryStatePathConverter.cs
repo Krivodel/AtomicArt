@@ -63,6 +63,32 @@ public sealed class GalleryStatePathConverter
             PersistedDirectorySeparator);
     }
 
+    public string? GetImagePathForDeletion(string? storedPath)
+    {
+        return GetManagedPathForDeletion(
+            storedPath,
+            _pathProvider.ArtDirectory);
+    }
+
+    public string? GetThumbnailPathForDeletion(string? storedPath)
+    {
+        return GetManagedPathForDeletion(
+            storedPath,
+            _pathProvider.ThumbnailsDirectory);
+    }
+
+    public bool IsStoredImageFileMissing(string? storedPath)
+    {
+        if (string.IsNullOrWhiteSpace(storedPath))
+        {
+            return true;
+        }
+
+        string? managedPath = GetImagePathForDeletion(storedPath);
+
+        return managedPath is not null && !File.Exists(managedPath);
+    }
+
     private static string? GetRelocatedLegacyPathOrDefault(
         string storedPath,
         string targetDirectory)
@@ -100,6 +126,31 @@ public sealed class GalleryStatePathConverter
         string modelId,
         string legacyTargetDirectory)
     {
+        return ResolveStoredPathOrDefault(
+            storedPath,
+            legacyTargetDirectory,
+            path => _trustedImageFileService.GetTrustedImagePathOrDefault(
+                path,
+                modelId));
+    }
+
+    private string? GetManagedPathForDeletion(
+        string? storedPath,
+        string targetDirectory)
+    {
+        return ResolveStoredPathOrDefault(
+            storedPath,
+            targetDirectory,
+            path => GetTrustedDeletionPathOrDefault(path, targetDirectory));
+    }
+
+    private string? ResolveStoredPathOrDefault(
+        string? storedPath,
+        string targetDirectory,
+        Func<string?, string?> resolvePath)
+    {
+        ArgumentNullException.ThrowIfNull(resolvePath);
+
         if (string.IsNullOrWhiteSpace(storedPath))
         {
             return null;
@@ -112,9 +163,7 @@ public sealed class GalleryStatePathConverter
             return null;
         }
 
-        string? trustedPath = _trustedImageFileService.GetTrustedImagePathOrDefault(
-            absolutePath,
-            modelId);
+        string? trustedPath = resolvePath(absolutePath);
 
         if (trustedPath is not null || !Path.IsPathFullyQualified(storedPath))
         {
@@ -123,11 +172,57 @@ public sealed class GalleryStatePathConverter
 
         string? relocatedPath = GetRelocatedLegacyPathOrDefault(
             storedPath,
-            legacyTargetDirectory);
+            targetDirectory);
 
-        return _trustedImageFileService.GetTrustedImagePathOrDefault(
-            relocatedPath,
-            modelId);
+        return resolvePath(relocatedPath);
+    }
+
+    private string? GetTrustedDeletionPathOrDefault(
+        string? path,
+        string trustedDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            string trustedRootDirectory = Path.GetFullPath(_pathProvider.RootDirectory);
+            string[] trustedDirectories = [Path.GetFullPath(trustedDirectory)];
+
+            return TrustedPathGuard.TryResolveTrustedPathForDeletion(
+                path,
+                trustedDirectories,
+                trustedRootDirectory,
+                out string? trustedPath)
+                ? trustedPath
+                : null;
+        }
+        catch (ArgumentException ex)
+        {
+            LogPathConversionFailure(ex);
+
+            return null;
+        }
+        catch (IOException ex)
+        {
+            LogPathConversionFailure(ex);
+
+            return null;
+        }
+        catch (NotSupportedException ex)
+        {
+            LogPathConversionFailure(ex);
+
+            return null;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            LogPathConversionFailure(ex);
+
+            return null;
+        }
     }
 
     private string? GetAbsoluteStoredPathOrDefault(string storedPath)

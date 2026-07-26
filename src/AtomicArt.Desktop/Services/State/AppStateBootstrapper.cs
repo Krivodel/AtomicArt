@@ -10,6 +10,7 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
     private const string GenerationPanelsSectionName = "generation panels";
 
     private readonly ISettingsStateService _settingsStateService;
+    private readonly IGalleryStateConsistencyService _galleryStateConsistencyService;
     private readonly IGalleryStateService _galleryStateService;
     private readonly IStateWriteScheduler _writeScheduler;
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
@@ -17,6 +18,7 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
 
     public AppStateBootstrapper(
         ISettingsStateService settingsStateService,
+        IGalleryStateConsistencyService galleryStateConsistencyService,
         IGalleryStateService galleryStateService,
         IStateWriteScheduler writeScheduler,
         IUiThreadDispatcher uiThreadDispatcher,
@@ -24,6 +26,8 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
     {
         _settingsStateService = settingsStateService
             ?? throw new ArgumentNullException(nameof(settingsStateService));
+        _galleryStateConsistencyService = galleryStateConsistencyService
+            ?? throw new ArgumentNullException(nameof(galleryStateConsistencyService));
         _galleryStateService = galleryStateService
             ?? throw new ArgumentNullException(nameof(galleryStateService));
         _writeScheduler = writeScheduler ?? throw new ArgumentNullException(nameof(writeScheduler));
@@ -85,6 +89,9 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
 
     private async Task RestoreGalleryAsync(IAppStateRestoreTarget target, CancellationToken ct)
     {
+        await _galleryStateConsistencyService
+            .ReconcileAsync(ct)
+            .ConfigureAwait(false);
         GalleryState state = await _galleryStateService.LoadAsync(ct).ConfigureAwait(false);
         await _uiThreadDispatcher.InvokeAsync(
             () => target.RestoreGalleryAsync(state.Items, ct),

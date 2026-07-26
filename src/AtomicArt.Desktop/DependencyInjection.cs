@@ -137,6 +137,7 @@ public static class DependencyInjection
         services.AddSingleton<IGenerationPanelStateService, GenerationPanelStateService>();
         services.AddSingleton<GalleryStatePathConverter>();
         services.AddSingleton<IGalleryStateService, GalleryStateService>();
+        services.AddSingleton<IGalleryStateConsistencyService, GalleryStateConsistencyService>();
         return services;
     }
 
