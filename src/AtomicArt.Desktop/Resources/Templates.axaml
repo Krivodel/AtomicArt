@@ -5,10 +5,8 @@
                 Value="{StaticResource GenerationPanelPadding}" />
         <Setter Property="Background"
                 Value="{DynamicResource GlassCardBrush}" />
-        <Setter Property="BorderBrush"
-                Value="{DynamicResource GlassBorderBrush}" />
         <Setter Property="BorderThickness"
-                Value="{StaticResource ShellBorderThickness}" />
+                Value="{StaticResource ZeroThickness}" />
         <Setter Property="CornerRadius"
                 Value="{StaticResource ShellCornerRadius}" />
     </Style>
