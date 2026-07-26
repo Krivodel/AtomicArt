@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -10,9 +11,11 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Services.Generation;
@@ -125,6 +128,112 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
         });
     }
 
+    [Fact]
+    public void PromptText_WhenScrolled_UsesFullViewportWithMetadataInsets()
+    {
+        Dispatch(() =>
+        {
+            string imagePath = CreateImageFile();
+            string prompt = string.Join(
+                Environment.NewLine,
+                Enumerable.Range(1, 20).Select(lineNumber => $"Строка {lineNumber}"));
+
+            try
+            {
+                GenerationMetadataOverlayView view = CreateView(imagePath, prompt);
+                Window window = Show(view, 750d, 780d);
+
+                try
+                {
+                    TextBox promptTextBox = view.FindControl<TextBox>("PromptText")
+                        ?? throw new InvalidOperationException("Prompt text box was not found.");
+                    promptTextBox.TryFindResource(
+                            "MetadataTextScrollInsets",
+                            out object? paddingResource)
+                        .Should()
+                        .BeTrue();
+                    Thickness themePadding = paddingResource
+                        .Should()
+                        .BeOfType<Thickness>()
+                        .Subject;
+                    TextBoxScrollContentAssertions.AssertUsesScrollableInsets(
+                        promptTextBox,
+                        window,
+                        themePadding);
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }
+            finally
+            {
+                File.Delete(imagePath);
+            }
+        });
+    }
+
+    [Fact]
+    public void PromptAndPathText_WhenShown_UseVerticalInsetsAndScrollEdgeFade()
+    {
+        Dispatch(() =>
+        {
+            string imagePath = CreateImageFile();
+
+            try
+            {
+                GenerationMetadataOverlayView view = CreateView(imagePath);
+                Window window = Show(view, 750d, 780d);
+
+                try
+                {
+                    string[] textBoxNames = ["PromptText", "PathText"];
+
+                    foreach (string textBoxName in textBoxNames)
+                    {
+                        TextBox textBox = view.FindControl<TextBox>(textBoxName)
+                            ?? throw new InvalidOperationException(
+                                $"Text box '{textBoxName}' was not found.");
+                        ScrollContentPresenter scrollPresenter = textBox
+                            .GetVisualDescendants()
+                            .OfType<ScrollContentPresenter>()
+                            .Single();
+                        textBox.TryFindResource(
+                                "MetadataTextScrollInsets",
+                                out object? paddingResource)
+                            .Should()
+                            .BeTrue();
+                        Thickness fadeInsets = paddingResource
+                            .Should()
+                            .BeOfType<Thickness>()
+                            .Subject;
+
+                        fadeInsets.Left.Should().Be(0d);
+                        fadeInsets.Right.Should().Be(0d);
+                        TextBoxScrollContentAssertions
+                            .GetTextPresenter(textBox)
+                            .Margin
+                            .Should()
+                            .Be(fadeInsets);
+                        VerticalFadeMaskBehavior.GetInsets(scrollPresenter)
+                            .Should()
+                            .Be(fadeInsets);
+                        scrollPresenter.OpacityMask.Should()
+                            .BeOfType<LinearGradientBrush>();
+                    }
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }
+            finally
+            {
+                File.Delete(imagePath);
+            }
+        });
+    }
+
     private static Rect GetBounds(Control control, Control relativeTo)
     {
         Point? position = control.TranslatePoint(new Point(0d, 0d), relativeTo);
@@ -146,11 +255,13 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
         return imagePath;
     }
 
-    private static GenerationMetadataOverlayView CreateView(string imagePath)
+    private static GenerationMetadataOverlayView CreateView(
+        string imagePath,
+        string prompt = "Промпт")
     {
         GenerationItemDto itemDto = GenerationItemDtoTestFactory.Create(
             modelDisplayName: "X",
-            prompt: "Промпт",
+            prompt: prompt,
             aspectRatio: GenerationAspectRatios.Auto,
             resolution: "1K",
             createdAtUtc: new DateTime(2026, 7, 17, 8, 32, 0, DateTimeKind.Utc),

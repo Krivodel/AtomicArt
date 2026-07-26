@@ -186,7 +186,6 @@
             <TextBox Grid.Row="2"
                      MinHeight="{StaticResource PromptHeight}"
                      Margin="{StaticResource GenerationPanelInnerSpacing}"
-                     Padding="{StaticResource ZeroThickness}"
                      VerticalContentAlignment="Top"
                      Classes="prompt-input"
                      IsEnabled="{Binding HasLoadedCatalog}"

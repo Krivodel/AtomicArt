@@ -194,75 +194,6 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void PromptTextBox_WhenShown_KeepsThemeInsetInsideFullHeightScrollViewport()
-    {
-        Dispatch(() =>
-        {
-            using ShownPanelContext context = new();
-            TextBox promptTextBox = context.View
-                .GetVisualDescendants()
-                .OfType<TextBox>()
-                .Single();
-            ScrollViewer scrollViewer = promptTextBox
-                .GetVisualDescendants()
-                .OfType<ScrollViewer>()
-                .Single();
-            Control textPresenter = promptTextBox
-                .GetVisualDescendants()
-                .OfType<Control>()
-                .Single(control => string.Equals(
-                    control.Name,
-                    "PART_TextPresenter",
-                    StringComparison.Ordinal));
-            promptTextBox.TryFindResource(
-                    "TextControlThemePadding",
-                    out object? paddingResource)
-                .Should()
-                .BeTrue();
-            Thickness themePadding = paddingResource.Should()
-                .BeOfType<Thickness>()
-                .Subject;
-            Rect scrollViewportBounds = GetTransformedBounds(scrollViewer, promptTextBox);
-            Rect textPresenterBounds = GetTransformedBounds(textPresenter, promptTextBox);
-
-            promptTextBox.Padding.Should().Be(new Thickness(0d));
-            textPresenter.Margin.Should().Be(themePadding);
-            scrollViewportBounds.Top.Should().BeLessThan(themePadding.Top);
-            (textPresenterBounds.Top - scrollViewportBounds.Top)
-                .Should()
-                .BeApproximately(themePadding.Top, 0.01d);
-
-            promptTextBox.Text = string.Join(
-                Environment.NewLine,
-                Enumerable.Range(1, 20).Select(lineNumber => $"Строка {lineNumber}"));
-            context.Window.CaptureRenderedFrame();
-            Rect initialTextBounds = GetTransformedBounds(textPresenter, promptTextBox);
-
-            scrollViewer.Offset = new Vector(0d, themePadding.Top);
-            context.Window.CaptureRenderedFrame();
-            Rect scrolledTextBounds = GetTransformedBounds(textPresenter, promptTextBox);
-
-            scrollViewer.Offset.Y.Should().BeApproximately(themePadding.Top, 0.01d);
-            scrolledTextBounds.Top.Should()
-                .BeApproximately(initialTextBounds.Top - themePadding.Top, 0.01d);
-            scrolledTextBounds.Top.Should()
-                .BeApproximately(scrollViewportBounds.Top, 0.01d);
-
-            double bottomEdgeOffset = scrollViewer.Extent.Height
-                - scrollViewer.Viewport.Height
-                - themePadding.Bottom;
-            bottomEdgeOffset.Should().BeGreaterThan(0d);
-
-            scrollViewer.Offset = new Vector(0d, bottomEdgeOffset);
-            context.Window.CaptureRenderedFrame();
-            Rect bottomEdgeTextBounds = GetTransformedBounds(textPresenter, promptTextBox);
-
-            bottomEdgeTextBounds.Bottom.Should()
-                .BeApproximately(scrollViewportBounds.Bottom, 0.01d);
-        });
-    }
-
-    [Fact]
     public void PromptTextBox_WithDefaultSetting_PreservesThemeTextSize()
     {
         Dispatch(() =>
@@ -840,14 +771,6 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         return origin.Value + new Vector(
             control.Bounds.Width / 2d,
             control.Bounds.Height / 2d);
-    }
-
-    private static Rect GetTransformedBounds(Control control, Visual target)
-    {
-        Matrix transform = control.TransformToVisual(target)
-            ?? throw new InvalidOperationException("Control transform was not found.");
-
-        return new Rect(control.Bounds.Size).TransformToAABB(transform);
     }
 
     private static Button GetTemperatureButton(NanoBanana2PanelView view)

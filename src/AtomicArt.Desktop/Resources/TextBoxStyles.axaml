@@ -1,14 +1,45 @@
-<Styles xmlns="https://github.com/avaloniaui">
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:behaviors="using:AtomicArt.Desktop.Behaviors">
+    <Style Selector="TextBox">
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+
     <Style Selector="TextBox.prompt-input /template/ TextBlock#PART_Placeholder,
                      TextBox.prompt-input /template/ TextBlock#PART_FloatingPlaceholder">
         <Setter Property="FontSize"
                 Value="{ReflectionBinding $self.TemplatedParent.FontSize}" />
+    </Style>
+
+    <Style Selector="TextBox /template/ TextBlock#PART_Placeholder,
+                     TextBox /template/ TextBlock#PART_FloatingPlaceholder">
         <Setter Property="Margin"
                 Value="{DynamicResource TextControlThemePadding}" />
     </Style>
 
-    <Style Selector="TextBox.prompt-input /template/ TextPresenter#PART_TextPresenter">
+    <Style Selector="TextBox.metadata-text /template/ TextBlock#PART_Placeholder,
+                     TextBox.metadata-text /template/ TextBlock#PART_FloatingPlaceholder">
+        <Setter Property="Margin"
+                Value="{StaticResource MetadataTextScrollInsets}" />
+    </Style>
+
+    <Style Selector="TextBox /template/ TextPresenter#PART_TextPresenter">
         <Setter Property="Margin"
                 Value="{DynamicResource TextControlThemePadding}" />
+    </Style>
+
+    <Style Selector="TextBox.metadata-text /template/ TextPresenter#PART_TextPresenter">
+        <Setter Property="Margin"
+                Value="{StaticResource MetadataTextScrollInsets}" />
+    </Style>
+
+    <Style Selector="TextBox /template/ ScrollViewer /template/ ScrollContentPresenter#PART_ContentPresenter">
+        <Setter Property="behaviors:VerticalFadeMaskBehavior.Insets"
+                Value="{DynamicResource TextControlThemePadding}" />
+    </Style>
+
+    <Style Selector="TextBox.metadata-text /template/ ScrollViewer /template/ ScrollContentPresenter#PART_ContentPresenter">
+        <Setter Property="behaviors:VerticalFadeMaskBehavior.Insets"
+                Value="{StaticResource MetadataTextScrollInsets}" />
     </Style>
 </Styles>

@@ -21,6 +21,7 @@ internal sealed class AnimatedGalleryControlTestApplication : Avalonia.Applicati
         "avares://AtomicArt/Resources/ButtonStyles.axaml",
         "avares://AtomicArt/Controls/Themes/Generic.axaml",
         "avares://AtomicArt/Resources/ScrollViewerStyles.axaml",
+        "avares://AtomicArt/Resources/TextBoxStyles.axaml",
         "avares://AtomicArt/Resources/Templates.axaml"
     ];
 

@@ -75,8 +75,9 @@
     <Thickness x:Key="MetadataChipPadding">13,0</Thickness>
     <Thickness x:Key="MetadataPricePadding">16,0</Thickness>
     <Thickness x:Key="MetadataStatusPadding">6,0,10,0</Thickness>
-    <Thickness x:Key="MetadataPromptPadding">16,14,10,14</Thickness>
+    <Thickness x:Key="MetadataPromptPadding">16,14,10,0</Thickness>
     <Thickness x:Key="MetadataPathPadding">14,0,10,0</Thickness>
+    <Thickness x:Key="MetadataTextScrollInsets">0,6,0,5</Thickness>
     <Thickness x:Key="MetadataRepeatMargin">0,14,0,0</Thickness>
     <Thickness x:Key="MetadataLabelMargin">0,0,16,10</Thickness>
     <Thickness x:Key="MetadataValueMargin">0,0,0,10</Thickness>

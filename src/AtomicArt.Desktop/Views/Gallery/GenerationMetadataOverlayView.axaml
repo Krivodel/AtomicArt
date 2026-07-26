@@ -223,9 +223,9 @@
                                        Text="{x:Static resources:UiStrings.MetadataPrompt}" />
                             <TextBox x:Name="PromptText"
                                      Grid.Row="1"
-                                     Margin="0,10,0,0"
                                      Padding="{StaticResource ZeroThickness}"
                                      VerticalContentAlignment="Top"
+                                     Classes="metadata-text"
                                      AcceptsReturn="True"
                                      Background="Transparent"
                                      BorderThickness="{StaticResource ZeroThickness}"
@@ -271,6 +271,7 @@
                                      Grid.Column="0"
                                      Padding="{StaticResource ZeroThickness}"
                                      VerticalAlignment="Center"
+                                     Classes="metadata-text"
                                      Background="Transparent"
                                      BorderThickness="{StaticResource ZeroThickness}"
                                      CaretBrush="Transparent"
