@@ -4,7 +4,6 @@
     <SukiUiVersion>7.0.2-nightly20260625</SukiUiVersion>
     <SukiUiVersion Condition="'$(MSBuildProjectName)' == 'AtomicArt.Desktop'">7.0.2.1-atomicart.3</SukiUiVersion>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageVersion Include="Avalonia" Version="12.0.5" />
     <PackageVersion Include="Avalonia.Desktop" Version="12.0.5" />
@@ -31,8 +30,7 @@
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" />
     <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="Ookii.Dialogs.WinForms" Version="4.0.0" />
-    <PackageVersion Include="Pica.Protocol" Version="1.0.0-preview.1" />
-    <PackageVersion Include="Pica.Viewer" Version="1.0.0-preview.1" />
+    <PackageVersion Include="Pica.Viewer" Version="1.0.3-preview.1" />
     <PackageVersion Include="SkiaSharp" Version="3.119.4" />
     <PackageVersion Include="SukiUI" Version="$(SukiUiVersion)" />
     <PackageVersion Include="System.Drawing.Common" Version="10.0.0" />
