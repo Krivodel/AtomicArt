@@ -214,6 +214,26 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
+    public async Task GenerateCommand_WithAttachment_PassesOriginalContentToRequest()
+    {
+        CapturingGenerationRunDispatcher dispatcher = new();
+        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(dispatcher: dispatcher);
+        AttachedImageDto originalImage = CreateAttachedImage("reference.png");
+        viewModel.Prompt = "Prompt";
+        await viewModel.AttachImagesCommand.ExecuteAsync([originalImage]);
+
+        await viewModel.GenerateCommand.ExecuteAsync(null);
+
+        GenerationRunRequest request = dispatcher.CapturedRequest
+            ?? throw new InvalidOperationException("Generation run request should be captured.");
+        AttachedImageDto requestedImage = request.Request.AttachedImages
+            .Should()
+            .ContainSingle()
+            .Subject;
+        requestedImage.Content.Should().Equal(originalImage.Content);
+    }
+
+    [Fact]
     public async Task GenerateCommand_WithTemperature_PassesTemperatureToRequest()
     {
         CapturingGenerationRunDispatcher dispatcher = new();

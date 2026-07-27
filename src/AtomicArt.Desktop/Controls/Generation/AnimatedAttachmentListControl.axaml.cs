@@ -12,6 +12,7 @@ using Avalonia.VisualTree;
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Imaging;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Generation;
 
@@ -40,6 +41,7 @@ public partial class AnimatedAttachmentListControl : UserControl
     private const int RemoveDurationMilliseconds = 300;
     private const int ImageRevealDurationMilliseconds = 520;
     private const int SpawnOrderDelayMilliseconds = 24;
+    private const int AttachmentPreviewShortSidePixels = 128;
 
     private readonly CollectionChangedSubscription _itemsSubscription;
     private readonly Dictionary<Guid, AttachmentVisualEntry> _entries = [];
@@ -138,11 +140,14 @@ public partial class AnimatedAttachmentListControl : UserControl
         return Math.Clamp(targetIndex, 0, itemCount - 1);
     }
 
-    private static Bitmap CreateBitmap(AttachedImageViewModel item)
+    private static Bitmap CreatePreviewBitmap(AttachedImageViewModel item)
     {
         using MemoryStream stream = new(item.Content);
 
-        return new Bitmap(stream);
+        return PreviewBitmapDecoder.Decode(
+            stream,
+            AttachmentPreviewShortSidePixels,
+            CancellationToken.None);
     }
 
     internal static List<MotionFrame> CreateRemoveFrames(Guid itemId)
@@ -460,7 +465,7 @@ public partial class AnimatedAttachmentListControl : UserControl
 
         if (item.IsReady)
         {
-            entry.SetBitmap(CreateBitmap(item));
+            entry.SetBitmap(CreatePreviewBitmap(item));
         }
 
         entry.Subscribe((sender, e) => OnAttachmentPropertyChanged(entry, sender, e));
@@ -488,7 +493,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             return;
         }
 
-        Bitmap bitmap = await Task.Run(() => CreateBitmap(entry.Item));
+        Bitmap bitmap = await Task.Run(() => CreatePreviewBitmap(entry.Item));
 
         if (!_entries.TryGetValue(entry.Item.Id, out AttachmentVisualEntry? activeEntry)
             || !ReferenceEquals(activeEntry, entry))

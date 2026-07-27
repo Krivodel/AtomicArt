@@ -73,6 +73,8 @@ public sealed class PicaViewerSessionTests
                 action.Id == AtomicArtPicaActions.AttachId);
             materializedPath = preparedRequest.Items[0].FilePath;
             File.Exists(materializedPath).Should().BeTrue();
+            byte[] materializedContent = await File.ReadAllBytesAsync(materializedPath);
+            materializedContent.Should().Equal(image.Content);
         }
 
         File.Exists(materializedPath).Should().BeFalse();

@@ -1,9 +1,8 @@
 using Microsoft.Extensions.Logging;
 
-using Avalonia;
 using Avalonia.Media.Imaging;
 
-using SkiaSharp;
+using AtomicArt.Desktop.Services.Imaging;
 
 namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
@@ -54,60 +53,10 @@ internal sealed class GalleryPreviewBitmapLoader : IGalleryPreviewBitmapLoader
 
     private static Bitmap Decode(string imagePath, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
         using FileStream stream = File.OpenRead(imagePath);
-        PixelSize pixelSize = ReadPixelSize(stream, ct);
-        PixelSize decodeSize = GalleryThumbnailSizeCalculator.Calculate(
-            pixelSize.Width,
-            pixelSize.Height);
-        stream.Position = 0;
-        Bitmap bitmap = decodeSize != pixelSize
-            ? DecodeReducedBitmap(stream, pixelSize, decodeSize)
-            : new Bitmap(stream);
-
-        if (ct.IsCancellationRequested)
-        {
-            bitmap.Dispose();
-            ct.ThrowIfCancellationRequested();
-        }
-
-        return bitmap;
-    }
-
-    private static Bitmap DecodeReducedBitmap(
-        Stream stream,
-        PixelSize pixelSize,
-        PixelSize decodeSize)
-    {
-        if (pixelSize.Width >= pixelSize.Height)
-        {
-            return Bitmap.DecodeToHeight(
-                stream,
-                decodeSize.Height,
-                BitmapInterpolationMode.MediumQuality);
-        }
-
-        return Bitmap.DecodeToWidth(
+        return PreviewBitmapDecoder.Decode(
             stream,
-            decodeSize.Width,
-            BitmapInterpolationMode.MediumQuality);
-    }
-
-    private static PixelSize ReadPixelSize(Stream stream, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        using SKManagedStream managedStream = new(stream);
-        using SKCodec codec = SKCodec.Create(managedStream)
-            ?? throw new InvalidDataException("Gallery preview image dimensions could not be read.");
-        SKImageInfo imageInfo = codec.Info;
-        bool swapDimensions = codec.EncodedOrigin is SKEncodedOrigin.LeftTop
-            or SKEncodedOrigin.RightTop
-            or SKEncodedOrigin.RightBottom
-            or SKEncodedOrigin.LeftBottom;
-        ct.ThrowIfCancellationRequested();
-
-        return swapDimensions
-            ? new PixelSize(imageInfo.Height, imageInfo.Width)
-            : new PixelSize(imageInfo.Width, imageInfo.Height);
+            GalleryThumbnailSpecification.ShortSidePixels,
+            ct);
     }
 }

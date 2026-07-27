@@ -14,6 +14,7 @@ using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
+using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Generation;
 
@@ -130,6 +131,45 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                 RenderOptions.GetBitmapInterpolationMode(image)
                     .Should()
                     .Be(BitmapInterpolationMode.MediumQuality);
+            });
+        });
+    }
+
+    [Theory]
+    [InlineData(1024, 512, 256, 128)]
+    [InlineData(512, 1024, 128, 256)]
+    public void Image_WhenAttachmentIsLarge_UsesReducedPreviewAndPreservesOriginalContent(
+        int sourceWidth,
+        int sourceHeight,
+        int expectedPreviewWidth,
+        int expectedPreviewHeight)
+    {
+        Dispatch(() =>
+        {
+            byte[] originalContent = GalleryThumbnailTestImages.CreatePngBytes(
+                sourceWidth,
+                sourceHeight);
+            AttachedImageDto dto = new(
+                "large.png",
+                GenerationImageContentTypes.Png,
+                originalContent);
+            AttachedImageViewModel item = new(dto, CreateState(dto));
+            ObservableCollection<AttachedImageViewModel> items = [item];
+
+            ShowAttachments(items, 160d, (control, _) =>
+            {
+                Image image = control
+                    .GetVisualDescendants()
+                    .OfType<Image>()
+                    .Single();
+                Bitmap preview = image.Source
+                    .Should()
+                    .BeOfType<Bitmap>()
+                    .Subject;
+
+                preview.PixelSize.Should().Be(
+                    new PixelSize(expectedPreviewWidth, expectedPreviewHeight));
+                item.ToDto().Content.Should().Equal(originalContent);
             });
         });
     }
@@ -278,7 +318,11 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                 image.IsVisible.Should().BeFalse();
                 loadingIndicator.IsVisible.Should().BeTrue();
 
-                AttachedImageDto dto = GenerationImageTestData.CreateAttachedImage("pending.png");
+                byte[] originalContent = GalleryThumbnailTestImages.CreatePngBytes(1024, 512);
+                AttachedImageDto dto = new(
+                    "pending.png",
+                    GenerationImageContentTypes.Png,
+                    originalContent);
                 pendingItem.Complete(dto, CreateState(dto));
 
                 for (int attempt = 0; attempt < 100 && image.Source is null; attempt++)
@@ -288,7 +332,16 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
 
                 window.CaptureRenderedFrame();
 
-                image.Source.Should().NotBeNull();
+                Bitmap preview = image.Source
+                    .Should()
+                    .BeOfType<Bitmap>()
+                    .Subject;
+                Math.Min(preview.PixelSize.Width, preview.PixelSize.Height)
+                    .Should()
+                    .Be(128);
+                preview.PixelSize.Width.Should().BeLessThanOrEqualTo(256);
+                preview.PixelSize.Height.Should().BeLessThanOrEqualTo(128);
+                pendingItem.ToDto().Content.Should().Equal(originalContent);
                 image.IsVisible.Should().BeTrue();
                 image.Opacity.Should().BeLessThan(1d);
                 loadingIndicator.IsVisible.Should().BeTrue();
