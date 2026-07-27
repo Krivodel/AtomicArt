@@ -33,7 +33,7 @@ public partial class ImageDropOverlayControl : UserControl
             defaultValue: 112d);
 
     private static readonly TransformOperations HiddenTransform =
-        TransformOperations.Parse("scale(0.97) translate(0px, 8px)");
+        TransformOperations.Parse("scale(0.97) translate(0px, -8px)");
     private static readonly TransformOperations VisibleTransform =
         TransformOperations.Parse("scale(1) translate(0px, 0px)");
 

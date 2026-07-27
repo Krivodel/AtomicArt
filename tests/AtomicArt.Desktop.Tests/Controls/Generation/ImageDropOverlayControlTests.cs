@@ -18,6 +18,33 @@ public sealed class ImageDropOverlayControlTests : AnimatedGalleryControlTestBas
     private const double WindowWidth = 1920d;
 
     [Fact]
+    public void Layout_WhenInactive_PositionsContentAboveItsVisibleLocation()
+    {
+        Dispatch(() =>
+        {
+            ImageDropOverlayControl overlay = new();
+            Window window = Show(overlay, WindowWidth, WindowHeight);
+
+            try
+            {
+                StackPanel animatedContent = overlay.FindControl<StackPanel>("AnimatedContent")
+                    ?? throw new InvalidOperationException("Drop overlay content was not found.");
+                ITransform renderTransform = animatedContent.RenderTransform
+                    ?? throw new InvalidOperationException("Drop overlay transform was not found.");
+
+                renderTransform.Value
+                    .M32
+                    .Should()
+                    .BeNegative();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public void Layout_WhenWindowIsLarge_TransformsOnlyCompactContent()
     {
         Dispatch(() =>
