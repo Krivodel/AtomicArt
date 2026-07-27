@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\Pica.Build.props" />
-
-  <PropertyGroup>
-    <AssemblyTitle>$(PicaApplicationName)</AssemblyTitle>
-  </PropertyGroup>
-</Project>

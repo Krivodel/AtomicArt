@@ -31,7 +31,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AtomicArt.Contracts\AtomicArt.Contracts.csproj" />
-    <ProjectReference Include="..\Pica.Viewer\Pica.Viewer.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,6 +44,8 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Pica.Protocol" />
+    <PackageReference Include="Pica.Viewer" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SukiUI" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
