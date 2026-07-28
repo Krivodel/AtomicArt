@@ -30,6 +30,7 @@ public sealed class GenerationModelCatalogContractsSerializationTests
         json.Should().Contain("\"thinking\"");
         json.Should().Contain("\"value\":\"high\"");
         json.Should().Contain("\"pricing\"");
+        json.Should().Contain("\"cachedInputTokenPriceMultiplier\":0.1");
         json.Should().Contain("\"outputImageTokensByResolution\"");
         json.Should().Contain("\"attachments\"");
         json.Should().Contain("\"supportedContentTypes\"");
@@ -61,6 +62,7 @@ public sealed class GenerationModelCatalogContractsSerializationTests
                     new GenerationModelPricingMetadataDto(
                         "USD",
                         0.25m,
+                        0.1m,
                         1.50m,
                         30.00m,
                         4m,

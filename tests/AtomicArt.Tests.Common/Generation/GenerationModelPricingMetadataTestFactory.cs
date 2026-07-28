@@ -12,6 +12,7 @@ public static class GenerationModelPricingMetadataTestFactory
         return new GenerationModelPricingMetadataDto(
             "USD",
             0.25m,
+            0.1m,
             1.50m,
             30.00m,
             4m,
@@ -27,6 +28,7 @@ public static class GenerationModelPricingMetadataTestFactory
         return new GenerationModelPricingMetadataDto(
             "USD",
             0.50m,
+            0.1m,
             3.00m,
             60.00m,
             4m,
@@ -39,6 +41,7 @@ public static class GenerationModelPricingMetadataTestFactory
         return new GenerationModelPricingMetadataDto(
             "USD",
             0m,
+            0.1m,
             0m,
             0m,
             4m,

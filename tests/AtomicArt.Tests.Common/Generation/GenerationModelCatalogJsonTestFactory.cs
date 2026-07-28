@@ -62,6 +62,7 @@ public static class GenerationModelCatalogJsonTestFactory
                   "pricing": {
                     "currencyCode": "USD",
                     "inputTokenUsdPerMillion": 0.25,
+                    "cachedInputTokenPriceMultiplier": 0.1,
                     "textOutputTokenUsdPerMillion": 1.50,
                     "imageOutputTokenUsdPerMillion": 30.00,
                     "estimatedCharactersPerTextToken": 4,

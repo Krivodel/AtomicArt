@@ -9,6 +9,7 @@ public sealed record GenerationModelPricing
     public string ModelId { get; }
     public string CurrencyCode { get; }
     public decimal InputTokenUsdPerMillion { get; }
+    public decimal CachedInputTokenPriceMultiplier { get; }
     public decimal TextOutputTokenUsdPerMillion { get; }
     public decimal ImageOutputTokenUsdPerMillion { get; }
     public decimal EstimatedCharactersPerTextToken { get; }
@@ -19,6 +20,7 @@ public sealed record GenerationModelPricing
         string modelId,
         string currencyCode,
         decimal inputTokenUsdPerMillion,
+        decimal cachedInputTokenPriceMultiplier,
         decimal textOutputTokenUsdPerMillion,
         decimal imageOutputTokenUsdPerMillion,
         decimal estimatedCharactersPerTextToken,
@@ -42,6 +44,9 @@ public sealed record GenerationModelPricing
         ModelId = modelId.Trim();
         CurrencyCode = currencyCode.Trim();
         InputTokenUsdPerMillion = RequirePositive(inputTokenUsdPerMillion, nameof(inputTokenUsdPerMillion));
+        CachedInputTokenPriceMultiplier = RequirePriceMultiplier(
+            cachedInputTokenPriceMultiplier,
+            nameof(cachedInputTokenPriceMultiplier));
         TextOutputTokenUsdPerMillion = RequirePositive(textOutputTokenUsdPerMillion, nameof(textOutputTokenUsdPerMillion));
         ImageOutputTokenUsdPerMillion = RequirePositive(imageOutputTokenUsdPerMillion, nameof(imageOutputTokenUsdPerMillion));
         EstimatedCharactersPerTextToken = RequirePositive(
@@ -53,6 +58,7 @@ public sealed record GenerationModelPricing
 
     public decimal CalculateUsagePrice(
         int inputTokens,
+        int cachedInputTokens,
         int textOutputTokens,
         int imageOutputTokens)
     {
@@ -61,6 +67,13 @@ public sealed record GenerationModelPricing
             throw new DomainException(
                 GenerationErrorCodes.ModelRequestValidation,
                 "The input token count must not be negative.");
+        }
+
+        if (cachedInputTokens < 0 || cachedInputTokens > inputTokens)
+        {
+            throw new DomainException(
+                GenerationErrorCodes.ModelRequestValidation,
+                "The cached input token count must be between zero and the total input token count.");
         }
 
         if (textOutputTokens < 0)
@@ -77,7 +90,14 @@ public sealed record GenerationModelPricing
                 "The image output token count must not be negative.");
         }
 
-        return CalculateTokenPrice(inputTokens, InputTokenUsdPerMillion)
+        int uncachedInputTokens = inputTokens - cachedInputTokens;
+        decimal cachedInputTokenUsdPerMillion =
+            InputTokenUsdPerMillion * CachedInputTokenPriceMultiplier;
+
+        return CalculateTokenPrice(uncachedInputTokens, InputTokenUsdPerMillion)
+            + CalculateTokenPrice(
+                cachedInputTokens,
+                cachedInputTokenUsdPerMillion)
             + CalculateTokenPrice(textOutputTokens, TextOutputTokenUsdPerMillion)
             + CalculateTokenPrice(imageOutputTokens, ImageOutputTokenUsdPerMillion);
     }
@@ -95,6 +115,20 @@ public sealed record GenerationModelPricing
     private static decimal CalculateTokenPrice(decimal tokens, decimal usdPerMillion)
     {
         return tokens * usdPerMillion / TokenPriceUnit;
+    }
+
+    private static decimal RequirePriceMultiplier(
+        decimal value,
+        string parameterName)
+    {
+        if (value <= 0m || value > 1m)
+        {
+            throw new DomainException(
+                GenerationErrorCodes.ModelRequestValidation,
+                $"Pricing parameter '{parameterName}' must be greater than zero and at most one.");
+        }
+
+        return value;
     }
 
     private static int RequirePositive(int value, string parameterName)

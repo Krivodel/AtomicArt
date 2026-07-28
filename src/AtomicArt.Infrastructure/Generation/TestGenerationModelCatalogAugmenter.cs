@@ -92,6 +92,8 @@ public static class TestGenerationModelCatalogAugmenter
             Pricing = new GenerationModelPricingMetadataDto(
                 "USD",
                 InputTokenUsdPerMillion: 0m,
+                CachedInputTokenPriceMultiplier:
+                    baseMetadata.Pricing.CachedInputTokenPriceMultiplier,
                 TextOutputTokenUsdPerMillion: 0m,
                 ImageOutputTokenUsdPerMillion: 0m,
                 EstimatedCharactersPerTextToken:

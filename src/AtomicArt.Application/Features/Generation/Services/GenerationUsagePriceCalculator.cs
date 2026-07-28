@@ -23,7 +23,8 @@ public sealed class GenerationUsagePriceCalculator
             || usage.TotalInputTokens < 0
             || usage.TotalOutputTokens < 0
             || HasNegativeOptionalTokenCounts(usage)
-            || HasUnpricedProviderTokenCounts(usage)
+            || HasUnpricedToolUseTokens(usage)
+            || HasInvalidCachedTokenCount(usage)
             || HasUnsupportedModality(
                 usage.InputTokensByModality,
                 GenerationUsageModalityNames.KnownImageGenerationInputModalities)
@@ -48,6 +49,7 @@ public sealed class GenerationUsagePriceCalculator
         decimal amount = CalculateDomainPrice(
             domainPricing,
             usage.TotalInputTokens.Value,
+            usage.TotalCachedTokens ?? 0,
             outputTokenCounts);
 
         return new GenerationPriceDto(
@@ -141,10 +143,16 @@ public sealed class GenerationUsagePriceCalculator
             || usage.TotalCachedTokens is < 0;
     }
 
-    private static bool HasUnpricedProviderTokenCounts(GenerationUsageDto usage)
+    private static bool HasUnpricedToolUseTokens(GenerationUsageDto usage)
     {
-        return usage.TotalToolUseTokens is > 0
-            || usage.TotalCachedTokens is > 0;
+        return usage.TotalToolUseTokens is > 0;
+    }
+
+    private static bool HasInvalidCachedTokenCount(GenerationUsageDto usage)
+    {
+        return usage.TotalCachedTokens is int cachedInputTokens
+            && usage.TotalInputTokens is int totalInputTokens
+            && cachedInputTokens > totalInputTokens;
     }
 
     private static OutputTokenCounts? CreateOutputTokenCounts(
@@ -162,10 +170,12 @@ public sealed class GenerationUsagePriceCalculator
     private static decimal CalculateDomainPrice(
         GenerationModelPricing domainPricing,
         int inputTokens,
+        int cachedInputTokens,
         OutputTokenCounts outputTokenCounts)
     {
         return domainPricing.CalculateUsagePrice(
             inputTokens,
+            cachedInputTokens,
             outputTokenCounts.TextOutputTokens,
             outputTokenCounts.ImageOutputTokens);
     }

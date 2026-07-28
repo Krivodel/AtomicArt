@@ -135,6 +135,7 @@ public sealed class ImageModelRegistryTests
             new GenerationModelPricingMetadataDto(
                 "USD",
                 0.25m,
+                0.1m,
                 1.50m,
                 30.00m,
                 4m,

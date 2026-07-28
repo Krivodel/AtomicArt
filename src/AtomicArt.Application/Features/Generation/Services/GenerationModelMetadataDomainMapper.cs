@@ -42,6 +42,7 @@ internal static class GenerationModelMetadataDomainMapper
             modelId,
             pricing.CurrencyCode,
             pricing.InputTokenUsdPerMillion,
+            pricing.CachedInputTokenPriceMultiplier,
             pricing.TextOutputTokenUsdPerMillion,
             pricing.ImageOutputTokenUsdPerMillion,
             pricing.EstimatedCharactersPerTextToken,
@@ -78,6 +79,7 @@ internal static class GenerationModelMetadataDomainMapper
             Pricing = new GenerationModelPricingMetadataDto(
                 pricing.CurrencyCode,
                 pricing.InputTokenUsdPerMillion,
+                pricing.CachedInputTokenPriceMultiplier,
                 pricing.TextOutputTokenUsdPerMillion,
                 pricing.ImageOutputTokenUsdPerMillion,
                 pricing.EstimatedCharactersPerTextToken,

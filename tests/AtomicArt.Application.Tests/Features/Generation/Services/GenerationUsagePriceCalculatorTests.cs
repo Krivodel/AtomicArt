@@ -168,7 +168,7 @@ public sealed class GenerationUsagePriceCalculatorTests
     }
 
     [Fact]
-    public void Calculate_WithCachedTokens_ReturnsUnavailableResult()
+    public void Calculate_WithCachedTokens_UsesCachedInputTokenPriceMultiplier()
     {
         GenerationUsageDto usage = new(
             TotalInputTokens: 1000,
@@ -182,7 +182,44 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage);
 
+        AssertActualPrice(price, 0.06761m);
+    }
+
+    [Fact]
+    public void Calculate_WithCachedTokensGreaterThanInputTokens_ReturnsUnavailableResult()
+    {
+        GenerationUsageDto usage = new(
+            TotalInputTokens: 1000,
+            TotalOutputTokens: 1120,
+            TotalTokens: 2120,
+            OutputTokensByModality:
+            [
+                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
+            ],
+            TotalCachedTokens: 1001);
+
+        GenerationPriceDto? price = CalculateNanoBanana2(usage);
+
         price.Should().BeNull();
+    }
+
+    [Fact]
+    public void Calculate_WithCachedTokensAndThoughts_UsesAllBillableTokenCategories()
+    {
+        GenerationUsageDto usage = new(
+            TotalInputTokens: 21108,
+            TotalOutputTokens: 1493,
+            TotalTokens: 23881,
+            OutputTokensByModality:
+            [
+                new GenerationModalityTokensDto(GenerationUsageModalityNames.Image, 1120)
+            ],
+            TotalThoughtTokens: 1280,
+            TotalCachedTokens: 7538);
+
+        GenerationPriceDto? price = CalculateNanoBanana2(usage, FourKResolution);
+
+        AssertActualPrice(price, 0.1622019m);
     }
 
     [Fact]
