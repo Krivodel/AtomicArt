@@ -14,6 +14,7 @@ public static class GenerationModelPricingMetadataTestFactory
             0.25m,
             1.50m,
             30.00m,
+            4m,
             1120,
             outputImageTokensByResolution);
     }
@@ -28,6 +29,7 @@ public static class GenerationModelPricingMetadataTestFactory
             0.50m,
             3.00m,
             60.00m,
+            4m,
             1120,
             outputImageTokensByResolution);
     }
@@ -39,6 +41,7 @@ public static class GenerationModelPricingMetadataTestFactory
             0m,
             0m,
             0m,
+            4m,
             0,
             new Dictionary<string, int>());
     }

@@ -1,10 +1,20 @@
+using Microsoft.Extensions.Options;
+
 namespace AtomicArt.Desktop.Services.Gallery.State;
 
-internal static class GalleryOrderTimestampPolicy
+public sealed class GalleryOrderTimestampPolicy
 {
-    private static readonly TimeSpan TimestampInterval = TimeSpan.FromSeconds(2);
+    private readonly TimeSpan _timestampInterval;
 
-    public static IReadOnlyList<DateTime> CreateForPrependedItems(
+    public GalleryOrderTimestampPolicy(IOptions<GalleryOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        _timestampInterval = TimeSpan.FromMilliseconds(
+            options.Value.OrderTimestampIntervalMilliseconds);
+    }
+
+    public IReadOnlyList<DateTime> CreateForPrependedItems(
         DateTime requestedAtUtc,
         DateTime? currentNewestTimestampUtc,
         int itemCount)
@@ -41,7 +51,7 @@ internal static class GalleryOrderTimestampPolicy
         return timestamps;
     }
 
-    public static DateTime Normalize(DateTime timestamp)
+    public DateTime Normalize(DateTime timestamp)
     {
         DateTime utcTimestamp = timestamp.Kind switch
         {
@@ -50,12 +60,12 @@ internal static class GalleryOrderTimestampPolicy
             _ => DateTime.SpecifyKind(timestamp, DateTimeKind.Utc)
         };
         long normalizedTicks = utcTimestamp.Ticks
-            - (utcTimestamp.Ticks % TimestampInterval.Ticks);
+            - (utcTimestamp.Ticks % _timestampInterval.Ticks);
 
         return new DateTime(normalizedTicks, DateTimeKind.Utc);
     }
 
-    public static DateTime EnsureNewer(DateTime candidateUtc, DateTime olderUtc)
+    public DateTime EnsureNewer(DateTime candidateUtc, DateTime olderUtc)
     {
         DateTime normalizedCandidateUtc = Normalize(candidateUtc);
         DateTime normalizedOlderUtc = Normalize(olderUtc);
@@ -65,14 +75,14 @@ internal static class GalleryOrderTimestampPolicy
             : AddInterval(normalizedOlderUtc);
     }
 
-    private static DateTime AddInterval(DateTime timestampUtc)
+    private DateTime AddInterval(DateTime timestampUtc)
     {
         return AddIntervals(timestampUtc, 1);
     }
 
-    private static DateTime AddIntervals(DateTime timestampUtc, int intervalCount)
+    private DateTime AddIntervals(DateTime timestampUtc, int intervalCount)
     {
-        long ticksToAdd = checked(TimestampInterval.Ticks * intervalCount);
+        long ticksToAdd = checked(_timestampInterval.Ticks * intervalCount);
 
         return timestampUtc.AddTicks(ticksToAdd);
     }

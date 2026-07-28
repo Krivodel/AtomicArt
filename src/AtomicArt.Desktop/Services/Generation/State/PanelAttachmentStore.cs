@@ -17,12 +17,14 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly ILogger<PanelAttachmentStore> _logger;
+    private readonly TrustedFileStreamFactory _trustedFileStreamFactory;
 
     public PanelAttachmentStore(
         IAtomicArtDataPathProvider pathProvider,
         IStatePathKeyEncoder keyEncoder,
         IGenerationImageFormatRegistry formatRegistry,
         IDataRootAccessCoordinator accessCoordinator,
+        TrustedFileStreamFactory trustedFileStreamFactory,
         ILogger<PanelAttachmentStore> logger)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
@@ -30,6 +32,8 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
         _formatRegistry = formatRegistry ?? throw new ArgumentNullException(nameof(formatRegistry));
         _accessCoordinator = accessCoordinator
             ?? throw new ArgumentNullException(nameof(accessCoordinator));
+        _trustedFileStreamFactory = trustedFileStreamFactory
+            ?? throw new ArgumentNullException(nameof(trustedFileStreamFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -102,7 +106,7 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
 
         try
         {
-            await using (FileStream stream = TrustedPathGuard.CreateTrustedNewFileForWrite(
+            await using (FileStream stream = _trustedFileStreamFactory.CreateNewFileForWrite(
                 panelDirectory,
                 path,
                 TrustedPathFailureMessage))
@@ -142,7 +146,7 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
             string attachmentsRootDirectory = GetAttachmentsRootDirectory();
             string[] trustedDirectories = [attachmentsRootDirectory];
 
-            if (!TrustedPathGuard.TryOpenTrustedExistingFileForRead(
+            if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
                 path,
                 trustedDirectories,
                 attachmentsRootDirectory,

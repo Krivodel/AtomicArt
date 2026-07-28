@@ -13,8 +13,12 @@ public sealed class StateWriteScheduler : IStateWriteScheduler
 
     public StateWriteScheduler(
         IAppStateStore stateStore,
-        ILogger<StateWriteScheduler> logger)
-        : this(stateStore, logger, StateWritePolicy.DeferredWriteDelay)
+        ILogger<StateWriteScheduler> logger,
+        StateWritePolicy writePolicy)
+        : this(
+            stateStore,
+            logger,
+            GetWriteDelay(writePolicy))
     {
     }
 
@@ -113,6 +117,13 @@ public sealed class StateWriteScheduler : IStateWriteScheduler
         }
 
         await WaitForRunningWritesAsync(ct).ConfigureAwait(false);
+    }
+
+    private static TimeSpan GetWriteDelay(StateWritePolicy writePolicy)
+    {
+        ArgumentNullException.ThrowIfNull(writePolicy);
+
+        return writePolicy.DeferredWriteDelay;
     }
 
     private async Task ProcessDelayedWriteAsync(string sectionKey, PendingWrite pendingWrite)

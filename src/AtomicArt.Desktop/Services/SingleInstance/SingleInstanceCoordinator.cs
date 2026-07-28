@@ -19,14 +19,18 @@ internal sealed class SingleInstanceCoordinator : IDisposable
 
     public SingleInstanceCoordinator(
         SingleInstanceIdentity identity,
-        ILogger<SingleInstanceCoordinator> logger)
+        ILogger<SingleInstanceCoordinator> logger,
+        SingleInstanceOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         _identity = identity
             ?? throw new ArgumentNullException(nameof(identity));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _activationChannel = new SingleInstanceActivationChannel(
             identity.PipeName,
-            logger);
+            logger,
+            options);
     }
 
     public bool TryStartOrNotifyExisting()

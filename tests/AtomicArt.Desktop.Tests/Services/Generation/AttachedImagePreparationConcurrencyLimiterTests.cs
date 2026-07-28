@@ -8,12 +8,15 @@ namespace AtomicArt.Desktop.Tests.Services.Generation;
 public sealed class AttachedImagePreparationConcurrencyLimiterTests
 {
     [Fact]
-    public async Task WaitAsync_WhenLogicalProcessorLimitIsOccupied_WaitsForRelease()
+    public async Task WaitAsync_WhenConfiguredLimitIsOccupied_WaitsForRelease()
     {
-        AttachedImagePreparationConcurrencyLimiter limiter = new();
+        const int maximumConcurrency = 2;
+        AttachedImagePreparationConcurrencyLimiter limiter = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper(
+                attachedImagePreparationConcurrency: maximumConcurrency));
 
         await ConcurrencyLimiterAssertions.AssertBlocksNextWaitUntilReleaseAsync(
             limiter,
-            AttachedImagePreparationConcurrencyLimiter.MaximumConcurrency);
+            maximumConcurrency);
     }
 }

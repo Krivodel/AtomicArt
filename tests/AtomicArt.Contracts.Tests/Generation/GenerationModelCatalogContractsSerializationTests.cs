@@ -63,6 +63,7 @@ public sealed class GenerationModelCatalogContractsSerializationTests
                         0.25m,
                         1.50m,
                         30.00m,
+                        4m,
                         1120,
                         new Dictionary<string, int>
                         {

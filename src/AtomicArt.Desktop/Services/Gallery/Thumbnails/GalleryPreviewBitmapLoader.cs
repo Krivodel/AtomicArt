@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Avalonia.Media.Imaging;
 
@@ -8,15 +9,23 @@ namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
 internal sealed class GalleryPreviewBitmapLoader : IGalleryPreviewBitmapLoader
 {
-    private const int MaximumConcurrentDecodes = 4;
-
     private readonly ILogger<GalleryPreviewBitmapLoader> _logger;
-    private readonly SemaphoreSlim _decodeSemaphore =
-        new(MaximumConcurrentDecodes, MaximumConcurrentDecodes);
+    private readonly int _thumbnailShortSidePixels;
+    private readonly SemaphoreSlim _decodeSemaphore;
 
-    public GalleryPreviewBitmapLoader(ILogger<GalleryPreviewBitmapLoader> logger)
+    public GalleryPreviewBitmapLoader(
+        ILogger<GalleryPreviewBitmapLoader> logger,
+        GalleryThumbnailSpecification specification,
+        IOptions<GalleryOptions> options)
     {
+        ArgumentNullException.ThrowIfNull(specification);
+        ArgumentNullException.ThrowIfNull(options);
+
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _thumbnailShortSidePixels = specification.ShortSidePixels;
+        _decodeSemaphore = new SemaphoreSlim(
+            options.Value.MaximumPreviewDecodeConcurrency,
+            options.Value.MaximumPreviewDecodeConcurrency);
     }
 
     public async Task<Bitmap?> LoadAsync(string imagePath, CancellationToken ct)
@@ -51,12 +60,12 @@ internal sealed class GalleryPreviewBitmapLoader : IGalleryPreviewBitmapLoader
         }
     }
 
-    private static Bitmap Decode(string imagePath, CancellationToken ct)
+    private Bitmap Decode(string imagePath, CancellationToken ct)
     {
         using FileStream stream = File.OpenRead(imagePath);
         return PreviewBitmapDecoder.Decode(
             stream,
-            GalleryThumbnailSpecification.ShortSidePixels,
+            _thumbnailShortSidePixels,
             ct);
     }
 }

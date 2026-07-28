@@ -5,5 +5,6 @@ public sealed record GenerationModelPricingMetadataDto(
     decimal InputTokenUsdPerMillion,
     decimal TextOutputTokenUsdPerMillion,
     decimal ImageOutputTokenUsdPerMillion,
+    decimal EstimatedCharactersPerTextToken,
     int InputImageTokens,
     IReadOnlyDictionary<string, int> OutputImageTokensByResolution);

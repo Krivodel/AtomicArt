@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using SkiaSharp;
 using Xunit;
 
@@ -20,12 +20,12 @@ public sealed class GalleryThumbnailGeneratorTests
         byte[] thumbnailBytes = await CreateThumbnailAsync(
             nameof(CreateThumbnailAsync_WithWideImage_SetsShortSideTo256),
             "wide.png",
-            GalleryThumbnailSpecification.ShortSidePixels * LargeScale,
-            GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
+            TestApiConfiguration.ThumbnailShortSidePixels * LargeScale,
+            TestApiConfiguration.ThumbnailShortSidePixels * MediumScale);
 
         SKSizeI size = GalleryThumbnailTestImages.ReadSize(thumbnailBytes);
-        size.Width.Should().Be(GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
-        size.Height.Should().Be(GalleryThumbnailSpecification.ShortSidePixels);
+        size.Width.Should().Be(TestApiConfiguration.ThumbnailShortSidePixels * MediumScale);
+        size.Height.Should().Be(TestApiConfiguration.ThumbnailShortSidePixels);
     }
 
     [Fact]
@@ -34,12 +34,12 @@ public sealed class GalleryThumbnailGeneratorTests
         byte[] thumbnailBytes = await CreateThumbnailAsync(
             nameof(CreateThumbnailAsync_WithTallImage_SetsShortSideTo256),
             "tall.png",
-            GalleryThumbnailSpecification.ShortSidePixels * MediumScale,
-            GalleryThumbnailSpecification.ShortSidePixels * LargeScale);
+            TestApiConfiguration.ThumbnailShortSidePixels * MediumScale,
+            TestApiConfiguration.ThumbnailShortSidePixels * LargeScale);
 
         SKSizeI size = GalleryThumbnailTestImages.ReadSize(thumbnailBytes);
-        size.Width.Should().Be(GalleryThumbnailSpecification.ShortSidePixels);
-        size.Height.Should().Be(GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
+        size.Width.Should().Be(TestApiConfiguration.ThumbnailShortSidePixels);
+        size.Height.Should().Be(TestApiConfiguration.ThumbnailShortSidePixels * MediumScale);
     }
 
     [Fact]
@@ -48,18 +48,18 @@ public sealed class GalleryThumbnailGeneratorTests
         byte[] thumbnailBytes = await CreateThumbnailAsync(
             nameof(CreateThumbnailAsync_WithSquareImage_SetsBothSidesTo256),
             "square.png",
-            GalleryThumbnailSpecification.ShortSidePixels * MediumScale,
-            GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
+            TestApiConfiguration.ThumbnailShortSidePixels * MediumScale,
+            TestApiConfiguration.ThumbnailShortSidePixels * MediumScale);
 
         SKSizeI size = GalleryThumbnailTestImages.ReadSize(thumbnailBytes);
-        size.Width.Should().Be(GalleryThumbnailSpecification.ShortSidePixels);
-        size.Height.Should().Be(GalleryThumbnailSpecification.ShortSidePixels);
+        size.Width.Should().Be(TestApiConfiguration.ThumbnailShortSidePixels);
+        size.Height.Should().Be(TestApiConfiguration.ThumbnailShortSidePixels);
     }
 
     [Fact]
     public async Task CreateThumbnailAsync_WithSmallImage_DoesNotUpscale()
     {
-        int smallSide = GalleryThumbnailSpecification.ShortSidePixels / SmallScale;
+        int smallSide = TestApiConfiguration.ThumbnailShortSidePixels / SmallScale;
 
         byte[] thumbnailBytes = await CreateThumbnailAsync(
             nameof(CreateThumbnailAsync_WithSmallImage_DoesNotUpscale),
@@ -78,11 +78,11 @@ public sealed class GalleryThumbnailGeneratorTests
         byte[] thumbnailBytes = await CreateThumbnailAsync(
             nameof(CreateThumbnailAsync_UsesThumbnailSpecificationShortSide),
             "spec.png",
-            GalleryThumbnailSpecification.ShortSidePixels * LargeScale,
-            GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
+            TestApiConfiguration.ThumbnailShortSidePixels * LargeScale,
+            TestApiConfiguration.ThumbnailShortSidePixels * MediumScale);
 
         SKSizeI size = GalleryThumbnailTestImages.ReadSize(thumbnailBytes);
-        Math.Min(size.Width, size.Height).Should().Be(GalleryThumbnailSpecification.ShortSidePixels);
+        Math.Min(size.Width, size.Height).Should().Be(TestApiConfiguration.ThumbnailShortSidePixels);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class GalleryThumbnailGeneratorTests
             FileAccess.Write,
             FileShare.None))
         {
-            stream.SetLength(GalleryThumbnailSpecification.MaxSourceImageBytes + 1);
+            stream.SetLength(TestApiConfiguration.MaximumThumbnailSourceImageBytes + 1);
         }
         GalleryThumbnailGenerator generator = CreateGenerator();
 
@@ -121,7 +121,7 @@ public sealed class GalleryThumbnailGeneratorTests
 
     private static GalleryThumbnailGenerator CreateGenerator()
     {
-        return new GalleryThumbnailGenerator(new GalleryThumbnailImageFormat());
+        return TestApiConfiguration.CreateGalleryThumbnailGenerator();
     }
 
     private static async Task<byte[]> CreateThumbnailAsync(

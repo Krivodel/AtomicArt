@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Application;
+using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Api.Authentication;
 using AtomicArt.Api.ErrorHandling;
 using AtomicArt.Api.Filters;
@@ -35,27 +38,55 @@ builder.Services
     .Bind(builder.Configuration.GetSection(GenerationServerOptions.SectionName))
     .Validate(
         GenerationServerOptions.IsValid,
-        "Generation configuration must include a positive MaxConcurrentGenerations value.")
+        "Generation configuration must include positive request and concurrency limits.")
     .ValidateOnStart();
+builder.Services
+    .AddOptions<KestrelServerOptions>()
+    .Configure<IOptions<GenerationServerOptions>>(
+        (kestrelOptions, generationOptions) =>
+        {
+            kestrelOptions.Limits.MaxRequestBodySize =
+                generationOptions.Value.MaxRequestBytes;
+        });
 builder.Services.AddSingleton<IGenerationRequestConcurrencyLimiter, GenerationRequestConcurrencyLimiter>();
 builder.Services.AddSingleton<MultipartGenerationRequestReader>();
 builder.Services.AddSingleton<GenerationStreamingResponseWriter>();
+builder.Services.AddSingleton(serviceProvider =>
+{
+    GenerationServerOptions options = serviceProvider
+        .GetRequiredService<IOptions<GenerationServerOptions>>()
+        .Value;
+
+    return new GenerationExecutionLimits(
+        options.EmergencyMaxProviderResponseBytes);
+});
 builder.Services.AddDomainServices();
 string modelMetadataPath = GenerationModelCatalogDefaults.ResolvePath(builder.Environment.ContentRootPath);
 TestGenerationOptions testGenerationOptions = builder.Configuration
     .GetSection(TestGenerationOptions.SectionName)
     .Get<TestGenerationOptions>()
-    ?? new TestGenerationOptions();
+    ?? throw new InvalidOperationException(
+        "TestGeneration configuration is missing.");
+
+if (!TestGenerationOptions.IsValid(testGenerationOptions))
+{
+    throw new InvalidOperationException(
+        "TestGeneration configuration is invalid.");
+}
+
 GenerationModelCatalogDto modelCatalog;
 
 try
 {
-    modelCatalog = JsonModelMetadataStartupLoader.Load(
+    GenerationModelMetadataStartupDocument metadataDocument =
+        JsonModelMetadataStartupLoader.LoadDocument(
         modelMetadataPath,
         new FileGenerationModelCatalogJsonSource());
+    modelCatalog = metadataDocument.Catalog;
     modelCatalog = TestGenerationModelCatalogAugmenter.AddTestModelIfEnabled(
         modelCatalog,
-        testGenerationOptions);
+        testGenerationOptions,
+        metadataDocument.TestModel);
 }
 catch (InvalidOperationException exception)
 {

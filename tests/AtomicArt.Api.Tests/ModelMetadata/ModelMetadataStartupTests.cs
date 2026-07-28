@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using FluentAssertions;
 using Xunit;
 
+using AtomicArt.Api.Tests.Controllers;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Tests.Common;
 
@@ -17,6 +18,11 @@ public sealed class ModelMetadataStartupTests
         string contentRootPath = TestDirectories.GetUniqueAssemblyDirectoryPath(
             typeof(ModelMetadataStartupTests));
         using TemporaryDirectory contentRoot = new(contentRootPath);
+        ApiContentRootTestFiles.WriteAppSettings(
+            contentRoot.DirectoryPath,
+            ApiTestAppSettingsJson.Create(
+                testGenerationEnabled: false,
+                imagesDirectory: string.Empty));
         ApiContentRootTestFiles.WriteModelMetadata(contentRoot.DirectoryPath, "{");
         using WebApplicationFactory<Program> factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder => builder.UseContentRoot(contentRoot.DirectoryPath));

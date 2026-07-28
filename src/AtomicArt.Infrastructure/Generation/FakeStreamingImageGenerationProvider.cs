@@ -3,6 +3,8 @@ using System.Buffers.Text;
 using System.Text;
 using System.Text.Json;
 
+using Microsoft.Extensions.Options;
+
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
@@ -16,12 +18,16 @@ internal sealed class FakeStreamingImageGenerationProvider
 
     private readonly IStreamingPlaceholderImageProvider
         _placeholderImageProvider;
+    private readonly TestGenerationOptions _options;
 
     public FakeStreamingImageGenerationProvider(
-        IStreamingPlaceholderImageProvider placeholderImageProvider)
+        IStreamingPlaceholderImageProvider placeholderImageProvider,
+        IOptions<TestGenerationOptions> options)
     {
         _placeholderImageProvider = placeholderImageProvider
             ?? throw new ArgumentNullException(nameof(placeholderImageProvider));
+        ArgumentNullException.ThrowIfNull(options);
+        _options = options.Value;
     }
 
     public async Task<IProviderGenerationStream> CreateStreamAsync(
@@ -34,7 +40,9 @@ internal sealed class FakeStreamingImageGenerationProvider
             .OpenNextAsync(context.Request.ModelId, 0, ct)
             .ConfigureAwait(false);
 
-        return new FakeProviderGenerationStream(image);
+        return new FakeProviderGenerationStream(
+            image,
+            _options);
     }
 
     private sealed class FakeProviderGenerationStream : IProviderGenerationStream
@@ -42,14 +50,21 @@ internal sealed class FakeStreamingImageGenerationProvider
         public string ContentType => "application/json";
         public ProviderGenerationSummary? Summary { get; private set; }
 
-        private const int InputBlockSize = 49152;
-        private const int OutputBlockSize = 65536;
-
         private readonly StreamingPlaceholderImage _image;
+        private readonly int _generationDelayMilliseconds;
+        private readonly int _inputBlockSize;
+        private readonly int _outputBlockSize;
 
-        public FakeProviderGenerationStream(StreamingPlaceholderImage image)
+        public FakeProviderGenerationStream(
+            StreamingPlaceholderImage image,
+            TestGenerationOptions options)
         {
             _image = image ?? throw new ArgumentNullException(nameof(image));
+            ArgumentNullException.ThrowIfNull(options);
+            _generationDelayMilliseconds =
+                options.GenerationDelayMilliseconds;
+            _inputBlockSize = options.Base64InputBufferSize;
+            _outputBlockSize = options.Base64OutputBufferSize;
         }
 
         public async Task CopyToAsync(
@@ -74,10 +89,13 @@ internal sealed class FakeStreamingImageGenerationProvider
                     "The test provider response exceeded its limit.");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
+            await Task.Delay(
+                    TimeSpan.FromMilliseconds(_generationDelayMilliseconds),
+                    ct)
+                .ConfigureAwait(false);
             await destination.WriteAsync(prefix, ct).ConfigureAwait(false);
-            byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(InputBlockSize);
-            byte[] outputBuffer = ArrayPool<byte>.Shared.Rent(OutputBlockSize);
+            byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(_inputBlockSize);
+            byte[] outputBuffer = ArrayPool<byte>.Shared.Rent(_outputBlockSize);
 
             try
             {
@@ -143,20 +161,20 @@ internal sealed class FakeStreamingImageGenerationProvider
             return _image.DisposeAsync();
         }
 
-        private static async Task<int> FillBufferAsync(
+        private async Task<int> FillBufferAsync(
             Stream source,
             byte[] buffer,
             CancellationToken ct)
         {
             int totalBytesRead = 0;
 
-            while (totalBytesRead < InputBlockSize)
+            while (totalBytesRead < _inputBlockSize)
             {
                 int bytesRead = await source
                     .ReadAsync(
                         buffer.AsMemory(
                             totalBytesRead,
-                            InputBlockSize - totalBytesRead),
+                            _inputBlockSize - totalBytesRead),
                         ct)
                     .ConfigureAwait(false);
 

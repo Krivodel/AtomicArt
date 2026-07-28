@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace AtomicArt.Desktop.Services;
 
@@ -9,19 +10,27 @@ public abstract class AtomicArtApiClient
     protected HttpClient HttpClient { get; }
     protected IApiEndpointService ApiEndpointService { get; }
     protected ILogger Logger { get; }
+    protected int MaximumProblemDetailsErrorCodeCharacters { get; }
+    protected int MaximumProblemDetailsResponseBytes { get; }
 
     protected AtomicArtApiClient(
         HttpClient httpClient,
         IApiEndpointService apiEndpointService,
-        ILogger logger)
+        ILogger logger,
+        IOptions<ApiClientOptions> options)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(apiEndpointService);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
 
         HttpClient = httpClient;
         ApiEndpointService = apiEndpointService;
         Logger = logger;
+        MaximumProblemDetailsErrorCodeCharacters =
+            options.Value.MaximumProblemDetailsErrorCodeCharacters;
+        MaximumProblemDetailsResponseBytes =
+            options.Value.MaximumProblemDetailsResponseBytes;
     }
 
     private protected async Task<TResponse> ReadSuccessfulJsonResponseAsync<TResponse>(
@@ -44,6 +53,8 @@ public abstract class AtomicArtApiClient
                     response,
                     api,
                     logResponseFailure,
+                    MaximumProblemDetailsResponseBytes,
+                    MaximumProblemDetailsErrorCodeCharacters,
                     ct)
                 .ConfigureAwait(false);
         }

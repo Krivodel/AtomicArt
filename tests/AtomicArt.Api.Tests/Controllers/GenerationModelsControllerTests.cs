@@ -14,7 +14,6 @@ using AtomicArt.Api.Controllers;
 using AtomicArt.Api.Tests.ModelMetadata;
 using AtomicArt.Application.Features.Generation.Queries.GetGenerationModels;
 using AtomicArt.Contracts.Generation;
-using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Tests.Common;
 using AtomicArt.Tests.Common.Generation;
 
@@ -40,7 +39,8 @@ public sealed class GenerationModelsControllerTests
             ApiModelMetadataStartupTestCatalog.LoadCatalog().Models.Count);
         catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId);
         catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBananaProModelId);
-        catalog.Models.Should().NotContain(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
+        catalog.Models.Should().NotContain(
+            model => model.Id == TestGenerationTestOptions.ModelId);
     }
 
     [Fact]
@@ -53,8 +53,9 @@ public sealed class GenerationModelsControllerTests
         statusCode.Should().Be(HttpStatusCode.OK);
         catalog.Should().NotBeNull();
         GenerationModelMetadataDto testModel = catalog.Models
-            .Single(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
-        testModel.DisplayName.Should().Be("Test");
+            .Single(model => model.Id == TestGenerationTestOptions.ModelId);
+        testModel.DisplayName.Should().Be(
+            TestGenerationTestOptions.DisplayName);
         testModel.Provider.Should().Be(GenerationProviderIds.Test);
         testModel.PanelId.Should().Be(GenerationPanelIds.NanoBanana);
     }

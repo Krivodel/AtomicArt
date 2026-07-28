@@ -7,8 +7,6 @@ namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
 internal sealed class GoogleProviderGenerationStream : IProviderGenerationStream
 {
-    private const int BufferSize = 65536;
-
     public string ContentType { get; }
     public ProviderGenerationSummary? Summary { get; private set; }
 
@@ -19,6 +17,7 @@ internal sealed class GoogleProviderGenerationStream : IProviderGenerationStream
     private readonly int _maximumAnalyzedMetadataBytes;
     private readonly int _maximumStructureDepth;
     private readonly int _maximumDiagnosticTextCharacters;
+    private readonly int _responseBufferSize;
 
     public GoogleProviderGenerationStream(
         GoogleInteractionsStreamingResponse response,
@@ -27,7 +26,8 @@ internal sealed class GoogleProviderGenerationStream : IProviderGenerationStream
         long maximumProviderResponseBytes,
         int maximumAnalyzedMetadataBytes,
         int maximumStructureDepth,
-        int maximumDiagnosticTextCharacters)
+        int maximumDiagnosticTextCharacters,
+        int responseBufferSize)
     {
         _response = response ?? throw new ArgumentNullException(nameof(response));
         _responseParser = responseParser
@@ -44,11 +44,13 @@ internal sealed class GoogleProviderGenerationStream : IProviderGenerationStream
         ArgumentOutOfRangeException.ThrowIfLessThan(
             maximumDiagnosticTextCharacters,
             1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(responseBufferSize, 1);
         _maximumProviderResponseBytes = maximumProviderResponseBytes;
         _maximumAnalyzedMetadataBytes = maximumAnalyzedMetadataBytes;
         _maximumStructureDepth = maximumStructureDepth;
         _maximumDiagnosticTextCharacters =
             maximumDiagnosticTextCharacters;
+        _responseBufferSize = responseBufferSize;
         ContentType = response.Response.Content.Headers.ContentType?.ToString()
             ?? "application/json";
     }
@@ -61,7 +63,7 @@ internal sealed class GoogleProviderGenerationStream : IProviderGenerationStream
         ArgumentNullException.ThrowIfNull(destination);
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumBytes, 1L);
 
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(_responseBufferSize);
         long totalBytes = 0L;
         GoogleStreamingResponseAnalyzer analyzer = new(
             _responseParser,
@@ -78,7 +80,7 @@ internal sealed class GoogleProviderGenerationStream : IProviderGenerationStream
             while (true)
             {
                 int bytesRead = await _response.Content
-                    .ReadAsync(buffer.AsMemory(0, BufferSize), ct)
+                    .ReadAsync(buffer.AsMemory(0, _responseBufferSize), ct)
                     .ConfigureAwait(false);
 
                 if (bytesRead == 0)

@@ -70,13 +70,36 @@
         ],
         "default": "low"
       }
+    },
+    "text-token-estimation": {
+      "pricing": {
+        "estimatedCharactersPerTextToken": 4
+      }
     }
+  },
+  "testModel": {
+    "id": "test",
+    "displayName": "Test",
+    "providerModelId": "test-folder",
+    "aspectRatios": [
+      "Авто",
+      "1:1",
+      "2:3",
+      "3:2",
+      "4:3",
+      "9:16",
+      "16:9"
+    ],
+    "resolutions": [
+      "1K"
+    ]
   },
   "models": [
     {
       "profiles": [
         "nano-banana-family",
-        "standard-thinking"
+        "standard-thinking",
+        "text-token-estimation"
       ],
       "id": "nano-banana-2",
       "displayName": "Nano Banana 2",
@@ -125,7 +148,8 @@
       "profiles": [
         "nano-banana-family",
         "standard-aspect-ratios",
-        "standard-thinking"
+        "standard-thinking",
+        "text-token-estimation"
       ],
       "id": "nano-banana-2-lite",
       "displayName": "Nano Banana 2 Lite",
@@ -150,7 +174,8 @@
     {
       "profiles": [
         "nano-banana-family",
-        "standard-aspect-ratios"
+        "standard-aspect-ratios",
+        "text-token-estimation"
       ],
       "id": "nano-banana-pro",
       "displayName": "Nano Banana Pro",

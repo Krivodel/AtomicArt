@@ -1,6 +1,7 @@
 using System.Net;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Application.Features.Generation.Models;
 
@@ -9,33 +10,30 @@ namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 internal sealed class GoogleInteractionsClient : IGoogleInteractionsClient
 {
     private const string ApiKeyHeaderName = "X-Goog-Api-Key";
-    private const string InteractionsPath = "/v1beta/interactions";
+
     private readonly HttpClient _httpClient;
     private readonly ILogger<GoogleInteractionsClient> _logger;
     private readonly GoogleInteractionsFailureClassifier _failureClassifier;
-
-    internal GoogleInteractionsClient(
-        HttpClient httpClient,
-        ILogger<GoogleInteractionsClient> logger)
-        : this(
-            httpClient,
-            logger,
-            new GoogleInteractionsFailureClassifier())
-    {
-    }
+    private readonly string _interactionsPath;
+    private readonly int _maxLoggedErrorMessageCharacters;
 
     public GoogleInteractionsClient(
         HttpClient httpClient,
         ILogger<GoogleInteractionsClient> logger,
-        GoogleInteractionsFailureClassifier failureClassifier)
+        GoogleInteractionsFailureClassifier failureClassifier,
+        IOptions<GoogleInteractionsOptions> options)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(failureClassifier);
+        ArgumentNullException.ThrowIfNull(options);
 
         _httpClient = httpClient;
         _logger = logger;
         _failureClassifier = failureClassifier;
+        _interactionsPath = options.Value.InteractionsPath;
+        _maxLoggedErrorMessageCharacters =
+            options.Value.MaxLoggedErrorMessageCharacters;
     }
 
     public async Task<GoogleInteractionsStreamingResponse> CreateInteractionStreamAsync(
@@ -57,7 +55,10 @@ internal sealed class GoogleInteractionsClient : IGoogleInteractionsClient
             {
                 GoogleInteractionsErrorDiagnostics diagnostics =
                     await GoogleInteractionsErrorResponseReader
-                        .ReadAsync(response.Content, ct)
+                        .ReadAsync(
+                            response.Content,
+                            _maxLoggedErrorMessageCharacters,
+                            ct)
                         .ConfigureAwait(false);
 
                 try
@@ -118,13 +119,13 @@ internal sealed class GoogleInteractionsClient : IGoogleInteractionsClient
         }
     }
 
-    private static HttpRequestMessage CreateRequest(
+    private HttpRequestMessage CreateRequest(
         HttpContent content,
         string providerCredential)
     {
         HttpRequestMessage request = new(
             HttpMethod.Post,
-            InteractionsPath);
+            _interactionsPath);
         request.Headers.Add(ApiKeyHeaderName, providerCredential.Trim());
         request.Content = content;
 

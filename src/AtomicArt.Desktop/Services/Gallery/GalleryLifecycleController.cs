@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Desktop.Services.Generation;
 
@@ -6,8 +7,6 @@ namespace AtomicArt.Desktop.Services.Gallery;
 
 public sealed class GalleryLifecycleController : IDisposable
 {
-    private static readonly TimeSpan ElapsedRefreshInterval = TimeSpan.FromSeconds(1);
-
     private readonly IGalleryLifecycleViewState _viewState;
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly IGenerationActivityTracker _generationActivityTracker;
@@ -16,6 +15,7 @@ public sealed class GalleryLifecycleController : IDisposable
     private readonly IReadOnlyDictionary<GenerationLifecycleStatus, IGalleryLifecycleEventHandler> _handlersByStatus;
     private readonly IDisposable _lifecycleSubscription;
     private readonly CancellationTokenSource _disposeCancellation = new();
+    private readonly TimeSpan _elapsedRefreshInterval;
     private readonly Task _elapsedRefreshTask;
 
     public GalleryLifecycleController(
@@ -25,7 +25,8 @@ public sealed class GalleryLifecycleController : IDisposable
         IGenerationActivityTracker generationActivityTracker,
         IWindowPresentationService windowPresentationService,
         IEnumerable<IGalleryLifecycleEventHandler> lifecycleEventHandlers,
-        ILogger<GalleryLifecycleController> logger)
+        ILogger<GalleryLifecycleController> logger,
+        IOptions<GalleryOptions> options)
     {
         ArgumentNullException.ThrowIfNull(lifecycleEventHub);
         ArgumentNullException.ThrowIfNull(viewState);
@@ -34,12 +35,15 @@ public sealed class GalleryLifecycleController : IDisposable
         ArgumentNullException.ThrowIfNull(windowPresentationService);
         ArgumentNullException.ThrowIfNull(lifecycleEventHandlers);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
 
         _viewState = viewState;
         _errorHandler = errorHandler;
         _generationActivityTracker = generationActivityTracker;
         _windowPresentationService = windowPresentationService;
         _logger = logger;
+        _elapsedRefreshInterval = TimeSpan.FromMilliseconds(
+            options.Value.ElapsedRefreshIntervalMilliseconds);
         _handlersByStatus = lifecycleEventHandlers.ToDictionary(handler => handler.Status);
         _lifecycleSubscription = lifecycleEventHub.Subscribe(OnGenerationLifecycleEvent);
         _elapsedRefreshTask = ObserveLifecycleTaskAsync(
@@ -79,7 +83,7 @@ public sealed class GalleryLifecycleController : IDisposable
                 }
 
                 await RefreshElapsedTextAsync(ct);
-                await Task.Delay(ElapsedRefreshInterval, ct);
+                await Task.Delay(_elapsedRefreshInterval, ct);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

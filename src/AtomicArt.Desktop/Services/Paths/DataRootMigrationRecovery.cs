@@ -1,13 +1,17 @@
+using Microsoft.Extensions.Options;
+
 namespace AtomicArt.Desktop.Services.Paths;
 
 internal static class DataRootMigrationRecovery
 {
     internal static void Recover(
         AtomicArtDataRootBootstrapStore bootstrapStore,
-        DataRootMigrationJournalStore journalStore)
+        DataRootMigrationJournalStore journalStore,
+        StorageOptions storageOptions)
     {
         ArgumentNullException.ThrowIfNull(bootstrapStore);
         ArgumentNullException.ThrowIfNull(journalStore);
+        ArgumentNullException.ThrowIfNull(storageOptions);
 
         DataRootMigrationJournal? journal = journalStore.Load();
 
@@ -22,7 +26,8 @@ internal static class DataRootMigrationRecovery
             Path.GetFullPath(journal.DestinationRootDirectory));
         string sourceRoot = Path.TrimEndingDirectorySeparator(
             Path.GetFullPath(journal.SourceRootDirectory));
-        DataRootFileTransfer fileTransfer = new();
+        DataRootFileTransfer fileTransfer = new(
+            Options.Create(storageOptions));
 
         if (string.Equals(
                 configuredRoot,

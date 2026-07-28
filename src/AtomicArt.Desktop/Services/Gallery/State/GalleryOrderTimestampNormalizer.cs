@@ -1,8 +1,17 @@
 namespace AtomicArt.Desktop.Services.Gallery.State;
 
-internal static class GalleryOrderTimestampNormalizer
+public sealed class GalleryOrderTimestampNormalizer
 {
-    public static IReadOnlyList<GalleryItemState> Normalize(
+    private readonly GalleryOrderTimestampPolicy _timestampPolicy;
+
+    public GalleryOrderTimestampNormalizer(
+        GalleryOrderTimestampPolicy timestampPolicy)
+    {
+        _timestampPolicy = timestampPolicy
+            ?? throw new ArgumentNullException(nameof(timestampPolicy));
+    }
+
+    public IReadOnlyList<GalleryItemState> Normalize(
         IReadOnlyList<GalleryItemState> items)
     {
         ArgumentNullException.ThrowIfNull(items);
@@ -16,10 +25,10 @@ internal static class GalleryOrderTimestampNormalizer
             DateTime candidateTimestampUtc = item.GalleryOrderTimestampUtc
                 ?? item.CreatedAtUtc;
             DateTime normalizedTimestampUtc = olderTimestampUtc.HasValue
-                ? GalleryOrderTimestampPolicy.EnsureNewer(
+                ? _timestampPolicy.EnsureNewer(
                     candidateTimestampUtc,
                     olderTimestampUtc.Value)
-                : GalleryOrderTimestampPolicy.Normalize(candidateTimestampUtc);
+                : _timestampPolicy.Normalize(candidateTimestampUtc);
 
             if (item.GalleryOrderTimestampUtc != normalizedTimestampUtc)
             {

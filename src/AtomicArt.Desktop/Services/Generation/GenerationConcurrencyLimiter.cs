@@ -6,14 +6,6 @@ namespace AtomicArt.Desktop.Services.Generation;
 
 public sealed class GenerationConcurrencyLimiter : SemaphoreConcurrencyLimiter, IGenerationConcurrencyLimiter
 {
-    public const int MaxConcurrentGenerations =
-        GenerationClientOptions.DefaultMaxConcurrentGenerations;
-
-    public GenerationConcurrencyLimiter()
-        : base(GenerationClientOptions.DefaultMaxConcurrentGenerations)
-    {
-    }
-
     public GenerationConcurrencyLimiter(
         IOptions<GenerationClientOptions> options)
         : base(GetMaximumConcurrency(options))

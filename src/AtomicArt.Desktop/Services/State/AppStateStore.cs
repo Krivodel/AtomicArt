@@ -22,15 +22,19 @@ public sealed class AppStateStore : IAppStateStore
     private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly ILogger<AppStateStore> _logger;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _writeLocks;
+    private readonly TrustedFileStreamFactory _trustedFileStreamFactory;
 
     public AppStateStore(
         IAtomicArtDataPathProvider pathProvider,
         IDataRootAccessCoordinator accessCoordinator,
+        TrustedFileStreamFactory trustedFileStreamFactory,
         ILogger<AppStateStore> logger)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _accessCoordinator = accessCoordinator
             ?? throw new ArgumentNullException(nameof(accessCoordinator));
+        _trustedFileStreamFactory = trustedFileStreamFactory
+            ?? throw new ArgumentNullException(nameof(trustedFileStreamFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _writeLocks = new ConcurrentDictionary<string, SemaphoreSlim>(StringComparer.Ordinal);
     }
@@ -48,7 +52,7 @@ public sealed class AppStateStore : IAppStateStore
         {
             string[] trustedDirectories = [Path.GetFullPath(_pathProvider.StateDirectory)];
 
-            if (!TrustedPathGuard.TryOpenTrustedExistingFileForRead(
+            if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
                 path,
                 trustedDirectories,
                 _pathProvider.StateDirectory,
@@ -223,7 +227,7 @@ public sealed class AppStateStore : IAppStateStore
                 Payload = state
             };
 
-            await using (FileStream stream = TrustedPathGuard.CreateTrustedNewFileForWrite(
+            await using (FileStream stream = _trustedFileStreamFactory.CreateNewFileForWrite(
                 _pathProvider.StateDirectory,
                 tempPath,
                 TrustedPathFailureMessage))

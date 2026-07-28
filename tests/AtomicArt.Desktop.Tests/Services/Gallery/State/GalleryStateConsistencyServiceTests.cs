@@ -165,6 +165,7 @@ public sealed class GalleryStateConsistencyServiceTests
             AppStateStore stateStore = new(
                 pathProvider,
                 accessCoordinator,
+                TestApiConfiguration.CreateTrustedFileStreamFactory(),
                 NullLogger<AppStateStore>.Instance);
             GalleryStateSection section = new();
             GalleryItemState missingImageItem = CreateItem(
@@ -183,7 +184,9 @@ public sealed class GalleryStateConsistencyServiceTests
             TrustedImageFileService trustedImageFileService = new(
                 pathProvider,
                 GenerationImageFormatRegistryTestFactory.Create(),
-                NullLogger<TrustedImageFileService>.Instance);
+                NullLogger<TrustedImageFileService>.Instance,
+                TestApiConfiguration.CreateGenerationOptionsWrapper(),
+                TestApiConfiguration.CreateTrustedFileStreamFactory());
             GalleryStatePathConverter pathConverter = new(
                 pathProvider,
                 trustedImageFileService,
@@ -321,6 +324,7 @@ public sealed class GalleryStateConsistencyServiceTests
             accessCoordinator,
             pathConverter,
             section ?? new GalleryStateSection(),
+            TestApiConfiguration.CreateGalleryOrderTimestampNormalizer(),
             NullLogger<GalleryStateConsistencyService>.Instance);
     }
 

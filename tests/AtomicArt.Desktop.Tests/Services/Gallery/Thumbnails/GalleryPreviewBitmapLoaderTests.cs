@@ -57,6 +57,8 @@ public sealed class GalleryPreviewBitmapLoaderTests : AnimatedGalleryControlTest
     private static GalleryPreviewBitmapLoader CreateLoader()
     {
         return new GalleryPreviewBitmapLoader(
-            NullLogger<GalleryPreviewBitmapLoader>.Instance);
+            NullLogger<GalleryPreviewBitmapLoader>.Instance,
+            TestApiConfiguration.CreateGalleryThumbnailSpecification(),
+            TestApiConfiguration.CreateGalleryOptionsWrapper());
     }
 }

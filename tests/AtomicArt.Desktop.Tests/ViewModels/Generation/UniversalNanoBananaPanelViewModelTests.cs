@@ -18,8 +18,8 @@ using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Tests.Common;
+using AtomicArt.Tests.Common.Generation;
 using static AtomicArt.Desktop.Tests.ViewModels.Generation.UniversalNanoBananaPanelViewModelTestHelper;
-using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Generation;
 
@@ -381,7 +381,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             imageModelOptionCatalog: CreateImageModelOptionCatalog(CreateTestModelCatalog()),
             dispatcher: dispatcher);
         viewModel.SelectedModel = viewModel.AvailableModels
-            .Single(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
+            .Single(model => model.Id == TestGenerationTestOptions.ModelId);
         viewModel.Prompt = "Prompt";
 
         await viewModel.GenerateCommand.ExecuteAsync(null);
@@ -390,7 +390,8 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         secretStore.GetCallCount.Should().Be(0);
         GenerationRunRequest request = dispatcher.CapturedRequest
             ?? throw new InvalidOperationException("Generation run request should be captured.");
-        request.Request.ModelId.Should().Be(TestGenerationModelCatalogAugmenter.ModelId);
+        request.Request.ModelId.Should().Be(
+            TestGenerationTestOptions.ModelId);
         request.ProviderCredential.Should().BeEmpty();
     }
 
@@ -1571,8 +1572,10 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             generationPanelStateService ?? new RecordingGenerationPanelStateService(),
             imageViewerService ?? new RecordingImageViewerService(),
             new RecordingPromptTextSizeController(),
-            new NanoBanana2QuoteViewModel(new GenerationPricePreviewEstimator()),
-            viewModelErrorHandler);
+            new NanoBanana2QuoteViewModel(
+                new GenerationPricePreviewEstimator()),
+            viewModelErrorHandler,
+            TestApiConfiguration.CreateStateWritePolicy());
 
         return viewModel;
     }
@@ -1671,10 +1674,8 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     {
         return TestGenerationModelCatalogAugmenter.AddTestModelIfEnabled(
             ApiModelMetadataTestCatalog.LoadCatalog(),
-            new TestGenerationOptions
-            {
-                Enabled = true
-            });
+            TestGenerationTestOptions.Create(enabled: true),
+            TestGenerationTestOptions.CreateModelMetadata());
     }
 
     private static AttachedImageDto CreateAttachedImage(string fileName)

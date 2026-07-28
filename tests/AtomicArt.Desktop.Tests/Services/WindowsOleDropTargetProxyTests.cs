@@ -289,7 +289,8 @@ public sealed class WindowsOleDropTargetProxyTests
 
         return new WindowsVirtualFileReader(
             new AttachedImageFileReader(signatureValidator),
-            NullLogger<WindowsVirtualFileReader>.Instance);
+            NullLogger<WindowsVirtualFileReader>.Instance,
+            TestApiConfiguration.CreateDataTransferOptionsWrapper());
     }
 
     private static nint CreateNativeWindow()

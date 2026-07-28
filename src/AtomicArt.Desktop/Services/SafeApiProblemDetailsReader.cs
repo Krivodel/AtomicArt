@@ -8,19 +8,26 @@ namespace AtomicArt.Desktop.Services;
 
 internal static class SafeApiProblemDetailsReader
 {
-    private const int MaxResponseBytes = 16 * 1024;
-    private const int MaxErrorCodeLength = 32;
     private const string ErrorCodePrefix = "ERR-";
 
     internal static async Task<SafeApiProblemDetailsReadResult> TryReadErrorCodeAsync(
         HttpContent content,
+        int maximumResponseBytes,
+        int maximumErrorCodeCharacters,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(content);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumResponseBytes, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumErrorCodeCharacters, 1);
 
         try
         {
-            string? errorCode = await ReadErrorCodeAsync(content, ct).ConfigureAwait(false);
+            string? errorCode = await ReadErrorCodeAsync(
+                    content,
+                    maximumResponseBytes,
+                    maximumErrorCodeCharacters,
+                    ct)
+                .ConfigureAwait(false);
 
             return new SafeApiProblemDetailsReadResult(errorCode, null);
         }
@@ -95,6 +102,8 @@ internal static class SafeApiProblemDetailsReader
         HttpResponseMessage response,
         SafeApiProblemDetailsApi api,
         Action<string> logResponseFailure,
+        int maximumResponseBytes,
+        int maximumErrorCodeCharacters,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(logger);
@@ -103,14 +112,41 @@ internal static class SafeApiProblemDetailsReader
 
         SafeApiProblemDetailsReadResult problemDetails = await TryReadErrorCodeAsync(
                 response.Content,
+                maximumResponseBytes,
+                maximumErrorCodeCharacters,
                 ct)
             .ConfigureAwait(false);
         LogReadFailure(logger, problemDetails, api);
         logResponseFailure(problemDetails.LogErrorCode);
     }
 
+    internal static string? GetSafeErrorCode(
+        string? errorCode,
+        int maximumErrorCodeCharacters)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(
+            maximumErrorCodeCharacters,
+            1);
+
+        if (string.IsNullOrWhiteSpace(errorCode)
+            || errorCode.Length > maximumErrorCodeCharacters
+            || !errorCode.StartsWith(ErrorCodePrefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return errorCode.All(character =>
+            character is >= 'A' and <= 'Z'
+                or >= '0' and <= '9'
+                or '-')
+            ? errorCode
+            : null;
+    }
+
     private static async Task<string?> ReadErrorCodeAsync(
         HttpContent content,
+        int maximumResponseBytes,
+        int maximumErrorCodeCharacters,
         CancellationToken ct)
     {
         string? mediaType = content.Headers.ContentType?.MediaType;
@@ -125,7 +161,7 @@ internal static class SafeApiProblemDetailsReader
         await using Stream stream = await content
             .ReadAsStreamAsync(ct)
             .ConfigureAwait(false);
-        byte[] buffer = new byte[MaxResponseBytes + 1];
+        byte[] buffer = new byte[maximumResponseBytes + 1];
         int totalBytesRead = 0;
 
         while (totalBytesRead < buffer.Length)
@@ -143,7 +179,7 @@ internal static class SafeApiProblemDetailsReader
         }
 
         if (totalBytesRead == 0
-            || totalBytesRead > MaxResponseBytes)
+            || totalBytesRead > maximumResponseBytes)
         {
             return null;
         }
@@ -161,23 +197,6 @@ internal static class SafeApiProblemDetailsReader
 
         string? errorCode = errorCodeElement.GetString();
 
-        return IsSafeErrorCode(errorCode)
-            ? errorCode
-            : null;
-    }
-
-    private static bool IsSafeErrorCode(string? errorCode)
-    {
-        if (string.IsNullOrWhiteSpace(errorCode)
-            || errorCode.Length > MaxErrorCodeLength
-            || !errorCode.StartsWith(ErrorCodePrefix, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        return errorCode.All(character =>
-            character is >= 'A' and <= 'Z'
-                or >= '0' and <= '9'
-                or '-');
+        return GetSafeErrorCode(errorCode, maximumErrorCodeCharacters);
     }
 }

@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 
 using FluentAssertions;
 using Xunit;
@@ -13,36 +13,39 @@ public sealed class GalleryThumbnailSizeCalculatorTests
     private const int MediumScale = 2;
     private const int SmallScale = 2;
 
+    private readonly GalleryThumbnailSizeCalculator _calculator = new(
+        TestApiConfiguration.CreateGalleryThumbnailSpecification());
+
     [Fact]
     public void Calculate_WithWideImage_SetsShortSideTo256()
     {
-        PixelSize result = GalleryThumbnailSizeCalculator.Calculate(
-            GalleryThumbnailSpecification.ShortSidePixels * LargeScale,
-            GalleryThumbnailSpecification.ShortSidePixels * MediumScale);
+        PixelSize result = _calculator.Calculate(
+            TestApiConfiguration.ThumbnailShortSidePixels * LargeScale,
+            TestApiConfiguration.ThumbnailShortSidePixels * MediumScale);
 
         result.Should().Be(new PixelSize(
-            GalleryThumbnailSpecification.ShortSidePixels * MediumScale,
-            GalleryThumbnailSpecification.ShortSidePixels));
+            TestApiConfiguration.ThumbnailShortSidePixels * MediumScale,
+            TestApiConfiguration.ThumbnailShortSidePixels));
     }
 
     [Fact]
     public void Calculate_WithTallImage_SetsShortSideTo256()
     {
-        PixelSize result = GalleryThumbnailSizeCalculator.Calculate(
-            GalleryThumbnailSpecification.ShortSidePixels * MediumScale,
-            GalleryThumbnailSpecification.ShortSidePixels * LargeScale);
+        PixelSize result = _calculator.Calculate(
+            TestApiConfiguration.ThumbnailShortSidePixels * MediumScale,
+            TestApiConfiguration.ThumbnailShortSidePixels * LargeScale);
 
         result.Should().Be(new PixelSize(
-            GalleryThumbnailSpecification.ShortSidePixels,
-            GalleryThumbnailSpecification.ShortSidePixels * MediumScale));
+            TestApiConfiguration.ThumbnailShortSidePixels,
+            TestApiConfiguration.ThumbnailShortSidePixels * MediumScale));
     }
 
     [Fact]
     public void Calculate_WithSmallImage_DoesNotUpscale()
     {
-        int smallSide = GalleryThumbnailSpecification.ShortSidePixels / SmallScale;
+        int smallSide = TestApiConfiguration.ThumbnailShortSidePixels / SmallScale;
 
-        PixelSize result = GalleryThumbnailSizeCalculator.Calculate(
+        PixelSize result = _calculator.Calculate(
             smallSide,
             smallSide);
 

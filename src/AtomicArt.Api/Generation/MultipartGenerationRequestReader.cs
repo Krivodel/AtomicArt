@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 
 using AtomicArt.Contracts.Generation;
@@ -9,13 +10,24 @@ namespace AtomicArt.Api.Generation;
 
 public sealed class MultipartGenerationRequestReader
 {
-    private const int MaximumBoundaryLength = 256;
-    private const int MaximumMetadataBytes = 256 * 1024;
-    private const long GlobalMaximumRequestBytes = 1024L * 1024L * 1024L;
-    private const int CopyBufferSize = 65536;
-
     private static readonly JsonSerializerOptions SerializerOptions =
         new(JsonSerializerDefaults.Web);
+
+    private readonly int _copyBufferSize;
+    private readonly int _maximumBoundaryLength;
+    private readonly int _maxMetadataBytes;
+    private readonly long _maxRequestBytes;
+
+    public MultipartGenerationRequestReader(
+        IOptions<GenerationServerOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        _copyBufferSize = options.Value.CopyBufferSize;
+        _maximumBoundaryLength = options.Value.MaximumBoundaryLength;
+        _maxMetadataBytes = options.Value.MaxMetadataBytes;
+        _maxRequestBytes = options.Value.MaxRequestBytes;
+    }
 
     public async Task<MultipartGenerationRequest> ReadAsync(
         HttpRequest request,
@@ -36,13 +48,13 @@ public sealed class MultipartGenerationRequestReader
         }
     }
 
-    private static async Task<MultipartGenerationRequest> ReadCoreAsync(
+    private async Task<MultipartGenerationRequest> ReadCoreAsync(
         HttpRequest request,
         CancellationToken ct)
     {
         string boundary = GetBoundary(request.ContentType);
 
-        if (request.ContentLength > GlobalMaximumRequestBytes)
+        if (request.ContentLength > _maxRequestBytes)
         {
             throw CreateInvalidRequestException(
                 "Тело запроса превышает аварийный предел.");
@@ -120,7 +132,7 @@ public sealed class MultipartGenerationRequestReader
         }
     }
 
-    private static void ValidateMetadata(
+    private void ValidateMetadata(
         GenerationRequestMetadataDto metadata)
     {
         if (metadata.LogicalGenerationId == Guid.Empty
@@ -163,7 +175,7 @@ public sealed class MultipartGenerationRequestReader
                 exception);
         }
 
-        if (declaredAttachmentBytes > GlobalMaximumRequestBytes)
+        if (declaredAttachmentBytes > _maxRequestBytes)
         {
             throw new GenerationMultipartRequestException(
                 GenerationProtocolErrorCodes.InvalidMultipartRequest,
@@ -173,7 +185,7 @@ public sealed class MultipartGenerationRequestReader
         }
     }
 
-    private static async Task<GenerationRequestMetadataDto> ReadMetadataAsync(
+    private async Task<GenerationRequestMetadataDto> ReadMetadataAsync(
         Stream stream,
         CancellationToken ct)
     {
@@ -181,7 +193,7 @@ public sealed class MultipartGenerationRequestReader
         await CopyWithLimitAsync(
                 stream,
                 buffer,
-                MaximumMetadataBytes,
+                _maxMetadataBytes,
                 ct)
             .ConfigureAwait(false);
         buffer.Position = 0L;
@@ -207,13 +219,13 @@ public sealed class MultipartGenerationRequestReader
         }
     }
 
-    private static async Task<TemporaryGenerationAttachmentSource> CopyAttachmentAsync(
+    private async Task<TemporaryGenerationAttachmentSource> CopyAttachmentAsync(
         Stream source,
         GenerationAttachmentMetadataDto descriptor,
         CancellationToken ct)
     {
         if (descriptor.ByteLength <= 0
-            || descriptor.ByteLength > GlobalMaximumRequestBytes)
+            || descriptor.ByteLength > _maxRequestBytes)
         {
             throw CreateInvalidRequestException(
                 "Размер вложения не прошёл проверку.");
@@ -230,7 +242,7 @@ public sealed class MultipartGenerationRequestReader
                 FileMode.CreateNew,
                 FileAccess.Write,
                 FileShare.None,
-                CopyBufferSize,
+                _copyBufferSize,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
             await CopyWithLimitAsync(
                     source,
@@ -247,7 +259,8 @@ public sealed class MultipartGenerationRequestReader
 
             return new TemporaryGenerationAttachmentSource(
                 descriptor,
-                temporaryPath);
+                temporaryPath,
+                _copyBufferSize);
         }
         catch
         {
@@ -256,13 +269,13 @@ public sealed class MultipartGenerationRequestReader
         }
     }
 
-    private static async Task CopyWithLimitAsync(
+    private async Task CopyWithLimitAsync(
         Stream source,
         Stream destination,
         long maximumBytes,
         CancellationToken ct)
     {
-        byte[] buffer = new byte[CopyBufferSize];
+        byte[] buffer = new byte[_copyBufferSize];
         long totalBytes = 0L;
 
         while (true)
@@ -290,7 +303,7 @@ public sealed class MultipartGenerationRequestReader
         }
     }
 
-    private static string GetBoundary(string? contentType)
+    private string GetBoundary(string? contentType)
     {
         if (string.IsNullOrWhiteSpace(contentType)
             || !MediaTypeHeaderValue.TryParse(
@@ -309,7 +322,7 @@ public sealed class MultipartGenerationRequestReader
             mediaType.Boundary).Value ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(boundary)
-            || boundary.Length > MaximumBoundaryLength)
+            || boundary.Length > _maximumBoundaryLength)
         {
             throw CreateInvalidRequestException(
                 "Граница multipart-запроса отсутствует или слишком длинна.");
@@ -318,7 +331,7 @@ public sealed class MultipartGenerationRequestReader
         return boundary;
     }
 
-    private static bool HasExpectedPartName(
+    private bool HasExpectedPartName(
         MultipartSection section,
         string expectedName)
     {
@@ -335,7 +348,7 @@ public sealed class MultipartGenerationRequestReader
         return string.Equals(partName, expectedName, StringComparison.Ordinal);
     }
 
-    private static GenerationMultipartRequestException CreateInvalidRequestException(
+    private GenerationMultipartRequestException CreateInvalidRequestException(
         string message)
     {
         return new GenerationMultipartRequestException(

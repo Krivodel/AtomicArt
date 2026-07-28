@@ -15,6 +15,11 @@ namespace AtomicArt.Infrastructure.Tests.Generation.GoogleInteractions;
 
 public sealed class GoogleInteractionsStreamingTests
 {
+    private const int MaximumFilteredResponseBytes = 4 * 1024 * 1024;
+    private const int MaximumStructureDepth = 64;
+    private const int MaximumDiagnosticTextCharacters = 512;
+    private const int ResponseBufferSize = 65536;
+
     private static readonly Guid LogicalGenerationId =
         Guid.Parse("11111111-1111-1111-1111-111111111111");
 
@@ -34,7 +39,9 @@ public sealed class GoogleInteractionsStreamingTests
             attachmentBytes,
             maximumReadSize: 17);
         StreamingGenerationProviderContext context = CreateContext(attachment);
-        using GoogleInteractionsStreamingContent content = new(context);
+        using GoogleInteractionsStreamingContent content = new(
+            context,
+            CreateOptions());
 
         byte[] serialized = await content.ReadAsByteArrayAsync();
 
@@ -47,6 +54,43 @@ public sealed class GoogleInteractionsStreamingTests
         Convert.FromBase64String(base64 ?? string.Empty)
             .Should()
             .Equal(attachmentBytes);
+    }
+
+    [Fact]
+    public async Task ReadAsByteArrayAsync_WithConfiguredRequestProperties_WritesConfiguredValues()
+    {
+        byte[] attachmentBytes = [1, 2, 3];
+        TestAttachmentSource attachment = new(
+            new GenerationAttachmentMetadataDto(
+                0,
+                "reference.png",
+                GenerationImageContentTypes.Png,
+                attachmentBytes.LongLength),
+            attachmentBytes,
+            maximumReadSize: 3);
+        StreamingGenerationProviderContext context = CreateContext(attachment);
+        GoogleInteractionsOptions options = new()
+        {
+            Base64InputBufferSize = 3,
+            Base64OutputBufferSize = 4,
+            ServiceTier = "configured-tier",
+            StoreInteractions = false
+        };
+        using GoogleInteractionsStreamingContent content = new(
+            context,
+            options);
+
+        byte[] serialized = await content.ReadAsByteArrayAsync();
+
+        using JsonDocument document = JsonDocument.Parse(serialized);
+        JsonElement root = document.RootElement;
+        root.GetProperty("service_tier").GetString()
+            .Should().Be(options.ServiceTier);
+        root.GetProperty("store").GetBoolean()
+            .Should().Be(options.StoreInteractions);
+        root.GetProperty("system_instruction").GetString()
+            .Should().Be(
+                GoogleInteractionsImageOutputContract.SystemInstruction);
     }
 
     [Fact]
@@ -318,7 +362,8 @@ public sealed class GoogleInteractionsStreamingTests
             maximumProviderResponseBytes: responseBytes.Length,
             maximumAnalyzedMetadataBytes: 512,
             maximumStructureDepth: 64,
-            maximumDiagnosticTextCharacters: 512);
+            maximumDiagnosticTextCharacters: 512,
+            responseBufferSize: ResponseBufferSize);
         using MemoryStream destination = new();
 
         await providerStream.CopyToAsync(
@@ -590,11 +635,11 @@ public sealed class GoogleInteractionsStreamingTests
 
     private static GoogleStreamingResponseAnalyzer CreateAnalyzer(
         int maximumFilteredResponseBytes =
-            GoogleInteractionsOptions.DefaultMaxAnalyzedMetadataBytes,
+            MaximumFilteredResponseBytes,
         int maximumStructureDepth =
-            GoogleInteractionsOptions.DefaultMaxResponseStructureDepth,
+            MaximumStructureDepth,
         int maximumDiagnosticTextCharacters =
-            GoogleInteractionsOptions.DefaultMaxDiagnosticTextCharacters)
+            MaximumDiagnosticTextCharacters)
     {
         return new GoogleStreamingResponseAnalyzer(
             new GoogleInteractionsResponseParser(),
@@ -602,6 +647,17 @@ public sealed class GoogleInteractionsStreamingTests
             maximumFilteredResponseBytes,
             maximumStructureDepth,
             maximumDiagnosticTextCharacters);
+    }
+
+    private static GoogleInteractionsOptions CreateOptions()
+    {
+        return new GoogleInteractionsOptions
+        {
+            Base64InputBufferSize = 48,
+            Base64OutputBufferSize = 64,
+            ServiceTier = "flex",
+            StoreInteractions = true
+        };
     }
 
     private static string CreateCompletedResponse(string data)

@@ -91,7 +91,8 @@ public sealed class GenerationStreamingResponseWriterTests
             GenerationProviderIds.Google,
             Guid.Parse("22222222-2222-2222-2222-222222222222"),
             Guid.Parse("33333333-3333-3333-3333-333333333333"),
-            StartedAtUtc);
+            StartedAtUtc,
+            emergencyMaxProviderResponseBytes: 1024L * 1024L);
     }
 
     private sealed class FailingProviderGenerationStream

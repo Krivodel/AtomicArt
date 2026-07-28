@@ -1,6 +1,7 @@
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -105,7 +106,8 @@ internal static class GalleryLifecycleTestFactory
 
         GalleryItemsController itemsController = new(
             new PassthroughTrustedImageFileService(),
-            statusRegistry);
+            statusRegistry,
+            TestApiConfiguration.CreateGalleryOrderTimestampPolicy());
 
         return new GalleryLifecycleViewStateController(
             new ImmediateUiThreadDispatcher(),

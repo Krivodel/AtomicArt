@@ -17,7 +17,10 @@ public sealed class TransferredImageFileNameTests
     {
         string result = TransferredImageFileName.Sanitize(
             candidate,
-            "fallback.png");
+            "fallback.png",
+            TestApiConfiguration
+                .CreateDataTransferOptions()
+                .MaximumTransferredFileNameCharacters);
 
         result.Should().Be(expected);
     }
@@ -29,7 +32,10 @@ public sealed class TransferredImageFileNameTests
 
         string result = TransferredImageFileName.Sanitize(
             candidate,
-            "fallback.png");
+            "fallback.png",
+            TestApiConfiguration
+                .CreateDataTransferOptions()
+                .MaximumTransferredFileNameCharacters);
 
         result.Should().HaveLength(128);
     }

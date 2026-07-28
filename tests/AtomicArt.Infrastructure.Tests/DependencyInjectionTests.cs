@@ -56,21 +56,27 @@ public sealed class DependencyInjectionTests
 
         GoogleInteractionsOptions options = GetOptions<GoogleInteractionsOptions>(serviceProvider);
 
-        options.BaseUrl.Should().Be(GoogleInteractionsOptions.DefaultBaseUrl);
+        options.BaseUrl.Should().Be(GoogleInteractionsTestConfiguration.BaseUrl);
     }
 
     [Fact]
-    public void AddInfrastructureServices_WithGoogleInteractionsHttpClient_UsesGenerationAttemptTimeout()
+    public void AddInfrastructureServices_WithConfiguredGoogleTimeout_ConfiguresHttpClient()
     {
-        IConfiguration configuration = CreateConfiguration();
+        const int timeoutSeconds = 123;
+        IConfiguration configuration = CreateConfiguration(
+            new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                [CreateGoogleInteractionsKey(
+                    nameof(GoogleInteractionsOptions.ProviderResponseTimeoutSeconds))] =
+                    timeoutSeconds.ToString()
+            });
         using ServiceProvider serviceProvider = CreateServiceProvider(configuration);
         IHttpClientFactory httpClientFactory =
             serviceProvider.GetRequiredService<IHttpClientFactory>();
         using HttpClient httpClient = httpClientFactory.CreateClient(
             nameof(IGoogleInteractionsClient));
 
-        httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(
-            GenerationAttemptLimits.ProviderResponseTimeoutSeconds));
+        httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(timeoutSeconds));
     }
 
     [Fact]
@@ -83,7 +89,7 @@ public sealed class DependencyInjectionTests
         TestGenerationOptions options = GetOptions<TestGenerationOptions>(serviceProvider);
 
         options.Enabled.Should().BeFalse();
-        options.MaxImageBytes.Should().Be(TestGenerationOptions.DefaultMaxImageBytes);
+        options.Base64InputBufferSize.Should().Be(48);
     }
 
     [Fact]
@@ -124,6 +130,13 @@ public sealed class DependencyInjectionTests
         IDictionary<string, string?>? additionalValues = null)
     {
         Dictionary<string, string?> values = GoogleInteractionsTestConfiguration.Create();
+        Dictionary<string, string?> testGenerationValues =
+            TestGenerationTestOptions.CreateConfiguration();
+
+        foreach (KeyValuePair<string, string?> value in testGenerationValues)
+        {
+            values[value.Key] = value.Value;
+        }
 
         if (additionalValues is not null)
         {
@@ -165,6 +178,11 @@ public sealed class DependencyInjectionTests
     private static string CreateTestGenerationKey(string key)
     {
         return $"{TestGenerationOptions.SectionName}:{key}";
+    }
+
+    private static string CreateGoogleInteractionsKey(string key)
+    {
+        return $"{GoogleInteractionsOptions.SectionName}:{key}";
     }
 
     private static TOptions GetOptions<TOptions>(ServiceProvider serviceProvider)

@@ -18,7 +18,9 @@ internal static class GenerationImageFormatRegistryTestFactory
 
     public static GenerationImageContentValidator CreateValidator()
     {
-        return new GenerationImageContentValidator(Create());
+        return new GenerationImageContentValidator(
+            Create(),
+            TestApiConfiguration.MaxInputImageBytes);
     }
 
     public static GenerationImageContentValidator CreateValidator(int maxImageBytes)

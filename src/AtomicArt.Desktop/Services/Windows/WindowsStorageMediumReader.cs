@@ -54,6 +54,7 @@ internal static class WindowsStorageMediumReader
         short formatId,
         int itemIndex,
         int maxBytes,
+        int bufferSize,
         string tooLargeMessage)
     {
         FORMATETC format = CreateFormat(
@@ -69,6 +70,7 @@ internal static class WindowsStorageMediumReader
                 TYMED.TYMED_ISTREAM => ReadComStream(
                     medium.unionmember,
                     maxBytes,
+                    bufferSize,
                     tooLargeMessage),
                 TYMED.TYMED_HGLOBAL => ReadGlobalMemory(
                     medium.unionmember,
@@ -88,8 +90,11 @@ internal static class WindowsStorageMediumReader
     private static byte[] ReadComStream(
         nint streamPointer,
         int maxBytes,
+        int bufferSize,
         string tooLargeMessage)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThan(bufferSize, 1);
+
         if (streamPointer == nint.Zero)
         {
             throw new InvalidDataException(
@@ -107,7 +112,7 @@ internal static class WindowsStorageMediumReader
             }
 
             using MemoryStream output = new();
-            byte[] buffer = new byte[81920];
+            byte[] buffer = new byte[bufferSize];
             nint bytesReadPointer = Marshal.AllocHGlobal(sizeof(int));
 
             try

@@ -154,7 +154,8 @@ public sealed class GalleryLifecycleControllerTests
             activityTracker ?? TestGenerationActivityTrackerFactory.Create(),
             windowPresentationService ?? presentationServiceMock.Object,
             lifecycleEventHandlers ?? [],
-            logger);
+            logger,
+            TestApiConfiguration.CreateGalleryOptionsWrapper());
     }
 
     private static GenerationLifecycleEvent CreateEvent(GenerationLifecycleStatus status)

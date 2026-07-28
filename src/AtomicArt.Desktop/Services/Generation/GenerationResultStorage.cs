@@ -15,18 +15,21 @@ public sealed class GenerationResultStorage : IGenerationResultStorage
     private readonly GenerationImageFileNamePolicy _fileNamePolicy;
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly IDataRootAccessCoordinator _accessCoordinator;
+    private readonly TrustedFileStreamFactory _trustedFileStreamFactory;
 
     public GenerationResultStorage(
         IAtomicArtDataPathProvider pathProvider,
         IGenerationImageFormatRegistry formatRegistry,
         GenerationImageFileNamePolicy fileNamePolicy,
         IDataRootAccessCoordinator accessCoordinator,
+        TrustedFileStreamFactory trustedFileStreamFactory,
         ILogger<GenerationResultStorage> logger)
     {
         ArgumentNullException.ThrowIfNull(pathProvider);
         ArgumentNullException.ThrowIfNull(formatRegistry);
         ArgumentNullException.ThrowIfNull(fileNamePolicy);
         ArgumentNullException.ThrowIfNull(accessCoordinator);
+        ArgumentNullException.ThrowIfNull(trustedFileStreamFactory);
         ArgumentNullException.ThrowIfNull(logger);
 
         _formatRegistry = formatRegistry;
@@ -34,6 +37,7 @@ public sealed class GenerationResultStorage : IGenerationResultStorage
         _logger = logger;
         _pathProvider = pathProvider;
         _accessCoordinator = accessCoordinator;
+        _trustedFileStreamFactory = trustedFileStreamFactory;
     }
 
     public async Task SaveAsync(
@@ -164,7 +168,7 @@ public sealed class GenerationResultStorage : IGenerationResultStorage
         ReadOnlyMemory<byte> bytes,
         CancellationToken ct)
     {
-        await using FileStream stream = TrustedPathGuard.CreateTrustedNewFileForWrite(
+        await using FileStream stream = _trustedFileStreamFactory.CreateNewFileForWrite(
             resultsDirectory,
             resultPath,
             TrustedPathFailureMessage);

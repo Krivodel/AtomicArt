@@ -11,6 +11,7 @@ public sealed record GenerationModelPricing
     public decimal InputTokenUsdPerMillion { get; }
     public decimal TextOutputTokenUsdPerMillion { get; }
     public decimal ImageOutputTokenUsdPerMillion { get; }
+    public decimal EstimatedCharactersPerTextToken { get; }
     public int InputImageTokens { get; }
     public IReadOnlyDictionary<string, int> OutputImageTokensByResolution { get; }
 
@@ -20,6 +21,7 @@ public sealed record GenerationModelPricing
         decimal inputTokenUsdPerMillion,
         decimal textOutputTokenUsdPerMillion,
         decimal imageOutputTokenUsdPerMillion,
+        decimal estimatedCharactersPerTextToken,
         int inputImageTokens,
         IReadOnlyDictionary<string, int> outputImageTokensByResolution)
     {
@@ -42,6 +44,9 @@ public sealed record GenerationModelPricing
         InputTokenUsdPerMillion = RequirePositive(inputTokenUsdPerMillion, nameof(inputTokenUsdPerMillion));
         TextOutputTokenUsdPerMillion = RequirePositive(textOutputTokenUsdPerMillion, nameof(textOutputTokenUsdPerMillion));
         ImageOutputTokenUsdPerMillion = RequirePositive(imageOutputTokenUsdPerMillion, nameof(imageOutputTokenUsdPerMillion));
+        EstimatedCharactersPerTextToken = RequirePositive(
+            estimatedCharactersPerTextToken,
+            nameof(estimatedCharactersPerTextToken));
         InputImageTokens = RequirePositive(inputImageTokens, nameof(inputImageTokens));
         OutputImageTokensByResolution = CreateOutputImageTokensSnapshot(outputImageTokensByResolution);
     }

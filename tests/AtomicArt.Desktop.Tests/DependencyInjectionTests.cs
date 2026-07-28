@@ -311,7 +311,24 @@ public sealed class DependencyInjectionTests
             nameof(IImageGenerationApiClient));
 
         httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(
-            GenerationAttemptLimits.ProviderResponseTimeoutSeconds));
+            TestApiConfiguration
+                .CreateGenerationOptions()
+                .ProviderResponseTimeoutSeconds));
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithModelCatalogHttpClient_UsesConfiguredTimeout()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+        IHttpClientFactory httpClientFactory =
+            serviceProvider.GetRequiredService<IHttpClientFactory>();
+        using HttpClient httpClient = httpClientFactory.CreateClient(
+            nameof(IGenerationModelCatalogApiClient));
+
+        httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(
+            TestApiConfiguration
+                .CreateApiClientOptions()
+                .ModelCatalogTimeoutSeconds));
     }
 
     [Fact]

@@ -12,22 +12,21 @@ namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
 internal sealed class GoogleInteractionsStreamingContent : HttpContent
 {
-    private const int InputBufferSize = 49152;
-    private const int OutputBufferSize = 65536;
     private const string JsonMediaType = "application/json";
-    private const string SystemInstruction =
-        "Treat **EVERY user input as an image generation request**. Return **image output only**. DO NOT answer with explanatory text.";
 
     private readonly StreamingGenerationProviderContext _context;
+    private readonly GoogleInteractionsOptions _options;
     private readonly byte[] _prefix;
     private readonly IReadOnlyList<byte[]> _attachmentPrefixes;
     private readonly byte[] _suffix;
     private readonly long _contentLength;
 
     public GoogleInteractionsStreamingContent(
-        StreamingGenerationProviderContext context)
+        StreamingGenerationProviderContext context,
+        GoogleInteractionsOptions options)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         _prefix = CreatePrefix(context);
         _attachmentPrefixes = context.Request.Attachments
             .Select(CreateAttachmentPrefix)
@@ -84,13 +83,15 @@ internal sealed class GoogleInteractionsStreamingContent : HttpContent
         await destination.WriteAsync(_suffix, ct).ConfigureAwait(false);
     }
 
-    private static async Task WriteAttachmentBase64Async(
+    private async Task WriteAttachmentBase64Async(
         Stream destination,
         IGenerationAttachmentSource attachment,
         CancellationToken ct)
     {
-        byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(InputBufferSize);
-        byte[] outputBuffer = ArrayPool<byte>.Shared.Rent(OutputBufferSize);
+        byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(
+            _options.Base64InputBufferSize);
+        byte[] outputBuffer = ArrayPool<byte>.Shared.Rent(
+            _options.Base64OutputBufferSize);
         long totalBytesRead = 0L;
 
         try
@@ -104,7 +105,7 @@ internal sealed class GoogleInteractionsStreamingContent : HttpContent
                 int bytesRead = await FillBufferAsync(
                         source,
                         inputBuffer,
-                        InputBufferSize,
+                        _options.Base64InputBufferSize,
                         ct)
                     .ConfigureAwait(false);
 
@@ -144,7 +145,7 @@ internal sealed class GoogleInteractionsStreamingContent : HttpContent
         }
     }
 
-    private static async Task<int> FillBufferAsync(
+    private async Task<int> FillBufferAsync(
         Stream source,
         byte[] buffer,
         int count,
@@ -169,7 +170,7 @@ internal sealed class GoogleInteractionsStreamingContent : HttpContent
         return totalBytesRead;
     }
 
-    private static byte[] CreatePrefix(
+    private byte[] CreatePrefix(
         StreamingGenerationProviderContext context)
     {
         string model = JsonSerializer.Serialize(context.ProviderModelId);
@@ -180,7 +181,7 @@ internal sealed class GoogleInteractionsStreamingContent : HttpContent
         return Encoding.UTF8.GetBytes(prefix);
     }
 
-    private static byte[] CreateAttachmentPrefix(
+    private byte[] CreateAttachmentPrefix(
         IGenerationAttachmentSource attachment)
     {
         string contentType = JsonSerializer.Serialize(
@@ -191,7 +192,7 @@ internal sealed class GoogleInteractionsStreamingContent : HttpContent
         return Encoding.UTF8.GetBytes(prefix);
     }
 
-    private static byte[] CreateSuffix(
+    private byte[] CreateSuffix(
         StreamingGenerationProviderContext context)
     {
         Dictionary<string, object> responseFormat = new(StringComparer.Ordinal)
@@ -219,10 +220,11 @@ internal sealed class GoogleInteractionsStreamingContent : HttpContent
         }
 
         string suffix =
-            $"],\"system_instruction\":{JsonSerializer.Serialize(SystemInstruction)},"
+            $"],\"system_instruction\":{JsonSerializer.Serialize(GoogleInteractionsImageOutputContract.SystemInstruction)},"
             + $"\"generation_config\":{JsonSerializer.Serialize(generationConfig)},"
             + $"\"response_format\":{JsonSerializer.Serialize(responseFormat)},"
-            + "\"service_tier\":\"flex\",\"store\":true}";
+            + $"\"service_tier\":{JsonSerializer.Serialize(_options.ServiceTier)},"
+            + $"\"store\":{JsonSerializer.Serialize(_options.StoreInteractions)}}}";
 
         return Encoding.UTF8.GetBytes(suffix);
     }

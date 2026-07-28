@@ -14,15 +14,16 @@ internal sealed class DesktopRollingFileWriter : IDisposable
     private const string FileNamePrefix = "atomicart-";
     private const string FileNameSearchPattern = "atomicart-*.log";
     private const string LogRetentionCleanupOperationName = "log retention cleanup";
-    private const int MaxMessageLength = 8 * 1024;
-    private const int MaxExceptionDepth = 5;
-    private const int MaxStackFrameCount = 64;
-    private const int MaxPausedBufferBytes = 4 * 1024 * 1024;
 
     private readonly LogLevel _minimumLevel;
     private readonly long _maxFileSizeBytes;
+    private readonly int _maximumExceptionDepth;
+    private readonly int _maximumMessageCharacters;
+    private readonly int _maximumPausedBufferBytes;
+    private readonly int _maximumStackFrameCount;
     private readonly int _retainedFileCount;
     private readonly int _retentionDays;
+    private readonly DesktopExceptionMessageSanitizer _exceptionMessageSanitizer;
     private readonly object _syncRoot = new();
     private readonly Queue<BufferedEntry> _pausedEntries = [];
     private string _directoryPath;
@@ -46,8 +47,14 @@ internal sealed class DesktopRollingFileWriter : IDisposable
         _directoryPath = pathProvider.LogsDirectory;
         _minimumLevel = options.MinimumLevel;
         _maxFileSizeBytes = options.MaxFileSizeBytes;
+        _maximumExceptionDepth = options.MaximumExceptionDepth;
+        _maximumMessageCharacters = options.MaximumMessageCharacters;
+        _maximumPausedBufferBytes = options.MaximumPausedBufferBytes;
+        _maximumStackFrameCount = options.MaximumStackFrameCount;
         _retainedFileCount = options.RetainedFileCount;
         _retentionDays = options.RetentionDays;
+        _exceptionMessageSanitizer =
+            new DesktopExceptionMessageSanitizer(options);
 
         try
         {
@@ -182,7 +189,7 @@ internal sealed class DesktopRollingFileWriter : IDisposable
         }
     }
 
-    private static string FormatEntry(
+    private string FormatEntry(
         LogLevel logLevel,
         string categoryName,
         EventId eventId,
@@ -209,24 +216,24 @@ internal sealed class DesktopRollingFileWriter : IDisposable
         return builder.ToString();
     }
 
-    private static string NormalizeMessage(string message)
+    private string NormalizeMessage(string message)
     {
         string normalizedMessage = message
             .Replace('\r', ' ')
             .Replace('\n', ' ');
 
-        return normalizedMessage.Length <= MaxMessageLength
+        return normalizedMessage.Length <= _maximumMessageCharacters
             ? normalizedMessage
-            : normalizedMessage[..MaxMessageLength];
+            : normalizedMessage[.._maximumMessageCharacters];
     }
 
-    private static void AppendSafeException(
+    private void AppendSafeException(
         StringBuilder builder,
         Exception? exception,
         int depth)
     {
         if (exception is null
-            || depth >= MaxExceptionDepth)
+            || depth >= _maximumExceptionDepth)
         {
             return;
         }
@@ -236,7 +243,8 @@ internal sealed class DesktopRollingFileWriter : IDisposable
         builder.Append(" HResult=0x");
         builder.AppendLine(exception.HResult.ToString("X8", CultureInfo.InvariantCulture));
 
-        string? sanitizedMessage = DesktopExceptionMessageSanitizer.Sanitize(exception.Message);
+        string? sanitizedMessage =
+            _exceptionMessageSanitizer.Sanitize(exception.Message);
 
         if (sanitizedMessage is not null)
         {
@@ -246,7 +254,7 @@ internal sealed class DesktopRollingFileWriter : IDisposable
 
         StackFrame[] frames = new StackTrace(exception, false)
             .GetFrames()
-            .Take(MaxStackFrameCount)
+            .Take(_maximumStackFrameCount)
             .ToArray();
 
         foreach (StackFrame frame in frames)
@@ -323,14 +331,14 @@ internal sealed class DesktopRollingFileWriter : IDisposable
     private void BufferEntry(string entry, int entrySizeBytes)
     {
         while (_pausedEntries.Count > 0
-            && _pausedBufferBytes + entrySizeBytes > MaxPausedBufferBytes)
+            && _pausedBufferBytes + entrySizeBytes > _maximumPausedBufferBytes)
         {
             BufferedEntry removedEntry = _pausedEntries.Dequeue();
             _pausedBufferBytes -= removedEntry.SizeBytes;
             _droppedPausedEntryCount++;
         }
 
-        if (entrySizeBytes > MaxPausedBufferBytes)
+        if (entrySizeBytes > _maximumPausedBufferBytes)
         {
             _droppedPausedEntryCount++;
             return;

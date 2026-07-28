@@ -17,6 +17,9 @@ public sealed class GalleryOrderTimestampNormalizerTests
         0,
         DateTimeKind.Utc);
 
+    private readonly GalleryOrderTimestampNormalizer _normalizer =
+        TestApiConfiguration.CreateGalleryOrderTimestampNormalizer();
+
     [Fact]
     public void Normalize_WithLegacyItems_AssignsDescendingTimestampsInGalleryOrder()
     {
@@ -28,7 +31,7 @@ public sealed class GalleryOrderTimestampNormalizerTests
             createdAtUtc: BaseTimestampUtc.AddSeconds(2));
 
         IReadOnlyList<GalleryItemState> normalizedItems =
-            GalleryOrderTimestampNormalizer.Normalize(
+            _normalizer.Normalize(
                 [topItem, middleItem, bottomItem]);
 
         normalizedItems.Select(item => item.GalleryOrderTimestampUtc).Should()
@@ -47,7 +50,7 @@ public sealed class GalleryOrderTimestampNormalizerTests
             galleryOrderTimestampUtc: BaseTimestampUtc);
 
         IReadOnlyList<GalleryItemState> normalizedItems =
-            GalleryOrderTimestampNormalizer.Normalize([topItem, bottomItem]);
+            _normalizer.Normalize([topItem, bottomItem]);
 
         normalizedItems.Select(item => item.GalleryOrderTimestampUtc).Should()
             .Equal(

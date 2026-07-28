@@ -187,6 +187,7 @@ public sealed class GenerationResultStorageTests
             GenerationImageFormatRegistryTestFactory.Create(),
             fileNamePolicy,
             new DataRootAccessCoordinator(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory(),
             NullLogger<GenerationResultStorage>.Instance);
     }
 

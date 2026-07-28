@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
+using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -16,6 +17,17 @@ internal static class GalleryServiceCollectionExtensions
 {
     public static IServiceCollection AddGalleryServices(this IServiceCollection services)
     {
+        services
+            .AddOptions<GalleryOptions>()
+            .BindConfiguration(GalleryOptions.SectionName)
+            .Validate(
+                GalleryOptions.IsValid,
+                "Gallery configuration must include valid timing, size, and concurrency limits.")
+            .ValidateOnStart();
+        services.AddSingleton<GalleryThumbnailSpecification>();
+        services.AddSingleton<GalleryThumbnailSizeCalculator>();
+        services.AddSingleton<GalleryOrderTimestampPolicy>();
+        services.AddSingleton<GalleryOrderTimestampNormalizer>();
         services.AddGallerySceneServices();
         services.AddGalleryComposition();
         services.AddGalleryViewModelServices();

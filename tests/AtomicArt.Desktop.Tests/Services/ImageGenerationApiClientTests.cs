@@ -100,7 +100,9 @@ public sealed class ImageGenerationApiClientTests
             TestApiEndpointServiceFactory.Create(),
             resultStore.Object,
             decoderRegistry,
-            NullLogger<ImageGenerationApiClient>.Instance);
+            NullLogger<ImageGenerationApiClient>.Instance,
+            TestApiConfiguration.CreateApiClientOptionsWrapper(),
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
     }
 
     private static ImageGenerationRequestDto CreateRequest()

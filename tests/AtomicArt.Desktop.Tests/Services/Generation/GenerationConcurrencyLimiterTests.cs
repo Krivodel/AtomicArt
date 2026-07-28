@@ -10,10 +10,13 @@ public sealed class GenerationConcurrencyLimiterTests
     [Fact]
     public async Task WaitAsync_WhenLimitReached_BlocksNextWaitUntilRelease()
     {
-        GenerationConcurrencyLimiter limiter = new();
+        const int maximumConcurrency = 2;
+        GenerationConcurrencyLimiter limiter = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper(
+                maxConcurrentGenerations: maximumConcurrency));
 
         await ConcurrencyLimiterAssertions.AssertBlocksNextWaitUntilReleaseAsync(
             limiter,
-            GenerationConcurrencyLimiter.MaxConcurrentGenerations);
+            maximumConcurrency);
     }
 }

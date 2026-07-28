@@ -2,11 +2,8 @@ using System.Text.RegularExpressions;
 
 namespace AtomicArt.Desktop.Services.Logging;
 
-internal static class DesktopExceptionMessageSanitizer
+internal sealed class DesktopExceptionMessageSanitizer
 {
-    private const int MaxInputMessageLength = 8 * 1024;
-    private const int MaxOutputMessageLength = 2 * 1024;
-
     private static readonly Regex NamedSecretRegex = CreateRegex(
         """\b(api[-_ ]?key|token|access[-_ ]?token|refresh[-_ ]?token|authorization|credential|password|secret|pwd|account[-_ ]?key)\b\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)""");
     private static readonly Regex ProviderKeyRegex = CreateRegex(
@@ -29,17 +26,30 @@ internal static class DesktopExceptionMessageSanitizer
         """\b(?:\d{1,3}\.){3}\d{1,3}\b""");
     private static readonly Regex WhitespaceRegex = CreateRegex(
         """\s+""");
+    private readonly int _maximumInputMessageCharacters;
+    private readonly int _maximumOutputMessageCharacters;
 
-    public static string? Sanitize(string? message)
+    public DesktopExceptionMessageSanitizer(
+        DesktopFileLoggingOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        _maximumInputMessageCharacters =
+            options.MaximumSanitizerInputMessageCharacters;
+        _maximumOutputMessageCharacters =
+            options.MaximumSanitizedMessageCharacters;
+    }
+
+    public string? Sanitize(string? message)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
             return null;
         }
 
-        string sanitizedMessage = message.Length <= MaxInputMessageLength
+        string sanitizedMessage = message.Length <= _maximumInputMessageCharacters
             ? message
-            : message[..MaxInputMessageLength];
+            : message[.._maximumInputMessageCharacters];
         sanitizedMessage = WhitespaceRegex.Replace(sanitizedMessage, " ").Trim();
         sanitizedMessage = NamedSecretRegex.Replace(
             sanitizedMessage,
@@ -72,9 +82,9 @@ internal static class DesktopExceptionMessageSanitizer
             sanitizedMessage,
             "[REDACTED IP]");
 
-        return sanitizedMessage.Length <= MaxOutputMessageLength
+        return sanitizedMessage.Length <= _maximumOutputMessageCharacters
             ? sanitizedMessage
-            : sanitizedMessage[..MaxOutputMessageLength];
+            : sanitizedMessage[.._maximumOutputMessageCharacters];
     }
 
     private static Regex CreateRegex(string pattern)

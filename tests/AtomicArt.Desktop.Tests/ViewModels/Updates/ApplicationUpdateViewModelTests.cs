@@ -5,6 +5,7 @@ using Xunit;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Updates;
+using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Updates;
@@ -119,7 +120,8 @@ public sealed class ApplicationUpdateViewModelTests
                 RestartCoordinatorMock.Object,
                 ActivityTracker,
                 new ImmediateUiThreadDispatcher(),
-                new TestViewModelErrorHandler());
+                new TestViewModelErrorHandler(),
+                TestApiConfiguration.CreateApplicationUpdateOptionsWrapper());
         }
 
         public void StartGeneration()

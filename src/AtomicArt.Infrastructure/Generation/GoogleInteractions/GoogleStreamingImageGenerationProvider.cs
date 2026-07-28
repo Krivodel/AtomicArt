@@ -48,7 +48,9 @@ internal sealed class GoogleStreamingImageGenerationProvider
                 "The temporary provider credential was not supplied.");
         }
 
-        GoogleInteractionsStreamingContent content = new(context);
+        GoogleInteractionsStreamingContent content = new(
+            context,
+            _options);
 
         long maximumRequestBytes = context.TransportLimits is null
             ? _options.MaxRequestBytes
@@ -99,7 +101,8 @@ internal sealed class GoogleStreamingImageGenerationProvider
                 _options.MaxResponseBytes,
                 maximumAnalyzedMetadataBytes,
                 maximumStructureDepth,
-                maximumDiagnosticTextCharacters);
+                maximumDiagnosticTextCharacters,
+                _options.ResponseBufferSize);
         }
         catch
         {

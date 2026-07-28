@@ -2,18 +2,19 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 
+using AtomicArt.Desktop.Services.Paths;
+
 namespace AtomicArt.Desktop.Services.SingleInstance;
 
 internal sealed class SingleInstanceIdentity
 {
-    private const string ApplicationDirectoryName = "AtomicArt";
-    private const string CoordinationDirectoryName = "Instance";
-    private const string PipeNamePrefix = "AtomicArt-";
-    private const string LockFileExtension = ".lock";
-    private const int IdentitySuffixLength = 24;
-
     public string LockFilePath { get; }
     public string PipeName { get; }
+
+    private const string CoordinationDirectoryName = "Instance";
+    private const int IdentitySuffixLength = 24;
+    private const string LockFileExtension = ".lock";
+    private const string PipeNamePrefix = "AtomicArt-";
 
     public SingleInstanceIdentity(
         string lockFilePath,
@@ -38,7 +39,7 @@ internal sealed class SingleInstanceIdentity
 
         string coordinationDirectory = Path.Combine(
             localApplicationData,
-            ApplicationDirectoryName,
+            AtomicArtPathNames.RootDirectory,
             CoordinationDirectoryName);
         string identitySuffix = CreateIdentitySuffix();
 

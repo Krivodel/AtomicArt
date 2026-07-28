@@ -1,6 +1,16 @@
+using Microsoft.Extensions.Options;
+
 namespace AtomicArt.Desktop.Services.State;
 
-internal static class StateWritePolicy
+public sealed class StateWritePolicy
 {
-    public static readonly TimeSpan DeferredWriteDelay = TimeSpan.FromMilliseconds(350);
+    public TimeSpan DeferredWriteDelay { get; }
+
+    public StateWritePolicy(IOptions<StatePersistenceOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        DeferredWriteDelay = TimeSpan.FromMilliseconds(
+            options.Value.DeferredWriteDelayMilliseconds);
+    }
 }

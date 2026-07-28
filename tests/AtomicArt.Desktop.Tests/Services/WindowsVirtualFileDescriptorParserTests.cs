@@ -21,7 +21,10 @@ public sealed class WindowsVirtualFileDescriptorParserTests
         IReadOnlyList<WindowsVirtualFileDescriptor> descriptors =
             WindowsVirtualFileDescriptorParser.Parse(
                 data,
-                isUnicode: true);
+                isUnicode: true,
+                TestApiConfiguration
+                    .CreateDataTransferOptions()
+                    .MaximumVirtualFileCount);
 
         WindowsVirtualFileDescriptor descriptor = descriptors.Should()
             .ContainSingle()
@@ -43,7 +46,10 @@ public sealed class WindowsVirtualFileDescriptorParserTests
         IReadOnlyList<WindowsVirtualFileDescriptor> descriptors =
             WindowsVirtualFileDescriptorParser.Parse(
                 data,
-                isUnicode: false);
+                isUnicode: false,
+                TestApiConfiguration
+                    .CreateDataTransferOptions()
+                    .MaximumVirtualFileCount);
 
         descriptors.Should().ContainSingle()
             .Which.FileName.Should().Be("image.png");
@@ -62,7 +68,10 @@ public sealed class WindowsVirtualFileDescriptorParserTests
         IReadOnlyList<WindowsVirtualFileDescriptor> descriptors =
             WindowsVirtualFileDescriptorParser.Parse(
                 data,
-                isUnicode: true);
+                isUnicode: true,
+                TestApiConfiguration
+                    .CreateDataTransferOptions()
+                    .MaximumVirtualFileCount);
 
         descriptors.Should().ContainSingle()
             .Which.IsDirectory.Should().BeTrue();
@@ -76,7 +85,10 @@ public sealed class WindowsVirtualFileDescriptorParserTests
 
         Action act = () => WindowsVirtualFileDescriptorParser.Parse(
             data,
-            isUnicode: true);
+            isUnicode: true,
+            TestApiConfiguration
+                .CreateDataTransferOptions()
+                .MaximumVirtualFileCount);
 
         act.Should().Throw<InvalidDataException>();
     }
@@ -85,13 +97,18 @@ public sealed class WindowsVirtualFileDescriptorParserTests
     public void Parse_WithExcessiveItemCount_ThrowsInvalidDataException()
     {
         byte[] data = new byte[sizeof(uint)];
-        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(data, 65);
+        int maximumFileCount = TestApiConfiguration
+            .CreateDataTransferOptions()
+            .MaximumVirtualFileCount;
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(
+            data,
+            checked((uint)(maximumFileCount + 1)));
 
         Action act = () => WindowsVirtualFileDescriptorParser.Parse(
             data,
-            isUnicode: true);
+            isUnicode: true,
+            maximumFileCount);
 
         act.Should().Throw<InvalidDataException>();
     }
-
 }

@@ -159,7 +159,8 @@ public sealed class DragDropImageServiceTests
         ExternalImageAttachmentReader externalImageReader = new(
             new HttpClient(handler),
             signatureValidator,
-            NullLogger<ExternalImageAttachmentReader>.Instance);
+            NullLogger<ExternalImageAttachmentReader>.Instance,
+            TestApiConfiguration.CreateDataTransferOptionsWrapper());
 
         return new DragDropImageService(
             new AttachedImageFileReader(signatureValidator),

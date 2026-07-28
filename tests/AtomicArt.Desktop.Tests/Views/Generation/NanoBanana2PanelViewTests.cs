@@ -739,8 +739,10 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             new NoOpGenerationPanelStateService(),
             new NullImageViewerService(),
             new RecordingPromptTextSizeController(),
-            new NanoBanana2QuoteViewModel(new GenerationPricePreviewEstimator()),
-            new TestViewModelErrorHandler());
+            new NanoBanana2QuoteViewModel(
+                new GenerationPricePreviewEstimator()),
+            new TestViewModelErrorHandler(),
+            TestApiConfiguration.CreateStateWritePolicy());
     }
 
     private static IImageModelOptionCatalog CreateLoadedImageModelOptionCatalog()

@@ -128,6 +128,7 @@ public sealed class SingleInstanceCoordinatorTests
     {
         return new SingleInstanceCoordinator(
             identity,
-            NullLogger<SingleInstanceCoordinator>.Instance);
+            NullLogger<SingleInstanceCoordinator>.Instance,
+            TestApiConfiguration.CreateSingleInstanceOptions());
     }
 }

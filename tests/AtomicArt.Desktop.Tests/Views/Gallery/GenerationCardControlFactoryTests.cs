@@ -10,6 +10,7 @@ using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
+using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Gallery;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Views.Gallery;
@@ -27,15 +28,19 @@ public sealed class GenerationCardControlFactoryTests : AnimatedGalleryControlTe
                 new((_, _) => Task.FromResult<Bitmap?>(null));
             using GalleryPreviewBitmapProvider provider = new(
                 loader,
-                NullLogger<GalleryPreviewBitmapProvider>.Instance);
+                NullLogger<GalleryPreviewBitmapProvider>.Instance,
+                TestApiConfiguration.CreateGalleryOptionsWrapper());
             UiAnimationScheduler animationScheduler =
                 new(new DiscardingUiFrameScheduler());
             GalleryPreviewSourceScheduler sourceScheduler =
-                new(new DiscardingUiFrameScheduler());
+                new(
+                    new DiscardingUiFrameScheduler(),
+                    TestApiConfiguration.CreateGalleryOptionsWrapper());
             GenerationCardControlFactory factory = new(
                 provider,
                 sourceScheduler,
-                animationScheduler);
+                animationScheduler,
+                TestApiConfiguration.CreateGalleryOptionsWrapper());
             GalleryCardCommands commands = new(
                 null,
                 null,

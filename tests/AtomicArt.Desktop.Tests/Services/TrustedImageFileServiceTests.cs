@@ -33,7 +33,9 @@ public sealed class TrustedImageFileServiceTests
         TrustedImageFileService service = new(
             pathProvider,
             GenerationImageFormatRegistryTestFactory.Create(),
-            NullLogger<TrustedImageFileService>.Instance);
+            NullLogger<TrustedImageFileService>.Instance,
+            TestApiConfiguration.CreateGenerationOptionsWrapper(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory());
         string testDirectory = Path.Combine(
             pathProvider.ArtDirectory,
             $"{TestDirectoryNamePrefix}{Guid.NewGuid():N}");
@@ -49,7 +51,7 @@ public sealed class TrustedImageFileServiceTests
 
             trustedPath.Should().Be(Path.GetFullPath(imagePath));
             TestImageBytes.Should().BeGreaterThan(PreviousTrustedImageBytes);
-            TestImageBytes.Should().BeLessThan(GenerationImageContentValidator.DefaultMaxImageBytes);
+            TestImageBytes.Should().BeLessThan(TestApiConfiguration.MaxInputImageBytes);
         }
         finally
         {

@@ -1,5 +1,7 @@
 using System.Globalization;
 
+using Microsoft.Extensions.Options;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -23,14 +25,13 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
         ? UiStrings.UpdateWaitAndInstall
         : UiStrings.UpdateInstall;
 
-    private static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromMinutes(30);
-
     private readonly IApplicationUpdateService _updateService;
     private readonly IApplicationUpdateRestartCoordinator _restartCoordinator;
     private readonly IGenerationActivityTracker _generationActivityTracker;
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
+    private readonly TimeSpan _updateCheckInterval;
     private ApplicationUpdate? _availableUpdate;
     private Task? _monitoringTask;
     private string? _dismissedVersion;
@@ -67,8 +68,11 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
         IApplicationUpdateRestartCoordinator restartCoordinator,
         IGenerationActivityTracker generationActivityTracker,
         IUiThreadDispatcher uiThreadDispatcher,
-        IViewModelErrorHandler errorHandler)
+        IViewModelErrorHandler errorHandler,
+        IOptions<ApplicationUpdateOptions> options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         _updateService = updateService
             ?? throw new ArgumentNullException(nameof(updateService));
         _restartCoordinator = restartCoordinator
@@ -79,6 +83,8 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
             ?? throw new ArgumentNullException(nameof(uiThreadDispatcher));
         _errorHandler = errorHandler
             ?? throw new ArgumentNullException(nameof(errorHandler));
+        _updateCheckInterval = TimeSpan.FromMinutes(
+            options.Value.CheckIntervalMinutes);
         IsGenerationActive = _generationActivityTracker.IsActive;
         _generationActivityTracker.ActivityChanged += OnGenerationActivityChanged;
     }
@@ -221,7 +227,7 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
         {
             try
             {
-                await Task.Delay(UpdateCheckInterval, ct);
+                await Task.Delay(_updateCheckInterval, ct);
                 await CheckForUpdateAsync(ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)

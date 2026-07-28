@@ -1,19 +1,26 @@
+using Microsoft.Extensions.Options;
+
 using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
 internal sealed class GalleryPreviewSourceScheduler
 {
-    private const int MaximumPresentationsPerFrame = 1;
-
     private readonly IUiFrameScheduler _frameScheduler;
     private readonly Queue<PendingPresentation> _pendingPresentations = [];
+    private readonly int _maximumPresentationsPerFrame;
     private bool _frameRequested;
 
-    public GalleryPreviewSourceScheduler(IUiFrameScheduler frameScheduler)
+    public GalleryPreviewSourceScheduler(
+        IUiFrameScheduler frameScheduler,
+        IOptions<GalleryOptions> options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         _frameScheduler = frameScheduler
             ?? throw new ArgumentNullException(nameof(frameScheduler));
+        _maximumPresentationsPerFrame =
+            options.Value.MaximumPreviewPresentationsPerFrame;
     }
 
     public Task PresentAsync(Action present, CancellationToken ct)
@@ -46,7 +53,7 @@ internal sealed class GalleryPreviewSourceScheduler
         int presentationCount = 0;
 
         while ((_pendingPresentations.Count > 0)
-            && (presentationCount < MaximumPresentationsPerFrame))
+            && (presentationCount < _maximumPresentationsPerFrame))
         {
             PendingPresentation presentation = _pendingPresentations.Dequeue();
             presentation.DisposeRegistration();

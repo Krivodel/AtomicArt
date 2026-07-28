@@ -4,6 +4,7 @@ using System.Runtime.InteropServices.ComTypes;
 using System.Runtime.Versioning;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace AtomicArt.Desktop.Services.Windows;
 
@@ -14,8 +15,6 @@ internal sealed class WindowsVirtualFileReader
         "The virtual file could not be read from the drag-and-drop source.";
     private const string VirtualFileTooLargeMessage =
         "The virtual file exceeds the safe input size limit.";
-    private const int MaximumDescriptorBytes = 64 * 1024;
-
     private static readonly Lazy<short> AnsiDescriptorFormat =
         new(() => RegisterFormat(VirtualFileDataTransferFormats.AnsiDescriptor));
     private static readonly Lazy<short> UnicodeDescriptorFormat =
@@ -25,16 +24,29 @@ internal sealed class WindowsVirtualFileReader
 
     private readonly AttachedImageFileReader _imageFileReader;
     private readonly ILogger<WindowsVirtualFileReader> _logger;
+    private readonly int _maximumFileNameCharacters;
+    private readonly int _maximumVirtualFileCount;
+    private readonly int _maximumVirtualFileDescriptorBytes;
+    private readonly int _virtualFileStreamBufferSize;
 
     public WindowsVirtualFileReader(
         AttachedImageFileReader imageFileReader,
-        ILogger<WindowsVirtualFileReader> logger)
+        ILogger<WindowsVirtualFileReader> logger,
+        IOptions<DataTransferOptions> options)
     {
         ArgumentNullException.ThrowIfNull(imageFileReader);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
 
         _imageFileReader = imageFileReader;
         _logger = logger;
+        _maximumFileNameCharacters =
+            options.Value.MaximumTransferredFileNameCharacters;
+        _maximumVirtualFileCount = options.Value.MaximumVirtualFileCount;
+        _maximumVirtualFileDescriptorBytes =
+            options.Value.MaximumVirtualFileDescriptorBytes;
+        _virtualFileStreamBufferSize =
+            options.Value.VirtualFileStreamBufferSize;
     }
 
     [SupportedOSPlatform("windows")]
@@ -49,6 +61,8 @@ internal sealed class WindowsVirtualFileReader
         {
             if (!TryReadDescriptors(
                     dataObject,
+                    _maximumVirtualFileDescriptorBytes,
+                    _maximumVirtualFileCount,
                     out IReadOnlyList<WindowsVirtualFileDescriptor> descriptors))
             {
                 return Array.Empty<ImageAttachmentInput>();
@@ -98,7 +112,10 @@ internal sealed class WindowsVirtualFileReader
         int index,
         int maxInputBytes)
     {
-        string fileName = CreateFileName(descriptor.FileName, index);
+        string fileName = CreateFileName(
+            descriptor.FileName,
+            index,
+            _maximumFileNameCharacters);
 
         try
         {
@@ -112,6 +129,7 @@ internal sealed class WindowsVirtualFileReader
                 ContentsFormat.Value,
                 index,
                 maxInputBytes,
+                _virtualFileStreamBufferSize,
                 VirtualFileTooLargeMessage);
 
             return _imageFileReader.CreateBufferedInput(fileName, content);
@@ -129,31 +147,35 @@ internal sealed class WindowsVirtualFileReader
 
     private static bool TryReadDescriptors(
         IDataObject dataObject,
+        int maximumDescriptorBytes,
+        int maximumFileCount,
         out IReadOnlyList<WindowsVirtualFileDescriptor> descriptors)
     {
         if (WindowsStorageMediumReader.TryReadGlobalMemory(
                 dataObject,
                 UnicodeDescriptorFormat.Value,
-                MaximumDescriptorBytes,
+                maximumDescriptorBytes,
                 "The virtual file descriptor is too large.",
                 out byte[] unicodeData))
         {
             descriptors = WindowsVirtualFileDescriptorParser.Parse(
                 unicodeData,
-                isUnicode: true);
+                isUnicode: true,
+                maximumFileCount);
             return true;
         }
 
         if (WindowsStorageMediumReader.TryReadGlobalMemory(
                 dataObject,
                 AnsiDescriptorFormat.Value,
-                MaximumDescriptorBytes,
+                maximumDescriptorBytes,
                 "The virtual file descriptor is too large.",
                 out byte[] ansiData))
         {
             descriptors = WindowsVirtualFileDescriptorParser.Parse(
                 ansiData,
-                isUnicode: false);
+                isUnicode: false,
+                maximumFileCount);
             return true;
         }
 
@@ -173,14 +195,18 @@ internal sealed class WindowsVirtualFileReader
         return unchecked((short)formatId);
     }
 
-    private static string CreateFileName(string sourceName, int index)
+    private static string CreateFileName(
+        string sourceName,
+        int index,
+        int maximumFileNameCharacters)
     {
         string normalizedPath = sourceName.Replace('/', '\\');
         string candidate = Path.GetFileName(normalizedPath);
 
         return TransferredImageFileName.Sanitize(
             candidate,
-            string.Concat(DroppedImageFileName, "-", index + 1));
+            string.Concat(DroppedImageFileName, "-", index + 1),
+            maximumFileNameCharacters);
     }
 
     private static bool IsRecoverableReadFailure(Exception ex)

@@ -150,6 +150,7 @@ public sealed class PanelAttachmentStoreTests
             new FixedStatePathKeyEncoder(),
             new TestGenerationImageFormatRegistry(),
             new DataRootAccessCoordinator(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory(),
             logger ?? NullLogger<PanelAttachmentStore>.Instance);
     }
 

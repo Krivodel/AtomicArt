@@ -1,36 +1,51 @@
+using Microsoft.Extensions.Options;
+
 using SkiaSharp;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
-internal static class AttachedImagePreparationPlanner
+public sealed class AttachedImagePreparationPlanner
 {
     public const int MaximumWebpDimension = 16383;
 
-    private const int EncodingProbeMaximumDimension = 2048;
-    private const int EncodingProbeActivationPixelMultiplier = 8;
-    private const double ResizeSafetyFactor = 0.92d;
+    private readonly int _encodingProbeActivationPixelMultiplier;
+    private readonly int _encodingProbeMaximumDimension;
+    private readonly double _resizeSafetyFactor;
 
-    public static bool ShouldUseEncodingProbe(AttachedImageCodecInfo imageInfo)
+    public AttachedImagePreparationPlanner(
+        IOptions<GenerationClientOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        _encodingProbeActivationPixelMultiplier =
+            options.Value.EncodingProbeActivationPixelMultiplier;
+        _encodingProbeMaximumDimension =
+            options.Value.EncodingProbeMaximumDimension;
+        _resizeSafetyFactor = options.Value.ResizeSafetyFactor;
+    }
+
+    public bool ShouldUseEncodingProbe(AttachedImageCodecInfo imageInfo)
     {
         ArgumentNullException.ThrowIfNull(imageInfo);
 
         long sourcePixels = (long)imageInfo.Width * imageInfo.Height;
         long maximumProbePixels =
-            (long)EncodingProbeMaximumDimension
-            * EncodingProbeMaximumDimension;
+            (long)_encodingProbeMaximumDimension
+            * _encodingProbeMaximumDimension;
 
         return sourcePixels
-               > maximumProbePixels * EncodingProbeActivationPixelMultiplier;
+               > maximumProbePixels
+               * _encodingProbeActivationPixelMultiplier;
     }
 
-    public static SKSizeI CalculateEncodingProbeSize(AttachedImageCodecInfo imageInfo)
+    public SKSizeI CalculateEncodingProbeSize(AttachedImageCodecInfo imageInfo)
     {
         return CalculateInitialWorkingSize(
             imageInfo,
-            EncodingProbeMaximumDimension);
+            _encodingProbeMaximumDimension);
     }
 
-    public static SKSizeI CalculateInitialWorkingSize(
+    public SKSizeI CalculateInitialWorkingSize(
         AttachedImageCodecInfo imageInfo,
         int maximumDimension)
     {
@@ -53,7 +68,7 @@ internal static class AttachedImagePreparationPlanner
             Math.Max(1, (int)Math.Floor(imageInfo.Height * scale)));
     }
 
-    public static long EstimateEncodedBytes(
+    public long EstimateEncodedBytes(
         SKSizeI targetSize,
         SKSizeI probeSize,
         long probeBytes)
@@ -73,7 +88,7 @@ internal static class AttachedImagePreparationPlanner
             : Math.Max(1L, (long)Math.Ceiling(estimatedBytes));
     }
 
-    public static SKSizeI CalculateReducedSize(
+    public SKSizeI CalculateReducedSize(
         int width,
         int height,
         long encodedBytes,
@@ -91,12 +106,12 @@ internal static class AttachedImagePreparationPlanner
         return new SKSizeI(targetWidth, targetHeight);
     }
 
-    private static double CalculateEncodedSizeScale(long encodedBytes, long maxBytes)
+    private double CalculateEncodedSizeScale(long encodedBytes, long maxBytes)
     {
         double ratio = (double)maxBytes / encodedBytes;
 
         return Math.Min(
-            ResizeSafetyFactor,
-            Math.Sqrt(ratio) * ResizeSafetyFactor);
+            _resizeSafetyFactor,
+            Math.Sqrt(ratio) * _resizeSafetyFactor);
     }
 }

@@ -13,23 +13,24 @@ internal static class GenerationRunDispatcherTestFactory
         IImageGenerationApiClient apiClient,
         IGenerationLifecycleEventHub lifecycleEventHub,
         IGenerationConcurrencyLimiter? limiter = null,
-        int maxAutomaticRetries = GenerationClientOptions.DefaultMaxAutomaticRetries,
+        int maxAutomaticRetries = TestApiConfiguration.MaxAutomaticRetries,
         ILogger<GenerationRunDispatcher>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(apiClient);
         ArgumentNullException.ThrowIfNull(lifecycleEventHub);
 
         return new GenerationRunDispatcher(
-            limiter ?? new GenerationConcurrencyLimiter(),
+            limiter ?? new GenerationConcurrencyLimiter(
+                Options.Create(
+                    TestApiConfiguration.CreateGenerationOptions())),
             apiClient,
             new NanoBanana2GenerationLifecyclePublisher(lifecycleEventHub),
             new NullGenerationResultStorage(),
             TestGenerationActivityTrackerFactory.Create(),
             new GenerationAdmissionGate(),
             logger ?? NullLogger<GenerationRunDispatcher>.Instance,
-            Options.Create(new GenerationClientOptions
-            {
-                MaxAutomaticRetries = maxAutomaticRetries
-            }));
+            Options.Create(
+                TestApiConfiguration.CreateGenerationOptions(
+                    maxAutomaticRetries: maxAutomaticRetries)));
     }
 }

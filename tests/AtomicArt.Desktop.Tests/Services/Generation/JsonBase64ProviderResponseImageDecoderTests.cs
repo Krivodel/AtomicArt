@@ -32,7 +32,8 @@ public sealed class JsonBase64ProviderResponseImageDecoderTests
             Encoding.UTF8.GetBytes(responseJson),
             maximumReadSize: 19);
         using MemoryStream output = new();
-        JsonBase64ProviderResponseImageDecoder decoder = new();
+        JsonBase64ProviderResponseImageDecoder decoder = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
 
         ProviderResponseImageDecodeResult result = new();
         await decoder.DecodeAsync(
@@ -60,7 +61,8 @@ public sealed class JsonBase64ProviderResponseImageDecoderTests
             Encoding.UTF8.GetBytes(responseJson),
             writable: false);
         using MemoryStream output = new();
-        JsonBase64ProviderResponseImageDecoder decoder = new();
+        JsonBase64ProviderResponseImageDecoder decoder = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
 
         ProviderResponseImageDecodeResult result = new();
         await decoder.DecodeAsync(

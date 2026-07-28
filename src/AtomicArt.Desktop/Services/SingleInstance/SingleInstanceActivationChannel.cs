@@ -10,32 +10,39 @@ internal sealed class SingleInstanceActivationChannel
     private const byte ActivateCommand = 1;
     private const byte ActivationAcknowledgement = 1;
     private const int MaximumServerInstances = 1;
-    private const int PipeConnectAttemptCount = 20;
-    private const int PipeConnectTimeoutMilliseconds = 150;
     private const int PipeBufferSize = 4;
 
     private static readonly byte[] ActivateCommandBuffer =
         [ActivateCommand];
     private static readonly byte[] ActivationAcknowledgementBuffer =
         [ActivationAcknowledgement];
-    private static readonly TimeSpan PipeConnectRetryDelay =
-        TimeSpan.FromMilliseconds(50d);
-    private static readonly TimeSpan ClientProtocolTimeout =
-        TimeSpan.FromSeconds(5d);
-    private static readonly TimeSpan ListenerRetryDelay =
-        TimeSpan.FromMilliseconds(100d);
-
     private readonly string _pipeName;
     private readonly ILogger<SingleInstanceCoordinator> _logger;
+    private readonly int _pipeConnectAttemptCount;
+    private readonly int _pipeConnectTimeoutMilliseconds;
+    private readonly TimeSpan _pipeConnectRetryDelay;
+    private readonly TimeSpan _clientProtocolTimeout;
+    private readonly TimeSpan _listenerRetryDelay;
 
     public SingleInstanceActivationChannel(
         string pipeName,
-        ILogger<SingleInstanceCoordinator> logger)
+        ILogger<SingleInstanceCoordinator> logger,
+        SingleInstanceOptions options)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pipeName);
+        ArgumentNullException.ThrowIfNull(options);
 
         _pipeName = pipeName;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _pipeConnectAttemptCount = options.PipeConnectAttemptCount;
+        _pipeConnectTimeoutMilliseconds =
+            options.PipeConnectTimeoutMilliseconds;
+        _pipeConnectRetryDelay = TimeSpan.FromMilliseconds(
+            options.PipeConnectRetryDelayMilliseconds);
+        _clientProtocolTimeout = TimeSpan.FromMilliseconds(
+            options.ClientProtocolTimeoutMilliseconds);
+        _listenerRetryDelay = TimeSpan.FromMilliseconds(
+            options.ListenerRetryDelayMilliseconds);
     }
 
     public async Task ListenAsync(
@@ -67,7 +74,7 @@ internal sealed class SingleInstanceActivationChannel
                 _logger.LogWarning(
                     ex,
                     "Atomic Art single-instance activation listener failed.");
-                await Task.Delay(ListenerRetryDelay, ct)
+                await Task.Delay(_listenerRetryDelay, ct)
                     .ConfigureAwait(false);
             }
         }
@@ -91,19 +98,6 @@ internal sealed class SingleInstanceActivationChannel
 
             return false;
         }
-    }
-
-    private NamedPipeServerStream CreateServerPipe()
-    {
-        PipeOptions options = PipeOptions.Asynchronous
-            | PipeOptions.CurrentUserOnly;
-
-        return new NamedPipeServerStream(
-            _pipeName,
-            PipeDirection.InOut,
-            MaximumServerInstances,
-            PipeTransmissionMode.Byte,
-            options);
     }
 
     private static async Task HandleClientAsync(
@@ -133,14 +127,27 @@ internal sealed class SingleInstanceActivationChannel
         await pipe.FlushAsync(ct).ConfigureAwait(false);
     }
 
+    private NamedPipeServerStream CreateServerPipe()
+    {
+        PipeOptions options = PipeOptions.Asynchronous
+            | PipeOptions.CurrentUserOnly;
+
+        return new NamedPipeServerStream(
+            _pipeName,
+            PipeDirection.InOut,
+            MaximumServerInstances,
+            PipeTransmissionMode.Byte,
+            options);
+    }
+
     private async Task<bool> NotifyExistingAsync()
     {
         using CancellationTokenSource timeoutCancellation = new(
-            ClientProtocolTimeout);
+            _clientProtocolTimeout);
         CancellationToken ct = timeoutCancellation.Token;
 
         for (int attempt = 0;
-             attempt < PipeConnectAttemptCount;
+             attempt < _pipeConnectAttemptCount;
              attempt++)
         {
             await using NamedPipeClientStream pipe = new(
@@ -190,21 +197,21 @@ internal sealed class SingleInstanceActivationChannel
             primaryProcessId);
     }
 
-    private static async Task<bool> TryConnectAsync(
+    private async Task<bool> TryConnectAsync(
         NamedPipeClientStream pipe,
         CancellationToken ct)
     {
         try
         {
             await pipe
-                .ConnectAsync(PipeConnectTimeoutMilliseconds, ct)
+                .ConnectAsync(_pipeConnectTimeoutMilliseconds, ct)
                 .ConfigureAwait(false);
 
             return true;
         }
         catch (Exception ex) when (ex is TimeoutException or IOException)
         {
-            await Task.Delay(PipeConnectRetryDelay, ct)
+            await Task.Delay(_pipeConnectRetryDelay, ct)
                 .ConfigureAwait(false);
 
             return false;

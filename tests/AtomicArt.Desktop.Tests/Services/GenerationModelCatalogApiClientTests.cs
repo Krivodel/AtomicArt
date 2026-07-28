@@ -119,7 +119,8 @@ public sealed class GenerationModelCatalogApiClientTests
         return new GenerationModelCatalogApiClient(
             httpClient,
             endpointService ?? TestApiEndpointServiceFactory.Create(),
-            logger ?? NullLogger<GenerationModelCatalogApiClient>.Instance);
+            logger ?? NullLogger<GenerationModelCatalogApiClient>.Instance,
+            TestApiConfiguration.CreateApiClientOptionsWrapper());
     }
 
     private sealed class DelayedCapturingHttpMessageHandler : HttpMessageHandler

@@ -4,13 +4,22 @@ using AtomicArt.Desktop.Services.Imaging;
 
 namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
-internal static class GalleryThumbnailSizeCalculator
+public sealed class GalleryThumbnailSizeCalculator
 {
-    public static PixelSize Calculate(int width, int height)
+    private readonly GalleryThumbnailSpecification _specification;
+
+    public GalleryThumbnailSizeCalculator(
+        GalleryThumbnailSpecification specification)
+    {
+        _specification = specification
+            ?? throw new ArgumentNullException(nameof(specification));
+    }
+
+    public PixelSize Calculate(int width, int height)
     {
         return ImagePreviewSizeCalculator.Calculate(
             width,
             height,
-            GalleryThumbnailSpecification.ShortSidePixels);
+            _specification.ShortSidePixels);
     }
 }

@@ -71,8 +71,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private const string SelectedModelNotInitializedMessage =
         "Selected model is not initialized.";
 
-    private static readonly TimeSpan PromptStateSaveDelay = StateWritePolicy.DeferredWriteDelay;
-
     private bool CanRunCommand => HasLoadedCatalog
                                   && !IsAttaching
                                   && !string.IsNullOrWhiteSpace(Prompt);
@@ -94,6 +92,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
     private readonly ObservableCollection<ImageModelOption> _availableModels = [];
+    private readonly TimeSpan _promptStateSaveDelay;
     private string? _rememberedThinkingLevelValue;
     private ImageModelOption? _selectedModel;
     private CancellationTokenSource? _promptStateSaveCancellation;
@@ -140,7 +139,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         IImageViewerService imageViewerService,
         IPromptTextSizeController promptTextSizeController,
         NanoBanana2QuoteViewModel quote,
-        IViewModelErrorHandler errorHandler)
+        IViewModelErrorHandler errorHandler,
+        StateWritePolicy stateWritePolicy)
     {
         ArgumentNullException.ThrowIfNull(filePickerService);
         ArgumentNullException.ThrowIfNull(secretStore);
@@ -156,6 +156,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         ArgumentNullException.ThrowIfNull(promptTextSizeController);
         ArgumentNullException.ThrowIfNull(quote);
         ArgumentNullException.ThrowIfNull(errorHandler);
+        ArgumentNullException.ThrowIfNull(stateWritePolicy);
 
         _generationModelCatalogApiClient = generationModelCatalogApiClient;
         _imageModelOptionCatalog = imageModelOptionCatalog;
@@ -172,6 +173,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _imageViewerService = imageViewerService;
         _promptTextSizeController = promptTextSizeController;
         _errorHandler = errorHandler;
+        _promptStateSaveDelay = stateWritePolicy.DeferredWriteDelay;
         _attachmentsViewModel.AttachmentStateChanged += OnAttachmentStateChanged;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
         _promptTextSizeController.TextSizeChanged += OnPromptTextSizeChanged;
@@ -1046,7 +1048,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         try
         {
-            await Task.Delay(PromptStateSaveDelay, cancellation.Token);
+            await Task.Delay(_promptStateSaveDelay, cancellation.Token);
 
             if (!ReferenceEquals(_promptStateSaveCancellation, cancellation))
             {

@@ -8,6 +8,9 @@ namespace AtomicArt.Desktop.Tests.Services.Generation;
 
 public sealed class AttachedImagePreparationPlannerTests
 {
+    private readonly AttachedImagePreparationPlanner _planner = new(
+        TestApiConfiguration.CreateGenerationOptionsWrapper());
+
     [Fact]
     public void ShouldUseEncodingProbe_WithVeryHighPixelCount_ReturnsTrue()
     {
@@ -16,7 +19,7 @@ public sealed class AttachedImagePreparationPlannerTests
             16383,
             SKAlphaType.Opaque);
 
-        bool result = AttachedImagePreparationPlanner.ShouldUseEncodingProbe(imageInfo);
+        bool result = _planner.ShouldUseEncodingProbe(imageInfo);
 
         result.Should().BeTrue();
     }
@@ -29,7 +32,7 @@ public sealed class AttachedImagePreparationPlannerTests
             3072,
             SKAlphaType.Opaque);
 
-        bool result = AttachedImagePreparationPlanner.ShouldUseEncodingProbe(imageInfo);
+        bool result = _planner.ShouldUseEncodingProbe(imageInfo);
 
         result.Should().BeFalse();
     }
@@ -40,7 +43,7 @@ public sealed class AttachedImagePreparationPlannerTests
         SKSizeI targetSize = new(4000, 2000);
         SKSizeI probeSize = new(1000, 500);
 
-        long result = AttachedImagePreparationPlanner.EstimateEncodedBytes(
+        long result = _planner.EstimateEncodedBytes(
             targetSize,
             probeSize,
             100);

@@ -13,8 +13,6 @@ namespace AtomicArt.Infrastructure.Generation;
 internal sealed class FileSystemPlaceholderImageProvider
     : IStreamingPlaceholderImageProvider
 {
-    private const int FileStreamBufferSize = 81920;
-
     private static readonly int MaxSignatureBytes = GenerationImageFileFormats.All
         .SelectMany(format => format.SignatureAlternatives)
         .SelectMany(alternative => alternative)
@@ -153,7 +151,9 @@ internal sealed class FileSystemPlaceholderImageProvider
     {
         try
         {
-            await using FileStream stream = OpenRead(path);
+            await using FileStream stream = OpenRead(
+                path,
+                _options.Value.FileStreamBufferSize);
             return await GetSupportedContentTypeAsync(stream, maxImageBytes, ct)
                 .ConfigureAwait(false) is not null;
         }
@@ -184,7 +184,9 @@ internal sealed class FileSystemPlaceholderImageProvider
 
         try
         {
-            stream = OpenRead(path);
+            stream = OpenRead(
+                path,
+                _options.Value.FileStreamBufferSize);
             string? contentType = await GetSupportedContentTypeAsync(
                     stream,
                     maxImageBytes,
@@ -245,14 +247,16 @@ internal sealed class FileSystemPlaceholderImageProvider
         return await DetectContentTypeAsync(stream, ct).ConfigureAwait(false);
     }
 
-    private static FileStream OpenRead(string path)
+    private static FileStream OpenRead(
+        string path,
+        int bufferSize)
     {
         return new FileStream(
             path,
             FileMode.Open,
             FileAccess.Read,
             FileShare.ReadWrite | FileShare.Delete,
-            bufferSize: FileStreamBufferSize,
+            bufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
     }
 

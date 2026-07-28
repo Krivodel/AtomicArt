@@ -1,7 +1,18 @@
+using Microsoft.Extensions.Options;
+
 namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
 public sealed class GalleryThumbnailSpecification
 {
-    public const int ShortSidePixels = 256;
-    public const long MaxSourceImageBytes = 500L * 1_048_576;
+    public const int ThumbnailShortSidePixels = 256;
+
+    public int ShortSidePixels => ThumbnailShortSidePixels;
+    public long MaximumSourceImageBytes { get; }
+
+    public GalleryThumbnailSpecification(IOptions<GalleryOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        MaximumSourceImageBytes = options.Value.MaximumThumbnailSourceImageBytes;
+    }
 }

@@ -4,6 +4,7 @@ using System.Text;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Desktop.Services.Paths;
 
@@ -11,8 +12,6 @@ namespace AtomicArt.Desktop.Services;
 
 public sealed class ProtectedDesktopSecretStore : ISecretStore
 {
-    private const int MaxProtectedSecretFileBytes = 64 * 1024;
-
     private static readonly string TrustedPathFailureMessage =
         TrustedPathGuard.CreateFailureMessage(
             "Secret path",
@@ -22,34 +21,56 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
     private readonly IDataRootAccessCoordinator? _accessCoordinator;
     private readonly string? _fixedSecretsDirectory;
     private readonly ILogger<ProtectedDesktopSecretStore> _logger;
+    private readonly int _maximumProtectedSecretFileBytes;
+    private readonly TrustedFileStreamFactory _trustedFileStreamFactory;
+
+    public ProtectedDesktopSecretStore(
+        string secretsDirectory,
+        IOptions<StorageOptions> options,
+        TrustedFileStreamFactory trustedFileStreamFactory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(secretsDirectory);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(trustedFileStreamFactory);
+
+        _fixedSecretsDirectory = Path.GetFullPath(secretsDirectory);
+        _logger = NullLogger<ProtectedDesktopSecretStore>.Instance;
+        _maximumProtectedSecretFileBytes =
+            options.Value.MaximumProtectedSecretFileBytes;
+        _trustedFileStreamFactory = trustedFileStreamFactory;
+    }
 
     public ProtectedDesktopSecretStore(
         IAtomicArtDataPathProvider pathProvider,
-        IDataRootAccessCoordinator accessCoordinator)
+        IDataRootAccessCoordinator accessCoordinator,
+        IOptions<StorageOptions> options,
+        TrustedFileStreamFactory trustedFileStreamFactory)
         : this(
             pathProvider,
             accessCoordinator,
-            NullLogger<ProtectedDesktopSecretStore>.Instance)
+            NullLogger<ProtectedDesktopSecretStore>.Instance,
+            options,
+            trustedFileStreamFactory)
     {
     }
 
     public ProtectedDesktopSecretStore(
         IAtomicArtDataPathProvider pathProvider,
         IDataRootAccessCoordinator accessCoordinator,
-        ILogger<ProtectedDesktopSecretStore> logger)
+        ILogger<ProtectedDesktopSecretStore> logger,
+        IOptions<StorageOptions> options,
+        TrustedFileStreamFactory trustedFileStreamFactory)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(trustedFileStreamFactory);
+
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _accessCoordinator = accessCoordinator
             ?? throw new ArgumentNullException(nameof(accessCoordinator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
-
-    public ProtectedDesktopSecretStore(string secretsDirectory)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(secretsDirectory);
-
-        _fixedSecretsDirectory = Path.GetFullPath(secretsDirectory);
-        _logger = NullLogger<ProtectedDesktopSecretStore>.Instance;
+        _maximumProtectedSecretFileBytes =
+            options.Value.MaximumProtectedSecretFileBytes;
+        _trustedFileStreamFactory = trustedFileStreamFactory;
     }
 
     public async Task<string?> GetSecretAsync(string key, CancellationToken ct)
@@ -75,7 +96,7 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
             string secretsDirectory = GetSecretsDirectory();
             string[] trustedDirectories = [secretsDirectory];
 
-            if (!TrustedPathGuard.TryOpenTrustedExistingFileForRead(
+            if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
                 path,
                 trustedDirectories,
                 secretsDirectory,
@@ -94,7 +115,7 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
             await using (stream.ConfigureAwait(false))
             {
                 if (stream.Length <= 0
-                    || stream.Length > MaxProtectedSecretFileBytes)
+                    || stream.Length > _maximumProtectedSecretFileBytes)
                 {
                     throw new IOException("Protected desktop secret file has an invalid size.");
                 }
@@ -145,7 +166,7 @@ public sealed class ProtectedDesktopSecretStore : ISecretStore
 
             try
             {
-                await using (FileStream stream = TrustedPathGuard.CreateTrustedNewFileForWrite(
+                await using (FileStream stream = _trustedFileStreamFactory.CreateNewFileForWrite(
                     secretsDirectory,
                     tempPath,
                     TrustedPathFailureMessage))

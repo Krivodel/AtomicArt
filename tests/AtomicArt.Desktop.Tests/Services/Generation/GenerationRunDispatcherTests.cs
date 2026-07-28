@@ -17,7 +17,8 @@ public sealed class GenerationRunDispatcherTests
 {
     private const string ModelId = "test-model";
     private const int ConcurrentDisposeAttemptCount = 50;
-    private const int OverLimitRunCount = GenerationConcurrencyLimiter.MaxConcurrentGenerations + 6;
+    private const int OverLimitRunCount =
+        TestApiConfiguration.MaxConcurrentGenerations + 6;
     private static readonly DateTime RequestedAtUtc = new(2026, 7, 4, 12, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 4, 12, 0, 1, DateTimeKind.Utc);
 
@@ -214,7 +215,8 @@ public sealed class GenerationRunDispatcherTests
     [Fact]
     public async Task EnqueueAsync_WithSharedLimiterAcrossDispatchers_LimitsConcurrentApiCalls()
     {
-        GenerationConcurrencyLimiter limiter = new();
+        GenerationConcurrencyLimiter limiter = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
         BlockingRunTestContext context = CreateBlockingRunContext(limiter);
         GenerationRunDispatcher secondDispatcher = CreateDispatcher(
             context.ApiClient,
@@ -569,10 +571,13 @@ public sealed class GenerationRunDispatcherTests
         TestGenerationLifecycleEventHub lifecycleEventHub)
     {
         await apiClient
-            .WaitForCallCountAsync(GenerationConcurrencyLimiter.MaxConcurrentGenerations)
+            .WaitForCallCountAsync(
+                TestApiConfiguration.MaxConcurrentGenerations)
             .ConfigureAwait(false);
-        apiClient.ActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
-        apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
+        apiClient.ActiveCount.Should().Be(
+            TestApiConfiguration.MaxConcurrentGenerations);
+        apiClient.MaxActiveCount.Should().Be(
+            TestApiConfiguration.MaxConcurrentGenerations);
 
         apiClient.Complete();
         await WaitForStatusCountAsync(
@@ -580,7 +585,8 @@ public sealed class GenerationRunDispatcherTests
             GenerationLifecycleStatus.Completed,
             OverLimitRunCount).ConfigureAwait(false);
 
-        apiClient.MaxActiveCount.Should().Be(GenerationConcurrencyLimiter.MaxConcurrentGenerations);
+        apiClient.MaxActiveCount.Should().Be(
+            TestApiConfiguration.MaxConcurrentGenerations);
     }
 
     private sealed record RunTestContext(

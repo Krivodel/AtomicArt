@@ -13,11 +13,13 @@ public sealed class GenerationStreamingResultStore
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly GenerationImageFileNamePolicy _fileNamePolicy;
+    private readonly TrustedFileStreamFactory _trustedFileStreamFactory;
 
     public GenerationStreamingResultStore(
         IAtomicArtDataPathProvider pathProvider,
         IGenerationImageFormatRegistry formatRegistry,
-        GenerationImageFileNamePolicy fileNamePolicy)
+        GenerationImageFileNamePolicy fileNamePolicy,
+        TrustedFileStreamFactory trustedFileStreamFactory)
     {
         _pathProvider = pathProvider
             ?? throw new ArgumentNullException(nameof(pathProvider));
@@ -25,6 +27,8 @@ public sealed class GenerationStreamingResultStore
             ?? throw new ArgumentNullException(nameof(formatRegistry));
         _fileNamePolicy = fileNamePolicy
             ?? throw new ArgumentNullException(nameof(fileNamePolicy));
+        _trustedFileStreamFactory = trustedFileStreamFactory
+            ?? throw new ArgumentNullException(nameof(trustedFileStreamFactory));
     }
 
     public GenerationTemporaryResult CreateTemporaryResult()
@@ -41,7 +45,7 @@ public sealed class GenerationStreamingResultStore
             resultsDirectory,
             temporaryPath,
             TrustedPathFailureMessage);
-        FileStream stream = TrustedPathGuard.CreateTrustedNewFileForWrite(
+        FileStream stream = _trustedFileStreamFactory.CreateNewFileForWrite(
             resultsDirectory,
             temporaryPath,
             TrustedPathFailureMessage);

@@ -123,11 +123,13 @@ internal static class TrustedPathGuard
         EnsureInsideDirectory(trustedDirectory, finalPath, failureMessage);
     }
 
-    public static FileStream CreateTrustedNewFileForWrite(
+    internal static FileStream CreateTrustedNewFileForWrite(
         string trustedDirectory,
         string path,
-        string failureMessage)
+        string failureMessage,
+        int bufferSize)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bufferSize);
         EnsureTrustedWriteTarget(trustedDirectory, path, failureMessage);
 
         FileStream stream = new(
@@ -135,7 +137,7 @@ internal static class TrustedPathGuard
             FileMode.CreateNew,
             FileAccess.Write,
             FileShare.None,
-            bufferSize: 81920,
+            bufferSize,
             FileOptions.Asynchronous | FileOptions.WriteThrough);
 
         try
@@ -154,11 +156,12 @@ internal static class TrustedPathGuard
         }
     }
 
-    public static bool TryOpenTrustedExistingFileForRead(
+    internal static bool TryOpenTrustedExistingFileForRead(
         string path,
         IReadOnlyCollection<string> trustedDirectories,
         string trustedRootDirectory,
         string failureMessage,
+        int bufferSize,
         out FileStream? stream,
         out string? trustedPath)
     {
@@ -166,6 +169,7 @@ internal static class TrustedPathGuard
         ArgumentNullException.ThrowIfNull(trustedDirectories);
         ArgumentException.ThrowIfNullOrWhiteSpace(trustedRootDirectory);
         ArgumentException.ThrowIfNullOrWhiteSpace(failureMessage);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bufferSize);
 
         stream = null;
         trustedPath = null;
@@ -185,7 +189,7 @@ internal static class TrustedPathGuard
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            bufferSize: 81920,
+            bufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         try

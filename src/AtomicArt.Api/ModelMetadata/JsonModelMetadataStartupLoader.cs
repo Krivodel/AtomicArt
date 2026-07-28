@@ -12,11 +12,27 @@ public static class JsonModelMetadataStartupLoader
         string path,
         IGenerationModelCatalogJsonSource source)
     {
+        return LoadDocument(path, source).Catalog;
+    }
+
+    public static GenerationModelMetadataStartupDocument LoadDocument(
+        string path,
+        IGenerationModelCatalogJsonSource source)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(source);
 
         string json = source.Read(path);
 
-        return GenerationModelCatalogMetadataLoader.LoadJson(json, SafeSourceName);
+        GenerationModelCatalogDto catalog =
+            GenerationModelCatalogMetadataLoader.LoadJson(json, SafeSourceName);
+        TestGenerationModelMetadata? testModel =
+            TestGenerationModelMetadataLoader.LoadOptionalJson(
+                json,
+                SafeSourceName);
+
+        return new GenerationModelMetadataStartupDocument(
+            catalog,
+            testModel);
     }
 }

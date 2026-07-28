@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Velopack;
 using Velopack.Sources;
@@ -9,16 +10,19 @@ public sealed class VelopackApplicationUpdateService : IApplicationUpdateService
 {
     public bool CanCheckForUpdates => GetUpdateManager().IsInstalled;
 
-    private const string RepositoryUrl = "https://github.com/Krivodel/AtomicArt";
-
     private readonly ILogger<VelopackApplicationUpdateService> _logger;
     private readonly object _syncRoot = new();
+    private readonly string _repositoryUrl;
     private UpdateManager? _updateManager;
 
     public VelopackApplicationUpdateService(
-        ILogger<VelopackApplicationUpdateService> logger)
+        ILogger<VelopackApplicationUpdateService> logger,
+        IOptions<ApplicationUpdateOptions> options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _repositoryUrl = options.Value.RepositoryUrl;
     }
 
     public async Task<ApplicationUpdate?> CheckForUpdateAsync(CancellationToken ct)
@@ -102,7 +106,7 @@ public sealed class VelopackApplicationUpdateService : IApplicationUpdateService
             if (_updateManager is null)
             {
                 GithubSource updateSource = new(
-                    RepositoryUrl,
+                    _repositoryUrl,
                     accessToken: null,
                     prerelease: false);
                 _updateManager = new UpdateManager(updateSource);

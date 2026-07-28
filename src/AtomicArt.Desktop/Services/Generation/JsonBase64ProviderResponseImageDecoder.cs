@@ -1,6 +1,8 @@
 using System.Buffers;
 using System.Buffers.Text;
 
+using Microsoft.Extensions.Options;
+
 using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Desktop.Services.Generation;
@@ -8,11 +10,22 @@ namespace AtomicArt.Desktop.Services.Generation;
 public sealed class JsonBase64ProviderResponseImageDecoder
     : IProviderResponseImageDecoder
 {
-    private const int InputBufferSize = 65536;
-    private const int OutputBufferSize = 49152;
-    private const long MaximumImageBytes = 512L * 1024L * 1024L;
-
     private static readonly byte[] DataPropertyName = "\"data\""u8.ToArray();
+
+    private readonly int _inputBufferSize;
+    private readonly long _maximumImageBytes;
+    private readonly int _outputBufferSize;
+
+    public JsonBase64ProviderResponseImageDecoder(
+        IOptions<GenerationClientOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        _inputBufferSize = options.Value.Base64DecoderInputBufferSize;
+        _maximumImageBytes =
+            options.Value.MaxDecodedProviderResponseImageBytes;
+        _outputBufferSize = options.Value.Base64DecoderOutputBufferSize;
+    }
 
     public bool CanDecode(string providerId, string contentType)
     {
@@ -39,15 +52,17 @@ public sealed class JsonBase64ProviderResponseImageDecoder
         ArgumentNullException.ThrowIfNull(imageDestination);
         ArgumentNullException.ThrowIfNull(result);
 
-        byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(InputBufferSize);
-        DecoderState state = new();
+        byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(_inputBufferSize);
+        DecoderState state = new(
+            _outputBufferSize,
+            _maximumImageBytes);
 
         try
         {
             while (true)
             {
                 int bytesRead = await providerResponse
-                    .ReadAsync(inputBuffer.AsMemory(0, InputBufferSize), ct)
+                    .ReadAsync(inputBuffer.AsMemory(0, _inputBufferSize), ct)
                     .ConfigureAwait(false);
 
                 if (bytesRead == 0)
@@ -84,9 +99,10 @@ public sealed class JsonBase64ProviderResponseImageDecoder
 
     private sealed class DecoderState : IDisposable
     {
-        private readonly byte[] _outputBuffer =
-            ArrayPool<byte>.Shared.Rent(OutputBufferSize);
+        private readonly byte[] _outputBuffer;
         private readonly byte[] _base64Quartet = new byte[4];
+        private readonly long _maximumImageBytes;
+        private readonly int _outputBufferSize;
         private AnalyzerState _state;
         private int _candidateIndex;
         private int _base64Count;
@@ -96,7 +112,16 @@ public sealed class JsonBase64ProviderResponseImageDecoder
         private bool _colonSeen;
 
         public bool ShouldFlush =>
-            _outputCount >= OutputBufferSize - 3;
+            _outputCount >= _outputBufferSize - 3;
+
+        public DecoderState(
+            int outputBufferSize,
+            long maximumImageBytes)
+        {
+            _outputBuffer = ArrayPool<byte>.Shared.Rent(outputBufferSize);
+            _maximumImageBytes = maximumImageBytes;
+            _outputBufferSize = outputBufferSize;
+        }
 
         public void Process(byte value)
         {
@@ -270,7 +295,7 @@ public sealed class JsonBase64ProviderResponseImageDecoder
             _outputCount += written;
             _totalOutputBytes += written;
 
-            if (_totalOutputBytes > MaximumImageBytes)
+            if (_totalOutputBytes > _maximumImageBytes)
             {
                 throw new InvalidDataException(
                     "Provider image exceeds the configured size limit.");

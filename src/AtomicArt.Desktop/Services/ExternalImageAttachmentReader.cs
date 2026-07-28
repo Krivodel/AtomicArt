@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Contracts.Generation;
 
@@ -17,19 +18,24 @@ public sealed class ExternalImageAttachmentReader
     private readonly HttpClient _httpClient;
     private readonly IAttachedImageSignatureValidator _signatureValidator;
     private readonly ILogger<ExternalImageAttachmentReader> _logger;
+    private readonly int _maximumFileNameCharacters;
 
     public ExternalImageAttachmentReader(
         HttpClient httpClient,
         IAttachedImageSignatureValidator signatureValidator,
-        ILogger<ExternalImageAttachmentReader> logger)
+        ILogger<ExternalImageAttachmentReader> logger,
+        IOptions<DataTransferOptions> options)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(signatureValidator);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
 
         _httpClient = httpClient;
         _signatureValidator = signatureValidator;
         _logger = logger;
+        _maximumFileNameCharacters =
+            options.Value.MaximumTransferredFileNameCharacters;
     }
 
     public ImageAttachmentInput CreateInput(
@@ -46,7 +52,9 @@ public sealed class ExternalImageAttachmentReader
                 nameof(imageUri));
         }
 
-        string fileName = BuildFileName(imageUri);
+        string fileName = BuildFileName(
+            imageUri,
+            _maximumFileNameCharacters);
 
         return new ImageAttachmentInput(
             fileName,
@@ -203,7 +211,9 @@ public sealed class ExternalImageAttachmentReader
             : UnknownImageContentType;
     }
 
-    private static string BuildFileName(Uri imageUri)
+    private static string BuildFileName(
+        Uri imageUri,
+        int maximumFileNameCharacters)
     {
         if (string.Equals(
                 imageUri.Scheme,
@@ -231,6 +241,7 @@ public sealed class ExternalImageAttachmentReader
 
         return TransferredImageFileName.Sanitize(
             candidate,
-            ExternalImageFileName);
+            ExternalImageFileName,
+            maximumFileNameCharacters);
     }
 }

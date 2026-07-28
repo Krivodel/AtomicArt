@@ -1,6 +1,9 @@
 using Avalonia.Controls;
 
+using Microsoft.Extensions.Options;
+
 using AtomicArt.Desktop.Controls.Gallery;
+using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.UiAnimation;
 
@@ -8,24 +11,27 @@ namespace AtomicArt.Desktop.Views.Gallery;
 
 internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
 {
-    private const int MaximumPooledControlCount = 64;
-
     private readonly IGalleryPreviewBitmapProvider _previewBitmapProvider;
     private readonly GalleryPreviewSourceScheduler _previewSourceScheduler;
     private readonly UiAnimationScheduler _animationScheduler;
     private readonly Stack<GenerationCardControl> _pooledControls = [];
+    private readonly int _maximumPooledControlCount;
 
     public GenerationCardControlFactory(
         IGalleryPreviewBitmapProvider previewBitmapProvider,
         GalleryPreviewSourceScheduler previewSourceScheduler,
-        UiAnimationScheduler animationScheduler)
+        UiAnimationScheduler animationScheduler,
+        IOptions<GalleryOptions> options)
     {
+        ArgumentNullException.ThrowIfNull(options);
         _previewBitmapProvider = previewBitmapProvider
             ?? throw new ArgumentNullException(nameof(previewBitmapProvider));
         _previewSourceScheduler = previewSourceScheduler
             ?? throw new ArgumentNullException(nameof(previewSourceScheduler));
         _animationScheduler = animationScheduler
             ?? throw new ArgumentNullException(nameof(animationScheduler));
+        _maximumPooledControlCount =
+            options.Value.MaximumPooledCardControlCount;
     }
 
     public Control Create(
@@ -80,7 +86,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         ArgumentNullException.ThrowIfNull(control);
         RequireGenerationCard(control);
 
-        return _pooledControls.Count < MaximumPooledControlCount;
+        return _pooledControls.Count < _maximumPooledControlCount;
     }
 
     public void Recycle(Control control)
@@ -103,7 +109,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         generationCard.DataContext = null;
         generationCard.IsVisible = false;
 
-        if (_pooledControls.Count < MaximumPooledControlCount)
+        if (_pooledControls.Count < _maximumPooledControlCount)
         {
             _pooledControls.Push(generationCard);
         }

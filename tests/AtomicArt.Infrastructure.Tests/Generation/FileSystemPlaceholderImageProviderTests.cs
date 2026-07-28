@@ -122,14 +122,12 @@ public sealed class FileSystemPlaceholderImageProviderTests
 
     private static FileSystemPlaceholderImageProvider CreateProvider(
         string imagesDirectory,
-        long maxImageBytes = TestGenerationOptions.DefaultMaxImageBytes)
+        long maxImageBytes = 500L * 1024L * 1024L)
     {
         return new FileSystemPlaceholderImageProvider(
-            Options.Create(new TestGenerationOptions
-            {
-                Enabled = true,
-                ImagesDirectory = imagesDirectory,
-                MaxImageBytes = maxImageBytes
-            }));
+            Options.Create(TestGenerationTestOptions.Create(
+                enabled: true,
+                imagesDirectory,
+                maxImageBytes)));
     }
 }

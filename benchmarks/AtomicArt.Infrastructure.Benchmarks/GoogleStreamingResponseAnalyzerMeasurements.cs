@@ -180,7 +180,13 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
     {
         GoogleStreamingResponseAnalyzer analyzer = new(
             new GoogleInteractionsResponseParser(),
-            new GoogleInteractionsFailureClassifier());
+            new GoogleInteractionsFailureClassifier(),
+            GoogleStreamingResponseAnalyzerBenchmarkLimits
+                .MaximumFilteredResponseBytes,
+            GoogleStreamingResponseAnalyzerBenchmarkLimits
+                .MaximumStructureDepth,
+            GoogleStreamingResponseAnalyzerBenchmarkLimits
+                .MaximumDiagnosticTextCharacters);
 
         long clientResponseBytes = ProcessInBlocks(
             response,

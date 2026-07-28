@@ -15,17 +15,21 @@ public sealed class GalleryItemsController
 
     private readonly ITrustedImageFileService _trustedImageFileService;
     private readonly IGenerationItemStatusDescriptorRegistry _statusDescriptorRegistry;
+    private readonly GalleryOrderTimestampPolicy _timestampPolicy;
     private readonly ObservableCollection<GenerationItemViewModel> _items = [];
 
     public GalleryItemsController(
         ITrustedImageFileService trustedImageFileService,
-        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry)
+        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry,
+        GalleryOrderTimestampPolicy timestampPolicy)
     {
         ArgumentNullException.ThrowIfNull(trustedImageFileService);
         ArgumentNullException.ThrowIfNull(statusDescriptorRegistry);
+        ArgumentNullException.ThrowIfNull(timestampPolicy);
 
         _trustedImageFileService = trustedImageFileService;
         _statusDescriptorRegistry = statusDescriptorRegistry;
+        _timestampPolicy = timestampPolicy;
         Items = new ReadOnlyObservableCollection<GenerationItemViewModel>(_items);
     }
 
@@ -49,7 +53,7 @@ public sealed class GalleryItemsController
         }
 
         IReadOnlyList<DateTime> galleryOrderTimestamps =
-            GalleryOrderTimestampPolicy.CreateForPrependedItems(
+            _timestampPolicy.CreateForPrependedItems(
                 orderedItems[^1].CreatedAtUtc,
                 GetCurrentNewestGalleryOrderTimestamp(),
                 orderedItems.Count);
@@ -117,7 +121,7 @@ public sealed class GalleryItemsController
 
         List<GenerationItemViewModel> placeholders = [];
         IReadOnlyList<DateTime> galleryOrderTimestamps =
-            GalleryOrderTimestampPolicy.CreateForPrependedItems(
+            _timestampPolicy.CreateForPrependedItems(
                 lifecycleEvent.Start.RequestedAtUtc,
                 GetCurrentNewestGalleryOrderTimestamp(),
                 lifecycleEvent.Start.GenerationCount);

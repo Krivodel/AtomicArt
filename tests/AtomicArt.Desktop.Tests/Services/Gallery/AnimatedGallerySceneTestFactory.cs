@@ -61,12 +61,18 @@ internal static class AnimatedGallerySceneTestFactory
                 frameScheduler,
                 runnerRegistry);
         GalleryPreviewBitmapLoader previewBitmapLoader =
-            new(NullLogger<GalleryPreviewBitmapLoader>.Instance);
+            new(
+                NullLogger<GalleryPreviewBitmapLoader>.Instance,
+                TestApiConfiguration.CreateGalleryThumbnailSpecification(),
+                TestApiConfiguration.CreateGalleryOptionsWrapper());
         GalleryPreviewBitmapProvider previewBitmapProvider = new(
             previewBitmapLoader,
-            NullLogger<GalleryPreviewBitmapProvider>.Instance);
+            NullLogger<GalleryPreviewBitmapProvider>.Instance,
+            TestApiConfiguration.CreateGalleryOptionsWrapper());
         GalleryPreviewSourceScheduler previewSourceScheduler =
-            new(frameScheduler);
+            new(
+                frameScheduler,
+                TestApiConfiguration.CreateGalleryOptionsWrapper());
         AnimatedGalleryScene scene = new(
             galleryLayout,
             animationScheduler,
@@ -75,7 +81,8 @@ internal static class AnimatedGallerySceneTestFactory
             new GenerationCardControlFactory(
                 previewBitmapProvider,
                 previewSourceScheduler,
-                animationScheduler),
+                animationScheduler,
+                TestApiConfiguration.CreateGalleryOptionsWrapper()),
             NullLogger<AnimatedGalleryResizeController>.Instance);
         scene.AttachLifetime(previewBitmapProvider);
 

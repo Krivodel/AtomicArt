@@ -1,5 +1,7 @@
 using System.Text.Json;
 
+using Microsoft.Extensions.Options;
+
 using FluentAssertions;
 using Xunit;
 
@@ -29,7 +31,11 @@ public sealed class FakeStreamingImageGenerationProviderTests
                 GenerationImageContentTypes.Png,
                 imageBytes.LongLength,
                 sourceStream));
-        FakeStreamingImageGenerationProvider provider = new(sourceProvider);
+        TestGenerationOptions options = TestGenerationTestOptions.Create(
+            enabled: true);
+        FakeStreamingImageGenerationProvider provider = new(
+            sourceProvider,
+            Options.Create(options));
         StreamingGenerationProviderContext context = CreateContext();
         await using IProviderGenerationStream providerStream =
             await provider.CreateStreamAsync(
@@ -52,7 +58,7 @@ public sealed class FakeStreamingImageGenerationProviderTests
             .Should()
             .Equal(imageBytes);
         sourceStream.MaximumRequestedReadLength.Should().BeLessThanOrEqualTo(
-            49152);
+            options.Base64InputBufferSize);
     }
 
     private static StreamingGenerationProviderContext CreateContext()
@@ -62,7 +68,7 @@ public sealed class FakeStreamingImageGenerationProviderTests
         StreamingImageGenerationRequest request = new(
             LogicalGenerationId,
             1,
-            TestGenerationModelCatalogAugmenter.ModelId,
+            TestGenerationTestOptions.ModelId,
             "Create an image",
             "1:1",
             "1K",
@@ -74,7 +80,7 @@ public sealed class FakeStreamingImageGenerationProviderTests
         return new StreamingGenerationProviderContext(
             request,
             GenerationProviderIds.Test,
-            "test-folder",
+            TestGenerationTestOptions.ProviderModelId,
             metadata.Pricing,
             null,
             metadata.TransportLimits);

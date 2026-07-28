@@ -1,6 +1,7 @@
 using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SkiaSharp;
 
 using AtomicArt.Contracts.Generation;
@@ -11,11 +12,6 @@ public sealed class AttachedImagePreparationService :
     IAttachedImagePreparationService,
     IGenerationModelService
 {
-    private const int MinimumLossyQuality = 35;
-    private const int MaximumLossyQuality = 100;
-    private const int LossyQualitySearchSteps = 6;
-    private const int MaximumResizeAttempts = 6;
-    private const double MaximumLosslessCandidateRatio = 1.05d;
     private const string PreparedFileNameSuffix = "-prepared";
 
     private readonly IAttachedImageSignatureValidator _signatureValidator;
@@ -23,25 +19,43 @@ public sealed class AttachedImagePreparationService :
     private readonly IAttachedImageCodec _codec;
     private readonly AttachedImagePreparationConcurrencyLimiter _concurrencyLimiter;
     private readonly ILogger<AttachedImagePreparationService> _logger;
+    private readonly AttachedImagePreparationPlanner _planner;
+    private readonly int _lossyQualitySearchSteps;
+    private readonly double _maximumLosslessCandidateRatio;
+    private readonly int _maximumLossyQuality;
+    private readonly int _maximumResizeAttempts;
+    private readonly int _minimumLossyQuality;
 
     public AttachedImagePreparationService(
         IAttachedImageSignatureValidator signatureValidator,
         IGenerationImageFormatRegistry formatRegistry,
         IAttachedImageCodec codec,
         AttachedImagePreparationConcurrencyLimiter concurrencyLimiter,
-        ILogger<AttachedImagePreparationService> logger)
+        ILogger<AttachedImagePreparationService> logger,
+        AttachedImagePreparationPlanner planner,
+        IOptions<GenerationClientOptions> options)
     {
         ArgumentNullException.ThrowIfNull(signatureValidator);
         ArgumentNullException.ThrowIfNull(formatRegistry);
         ArgumentNullException.ThrowIfNull(codec);
         ArgumentNullException.ThrowIfNull(concurrencyLimiter);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(planner);
+        ArgumentNullException.ThrowIfNull(options);
 
         _signatureValidator = signatureValidator;
         _formatRegistry = formatRegistry;
         _codec = codec;
         _concurrencyLimiter = concurrencyLimiter;
         _logger = logger;
+        _planner = planner;
+        _lossyQualitySearchSteps =
+            options.Value.LossyQualitySearchSteps;
+        _maximumLosslessCandidateRatio =
+            options.Value.MaximumLosslessCandidateRatio;
+        _maximumLossyQuality = options.Value.MaximumLossyQuality;
+        _maximumResizeAttempts = options.Value.MaximumResizeAttempts;
+        _minimumLossyQuality = options.Value.MinimumLossyQuality;
     }
 
     public async Task<AttachedImageDto?> PrepareAsync(
@@ -146,7 +160,7 @@ public sealed class AttachedImagePreparationService :
                                == AttachedImageEncodingFormat.Webp
             ? AttachedImagePreparationPlanner.MaximumWebpDimension
             : int.MaxValue;
-        SKSizeI formatWorkingSize = AttachedImagePreparationPlanner.CalculateInitialWorkingSize(
+        SKSizeI formatWorkingSize = _planner.CalculateInitialWorkingSize(
             imageInfo,
             maximumDimension);
         AttachedImagePreparationProbeResult? probeResult = CreateEncodingProbe(
@@ -265,13 +279,13 @@ public sealed class AttachedImagePreparationService :
         ImageModelOption selectedModel,
         CancellationToken ct)
     {
-        if (!AttachedImagePreparationPlanner.ShouldUseEncodingProbe(imageInfo))
+        if (!_planner.ShouldUseEncodingProbe(imageInfo))
         {
             return null;
         }
 
         SKSizeI probeSize =
-            AttachedImagePreparationPlanner.CalculateEncodingProbeSize(imageInfo);
+            _planner.CalculateEncodingProbeSize(imageInfo);
         Stopwatch probeStopwatch = Stopwatch.StartNew();
         _logger.LogInformation(
             "Attached image encoding probe started. SourceWidth: {SourceWidth}, SourceHeight: {SourceHeight}, ProbeWidth: {ProbeWidth}, ProbeHeight: {ProbeHeight}",
@@ -297,7 +311,7 @@ public sealed class AttachedImagePreparationService :
             if (losslessProbeBytes is not null)
             {
                 long estimatedLosslessBytes =
-                    AttachedImagePreparationPlanner.EstimateEncodedBytes(
+                    _planner.EstimateEncodedBytes(
                         formatWorkingSize,
                         probeSize,
                         losslessProbeBytes.LongLength);
@@ -328,7 +342,7 @@ public sealed class AttachedImagePreparationService :
             byte[]? lossyProbeBytes = _codec.EncodeWithLoss(
                 probeBitmap,
                 lossyFormat.Value,
-                MaximumLossyQuality,
+                _maximumLossyQuality,
                 ct);
 
             if (lossyProbeBytes is null)
@@ -339,7 +353,7 @@ public sealed class AttachedImagePreparationService :
             }
 
             long estimatedLossyBytes =
-                AttachedImagePreparationPlanner.EstimateEncodedBytes(
+                _planner.EstimateEncodedBytes(
                     formatWorkingSize,
                     probeSize,
                     lossyProbeBytes.LongLength);
@@ -350,7 +364,7 @@ public sealed class AttachedImagePreparationService :
             _logger.LogInformation(
                 "Lossy attachment probe encoded. Format: {Format}, Quality: {Quality}, ProbeBytes: {ProbeBytes}, EstimatedBytes: {EstimatedBytes}, WorkingWidth: {WorkingWidth}, WorkingHeight: {WorkingHeight}, ElapsedMilliseconds: {ElapsedMilliseconds}",
                 lossyFormat.Value,
-                MaximumLossyQuality,
+                _maximumLossyQuality,
                 lossyProbeBytes.LongLength,
                 estimatedLossyBytes,
                 estimatedWorkingSize.Width,
@@ -369,7 +383,7 @@ public sealed class AttachedImagePreparationService :
                 false);
         }
 
-        long estimatedBytes = AttachedImagePreparationPlanner.EstimateEncodedBytes(
+        long estimatedBytes = _planner.EstimateEncodedBytes(
             formatWorkingSize,
             probeSize,
             losslessProbeBytes.LongLength);
@@ -520,7 +534,7 @@ public sealed class AttachedImagePreparationService :
         byte[]? maximumQualityBytes = EncodeWithLossCandidate(
             bitmap,
             format,
-            MaximumLossyQuality,
+            _maximumLossyQuality,
             ct);
 
         if (maximumQualityBytes is null)
@@ -536,7 +550,7 @@ public sealed class AttachedImagePreparationService :
         byte[]? minimumQualityBytes = EncodeWithLossCandidate(
             bitmap,
             format,
-            MinimumLossyQuality,
+            _minimumLossyQuality,
             ct);
 
         if (minimumQualityBytes is null)
@@ -549,11 +563,13 @@ public sealed class AttachedImagePreparationService :
             return new LossyEncodingResult(null, minimumQualityBytes);
         }
 
-        int low = MinimumLossyQuality + 1;
-        int high = MaximumLossyQuality - 1;
+        int low = _minimumLossyQuality + 1;
+        int high = _maximumLossyQuality - 1;
         byte[] bestBytes = minimumQualityBytes;
 
-        for (int step = 0; step < LossyQualitySearchSteps && low <= high; step++)
+        for (int step = 0;
+             step < _lossyQualitySearchSteps && low <= high;
+             step++)
         {
             ct.ThrowIfCancellationRequested();
             int quality = low + ((high - low) / 2);
@@ -624,14 +640,16 @@ public sealed class AttachedImagePreparationService :
 
         try
         {
-            for (int attempt = 0; attempt < MaximumResizeAttempts; attempt++)
+            for (int attempt = 0;
+                 attempt < _maximumResizeAttempts;
+                 attempt++)
             {
                 ct.ThrowIfCancellationRequested();
 
                 if (minimumBytes is not null
                     && minimumBytes.LongLength > selectedModel.MaxAttachedImageBytes)
                 {
-                    SKSizeI nextSize = AttachedImagePreparationPlanner.CalculateReducedSize(
+                    SKSizeI nextSize = _planner.CalculateReducedSize(
                         currentBitmap.Width,
                         currentBitmap.Height,
                         minimumBytes.LongLength,
@@ -700,12 +718,13 @@ public sealed class AttachedImagePreparationService :
         }
     }
 
-    private static bool IsCloseToLimit(long candidateBytes, long maxBytes)
+    private bool IsCloseToLimit(long candidateBytes, long maxBytes)
     {
-        return candidateBytes <= maxBytes * MaximumLosslessCandidateRatio;
+        return candidateBytes
+            <= maxBytes * _maximumLosslessCandidateRatio;
     }
 
-    private static SKSizeI CalculateEstimatedWorkingSize(
+    private SKSizeI CalculateEstimatedWorkingSize(
         SKSizeI formatWorkingSize,
         long estimatedBytes,
         long maxBytes)
@@ -715,7 +734,7 @@ public sealed class AttachedImagePreparationService :
             return formatWorkingSize;
         }
 
-        return AttachedImagePreparationPlanner.CalculateReducedSize(
+        return _planner.CalculateReducedSize(
             formatWorkingSize.Width,
             formatWorkingSize.Height,
             estimatedBytes,

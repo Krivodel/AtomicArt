@@ -5,6 +5,7 @@ using System.Text.Json;
 
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 
 using AtomicArt.Contracts.Generation;
@@ -19,7 +20,6 @@ namespace AtomicArt.Desktop.Services;
 public sealed class ImageGenerationApiClient
     : AtomicArtApiClient, IImageGenerationApiClient
 {
-    private const int MaximumMetadataBytes = 256 * 1024;
     private const string ProviderIdHeaderName = "X-AtomicArt-Provider-Id";
 
     private static readonly JsonSerializerOptions SerializerOptions =
@@ -27,19 +27,29 @@ public sealed class ImageGenerationApiClient
 
     private readonly IGenerationStreamingResultStore _resultStore;
     private readonly ProviderResponseImageDecoderRegistry _decoderRegistry;
+    private readonly int _maxResponseMetadataBytes;
+    private readonly int _responseMetadataBufferSize;
 
     public ImageGenerationApiClient(
         HttpClient httpClient,
         IApiEndpointService apiEndpointService,
         IGenerationStreamingResultStore resultStore,
         ProviderResponseImageDecoderRegistry decoderRegistry,
-        ILogger<ImageGenerationApiClient> logger)
-        : base(httpClient, apiEndpointService, logger)
+        ILogger<ImageGenerationApiClient> logger,
+        IOptions<ApiClientOptions> apiOptions,
+        IOptions<GenerationClientOptions> options)
+        : base(httpClient, apiEndpointService, logger, apiOptions)
     {
+        ArgumentNullException.ThrowIfNull(apiOptions);
+        ArgumentNullException.ThrowIfNull(options);
         _resultStore = resultStore
             ?? throw new ArgumentNullException(nameof(resultStore));
         _decoderRegistry = decoderRegistry
             ?? throw new ArgumentNullException(nameof(decoderRegistry));
+        _maxResponseMetadataBytes =
+            options.Value.MaxResponseMetadataBytes;
+        _responseMetadataBufferSize =
+            options.Value.ResponseMetadataBufferSize;
     }
 
     public async Task<GenerationBatchDto> CreateGenerationAsync(
@@ -330,12 +340,12 @@ public sealed class ImageGenerationApiClient
         return multipart;
     }
 
-    private static async Task<GenerationAttemptMetadataDto> ReadMetadataAsync(
+    private async Task<GenerationAttemptMetadataDto> ReadMetadataAsync(
         Stream source,
         CancellationToken ct)
     {
         using MemoryStream buffer = new();
-        byte[] copyBuffer = new byte[8192];
+        byte[] copyBuffer = new byte[_responseMetadataBufferSize];
         int totalBytes = 0;
 
         while (true)
@@ -351,7 +361,7 @@ public sealed class ImageGenerationApiClient
 
             totalBytes += bytesRead;
 
-            if (totalBytes > MaximumMetadataBytes)
+            if (totalBytes > _maxResponseMetadataBytes)
             {
                 throw new InvalidDataException(
                     "Generation response metadata exceeds its limit.");
@@ -374,7 +384,7 @@ public sealed class ImageGenerationApiClient
             "Generation response metadata is empty.");
     }
 
-    private static async Task<GenerationProblemDetails> ReadProblemDetailsAsync(
+    private async Task<GenerationProblemDetails> ReadProblemDetailsAsync(
         HttpContent content,
         CancellationToken ct)
     {
@@ -382,7 +392,7 @@ public sealed class ImageGenerationApiClient
             .ReadAsStreamAsync(ct)
             .ConfigureAwait(false);
         using MemoryStream buffer = new();
-        byte[] bytes = new byte[16385];
+        byte[] bytes = new byte[MaximumProblemDetailsResponseBytes + 1];
         int totalBytes = 0;
 
         while (totalBytes < bytes.Length)
@@ -399,7 +409,8 @@ public sealed class ImageGenerationApiClient
             totalBytes += bytesRead;
         }
 
-        if (totalBytes == 0 || totalBytes == bytes.Length)
+        if (totalBytes == 0
+            || totalBytes > MaximumProblemDetailsResponseBytes)
         {
             return new GenerationProblemDetails(null, false);
         }
@@ -414,12 +425,16 @@ public sealed class ImageGenerationApiClient
                     cancellationToken: ct)
                 .ConfigureAwait(false);
             JsonElement root = document.RootElement;
-            string? safeErrorCode = root.TryGetProperty(
+            string? errorCode = root.TryGetProperty(
                     GenerationApiRoutes.ProblemDetailsErrorCodeExtensionName,
                     out JsonElement codeElement)
                 && codeElement.ValueKind == JsonValueKind.String
                     ? codeElement.GetString()
                     : null;
+            string? safeErrorCode =
+                SafeApiProblemDetailsReader.GetSafeErrorCode(
+                    errorCode,
+                    MaximumProblemDetailsErrorCodeCharacters);
             bool retryable = root.TryGetProperty(
                     GenerationApiRoutes.ProblemDetailsRetryableExtensionName,
                     out JsonElement retryableElement)

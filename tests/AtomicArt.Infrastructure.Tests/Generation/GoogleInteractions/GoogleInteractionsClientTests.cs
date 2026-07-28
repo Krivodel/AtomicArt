@@ -4,6 +4,7 @@ using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 using FluentAssertions;
 using Xunit;
@@ -422,7 +423,15 @@ public sealed class GoogleInteractionsClientTests
             {
                 BaseAddress = new Uri("https://example.invalid")
             };
-            Client = new GoogleInteractionsClient(_httpClient, logger);
+            Client = new GoogleInteractionsClient(
+                _httpClient,
+                logger,
+                new GoogleInteractionsFailureClassifier(),
+                Options.Create(new GoogleInteractionsOptions
+                {
+                    InteractionsPath = "/v1beta/interactions",
+                    MaxLoggedErrorMessageCharacters = 512
+                }));
         }
 
         public async Task<string> CreateInteractionStreamAsync(

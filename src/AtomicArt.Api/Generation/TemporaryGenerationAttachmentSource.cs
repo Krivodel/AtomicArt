@@ -9,16 +9,20 @@ internal sealed class TemporaryGenerationAttachmentSource
     public GenerationAttachmentMetadataDto Metadata { get; }
 
     private readonly string _path;
+    private readonly int _readBufferSize;
     private int _disposed;
 
     public TemporaryGenerationAttachmentSource(
         GenerationAttachmentMetadataDto metadata,
-        string path)
+        string path,
+        int readBufferSize)
     {
         Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentOutOfRangeException.ThrowIfLessThan(readBufferSize, 1);
 
         _path = path;
+        _readBufferSize = readBufferSize;
     }
 
     public ValueTask<Stream> OpenReadAsync(CancellationToken ct)
@@ -32,7 +36,7 @@ internal sealed class TemporaryGenerationAttachmentSource
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            65536,
+            _readBufferSize,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
         return ValueTask.FromResult(stream);

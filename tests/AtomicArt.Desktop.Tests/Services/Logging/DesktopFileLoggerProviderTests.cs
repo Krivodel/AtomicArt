@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 using FluentAssertions;
@@ -142,9 +141,9 @@ public sealed class DesktopFileLoggerProviderTests
 
     private static DesktopFileLoggerProvider CreateLoggerProvider(string rootPath)
     {
-        IConfiguration configuration = CreateConfiguration();
         AtomicArtDataPathProvider pathProvider = new(rootPath);
-        DesktopFileLoggingOptions options = new(configuration);
+        DesktopFileLoggingOptions options = new(
+            TestApiConfiguration.Create());
 
         return new DesktopFileLoggerProvider(pathProvider, options);
     }
@@ -154,21 +153,6 @@ public sealed class DesktopFileLoggerProviderTests
         return Path.Combine(
             Path.GetTempPath(),
             $"{prefix}-{Guid.NewGuid():N}");
-    }
-
-    private static IConfiguration CreateConfiguration()
-    {
-        Dictionary<string, string?> values = new(StringComparer.Ordinal)
-        {
-            ["Logging:File:MinimumLevel"] = nameof(LogLevel.Debug),
-            ["Logging:File:MaxFileSizeBytes"] = "65536",
-            ["Logging:File:RetainedFileCount"] = "2",
-            ["Logging:File:RetentionDays"] = "14"
-        };
-
-        return new ConfigurationBuilder()
-            .AddInMemoryCollection(values)
-            .Build();
     }
 
     private static void ExecuteLogging(string rootPath, Action<ILogger> writeLog)

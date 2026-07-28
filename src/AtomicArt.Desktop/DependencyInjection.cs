@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using SukiUI.Toasts;
 
@@ -79,6 +80,8 @@ public static class DependencyInjection
             provider => provider.GetRequiredService<DesktopFileLoggerProvider>());
         services.AddSingleton<DesktopFileLoggingOptions>();
         services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Debug));
+        services.AddStorageConfiguration();
+        services.AddDataTransferConfiguration();
         services.AddShellServices();
         services.AddPlatformServices();
         services.AddGalleryServices();
@@ -86,6 +89,35 @@ public static class DependencyInjection
         services.AddGenerationServices();
         services.AddStateServices();
         services.AddUpdateServices();
+    }
+
+    private static IServiceCollection AddStorageConfiguration(
+        this IServiceCollection services)
+    {
+        services
+            .AddOptions<StorageOptions>()
+            .BindConfiguration(StorageOptions.SectionName)
+            .Validate(
+                StorageOptions.IsValid,
+                "Storage configuration must include positive file-size and buffer limits.")
+            .ValidateOnStart();
+        services.AddSingleton<TrustedFileStreamFactory>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddDataTransferConfiguration(
+        this IServiceCollection services)
+    {
+        services
+            .AddOptions<DataTransferOptions>()
+            .BindConfiguration(DataTransferOptions.SectionName)
+            .Validate(
+                DataTransferOptions.IsValid,
+                "Data-transfer configuration must include positive safety and buffer limits.")
+            .ValidateOnStart();
+
+        return services;
     }
 
     private static IServiceCollection AddShellServices(this IServiceCollection services)
@@ -115,6 +147,14 @@ public static class DependencyInjection
 
     private static IServiceCollection AddStateServices(this IServiceCollection services)
     {
+        services
+            .AddOptions<StatePersistenceOptions>()
+            .BindConfiguration(StatePersistenceOptions.SectionName)
+            .Validate(
+                StatePersistenceOptions.IsValid,
+                "State configuration must include a positive deferred-write delay.")
+            .ValidateOnStart();
+        services.AddSingleton<StateWritePolicy>();
         services.AddSingleton<IStatePathKeyEncoder, StatePathKeyEncoder>();
         services.AddStateSectionsByConvention();
         services.AddSingleton<IStateSectionRegistry, StateSectionRegistry>();
@@ -164,6 +204,13 @@ public static class DependencyInjection
         services.AddTransient<ISettingsItemViewModelProvider, SettingsItemViewModelProvider>();
         services.AddSingleton<IUiThreadDispatcher, AvaloniaUiThreadDispatcher>();
         services.AddSingleton<IViewModelErrorHandler, ViewModelErrorHandler>();
+        services
+            .AddOptions<ApiClientOptions>()
+            .BindConfiguration(ApiClientOptions.SectionName)
+            .Validate(
+                ApiClientOptions.IsValid,
+                "API configuration must include positive problem-details limits.")
+            .ValidateOnStart();
         services.AddSingleton<IApiEndpointService, ApiEndpointService>();
         services.AddSingleton<ISecretStore, ProtectedDesktopSecretStore>();
         services.AddSingleton<IAttachedImageSignatureValidator, AttachedImageSignatureValidator>();
@@ -176,9 +223,13 @@ public static class DependencyInjection
             typeof(IFilePickerService),
             typeof(IFolderPickerService),
             typeof(IFilePickerAttachmentService));
-        services.AddHttpClient<ExternalImageAttachmentReader>(httpClient =>
+        services.AddHttpClient<ExternalImageAttachmentReader>((serviceProvider, httpClient) =>
         {
-            httpClient.Timeout = TimeSpan.FromSeconds(30);
+            GenerationClientOptions options = serviceProvider
+                .GetRequiredService<IOptions<GenerationClientOptions>>()
+                .Value;
+            httpClient.Timeout = TimeSpan.FromSeconds(
+                options.ExternalImageTimeoutSeconds);
         });
         services.AddSingleton<VirtualFileDropInputSession>();
         services.AddSingleton<IVirtualFileDropInputProvider>(
@@ -238,7 +289,6 @@ public static class DependencyInjection
         services.AddSharedSingletonAliases<GenerationImageContentValidator>(
             typeof(IGenerationImageContentValidator));
         services.AddSingleton<GenerationImageFileNamePolicy>();
-        services.AddSingleton<GalleryThumbnailSpecification>();
         services.AddSingleton<GalleryThumbnailImageFormat>();
         services.AddSingleton<IGenerationResultStorage, GenerationResultStorage>();
         services.AddSingleton<IGenerationStreamingResultStore, GenerationStreamingResultStore>();
@@ -253,15 +303,28 @@ public static class DependencyInjection
         services.AddSingleton<IGenerationCancellationService, GenerationCancellationService>();
         services.AddSingleton<IGenerationConcurrencyLimiter, GenerationConcurrencyLimiter>();
         services.AddSingleton<AttachedImagePreparationConcurrencyLimiter>();
+        services.AddSingleton<AttachedImagePreparationPlanner>();
         services.AddTransient<IAttachedImageCodec, SkiaAttachedImageCodec>();
         services.AddGenerationModelServicesByConvention();
         services.AddGenerationViewModelsByConvention();
-        services.AddHttpClient<IGenerationModelCatalogApiClient, GenerationModelCatalogApiClient>();
-        services.AddHttpClient<IImageGenerationApiClient, ImageGenerationApiClient>(
-            httpClient =>
+        services.AddHttpClient<
+            IGenerationModelCatalogApiClient,
+            GenerationModelCatalogApiClient>((serviceProvider, httpClient) =>
             {
+                ApiClientOptions options = serviceProvider
+                    .GetRequiredService<IOptions<ApiClientOptions>>()
+                    .Value;
                 httpClient.Timeout = TimeSpan.FromSeconds(
-                    GenerationAttemptLimits.ProviderResponseTimeoutSeconds);
+                    options.ModelCatalogTimeoutSeconds);
+            });
+        services.AddHttpClient<IImageGenerationApiClient, ImageGenerationApiClient>(
+            (serviceProvider, httpClient) =>
+            {
+                GenerationClientOptions options = serviceProvider
+                    .GetRequiredService<IOptions<GenerationClientOptions>>()
+                    .Value;
+                httpClient.Timeout = TimeSpan.FromSeconds(
+                    options.ProviderResponseTimeoutSeconds);
             });
 
         return services;
@@ -269,6 +332,13 @@ public static class DependencyInjection
 
     private static IServiceCollection AddUpdateServices(this IServiceCollection services)
     {
+        services
+            .AddOptions<ApplicationUpdateOptions>()
+            .BindConfiguration(ApplicationUpdateOptions.SectionName)
+            .Validate(
+                ApplicationUpdateOptions.IsValid,
+                "Update configuration must include a positive interval and an HTTPS repository URL.")
+            .ValidateOnStart();
         services.AddSingleton<ISukiToastManager, SukiToastManager>();
         services.AddSingleton<IApplicationUpdateService, VelopackApplicationUpdateService>();
         services.AddSharedSingletonAliases<ApplicationUpdateRestartCoordinator>(

@@ -1,14 +1,19 @@
 using System.Buffers;
 using System.Security.Cryptography;
 
+using Microsoft.Extensions.Options;
+
 namespace AtomicArt.Desktop.Services.Paths;
 
 internal sealed class DataRootFileTransfer
 {
-    private const int CopyBufferSize = 1024 * 1024;
+    private readonly int _copyBufferSize;
 
-    public DataRootFileTransfer()
+    public DataRootFileTransfer(IOptions<StorageOptions> options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
+        _copyBufferSize = options.Value.DataRootFileTransferBufferSize;
     }
 
     internal async Task<IReadOnlyList<DataRootMigrationFile>> CopyAndVerifyAsync(
@@ -177,7 +182,7 @@ internal sealed class DataRootFileTransfer
         }
     }
 
-    private static void DeleteFiles(
+    private void DeleteFiles(
         string rootDirectory,
         IReadOnlyList<DataRootMigrationFile> files,
         IReadOnlyList<string>? relativeDirectories,
@@ -235,7 +240,7 @@ internal sealed class DataRootFileTransfer
         }
     }
 
-    private static void CreateDestinationDirectories(DataRootMigrationPlan plan)
+    private void CreateDestinationDirectories(DataRootMigrationPlan plan)
     {
         foreach (string relativeDirectory in plan.RelativeDirectories)
         {
@@ -246,14 +251,14 @@ internal sealed class DataRootFileTransfer
         }
     }
 
-    private static async Task<string> CopyFileAsync(
+    private async Task<string> CopyFileAsync(
         string sourcePath,
         string destinationPath,
         Action<long> reportCopiedBytes,
         CancellationToken ct)
     {
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(CopyBufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(_copyBufferSize);
         long copiedBytes = 0;
 
         try
@@ -263,14 +268,14 @@ internal sealed class DataRootFileTransfer
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read,
-                CopyBufferSize,
+                _copyBufferSize,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
             await using FileStream destination = new(
                 destinationPath,
                 FileMode.CreateNew,
                 FileAccess.Write,
                 FileShare.None,
-                CopyBufferSize,
+                _copyBufferSize,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
 
             while (true)
@@ -303,13 +308,13 @@ internal sealed class DataRootFileTransfer
         }
     }
 
-    private static async Task<string> HashFileAsync(
+    private async Task<string> HashFileAsync(
         string path,
         Action<long> reportVerifiedBytes,
         CancellationToken ct)
     {
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        byte[] buffer = ArrayPool<byte>.Shared.Rent(CopyBufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(_copyBufferSize);
         long verifiedBytes = 0;
 
         try
@@ -319,7 +324,7 @@ internal sealed class DataRootFileTransfer
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read,
-                CopyBufferSize,
+                _copyBufferSize,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
 
             while (true)
@@ -346,7 +351,7 @@ internal sealed class DataRootFileTransfer
         }
     }
 
-    private static async Task VerifySourceUnchangedAsync(
+    private async Task VerifySourceUnchangedAsync(
         DataRootMigrationPlan plan,
         IReadOnlyList<DataRootMigrationFile> verifiedFiles,
         long completedWorkBytes,
@@ -387,7 +392,7 @@ internal sealed class DataRootFileTransfer
         }
     }
 
-    private static void ValidateDestinationContents(
+    private void ValidateDestinationContents(
         DataRootMigrationPlan plan,
         IReadOnlyList<DataRootMigrationFile> verifiedFiles)
     {
@@ -398,7 +403,7 @@ internal sealed class DataRootFileTransfer
         }
     }
 
-    private static bool FileSetsMatch(
+    private bool FileSetsMatch(
         string rootDirectory,
         IReadOnlyList<DataRootMigrationFile> files)
     {
@@ -417,13 +422,13 @@ internal sealed class DataRootFileTransfer
         return expectedFiles.SetEquals(actualFiles);
     }
 
-    private static string NormalizeRelativePath(string relativePath)
+    private string NormalizeRelativePath(string relativePath)
     {
         return relativePath
             .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
     }
 
-    private static string ResolveOwnedPath(string rootDirectory, string relativePath)
+    private string ResolveOwnedPath(string rootDirectory, string relativePath)
     {
         if (string.IsNullOrWhiteSpace(relativePath)
             || Path.IsPathRooted(relativePath))
@@ -441,7 +446,7 @@ internal sealed class DataRootFileTransfer
         return fullPath;
     }
 
-    private static void EnsureNotReparsePoint(string path)
+    private void EnsureNotReparsePoint(string path)
     {
         if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
         {
@@ -450,7 +455,7 @@ internal sealed class DataRootFileTransfer
         }
     }
 
-    private static void EnsureFileMatchesManifest(
+    private void EnsureFileMatchesManifest(
         string path,
         DataRootMigrationFile file)
     {
@@ -472,7 +477,7 @@ internal sealed class DataRootFileTransfer
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
-            CopyBufferSize,
+            _copyBufferSize,
             FileOptions.SequentialScan);
         byte[] hash = SHA256.HashData(stream);
         string hashText = Convert.ToHexString(hash);
@@ -484,7 +489,7 @@ internal sealed class DataRootFileTransfer
         }
     }
 
-    private static void Report(
+    private void Report(
         IProgress<DataRootMigrationProgress> progress,
         DataRootMigrationProgressStage stage,
         long completedBytes,

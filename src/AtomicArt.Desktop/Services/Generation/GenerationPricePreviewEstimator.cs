@@ -5,7 +5,6 @@ namespace AtomicArt.Desktop.Services.Generation;
 public sealed class GenerationPricePreviewEstimator
 {
     private const decimal TokenPriceUnit = 1_000_000m;
-    private const decimal CharactersPerTextToken = 4m;
 
     public GenerationPriceDto? Estimate(NanoBanana2GenerationParameters parameters)
     {
@@ -31,7 +30,9 @@ public sealed class GenerationPricePreviewEstimator
             return null;
         }
 
-        decimal inputTokens = EstimatePromptTokens(parameters.Prompt)
+        decimal inputTokens = EstimatePromptTokens(
+                parameters.Prompt,
+                pricing.EstimatedCharactersPerTextToken)
             + ((decimal)parameters.AttachedImages.Count * pricing.InputImageTokens);
         decimal outputTokens = (decimal)parameters.GenerationCount * outputImageTokens;
         decimal amount = CalculateTokenPrice(inputTokens, pricing.InputTokenUsdPerMillion)
@@ -43,14 +44,17 @@ public sealed class GenerationPricePreviewEstimator
             GenerationPriceSources.EstimatedModelMetadata);
     }
 
-    private static decimal EstimatePromptTokens(string? prompt)
+    private static decimal EstimatePromptTokens(
+        string? prompt,
+        decimal estimatedCharactersPerTextToken)
     {
         if (string.IsNullOrEmpty(prompt))
         {
             return 0m;
         }
 
-        return Math.Ceiling(prompt.Length / CharactersPerTextToken);
+        return Math.Ceiling(
+            prompt.Length / estimatedCharactersPerTextToken);
     }
 
     private static decimal CalculateTokenPrice(decimal tokens, decimal usdPerMillion)

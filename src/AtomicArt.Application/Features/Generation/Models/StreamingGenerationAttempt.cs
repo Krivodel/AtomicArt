@@ -9,8 +9,6 @@ namespace AtomicArt.Application.Features.Generation.Models;
 
 public sealed class StreamingGenerationAttempt : IAsyncDisposable
 {
-    private const long EmergencyMaximumProviderResponseBytes = 1073741824L;
-
     public string ProviderResponseContentType => _providerStream.ContentType;
     public string ProviderId => _providerId;
 
@@ -24,6 +22,7 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
     private readonly Guid _batchId;
     private readonly Guid _itemId;
     private readonly DateTime _startedAtUtc;
+    private readonly long _emergencyMaxProviderResponseBytes;
 
     public StreamingGenerationAttempt(
         IProviderGenerationStream providerStream,
@@ -35,7 +34,8 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
         string providerId,
         Guid batchId,
         Guid itemId,
-        DateTime startedAtUtc)
+        DateTime startedAtUtc,
+        long emergencyMaxProviderResponseBytes)
     {
         ArgumentNullException.ThrowIfNull(providerStream);
         ArgumentNullException.ThrowIfNull(priceCalculator);
@@ -44,6 +44,9 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(model);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerId);
+        ArgumentOutOfRangeException.ThrowIfLessThan(
+            emergencyMaxProviderResponseBytes,
+            1L);
 
         _providerStream = providerStream;
         _priceCalculator = priceCalculator;
@@ -55,6 +58,8 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
         _batchId = batchId;
         _itemId = itemId;
         _startedAtUtc = startedAtUtc;
+        _emergencyMaxProviderResponseBytes =
+            emergencyMaxProviderResponseBytes;
     }
 
     public async Task<GenerationAttemptMetadataDto> CopyProviderResponseAsync(
@@ -151,11 +156,11 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
     private long GetMaximumProviderResponseBytes()
     {
         long modelLimit = _model.TransportLimits?.MaxResponseBytes
-            ?? EmergencyMaximumProviderResponseBytes;
+            ?? _emergencyMaxProviderResponseBytes;
 
         return Math.Min(
             modelLimit,
-            EmergencyMaximumProviderResponseBytes);
+            _emergencyMaxProviderResponseBytes);
     }
 
     private void ValidateSummary(ProviderGenerationSummary summary)

@@ -37,12 +37,9 @@ internal sealed class GoogleStreamingResponseAnalyzer
     public GoogleStreamingResponseAnalyzer(
         GoogleInteractionsResponseParser responseParser,
         GoogleInteractionsFailureClassifier failureClassifier,
-        int maximumFilteredResponseBytes =
-            GoogleInteractionsOptions.DefaultMaxAnalyzedMetadataBytes,
-        int maximumStructureDepth =
-            GoogleInteractionsOptions.DefaultMaxResponseStructureDepth,
-        int maximumDiagnosticTextCharacters =
-            GoogleInteractionsOptions.DefaultMaxDiagnosticTextCharacters)
+        int maximumFilteredResponseBytes,
+        int maximumStructureDepth,
+        int maximumDiagnosticTextCharacters)
     {
         _responseParser = responseParser
             ?? throw new ArgumentNullException(nameof(responseParser));

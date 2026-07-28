@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 using FluentAssertions;
 using MediatR;
@@ -128,7 +129,8 @@ public sealed class GenerationsControllerTests
         GenerationsController controller = new(
             mediator,
             concurrencyLimiter,
-            new MultipartGenerationRequestReader(),
+            new MultipartGenerationRequestReader(
+                Options.Create(CreateServerOptions())),
             new GenerationStreamingResponseWriter(
                 NullLogger<GenerationStreamingResponseWriter>.Instance),
             NullLogger<GenerationsController>.Instance)
@@ -168,7 +170,21 @@ public sealed class GenerationsControllerTests
             GenerationProviderIds.Google,
             BatchId,
             ItemId,
-            StartedAtUtc);
+            StartedAtUtc,
+            emergencyMaxProviderResponseBytes: 1024L * 1024L);
+    }
+
+    private static GenerationServerOptions CreateServerOptions()
+    {
+        return new GenerationServerOptions
+        {
+            CopyBufferSize = 4096,
+            EmergencyMaxProviderResponseBytes = 1024L * 1024L,
+            MaximumBoundaryLength = 256,
+            MaxConcurrentGenerations = 1,
+            MaxMetadataBytes = 256 * 1024,
+            MaxRequestBytes = 1024L * 1024L
+        };
     }
 
     private static MultipartFormDataContent CreateRequestContent()

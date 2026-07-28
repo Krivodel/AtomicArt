@@ -14,8 +14,6 @@ namespace AtomicArt.Api.Controllers;
 [Route(GenerationApiRoutes.Generations)]
 public sealed class GenerationsController : ControllerBase
 {
-    private const long GlobalMaximumRequestBytes = 1024L * 1024L * 1024L;
-
     private readonly IMediator _mediator;
     private readonly IGenerationRequestConcurrencyLimiter _concurrencyLimiter;
     private readonly MultipartGenerationRequestReader _requestReader;
@@ -40,7 +38,6 @@ public sealed class GenerationsController : ControllerBase
     }
 
     [HttpPost]
-    [RequestSizeLimit(GlobalMaximumRequestBytes)]
     [DisableFormValueModelBinding]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK)]

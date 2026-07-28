@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Avalonia;
 using Velopack;
 
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.Settings;
@@ -19,6 +20,10 @@ internal sealed class Program
         VelopackApp.Build().Run();
 
         IConfiguration bootstrapConfiguration = CreateBootstrapConfiguration();
+        SingleInstanceOptions singleInstanceOptions =
+            LoadSingleInstanceOptions(bootstrapConfiguration);
+        StorageOptions storageOptions =
+            LoadStorageOptions(bootstrapConfiguration);
         AtomicArtDataRootBootstrapStore bootstrapStore = new();
         DataRootMigrationJournalStore journalStore = new(bootstrapStore);
         Exception? bootstrapLoadFailure = null;
@@ -54,7 +59,8 @@ internal sealed class Program
                 SingleInstanceIdentity.CreateDefault();
             using SingleInstanceCoordinator singleInstanceCoordinator = new(
                 singleInstanceIdentity,
-                loggerFactory.CreateLogger<SingleInstanceCoordinator>());
+                loggerFactory.CreateLogger<SingleInstanceCoordinator>(),
+                singleInstanceOptions);
 
             if (!singleInstanceCoordinator.TryStartOrNotifyExisting())
             {
@@ -70,7 +76,11 @@ internal sealed class Program
                     bootstrapLoadFailure);
             }
 
-            TryRecoverDataRootMigration(bootstrapStore, journalStore, logger);
+            TryRecoverDataRootMigration(
+                bootstrapStore,
+                journalStore,
+                storageOptions,
+                logger);
             IConfiguration configuration = App.CreateConfiguration();
             App.ConfigureBootstrap(
                 configuration,
@@ -128,14 +138,54 @@ internal sealed class Program
             .Build();
     }
 
+    private static SingleInstanceOptions LoadSingleInstanceOptions(
+        IConfiguration configuration)
+    {
+        SingleInstanceOptions options = configuration
+            .GetRequiredSection(SingleInstanceOptions.SectionName)
+            .Get<SingleInstanceOptions>()
+            ?? throw new InvalidOperationException(
+                "Single-instance configuration could not be loaded.");
+
+        if (!SingleInstanceOptions.IsValid(options))
+        {
+            throw new InvalidOperationException(
+                "Single-instance configuration is invalid.");
+        }
+
+        return options;
+    }
+
+    private static StorageOptions LoadStorageOptions(
+        IConfiguration configuration)
+    {
+        StorageOptions options = configuration
+            .GetRequiredSection(StorageOptions.SectionName)
+            .Get<StorageOptions>()
+            ?? throw new InvalidOperationException(
+                "Storage configuration could not be loaded.");
+
+        if (!StorageOptions.IsValid(options))
+        {
+            throw new InvalidOperationException(
+                "Storage configuration is invalid.");
+        }
+
+        return options;
+    }
+
     private static void TryRecoverDataRootMigration(
         AtomicArtDataRootBootstrapStore bootstrapStore,
         DataRootMigrationJournalStore journalStore,
+        StorageOptions storageOptions,
         ILogger<Program> logger)
     {
         try
         {
-            DataRootMigrationRecovery.Recover(bootstrapStore, journalStore);
+            DataRootMigrationRecovery.Recover(
+                bootstrapStore,
+                journalStore,
+                storageOptions);
         }
         catch (Exception ex) when (ex is IOException
             or UnauthorizedAccessException

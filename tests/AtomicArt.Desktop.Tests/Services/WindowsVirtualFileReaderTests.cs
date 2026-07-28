@@ -102,7 +102,8 @@ public sealed class WindowsVirtualFileReaderTests
 
         return new WindowsVirtualFileReader(
             new AttachedImageFileReader(signatureValidator),
-            NullLogger<WindowsVirtualFileReader>.Instance);
+            NullLogger<WindowsVirtualFileReader>.Instance,
+            TestApiConfiguration.CreateDataTransferOptionsWrapper());
     }
 
     private sealed class VirtualFileDataObject(

@@ -61,7 +61,10 @@ public sealed class ProtectedDesktopSecretStoreTests
         Func<string, string, string, Task> assertPersistedValue)
     {
         string secretsDirectory = CreateTemporarySecretsDirectory();
-        ProtectedDesktopSecretStore store = new(secretsDirectory);
+        ProtectedDesktopSecretStore store = new(
+            secretsDirectory,
+            TestApiConfiguration.CreateStorageOptionsWrapper(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory());
         string key = CreateUniqueKey();
         string value = "value-for-test-only";
 

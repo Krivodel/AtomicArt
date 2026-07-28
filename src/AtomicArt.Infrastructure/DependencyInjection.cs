@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Application.Common.Interfaces;
 using AtomicArt.Application.Features.Generation.Interfaces;
-using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
@@ -37,7 +37,8 @@ public static class DependencyInjection
             .PostConfigure(options => ResolveTestGenerationImagesDirectory(options, testGenerationImagesBaseDirectory))
             .Validate(
                 TestGenerationOptions.IsValid,
-                "TestGeneration configuration must include a positive MaxImageBytes value.");
+                "TestGeneration configuration must include valid provider and model settings.")
+            .ValidateOnStart();
 
         services.AddSingleton<FileSystemPlaceholderImageProvider>();
         services.AddSingleton<IStreamingPlaceholderImageProvider>(serviceProvider =>
@@ -84,12 +85,12 @@ public static class DependencyInjection
         services.AddHttpClient<IGoogleInteractionsClient, GoogleInteractionsClient>((serviceProvider, httpClient) =>
         {
             GoogleInteractionsOptions options = serviceProvider
-                .GetRequiredService<Microsoft.Extensions.Options.IOptions<GoogleInteractionsOptions>>()
+                .GetRequiredService<IOptions<GoogleInteractionsOptions>>()
                 .Value;
 
             httpClient.BaseAddress = new Uri(options.BaseUrl);
             httpClient.Timeout = TimeSpan.FromSeconds(
-                GenerationAttemptLimits.ProviderResponseTimeoutSeconds);
+                options.ProviderResponseTimeoutSeconds);
         });
 
         return services;

@@ -2,11 +2,13 @@ namespace AtomicArt.Desktop.Services;
 
 internal static class TransferredImageFileName
 {
-    private const int MaximumLength = 128;
-
-    public static string Sanitize(string? candidate, string fallback)
+    public static string Sanitize(
+        string? candidate,
+        string fallback,
+        int maximumCharacters)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fallback);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumCharacters, 1);
 
         if (string.IsNullOrWhiteSpace(candidate))
         {
@@ -28,8 +30,8 @@ internal static class TransferredImageFileName
             return fallback;
         }
 
-        return sanitizedName.Length <= MaximumLength
+        return sanitizedName.Length <= maximumCharacters
             ? sanitizedName
-            : sanitizedName[..MaximumLength];
+            : sanitizedName[..maximumCharacters];
     }
 }

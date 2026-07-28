@@ -371,7 +371,8 @@ public sealed class AtomicArtDataRootMigrationServiceTests
             bootstrapStore,
             new DataRootMigrationJournalStore(bootstrapStore),
             new DataRootMigrationPlanner(),
-            new DataRootFileTransfer(),
+            new DataRootFileTransfer(
+                TestApiConfiguration.CreateStorageOptionsWrapper()),
             new GenerationAdmissionGate(),
             activityTrackerMock.Object,
             accessCoordinator,

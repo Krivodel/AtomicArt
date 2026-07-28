@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
@@ -8,7 +9,6 @@ namespace AtomicArt.Desktop.Services;
 public sealed class TrustedImageFileService : ITrustedImageFileService
 {
     private const string InvalidImagePathMessage = "Image file path is not trusted.";
-    private const long MaxTrustedImageBytes = GenerationImageContentValidator.DefaultMaxImageBytes;
     private const int SignatureReadBytes = 64;
 
     private static readonly string TrustedPathFailureMessage =
@@ -18,19 +18,27 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
     private readonly ILogger<TrustedImageFileService> _logger;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly IAtomicArtDataPathProvider _pathProvider;
+    private readonly long _maxTrustedImageBytes;
+    private readonly TrustedFileStreamFactory _trustedFileStreamFactory;
 
     public TrustedImageFileService(
         IAtomicArtDataPathProvider pathProvider,
         IGenerationImageFormatRegistry formatRegistry,
-        ILogger<TrustedImageFileService> logger)
+        ILogger<TrustedImageFileService> logger,
+        IOptions<GenerationClientOptions> options,
+        TrustedFileStreamFactory trustedFileStreamFactory)
     {
         ArgumentNullException.ThrowIfNull(pathProvider);
         ArgumentNullException.ThrowIfNull(formatRegistry);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(trustedFileStreamFactory);
 
         _formatRegistry = formatRegistry;
         _logger = logger;
         _pathProvider = pathProvider;
+        _maxTrustedImageBytes = options.Value.MaxInputImageBytes;
+        _trustedFileStreamFactory = trustedFileStreamFactory;
         EnsureTrustedDirectories();
     }
 
@@ -99,7 +107,7 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
             string trustedRootDirectory = Path.GetFullPath(_pathProvider.RootDirectory);
             string[] trustedDirectories = GetTrustedDirectories();
 
-            if (!TrustedPathGuard.TryOpenTrustedExistingFileForRead(
+            if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
                 path,
                 trustedDirectories,
                 trustedRootDirectory,
@@ -117,7 +125,7 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
                 FileInfo fileInfo = new(trustedFullPath);
 
                 if (stream.Length <= 0
-                    || stream.Length > MaxTrustedImageBytes)
+                    || stream.Length > _maxTrustedImageBytes)
                 {
                     return false;
                 }

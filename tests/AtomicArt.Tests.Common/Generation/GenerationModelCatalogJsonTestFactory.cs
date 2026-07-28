@@ -64,6 +64,7 @@ public static class GenerationModelCatalogJsonTestFactory
                     "inputTokenUsdPerMillion": 0.25,
                     "textOutputTokenUsdPerMillion": 1.50,
                     "imageOutputTokenUsdPerMillion": 30.00,
+                    "estimatedCharactersPerTextToken": 4,
                     "inputImageTokens": 1120,
                     "outputImageTokensByResolution": {
                       "{{Resolution}}": {{OutputImageTokens}}

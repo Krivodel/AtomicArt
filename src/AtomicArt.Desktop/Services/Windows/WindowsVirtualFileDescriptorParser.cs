@@ -8,12 +8,14 @@ internal static class WindowsVirtualFileDescriptorParser
     private const uint FileAttributeDirectory = 0x00000010;
     private const uint HasFileAttributes = 0x00000004;
     private const uint HasFileSize = 0x00000040;
-    private const int MaximumVirtualFileCount = 64;
 
     public static IReadOnlyList<WindowsVirtualFileDescriptor> Parse(
         ReadOnlySpan<byte> data,
-        bool isUnicode)
+        bool isUnicode,
+        int maximumFileCount)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumFileCount, 1);
+
         if (data.Length < sizeof(uint))
         {
             throw new InvalidDataException(
@@ -22,7 +24,7 @@ internal static class WindowsVirtualFileDescriptorParser
 
         uint itemCount = BinaryPrimitives.ReadUInt32LittleEndian(data);
 
-        if (itemCount > MaximumVirtualFileCount)
+        if (itemCount > maximumFileCount)
         {
             throw new InvalidDataException(
                 "The virtual file descriptor contains too many files.");

@@ -10,6 +10,7 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
+using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -80,7 +81,9 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
                     : secondCompletion.Task);
             TestUiFrameScheduler frameScheduler = new();
             GalleryPreviewSourceScheduler sourceScheduler =
-                new(frameScheduler);
+                new(
+                    frameScheduler,
+                    TestApiConfiguration.CreateGalleryOptionsWrapper());
             GenerationPreviewControl control = new()
             {
                 PreviewPath = FirstImagePath
@@ -131,7 +134,9 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
                         () => releaseCount++)));
             TestUiFrameScheduler frameScheduler = new();
             GalleryPreviewSourceScheduler sourceScheduler =
-                new(frameScheduler);
+                new(
+                    frameScheduler,
+                    TestApiConfiguration.CreateGalleryOptionsWrapper());
             GenerationPreviewControl control = new()
             {
                 PreviewPath = FirstImagePath
@@ -180,7 +185,9 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
                 });
             TestUiFrameScheduler frameScheduler = new();
             GalleryPreviewSourceScheduler sourceScheduler =
-                new(frameScheduler);
+                new(
+                    frameScheduler,
+                    TestApiConfiguration.CreateGalleryOptionsWrapper());
             GenerationPreviewControl control = new()
             {
                 PreviewPath = FirstImagePath

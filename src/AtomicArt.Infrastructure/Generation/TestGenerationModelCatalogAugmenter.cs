@@ -6,21 +6,8 @@ namespace AtomicArt.Infrastructure.Generation;
 
 public static class TestGenerationModelCatalogAugmenter
 {
-    public const string ModelId = "test";
-    private const string DisplayName = "Test";
-    private const string ProviderModelId = "test-folder";
+    private const long Base64EnvelopeBytes = 1024L * 1024L;
 
-    private static readonly IReadOnlyList<string> AspectRatios =
-    [
-        GenerationAspectRatios.Auto,
-        "1:1",
-        "2:3",
-        "3:2",
-        "4:3",
-        "9:16",
-        "16:9"
-    ];
-    private static readonly IReadOnlyList<string> Resolutions = ["1K"];
     private static readonly IReadOnlyList<string> SupportedContentTypes =
         GenerationImageFileFormats.All
             .Select(format => format.ContentType)
@@ -30,7 +17,8 @@ public static class TestGenerationModelCatalogAugmenter
 
     public static GenerationModelCatalogDto AddTestModelIfEnabled(
         GenerationModelCatalogDto catalog,
-        TestGenerationOptions options)
+        TestGenerationOptions options,
+        TestGenerationModelMetadata? testModelMetadata)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(options);
@@ -40,9 +28,15 @@ public static class TestGenerationModelCatalogAugmenter
             return catalog;
         }
 
+        TestGenerationModelMetadata metadata = testModelMetadata
+            ?? throw new InvalidOperationException(
+                "Generation model metadata does not contain the Test model.");
         IReadOnlyList<GenerationModelMetadataDto> existingModels = catalog.Models ?? [];
 
-        if (existingModels.Any(model => string.Equals(model.Id, ModelId, StringComparison.Ordinal)))
+        if (existingModels.Any(model => string.Equals(
+                model.Id,
+                metadata.Id,
+                StringComparison.Ordinal)))
         {
             throw new InvalidOperationException("Generation model catalog already contains the Test model.");
         }
@@ -55,14 +49,15 @@ public static class TestGenerationModelCatalogAugmenter
                 StringComparison.Ordinal))
             ?? throw new InvalidOperationException(
                 "Generation model catalog does not contain Nano Banana temperature metadata.");
-        models.Add(CreateTestModel(baseMetadata, options));
+        models.Add(CreateTestModel(baseMetadata, options, metadata));
 
         return new GenerationModelCatalogDto(models.AsReadOnly());
     }
 
     private static GenerationModelMetadataDto CreateTestModel(
         GenerationModelMetadataDto baseMetadata,
-        TestGenerationOptions options)
+        TestGenerationOptions options,
+        TestGenerationModelMetadata metadata)
     {
         ArgumentNullException.ThrowIfNull(baseMetadata);
         ArgumentNullException.ThrowIfNull(options);
@@ -80,40 +75,44 @@ public static class TestGenerationModelCatalogAugmenter
             {
                 MaxResponseBytes = Math.Max(
                     baseTransportLimits.MaxResponseBytes,
-                    CalculateMaximumResponseBytes(options.MaxImageBytes)),
+                    CalculateMaximumResponseBytes(
+                        options.MaxImageBytes)),
                 AllowedResponseContentTypes = SupportedContentTypes
             };
 
         return baseMetadata with
         {
-            Id = ModelId,
-            DisplayName = DisplayName,
+            Id = metadata.Id,
+            DisplayName = metadata.DisplayName,
             Provider = GenerationProviderIds.Test,
-            ProviderModelId = ProviderModelId,
-            AspectRatios = AspectRatios,
-            Resolutions = Resolutions,
+            ProviderModelId = metadata.ProviderModelId,
+            AspectRatios = metadata.AspectRatios,
+            Resolutions = metadata.Resolutions,
             Attachments = attachments,
             Pricing = new GenerationModelPricingMetadataDto(
                 "USD",
                 InputTokenUsdPerMillion: 0m,
                 TextOutputTokenUsdPerMillion: 0m,
                 ImageOutputTokenUsdPerMillion: 0m,
+                EstimatedCharactersPerTextToken:
+                    baseMetadata.Pricing.EstimatedCharactersPerTextToken,
                 InputImageTokens: 0,
-                OutputImageTokensByResolution: Resolutions.ToDictionary(
+                OutputImageTokensByResolution: metadata.Resolutions.ToDictionary(
                     resolution => resolution,
                     _ => 0,
                     StringComparer.Ordinal)),
             Thinking = null,
-            Parameters = CreateTestParameters(baseMetadata),
+            Parameters = CreateTestParameters(
+                baseMetadata,
+                metadata),
             TransportLimits = transportLimits
         };
     }
 
     private static long CalculateMaximumResponseBytes(long maxImageBytes)
     {
-        const long envelopeBytes = 1024L * 1024L;
         long maximumEncodableInputBytes =
-            ((long.MaxValue - envelopeBytes) / 4L) * 3L - 2L;
+            ((long.MaxValue - Base64EnvelopeBytes) / 4L) * 3L - 2L;
 
         if (maxImageBytes > maximumEncodableInputBytes)
         {
@@ -123,11 +122,12 @@ public static class TestGenerationModelCatalogAugmenter
         long encodedImageBytes =
             ((maxImageBytes + 2L) / 3L) * 4L;
 
-        return encodedImageBytes + envelopeBytes;
+        return encodedImageBytes + Base64EnvelopeBytes;
     }
 
     private static IReadOnlyList<GenerationModelParameterMetadataDto> CreateTestParameters(
-        GenerationModelMetadataDto baseMetadata)
+        GenerationModelMetadataDto baseMetadata,
+        TestGenerationModelMetadata metadata)
     {
         GenerationModelParameterMetadataDto temperature =
             baseMetadata.Parameters?
@@ -155,7 +155,7 @@ public static class TestGenerationModelCatalogAugmenter
                 null,
                 null,
                 null,
-                AspectRatios
+                metadata.AspectRatios
                     .Select(value => JsonSerializer.SerializeToElement(value))
                     .ToList()),
             new GenerationModelParameterMetadataDto(
@@ -166,7 +166,7 @@ public static class TestGenerationModelCatalogAugmenter
                 null,
                 null,
                 null,
-                Resolutions
+                metadata.Resolutions
                     .Select(value => JsonSerializer.SerializeToElement(value))
                     .ToList())
         };

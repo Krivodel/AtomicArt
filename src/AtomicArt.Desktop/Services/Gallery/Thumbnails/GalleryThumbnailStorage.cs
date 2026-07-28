@@ -21,6 +21,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
     private readonly GalleryThumbnailImageFormat _thumbnailImageFormat;
     private readonly IGalleryThumbnailGenerator _thumbnailGenerator;
     private readonly IDataRootAccessCoordinator _accessCoordinator;
+    private readonly TrustedFileStreamFactory _trustedFileStreamFactory;
 
     public GalleryThumbnailStorage(
         IAtomicArtDataPathProvider pathProvider,
@@ -29,6 +30,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
         GalleryThumbnailImageFormat thumbnailImageFormat,
         IGalleryThumbnailGenerator thumbnailGenerator,
         IDataRootAccessCoordinator accessCoordinator,
+        TrustedFileStreamFactory trustedFileStreamFactory,
         ILogger<GalleryThumbnailStorage> logger)
     {
         ArgumentNullException.ThrowIfNull(pathProvider);
@@ -37,6 +39,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
         ArgumentNullException.ThrowIfNull(thumbnailImageFormat);
         ArgumentNullException.ThrowIfNull(thumbnailGenerator);
         ArgumentNullException.ThrowIfNull(accessCoordinator);
+        ArgumentNullException.ThrowIfNull(trustedFileStreamFactory);
         ArgumentNullException.ThrowIfNull(logger);
 
         _pathProvider = pathProvider;
@@ -45,6 +48,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
         _thumbnailImageFormat = thumbnailImageFormat;
         _thumbnailGenerator = thumbnailGenerator;
         _accessCoordinator = accessCoordinator;
+        _trustedFileStreamFactory = trustedFileStreamFactory;
         _logger = logger;
     }
 
@@ -231,7 +235,7 @@ public sealed class GalleryThumbnailStorage : IGalleryThumbnailStorage
 
         try
         {
-            await using (FileStream stream = TrustedPathGuard.CreateTrustedNewFileForWrite(
+            await using (FileStream stream = _trustedFileStreamFactory.CreateNewFileForWrite(
                 thumbnailsDirectory,
                 tempPath,
                 TrustedPathFailureMessage))

@@ -21,6 +21,7 @@ public sealed class CreateStreamingGenerationHandler
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger<CreateStreamingGenerationHandler> _logger;
     private readonly ILogger<StreamingGenerationAttempt> _attemptLogger;
+    private readonly GenerationExecutionLimits _executionLimits;
 
     public CreateStreamingGenerationHandler(
         IImageModelRegistry modelRegistry,
@@ -29,7 +30,8 @@ public sealed class CreateStreamingGenerationHandler
         GenerationUsagePriceCalculator priceCalculator,
         IDateTimeProvider dateTimeProvider,
         ILogger<CreateStreamingGenerationHandler> logger,
-        ILogger<StreamingGenerationAttempt> attemptLogger)
+        ILogger<StreamingGenerationAttempt> attemptLogger,
+        GenerationExecutionLimits executionLimits)
     {
         _modelRegistry = modelRegistry
             ?? throw new ArgumentNullException(nameof(modelRegistry));
@@ -45,6 +47,8 @@ public sealed class CreateStreamingGenerationHandler
             ?? throw new ArgumentNullException(nameof(logger));
         _attemptLogger = attemptLogger
             ?? throw new ArgumentNullException(nameof(attemptLogger));
+        _executionLimits = executionLimits
+            ?? throw new ArgumentNullException(nameof(executionLimits));
     }
 
     public async Task<GenerationAttemptPreparation> Handle(
@@ -117,7 +121,8 @@ public sealed class CreateStreamingGenerationHandler
                 modelDefinition.Metadata.Provider,
                 batchId,
                 itemId,
-                startedAtUtc);
+                startedAtUtc,
+                _executionLimits.EmergencyMaxProviderResponseBytes);
 
             _logger.LogInformation(
                 "Generation attempt {AttemptNumber} for logical generation {LogicalGenerationId} started with provider {Provider}.",

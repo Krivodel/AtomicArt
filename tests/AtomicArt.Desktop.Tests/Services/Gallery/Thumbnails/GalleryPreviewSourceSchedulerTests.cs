@@ -11,7 +11,9 @@ public sealed class GalleryPreviewSourceSchedulerTests
     public void PresentAsync_WithMultipleRequests_PresentsOnePerFrame()
     {
         TestUiFrameScheduler frameScheduler = new();
-        GalleryPreviewSourceScheduler scheduler = new(frameScheduler);
+        GalleryPreviewSourceScheduler scheduler = new(
+            frameScheduler,
+            TestApiConfiguration.CreateGalleryOptionsWrapper());
         int presentationCount = 0;
 
         Task first = scheduler.PresentAsync(
@@ -62,7 +64,9 @@ public sealed class GalleryPreviewSourceSchedulerTests
     public void PresentAsync_WhenFirstRequestIsCanceled_DoesNotConsumeFrameSlot()
     {
         TestUiFrameScheduler frameScheduler = new();
-        GalleryPreviewSourceScheduler scheduler = new(frameScheduler);
+        GalleryPreviewSourceScheduler scheduler = new(
+            frameScheduler,
+            TestApiConfiguration.CreateGalleryOptionsWrapper());
         using CancellationTokenSource cancellation = new();
         int presentationCount = 0;
         Task canceled = scheduler.PresentAsync(

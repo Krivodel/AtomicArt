@@ -4,6 +4,7 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -195,7 +196,8 @@ public sealed class GalleryItemsControllerTests
     {
         return new GalleryItemsController(
             trustedImageFileService,
-            GenerationItemStatusDescriptorRegistryTestFactory.Create());
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestApiConfiguration.CreateGalleryOrderTimestampPolicy());
     }
 
     private static GalleryItemState CreateState(string? imagePath, string? thumbnailPath)

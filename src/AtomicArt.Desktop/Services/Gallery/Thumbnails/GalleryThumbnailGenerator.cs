@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+
 using Avalonia;
 
 using SkiaSharp;
@@ -6,17 +8,30 @@ namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
 public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
 {
-    private const int MaximumConcurrentCreations = 1;
+    private const long BytesPerMegabyte = 1_048_576L;
 
     private readonly GalleryThumbnailImageFormat _thumbnailImageFormat;
-    private readonly SemaphoreSlim _creationSemaphore =
-        new(MaximumConcurrentCreations, MaximumConcurrentCreations);
+    private readonly GalleryThumbnailSizeCalculator _sizeCalculator;
+    private readonly long _maximumSourceImageBytes;
+    private readonly SemaphoreSlim _creationSemaphore;
 
-    public GalleryThumbnailGenerator(GalleryThumbnailImageFormat thumbnailImageFormat)
+    public GalleryThumbnailGenerator(
+        GalleryThumbnailImageFormat thumbnailImageFormat,
+        GalleryThumbnailSizeCalculator sizeCalculator,
+        GalleryThumbnailSpecification specification,
+        IOptions<GalleryOptions> options)
     {
         ArgumentNullException.ThrowIfNull(thumbnailImageFormat);
+        ArgumentNullException.ThrowIfNull(sizeCalculator);
+        ArgumentNullException.ThrowIfNull(specification);
+        ArgumentNullException.ThrowIfNull(options);
 
         _thumbnailImageFormat = thumbnailImageFormat;
+        _sizeCalculator = sizeCalculator;
+        _maximumSourceImageBytes = specification.MaximumSourceImageBytes;
+        _creationSemaphore = new SemaphoreSlim(
+            options.Value.MaximumThumbnailCreationConcurrency,
+            options.Value.MaximumThumbnailCreationConcurrency);
     }
 
     public async Task<byte[]> CreateThumbnailAsync(string imagePath, CancellationToken ct)
@@ -36,13 +51,17 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
         }
     }
 
-    private static void EnsureSourceImageSizeIsAllowed(string imagePath)
+    private void EnsureSourceImageSizeIsAllowed(string imagePath)
     {
         FileInfo fileInfo = new(imagePath);
 
-        if (fileInfo.Length > GalleryThumbnailSpecification.MaxSourceImageBytes)
+        if (fileInfo.Length > _maximumSourceImageBytes)
         {
-            throw new InvalidDataException("Thumbnail source image exceeds the 500 MB size limit.");
+            long maximumSourceImageMegabytes =
+                _maximumSourceImageBytes / BytesPerMegabyte;
+
+            throw new InvalidDataException(
+                $"Thumbnail source image exceeds the {maximumSourceImageMegabytes} MB size limit.");
         }
     }
 
@@ -55,7 +74,7 @@ public sealed class GalleryThumbnailGenerator : IGalleryThumbnailGenerator
         using SKImage sourceImage = SKImage.FromEncodedData(sourceStream)
             ?? throw new InvalidDataException(
                 "Thumbnail source image format is not supported.");
-        PixelSize thumbnailSize = GalleryThumbnailSizeCalculator.Calculate(
+        PixelSize thumbnailSize = _sizeCalculator.Calculate(
             sourceImage.Width,
             sourceImage.Height);
         using SKBitmap thumbnailBitmap = new(

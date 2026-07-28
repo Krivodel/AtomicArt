@@ -44,6 +44,7 @@ internal static class GenerationModelMetadataDomainMapper
             pricing.InputTokenUsdPerMillion,
             pricing.TextOutputTokenUsdPerMillion,
             pricing.ImageOutputTokenUsdPerMillion,
+            pricing.EstimatedCharactersPerTextToken,
             pricing.InputImageTokens,
             pricing.OutputImageTokensByResolution);
     }
@@ -79,6 +80,7 @@ internal static class GenerationModelMetadataDomainMapper
                 pricing.InputTokenUsdPerMillion,
                 pricing.TextOutputTokenUsdPerMillion,
                 pricing.ImageOutputTokenUsdPerMillion,
+                pricing.EstimatedCharactersPerTextToken,
                 pricing.InputImageTokens,
                 pricing.OutputImageTokensByResolution),
             Thinking = thinking,

@@ -106,7 +106,9 @@ public sealed class GalleryViewModelTests
             new TrustedImageFileService(
                 pathProvider,
                 GenerationImageFormatRegistryTestFactory.Create(),
-                NullLogger<TrustedImageFileService>.Instance),
+                NullLogger<TrustedImageFileService>.Instance,
+                TestApiConfiguration.CreateGenerationOptionsWrapper(),
+                TestApiConfiguration.CreateTrustedFileStreamFactory()),
             fileNamePolicy,
             new DataRootAccessCoordinator(),
             NullLogger<GalleryItemDeletionService>.Instance);

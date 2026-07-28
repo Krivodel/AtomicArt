@@ -45,7 +45,10 @@ public sealed class DataRootMigrationRecoveryTests
                 CreateJournal(sourceRoot, destinationRoot, file),
                 CancellationToken.None);
 
-            DataRootMigrationRecovery.Recover(bootstrapStore, journalStore);
+            DataRootMigrationRecovery.Recover(
+                bootstrapStore,
+                journalStore,
+                TestApiConfiguration.CreateStorageOptions());
 
             Directory.Exists(sourceRoot).Should().BeFalse();
             File.ReadAllBytes(Path.Combine(destinationRoot, file.RelativePath))
@@ -94,7 +97,10 @@ public sealed class DataRootMigrationRecoveryTests
                     DataRootMigrationStage.ReadyToSwitch),
                 CancellationToken.None);
 
-            DataRootMigrationRecovery.Recover(bootstrapStore, journalStore);
+            DataRootMigrationRecovery.Recover(
+                bootstrapStore,
+                journalStore,
+                TestApiConfiguration.CreateStorageOptions());
 
             File.Exists(Path.Combine(sourceRoot, file.RelativePath)).Should().BeTrue();
             journalStore.Load().Should().NotBeNull();

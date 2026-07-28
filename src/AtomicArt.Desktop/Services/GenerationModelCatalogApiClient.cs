@@ -1,5 +1,7 @@
 using System.Diagnostics;
+
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using AtomicArt.Contracts.Generation;
 
@@ -11,8 +13,9 @@ public sealed class GenerationModelCatalogApiClient
     public GenerationModelCatalogApiClient(
         HttpClient httpClient,
         IApiEndpointService apiEndpointService,
-        ILogger<GenerationModelCatalogApiClient> logger)
-        : base(httpClient, apiEndpointService, logger)
+        ILogger<GenerationModelCatalogApiClient> logger,
+        IOptions<ApiClientOptions> options)
+        : base(httpClient, apiEndpointService, logger, options)
     {
     }
 

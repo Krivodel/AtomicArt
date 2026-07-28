@@ -276,7 +276,9 @@ public sealed class GalleryItemDeletionServiceTests
         return new TrustedImageFileService(
             pathProvider,
             GenerationImageFormatRegistryTestFactory.Create(),
-            NullLogger<TrustedImageFileService>.Instance);
+            NullLogger<TrustedImageFileService>.Instance,
+            TestApiConfiguration.CreateGenerationOptionsWrapper(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory());
     }
 
     private static GalleryItemDeletionRequest CreateRequest(

@@ -34,6 +34,36 @@ public sealed class GenerationPricePreviewEstimatorTests
     }
 
     [Fact]
+    public void Estimate_WithModelTokenEstimate_UsesModelCharacterRatio()
+    {
+        GenerationPricePreviewEstimator estimator = new();
+        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+        metadata = metadata with
+        {
+            Pricing = metadata.Pricing with
+            {
+                EstimatedCharactersPerTextToken = 2m
+            }
+        };
+        NanoBanana2GenerationParameters parameters = CreateParameters(
+            metadata,
+            prompt: "abcd",
+            resolution: "512",
+            generationCount: 2,
+            attachedImages:
+            [
+                new("reference.png", "image/png", [0x01])
+            ]);
+
+        GenerationPriceDto? price = estimator.Estimate(parameters);
+
+        price.Should().BeEquivalentTo(new GenerationPriceDto(
+            0.090201m,
+            metadata.Pricing.CurrencyCode,
+            GenerationPriceSources.EstimatedModelMetadata));
+    }
+
+    [Fact]
     public void Estimate_WithUnsupportedResolution_ReturnsNull()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();

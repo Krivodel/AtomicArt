@@ -52,10 +52,10 @@ public sealed class GenerationImageContentValidatorTests
     }
 
     [Fact]
-    public void DefaultMaxImageBytes_WithKnownLargePlaceholders_CoversCurrentResources()
+    public void MaxInputImageBytes_WithKnownLargePlaceholders_CoversCurrentResources()
     {
-        GenerationImageContentValidator.DefaultMaxImageBytes.Should().Be(128 * 1_048_576);
-        KnownLargePlaceholderBytes.Should().BeLessThan(GenerationImageContentValidator.DefaultMaxImageBytes);
+        TestApiConfiguration.MaxInputImageBytes.Should().Be(128 * 1_048_576);
+        KnownLargePlaceholderBytes.Should().BeLessThan(TestApiConfiguration.MaxInputImageBytes);
     }
 
     [Fact]

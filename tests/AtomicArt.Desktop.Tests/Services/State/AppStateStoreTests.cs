@@ -196,6 +196,7 @@ public sealed class AppStateStoreTests
         return new AppStateStore(
             pathProvider,
             new DataRootAccessCoordinator(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory(),
             logger ?? new RecordingLogger<AppStateStore>());
     }
 

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Avalonia.Media.Imaging;
 
@@ -9,7 +10,6 @@ internal sealed class GalleryPreviewBitmapProvider :
     IDisposable
 {
     private const int EstimatedBytesPerPixel = 4;
-    private const long DefaultMaximumCacheSizeBytes = 64L * 1024L * 1024L;
 
     private readonly object _sync = new();
     private readonly IGalleryPreviewBitmapLoader _loader;
@@ -27,8 +27,9 @@ internal sealed class GalleryPreviewBitmapProvider :
 
     public GalleryPreviewBitmapProvider(
         IGalleryPreviewBitmapLoader loader,
-        ILogger<GalleryPreviewBitmapProvider> logger)
-        : this(loader, logger, DefaultMaximumCacheSizeBytes)
+        ILogger<GalleryPreviewBitmapProvider> logger,
+        IOptions<GalleryOptions> options)
+        : this(loader, logger, GetMaximumCacheSizeBytes(options))
     {
     }
 
@@ -184,6 +185,14 @@ internal sealed class GalleryPreviewBitmapProvider :
             (long)bitmap.PixelSize.Width
             * bitmap.PixelSize.Height
             * EstimatedBytesPerPixel);
+    }
+
+    private static long GetMaximumCacheSizeBytes(
+        IOptions<GalleryOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        return options.Value.MaximumPreviewCacheSizeBytes;
     }
 
     private async Task LoadEntryAsync(CacheEntry entry)

@@ -15,6 +15,7 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
     private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly GalleryStatePathConverter _pathConverter;
     private readonly GalleryStateSection _section;
+    private readonly GalleryOrderTimestampNormalizer _timestampNormalizer;
     private readonly ILogger<GalleryStateConsistencyService> _logger;
 
     public GalleryStateConsistencyService(
@@ -24,6 +25,7 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
         IDataRootAccessCoordinator accessCoordinator,
         GalleryStatePathConverter pathConverter,
         GalleryStateSection section,
+        GalleryOrderTimestampNormalizer timestampNormalizer,
         ILogger<GalleryStateConsistencyService> logger)
     {
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
@@ -35,6 +37,8 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
             ?? throw new ArgumentNullException(nameof(accessCoordinator));
         _pathConverter = pathConverter ?? throw new ArgumentNullException(nameof(pathConverter));
         _section = section ?? throw new ArgumentNullException(nameof(section));
+        _timestampNormalizer = timestampNormalizer
+            ?? throw new ArgumentNullException(nameof(timestampNormalizer));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -65,7 +69,7 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
             .Where(item => !HasMissingGeneratedImage(item))
             .ToList();
         IReadOnlyList<GalleryItemState> normalizedItems =
-            GalleryOrderTimestampNormalizer.Normalize(retainedItems);
+            _timestampNormalizer.Normalize(retainedItems);
         int galleryOrderChangeCount = normalizedItems
             .Where((item, index) =>
                 item.GalleryOrderTimestampUtc

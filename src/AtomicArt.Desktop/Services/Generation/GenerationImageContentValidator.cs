@@ -1,16 +1,20 @@
+using Microsoft.Extensions.Options;
+
 using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
 public sealed class GenerationImageContentValidator : IGenerationImageContentValidator
 {
-    public const int DefaultMaxImageBytes = 128 * 1_048_576;
-
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly int _maxImageBytes;
 
-    public GenerationImageContentValidator(IGenerationImageFormatRegistry formatRegistry)
-        : this(formatRegistry, DefaultMaxImageBytes)
+    public GenerationImageContentValidator(
+        IGenerationImageFormatRegistry formatRegistry,
+        IOptions<GenerationClientOptions> options)
+        : this(
+            formatRegistry,
+            GetMaxImageBytes(options))
     {
     }
 
@@ -67,6 +71,14 @@ public sealed class GenerationImageContentValidator : IGenerationImageContentVal
 
         result = new GenerationImageContentValidationResult(format.ContentType, bytes);
         return true;
+    }
+
+    private static int GetMaxImageBytes(
+        IOptions<GenerationClientOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        return options.Value.MaxInputImageBytes;
     }
 
     private bool IsBase64TooLarge(string base64Data)

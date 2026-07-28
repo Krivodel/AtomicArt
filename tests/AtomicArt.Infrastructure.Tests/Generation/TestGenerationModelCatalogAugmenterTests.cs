@@ -15,16 +15,19 @@ public sealed class TestGenerationModelCatalogAugmenterTests
         GenerationModelMetadataDto baseMetadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
         List<GenerationModelMetadataDto> models = [baseMetadata];
         GenerationModelCatalogDto catalog = new(models);
-        TestGenerationOptions options = new()
-        {
-            Enabled = true
-        };
+        TestGenerationOptions options = TestGenerationTestOptions.Create(
+            enabled: true);
+        TestGenerationModelMetadata metadata =
+            TestGenerationTestOptions.CreateModelMetadata();
 
         GenerationModelCatalogDto augmentedCatalog =
-            TestGenerationModelCatalogAugmenter.AddTestModelIfEnabled(catalog, options);
+            TestGenerationModelCatalogAugmenter.AddTestModelIfEnabled(
+                catalog,
+                options,
+                metadata);
 
         GenerationModelMetadataDto testMetadata = augmentedCatalog.Models
-            .Single(model => model.Id == TestGenerationModelCatalogAugmenter.ModelId);
+            .Single(model => model.Id == metadata.Id);
         testMetadata.PanelId.Should().Be(baseMetadata.PanelId);
         testMetadata.ContextWindowTokens.Should().Be(baseMetadata.ContextWindowTokens);
         testMetadata.MaxOutputTokens.Should().Be(baseMetadata.MaxOutputTokens);
@@ -46,5 +49,29 @@ public sealed class TestGenerationModelCatalogAugmenterTests
             ((options.MaxImageBytes + 2L) / 3L) * 4L;
         testMetadata.TransportLimits?.MaxResponseBytes.Should()
             .BeGreaterThan(encodedMaximumImageBytes);
+    }
+
+    [Fact]
+    public void AddTestModelIfEnabled_WithConfiguredMetadata_UsesConfiguredValues()
+    {
+        GenerationModelCatalogDto catalog =
+            ApiModelMetadataTestCatalog.LoadCatalog();
+        TestGenerationOptions options = TestGenerationTestOptions.Create(
+            enabled: true);
+        TestGenerationModelMetadata metadata =
+            TestGenerationTestOptions.CreateModelMetadata();
+
+        GenerationModelCatalogDto augmentedCatalog =
+            TestGenerationModelCatalogAugmenter.AddTestModelIfEnabled(
+                catalog,
+                options,
+                metadata);
+
+        GenerationModelMetadataDto testMetadata = augmentedCatalog.Models
+            .Single(model => model.Id == metadata.Id);
+        testMetadata.DisplayName.Should().Be(metadata.DisplayName);
+        testMetadata.ProviderModelId.Should().Be(metadata.ProviderModelId);
+        testMetadata.AspectRatios.Should().Equal(metadata.AspectRatios);
+        testMetadata.Resolutions.Should().Equal(metadata.Resolutions);
     }
 }

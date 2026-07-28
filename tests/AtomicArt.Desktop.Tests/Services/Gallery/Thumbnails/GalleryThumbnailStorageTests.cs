@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using FluentAssertions;
@@ -42,12 +42,12 @@ public sealed class GalleryThumbnailStorageTests
     public async Task SaveAsync_WithExistingThumbnail_ReplacesThumbnail()
     {
         byte[] redThumbnail = GalleryThumbnailTestImages.CreatePngBytes(
-            GalleryThumbnailSpecification.ShortSidePixels,
-            GalleryThumbnailSpecification.ShortSidePixels,
+            TestApiConfiguration.ThumbnailShortSidePixels,
+            TestApiConfiguration.ThumbnailShortSidePixels,
             SKColors.Red);
         byte[] blueThumbnail = GalleryThumbnailTestImages.CreatePngBytes(
-            GalleryThumbnailSpecification.ShortSidePixels,
-            GalleryThumbnailSpecification.ShortSidePixels,
+            TestApiConfiguration.ThumbnailShortSidePixels,
+            TestApiConfiguration.ThumbnailShortSidePixels,
             SKColors.Blue);
         Mock<IGalleryThumbnailGenerator> generatorMock = new();
         StorageTestContext context = await CreateContextAsync(
@@ -160,8 +160,8 @@ public sealed class GalleryThumbnailStorageTests
         await File.WriteAllBytesAsync(
             sourceImagePath,
             GalleryThumbnailTestImages.CreatePngBytes(
-                GalleryThumbnailSpecification.ShortSidePixels,
-                GalleryThumbnailSpecification.ShortSidePixels));
+                TestApiConfiguration.ThumbnailShortSidePixels,
+                TestApiConfiguration.ThumbnailShortSidePixels));
 
         await AssertSourceRejectedAsync(
             pathProvider,
@@ -181,7 +181,9 @@ public sealed class GalleryThumbnailStorageTests
         TrustedImageFileService trustedImageFileService = new(
             pathProvider,
             GenerationImageFormatRegistryTestFactory.Create(),
-            NullLogger<TrustedImageFileService>.Instance);
+            NullLogger<TrustedImageFileService>.Instance,
+            TestApiConfiguration.CreateGenerationOptionsWrapper(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory());
 
         return new GalleryThumbnailStorage(
             pathProvider,
@@ -190,6 +192,7 @@ public sealed class GalleryThumbnailStorageTests
             thumbnailImageFormat,
             thumbnailGenerator,
             new DataRootAccessCoordinator(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory(),
             logger);
     }
 
@@ -221,7 +224,7 @@ public sealed class GalleryThumbnailStorageTests
 
     private static GalleryThumbnailGenerator CreateGenerator()
     {
-        return new GalleryThumbnailGenerator(new GalleryThumbnailImageFormat());
+        return TestApiConfiguration.CreateGalleryThumbnailGenerator();
     }
 
     private static async Task<string> WriteSourceImageAsync(AtomicArtDataPathProvider pathProvider)
@@ -231,8 +234,8 @@ public sealed class GalleryThumbnailStorageTests
         await File.WriteAllBytesAsync(
             sourceImagePath,
             GalleryThumbnailTestImages.CreatePngBytes(
-                GalleryThumbnailSpecification.ShortSidePixels * 2,
-                GalleryThumbnailSpecification.ShortSidePixels * 2));
+                TestApiConfiguration.ThumbnailShortSidePixels * 2,
+                TestApiConfiguration.ThumbnailShortSidePixels * 2));
 
         return sourceImagePath;
     }

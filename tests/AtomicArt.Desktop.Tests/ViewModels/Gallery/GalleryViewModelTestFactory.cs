@@ -55,6 +55,7 @@ internal static class GalleryViewModelTestFactory
                 GenerationImageFormatRegistryTestFactory.Create(),
                 new GenerationImageFileNamePolicy(),
                 new DataRootAccessCoordinator(),
+                TestApiConfiguration.CreateTrustedFileStreamFactory(),
                 NullLogger<GenerationResultStorage>.Instance);
         IGenerationImageContentValidator contentValidator =
             generationImageContentValidator ?? GenerationImageFormatRegistryTestFactory.CreateValidator();
@@ -74,7 +75,10 @@ internal static class GalleryViewModelTestFactory
             galleryItemDeletionService ?? new NullGalleryItemDeletionService();
         IGalleryThumbnailStorage thumbnailStorage =
             galleryThumbnailStorage ?? new NullGalleryThumbnailStorage();
-        GalleryItemsController itemsController = new(trustedService, statusRegistry);
+        GalleryItemsController itemsController = new(
+            trustedService,
+            statusRegistry,
+            TestApiConfiguration.CreateGalleryOrderTimestampPolicy());
         GalleryLifecycleViewStateController viewStateController = new(
             uiThreadService,
             galleryOperations,
@@ -102,7 +106,8 @@ internal static class GalleryViewModelTestFactory
             TestGenerationActivityTrackerFactory.Create(),
             new PresentedWindowPresentationService(),
             lifecycleEventHandlers,
-            NullLogger<GalleryLifecycleController>.Instance);
+            NullLogger<GalleryLifecycleController>.Instance,
+            TestApiConfiguration.CreateGalleryOptionsWrapper());
 
         return new GalleryViewModel(
             revealService,

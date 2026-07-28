@@ -290,6 +290,7 @@ public sealed class GalleryGenerationCompletedHandlerTests
             GenerationImageFormatRegistryTestFactory.Create(),
             new GenerationImageFileNamePolicy(),
             new DataRootAccessCoordinator(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory(),
             NullLogger<GenerationResultStorage>.Instance);
     }
 

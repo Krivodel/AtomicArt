@@ -1,19 +1,30 @@
+using Microsoft.Extensions.Options;
+
 using SkiaSharp;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
 public sealed class SkiaAttachedImageCodec : IAttachedImageCodec
 {
-    private static readonly AttachedImageCompressionOptions FastCompressionOptions = new(
-        35f,
-        new SKPngEncoderOptions(
-            SKPngEncoderFilterFlags.AllFilters,
-            3));
-    private static readonly AttachedImageCompressionOptions MaximumCompressionOptions = new(
-        100f,
-        new SKPngEncoderOptions(
-            SKPngEncoderFilterFlags.AllFilters,
-            9));
+    private readonly AttachedImageCompressionOptions _fastCompressionOptions;
+    private readonly AttachedImageCompressionOptions _maximumCompressionOptions;
+
+    public SkiaAttachedImageCodec(
+        IOptions<GenerationClientOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        _fastCompressionOptions = new AttachedImageCompressionOptions(
+            options.Value.FastLosslessWebpCompressionEffort,
+            new SKPngEncoderOptions(
+                SKPngEncoderFilterFlags.AllFilters,
+                options.Value.FastPngCompressionLevel));
+        _maximumCompressionOptions = new AttachedImageCompressionOptions(
+            options.Value.MaximumLosslessWebpCompressionEffort,
+            new SKPngEncoderOptions(
+                SKPngEncoderFilterFlags.AllFilters,
+                options.Value.MaximumPngCompressionLevel));
+    }
 
     public AttachedImageCodecInfo? ReadInfo(byte[]? content)
     {
@@ -75,17 +86,6 @@ public sealed class SkiaAttachedImageCodec : IAttachedImageCodec
         return SkiaAttachedImageDecoder.Resize(sourceBitmap, targetSize);
     }
 
-    private static AttachedImageCompressionOptions ResolveCompressionOptions(
-        AttachedImageCompressionEffort effort)
-    {
-        return effort switch
-        {
-            AttachedImageCompressionEffort.Fast => FastCompressionOptions,
-            AttachedImageCompressionEffort.Maximum => MaximumCompressionOptions,
-            _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, null)
-        };
-    }
-
     private static byte[]? EncodePng(
         SKBitmap bitmap,
         SKPngEncoderOptions options,
@@ -128,6 +128,17 @@ public sealed class SkiaAttachedImageCodec : IAttachedImageCodec
         ct.ThrowIfCancellationRequested();
 
         return data?.ToArray();
+    }
+
+    private AttachedImageCompressionOptions ResolveCompressionOptions(
+        AttachedImageCompressionEffort effort)
+    {
+        return effort switch
+        {
+            AttachedImageCompressionEffort.Fast => _fastCompressionOptions,
+            AttachedImageCompressionEffort.Maximum => _maximumCompressionOptions,
+            _ => throw new ArgumentOutOfRangeException(nameof(effort), effort, null)
+        };
     }
 
     private sealed record AttachedImageCompressionOptions(

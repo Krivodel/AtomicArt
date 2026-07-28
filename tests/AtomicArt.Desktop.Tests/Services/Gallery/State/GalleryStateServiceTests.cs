@@ -232,11 +232,13 @@ public sealed class GalleryStateServiceTests
         AppStateStore stateStore = new(
             pathProvider,
             new DataRootAccessCoordinator(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory(),
             NullLogger<AppStateStore>.Instance);
 
         return new StateWriteScheduler(
             stateStore,
-            NullLogger<StateWriteScheduler>.Instance);
+            NullLogger<StateWriteScheduler>.Instance,
+            TestApiConfiguration.CreateStateWritePolicy());
     }
 
     private static GalleryItemState CreateGeneratedItem(

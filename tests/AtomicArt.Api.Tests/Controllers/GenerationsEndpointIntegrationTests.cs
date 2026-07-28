@@ -4,6 +4,9 @@ using System.Text.Json;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 using FluentAssertions;
 using Xunit;
@@ -21,6 +24,31 @@ public sealed class GenerationsEndpointIntegrationTests
         Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     [Fact]
+    public void CreateClient_WithGenerationRequestLimit_ConfiguresKestrelLimit()
+    {
+        using TemporaryDirectory contentRoot = new(
+            TestDirectories.GetUniqueAssemblyDirectoryPath(
+                typeof(GenerationsEndpointIntegrationTests)));
+        ApiContentRootTestFiles.CopyModelMetadata(contentRoot.DirectoryPath);
+        ApiContentRootTestFiles.WriteAppSettings(
+            contentRoot.DirectoryPath,
+            ApiTestAppSettingsJson.Create(
+                testGenerationEnabled: false,
+                imagesDirectory: string.Empty));
+        using WebApplicationFactory<Program> factory =
+            new WebApplicationFactory<Program>()
+                .WithWebHostBuilder(builder =>
+                    builder.UseContentRoot(contentRoot.DirectoryPath));
+
+        using HttpClient client = factory.CreateClient();
+        KestrelServerOptions options = factory.Services
+            .GetRequiredService<IOptions<KestrelServerOptions>>()
+            .Value;
+
+        options.Limits.MaxRequestBodySize.Should().Be(1_048_576L);
+    }
+
+    [Fact]
     public async Task PostAsync_WithStreamingMultipartBody_DoesNotPreReadRequestBody()
     {
         using TemporaryDirectory contentRoot = new(
@@ -29,16 +57,9 @@ public sealed class GenerationsEndpointIntegrationTests
         ApiContentRootTestFiles.CopyModelMetadata(contentRoot.DirectoryPath);
         ApiContentRootTestFiles.WriteAppSettings(
             contentRoot.DirectoryPath,
-            """
-            {
-              "Generation": {
-                "MaxConcurrentGenerations": 64
-              },
-              "TestGeneration": {
-                "Enabled": false
-              }
-            }
-            """);
+            ApiTestAppSettingsJson.Create(
+                testGenerationEnabled: false,
+                imagesDirectory: string.Empty));
         await using WebApplicationFactory<Program> factory =
             new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>

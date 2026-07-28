@@ -64,7 +64,8 @@ internal sealed class PreviousGoogleStreamingResponseAnalyzer
             new JsonDocumentOptions
             {
                 MaxDepth =
-                    GoogleInteractionsOptions.DefaultMaxResponseStructureDepth
+                    GoogleStreamingResponseAnalyzerBenchmarkLimits
+                        .MaximumStructureDepth
             });
         JsonElement root = document.RootElement;
 
@@ -105,8 +106,8 @@ internal sealed class PreviousGoogleStreamingResponseAnalyzer
                 break;
             case JsonValueKind.String:
                 if ((element.GetString()?.Length ?? 0)
-                    > GoogleInteractionsOptions
-                        .DefaultMaxDiagnosticTextCharacters)
+                    > GoogleStreamingResponseAnalyzerBenchmarkLimits
+                        .MaximumDiagnosticTextCharacters)
                 {
                     throw new InvalidOperationException(
                         "The benchmark metadata exceeded its limit.");
@@ -258,7 +259,8 @@ internal sealed class PreviousGoogleStreamingResponseAnalyzer
     private void EnsureCapacity(int additionalBytes)
     {
         if (_filteredResponse.Length + additionalBytes
-            > GoogleInteractionsOptions.DefaultMaxAnalyzedMetadataBytes)
+            > GoogleStreamingResponseAnalyzerBenchmarkLimits
+                .MaximumFilteredResponseBytes)
         {
             throw new InvalidOperationException(
                 "The benchmark metadata exceeded its limit.");

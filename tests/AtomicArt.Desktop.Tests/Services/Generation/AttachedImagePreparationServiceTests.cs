@@ -1,5 +1,7 @@
-using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+
+using FluentAssertions;
 using SkiaSharp;
 using Xunit;
 
@@ -33,7 +35,8 @@ public sealed class AttachedImagePreparationServiceTests
     public async Task PrepareAsync_WhenFastLosslessEncodingFits_PreservesPixels()
     {
         byte[] encodedPng = CreateDeterministicPng();
-        SkiaAttachedImageCodec codec = new();
+        SkiaAttachedImageCodec codec = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
         using SKBitmap bitmap = Decode(encodedPng);
         byte[] fastLosslessBytes = codec.EncodeLosslessly(
                 bitmap,
@@ -184,7 +187,8 @@ public sealed class AttachedImagePreparationServiceTests
     public async Task PrepareAsync_WhenLargeProbePredictsOversizedEncoding_ResizesBeforeFullEncoding()
     {
         const int largeWidth = 10923;
-        const int largeHeight = AttachedImagePreparationPlanner.MaximumWebpDimension;
+        int largeHeight =
+            AttachedImagePreparationPlanner.MaximumWebpDimension;
         RecordingAttachedImageCodec codec = CreateOversizedLosslessCodec(
             EncodeAtMaximumQuality);
         codec.ImageInfo = new AttachedImageCodecInfo(
@@ -207,7 +211,11 @@ public sealed class AttachedImagePreparationServiceTests
     public async Task PrepareAsync_WhenLargeLosslessProbeFits_DoesNotReduceWorkingResolution()
     {
         const int largeWidth = 10923;
-        const int largeHeight = AttachedImagePreparationPlanner.MaximumWebpDimension;
+        IOptions<GenerationClientOptions> options =
+            TestApiConfiguration.CreateGenerationOptionsWrapper();
+        AttachedImagePreparationPlanner planner = new(options);
+        int largeHeight =
+            AttachedImagePreparationPlanner.MaximumWebpDimension;
         RecordingAttachedImageCodec codec = new()
         {
             ImageInfo = new AttachedImageCodecInfo(
@@ -226,7 +234,7 @@ public sealed class AttachedImagePreparationServiceTests
 
         VerifyDecodedResizeCount(result, codec, 1);
         codec.ResizeCalls.Single().Should().Be(
-            AttachedImagePreparationPlanner.CalculateEncodingProbeSize(codec.ImageInfo));
+            planner.CalculateEncodingProbeSize(codec.ImageInfo));
         codec.LosslessCalls.Should().Equal(
             (AttachedImageEncodingFormat.Webp, AttachedImageCompressionEffort.Fast),
             (AttachedImageEncodingFormat.Webp, AttachedImageCompressionEffort.Fast));
@@ -254,7 +262,8 @@ public sealed class AttachedImagePreparationServiceTests
         VerifyDecodedResizeCount(result, codec, 1);
         codec.ResizeCalls.Single().Width
             .Should()
-            .BeLessThanOrEqualTo(AttachedImagePreparationPlanner.MaximumWebpDimension);
+            .BeLessThanOrEqualTo(
+                AttachedImagePreparationPlanner.MaximumWebpDimension);
         codec.LosslessCalls.Should().BeEmpty();
     }
 
@@ -288,7 +297,8 @@ public sealed class AttachedImagePreparationServiceTests
     public void ReadInfo_WithPng_ReturnsDimensionsWithoutPixelDecode()
     {
         byte[] content = CreateDeterministicPng();
-        SkiaAttachedImageCodec codec = new();
+        SkiaAttachedImageCodec codec = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
 
         AttachedImageCodecInfo? result = codec.ReadInfo(content);
 
@@ -300,12 +310,18 @@ public sealed class AttachedImagePreparationServiceTests
     private static AttachedImagePreparationService CreateService(
         IAttachedImageCodec? codec = null)
     {
+        IOptions<GenerationClientOptions> options =
+            TestApiConfiguration.CreateGenerationOptionsWrapper();
+
         return new AttachedImagePreparationService(
             new AttachedImageSignatureValidator(),
             GenerationImageFormatRegistryTestFactory.Create(),
-            codec ?? new SkiaAttachedImageCodec(),
-            new AttachedImagePreparationConcurrencyLimiter(),
-            NullLogger<AttachedImagePreparationService>.Instance);
+            codec ?? new SkiaAttachedImageCodec(
+                TestApiConfiguration.CreateGenerationOptionsWrapper()),
+            new AttachedImagePreparationConcurrencyLimiter(options),
+            NullLogger<AttachedImagePreparationService>.Instance,
+            new AttachedImagePreparationPlanner(options),
+            options);
     }
 
     private static RecordingAttachedImageCodec CreateOversizedLosslessCodec(

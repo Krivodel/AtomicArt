@@ -5,8 +5,6 @@ namespace AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
 internal static class GoogleInteractionsErrorResponseReader
 {
-    private const int MaxLoggedMessageCharacters = 512;
-
     private static readonly Regex ProviderStatusRegex = new(
         @"^[A-Z0-9_]{1,64}$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -16,9 +14,13 @@ internal static class GoogleInteractionsErrorResponseReader
 
     public static async Task<GoogleInteractionsErrorDiagnostics> ReadAsync(
         HttpContent content,
+        int maxLoggedMessageCharacters,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(content);
+        ArgumentOutOfRangeException.ThrowIfLessThan(
+            maxLoggedMessageCharacters,
+            1);
 
         string body = await content
             .ReadAsStringAsync(ct)
@@ -34,10 +36,12 @@ internal static class GoogleInteractionsErrorResponseReader
                 null);
         }
 
-        return Parse(body);
+        return Parse(body, maxLoggedMessageCharacters);
     }
 
-    private static GoogleInteractionsErrorDiagnostics Parse(string body)
+    private static GoogleInteractionsErrorDiagnostics Parse(
+        string body,
+        int maxLoggedMessageCharacters)
     {
         try
         {
@@ -61,7 +65,9 @@ internal static class GoogleInteractionsErrorResponseReader
                 body.Length,
                 errorCode,
                 SanitizeProviderStatus(errorStatus),
-                NormalizeAndLimit(errorMessage));
+                NormalizeAndLimit(
+                    errorMessage,
+                    maxLoggedMessageCharacters));
         }
         catch (JsonException)
         {
@@ -99,7 +105,9 @@ internal static class GoogleInteractionsErrorResponseReader
             : null;
     }
 
-    private static string? NormalizeAndLimit(string? value)
+    private static string? NormalizeAndLimit(
+        string? value,
+        int maxLoggedMessageCharacters)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -108,9 +116,9 @@ internal static class GoogleInteractionsErrorResponseReader
 
         string normalizedValue = NormalizeWhitespaceAndControlCharacters(value);
 
-        return normalizedValue.Length <= MaxLoggedMessageCharacters
+        return normalizedValue.Length <= maxLoggedMessageCharacters
             ? normalizedValue
-            : normalizedValue[..MaxLoggedMessageCharacters];
+            : normalizedValue[..maxLoggedMessageCharacters];
     }
 
     private static string NormalizeWhitespaceAndControlCharacters(string value)
