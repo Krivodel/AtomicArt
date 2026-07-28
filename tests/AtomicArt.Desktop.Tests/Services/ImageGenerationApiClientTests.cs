@@ -88,6 +88,36 @@ public sealed class ImageGenerationApiClientTests
             TestGenerationCredentials.ProviderCredential);
     }
 
+    [Fact]
+    public async Task CreateGenerationAsync_WithUnicodePrompt_SendsUnescapedPrompt()
+    {
+        const string Prompt = "Нарисуй уютный дом у моря — 東京";
+        string problemDetails = """
+        {
+          "status": 400,
+          "code": "GENERATION_INVALID_MULTIPART_REQUEST",
+          "retryable": false
+        }
+        """;
+        CapturingHttpMessageHandler handler = new(
+            problemDetails,
+            HttpStatusCode.BadRequest);
+        using HttpClient httpClient = new(handler);
+        ImageGenerationApiClient apiClient = CreateApiClient(httpClient);
+
+        Func<Task> act = () => apiClient.CreateGenerationAsync(
+            CreateRequest(Prompt),
+            LogicalGenerationId,
+            1,
+            TestGenerationCredentials.ProviderCredential,
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<GenerationAttemptException>();
+        handler.RequestBody.Should().Contain($"\"prompt\":\"{Prompt}\"");
+        handler.RequestBody.Should().NotContain("\\u041d");
+        handler.RequestBody.Should().NotContain("\\u6771");
+    }
+
     private static ImageGenerationApiClient CreateApiClient(
         HttpClient httpClient)
     {
@@ -105,7 +135,8 @@ public sealed class ImageGenerationApiClientTests
             TestApiConfiguration.CreateGenerationOptionsWrapper());
     }
 
-    private static ImageGenerationRequestDto CreateRequest()
+    private static ImageGenerationRequestDto CreateRequest(
+        string prompt = "Create a studio product shot")
     {
         List<AttachedImageDto> attachedImages =
         [
@@ -122,7 +153,7 @@ public sealed class ImageGenerationApiClientTests
         ];
 
         return ImageGenerationRequestDtoTestFactory.Create(
-            prompt: "Create a studio product shot",
+            prompt: prompt,
             aspectRatio: "16:9",
             attachedImages: attachedImages);
     }

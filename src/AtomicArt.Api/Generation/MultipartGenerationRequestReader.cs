@@ -39,6 +39,10 @@ public sealed class MultipartGenerationRequestReader
         {
             return await ReadCoreAsync(request, ct).ConfigureAwait(false);
         }
+        catch (GenerationMultipartRequestException)
+        {
+            throw;
+        }
         catch (IOException exception)
         {
             throw new GenerationMultipartRequestException(
@@ -294,7 +298,7 @@ public sealed class MultipartGenerationRequestReader
             if (totalBytes > maximumBytes)
             {
                 throw CreateInvalidRequestException(
-                    "Часть multipart-запроса превышает заявленный размер.");
+                    "Часть multipart-запроса превышает допустимый размер.");
             }
 
             await destination

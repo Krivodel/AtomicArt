@@ -67,6 +67,32 @@ public sealed class GenerationModelRulesTests
     }
 
     [Fact]
+    public void Validate_WithMaximumLengthPrompt_ReturnsValid()
+    {
+        GenerationModelConstraints constraints = CreateConstraints();
+        string prompt = new('Я', constraints.MaxPromptLength);
+        GenerationValidationRequest request = CreateRequest(
+            constraints,
+            prompt: prompt);
+
+        AssertValid(request);
+    }
+
+    [Fact]
+    public void Validate_WithPromptLongerThanMaximum_ReturnsModelRequestError()
+    {
+        GenerationModelConstraints constraints = CreateConstraints();
+        string prompt = new('Я', constraints.MaxPromptLength + 1);
+        GenerationValidationRequest request = CreateRequest(
+            constraints,
+            prompt: prompt);
+
+        AssertValidationError(
+            request,
+            GenerationErrorCodes.ModelRequestValidation);
+    }
+
+    [Fact]
     public void Validate_WithTooManyAttachments_ReturnsModelRequestError()
     {
         AssertAttachmentsInvalid(constraints => Enumerable

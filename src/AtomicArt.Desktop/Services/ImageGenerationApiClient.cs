@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Unicode;
 
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
@@ -23,7 +25,10 @@ public sealed class ImageGenerationApiClient
     private const string ProviderIdHeaderName = "X-AtomicArt-Provider-Id";
 
     private static readonly JsonSerializerOptions SerializerOptions =
-        new(JsonSerializerDefaults.Web);
+        new(JsonSerializerDefaults.Web)
+        {
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+        };
 
     private readonly IGenerationStreamingResultStore _resultStore;
     private readonly ProviderResponseImageDecoderRegistry _decoderRegistry;

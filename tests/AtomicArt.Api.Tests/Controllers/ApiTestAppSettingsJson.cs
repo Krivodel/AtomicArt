@@ -21,7 +21,7 @@ internal static class ApiTestAppSettingsJson
             "EmergencyMaxProviderResponseBytes": 1048576,
             "MaximumBoundaryLength": 256,
             "MaxConcurrentGenerations": 4,
-            "MaxMetadataBytes": 262144,
+            "MaxMetadataBytes": 1048576,
             "MaxRequestBytes": 1048576
           },
           "GoogleInteractions": {
