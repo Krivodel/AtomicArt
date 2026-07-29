@@ -62,12 +62,12 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         if (canShowInGallery)
         {
-            actions.Add(AtomicArtPicaActions.ShowInGallery);
+            actions.Add(_dependencies.Actions.ShowInGallery);
         }
 
         if (_attachImagesCommand is not null)
         {
-            actions.Add(AtomicArtPicaActions.Attach);
+            actions.Add(_dependencies.Actions.Attach);
         }
 
         Request = new PicaViewerRequest(

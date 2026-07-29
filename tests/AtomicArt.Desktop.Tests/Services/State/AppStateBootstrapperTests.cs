@@ -31,7 +31,7 @@ public sealed class AppStateBootstrapperTests
         AssertRestoreCalls(context.Calls);
         context.Target.RestoredGalleryItems.Should().ContainSingle()
             .Which.Id.Should().Be(GalleryItemId);
-        context.UiThreadDispatcher.CallCount.Should().Be(2);
+        context.UiThreadDispatcher.CallCount.Should().Be(3);
     }
 
     [Fact]
@@ -75,6 +75,8 @@ public sealed class AppStateBootstrapperTests
     private static void AssertRestoreCalls(List<string> calls)
     {
         calls.Should().Equal(
+            "localization.refresh",
+            "localization.reconcile",
             "settings.apply",
             "panel.restore:nano-banana",
             "gallery.reconcile",
@@ -98,6 +100,7 @@ public sealed class AppStateBootstrapperTests
             Target = new RecordingRestoreTarget(Calls);
             UiThreadDispatcher = new ImmediateUiThreadDispatcher();
             Bootstrapper = new AppStateBootstrapper(
+                new TestLocalizationService(Calls),
                 SettingsStateService,
                 new RecordingGalleryStateConsistencyService(Calls),
                 galleryStateService,
@@ -124,6 +127,7 @@ public sealed class AppStateBootstrapperTests
                 TimeSpan.FromHours(1));
             _section = new NonDeserializingTestStateSection();
             Bootstrapper = new AppStateBootstrapper(
+                new TestLocalizationService(),
                 new RecordingSettingsStateService([]),
                 new RecordingGalleryStateConsistencyService([]),
                 new RecordingGalleryStateService([]),

@@ -275,7 +275,7 @@ public sealed class GalleryViewModelTests
         viewModel.ConfigureGenerationPresetTarget(presetTarget);
         List<GenerationItemDto> items =
         [
-            GalleryViewModelTestFactory.CreateItem(prompt: "Повтори этот промпт")
+            GalleryViewModelTestFactory.CreateItem(prompt: "Repeat this prompt")
         ];
         viewModel.AddGeneratedItems(items, 0);
         GenerationItemViewModel item = viewModel.Items[0];
@@ -466,7 +466,7 @@ public sealed class GalleryViewModelTests
         await context.ViewModel.ShowFailureDetailsCommand.ExecuteAsync(failedItem);
 
         dialogService.ErrorMessages.Should().ContainSingle()
-            .Which.Should().Be(UiStrings.GenerationProviderUnavailable);
+            .Which.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.ProviderUnavailable));
     }
 
     [Fact]
@@ -694,7 +694,7 @@ public sealed class GalleryViewModelTests
     private static GenerationRunRequest CreateRunRequest()
     {
         ImageGenerationRequestDto request = ImageGenerationRequestDtoTestFactory.Create(
-            aspectRatio: "Авто",
+            aspectRatio: GenerationAspectRatios.Auto,
             temperature: ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().Temperature.Default);
         GenerationStartSnapshot startSnapshot = new(
             request.ModelId,

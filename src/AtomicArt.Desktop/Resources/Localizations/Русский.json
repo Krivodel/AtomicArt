@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "culture": "ru-RU",
+  "strings": {
+    "Common": {
+      "Error": "Ошибка",
+      "Copy": "Копировать",
+      "UnknownError": "Неизвестная ошибка.",
+      "Auto": "Авто",
+      "TimeUnits": {
+        "SecondShort": "с",
+        "MinuteShort": "м",
+        "HourShort": "ч",
+        "DayShort": "д",
+        "MonthShort": "мес",
+        "YearShort": "г"
+      }
+    },
+    "Shell": {
+      "ShowWindow": "Показать окно",
+      "Exit": "Выход"
+    },
+    "Generation": {
+      "Prompt": {
+        "Placeholder": "Сгенерируй новый сезон Рика и Морти…"
+      },
+      "Actions": {
+        "Generate": "Сгенерировать",
+        "GenerateWithPrice": "Сгенерировать ({0})",
+        "PickImagesTitle": "Выбор изображений"
+      },
+      "Attachments": {
+        "CounterFormat": "{0}/{1}",
+        "Failed": "Не удалось прикрепить."
+      },
+      "Temperature": {
+        "ValueFormat": "{0:0.0}"
+      },
+      "Errors": {
+        "ApiUnavailable": "Сервер недоступен.",
+        "Failed": "Не удалось сгенерировать.",
+        "AuthenticationFailed": "Провайдер отклонил API-ключ. Проверь ключ в настройках.",
+        "AuthorizationFailed": "У API-ключа нет доступа к выбранной модели.",
+        "RateLimited": "Провайдер временно ограничил количество запросов. Попробуй позже.",
+        "InvalidResponse": "Провайдер вернул некорректный ответ.",
+        "TimedOut": "Провайдер не успел завершить генерацию вовремя.",
+        "ProviderUnavailable": "Сервис провайдера временно недоступен. Попробуй позже.",
+        "RequestRejected": "Провайдер отклонил запрос. Проверь промпт, параметры и вложения.",
+        "ResourceNotFound": "Выбранная модель недоступна у провайдера.",
+        "ProviderInternalError": "У провайдера произошла внутренняя ошибка. Попробуй позже.",
+        "ConcurrencyLimitReached": "Достигнут лимит одновременных генераций.",
+        "InvalidRequest": "Сервер не смог обработать запрос генерации.",
+        "InvalidAttempt": "Сервер отклонил номер попытки генерации.",
+        "InvalidParameters": "Параметры генерации не прошли проверку.",
+        "ResponseTooLarge": "Результат генерации превысил допустимый размер.",
+        "TransportInterrupted": "Соединение прервалось во время получения результата.",
+        "ModelNotFound": "Выбранная модель недоступна.",
+        "UnsupportedResolution": "Выбранная модель не поддерживает это разрешение.",
+        "UnsupportedAspectRatio": "Выбранная модель не поддерживает это соотношение сторон.",
+        "ModelRequestValidation": "Запрос генерации не прошёл проверку.",
+        "GoogleApiKeyMissing": "Укажи Google API-ключ в настройках.",
+        "ModelCatalogLoadFailed": "Не удалось загрузить список моделей."
+      },
+      "ImageDropLabel": "ДРОП",
+      "Status": {
+        "Generated": "Готово",
+        "Generating": "Генерируется…"
+      },
+      "Options": {
+        "Auto": "Авто"
+      },
+      "Thinking": {
+        "Low": "Низкий",
+        "High": "Высокий"
+      }
+    },
+    "Gallery": {
+      "Empty": "В галерее пусто",
+      "Metadata": {
+        "Title": "Свойства",
+        "CreatedAt": "Дата",
+        "Prompt": "ПРОМПТ",
+        "Model": "Модель",
+        "Resolution": "Разрешение",
+        "AspectRatio": "Соотношение",
+        "Attachments": "Вложения",
+        "Price": "Цена",
+        "GenerationDuration": "Время генерации",
+        "ImagePath": "Путь",
+        "Status": "Статус",
+        "NoFilePath": "Нет файла",
+        "Unavailable": "Недоступно",
+        "Repeat": "Повторить"
+      },
+      "Errors": {
+        "FileRevealFailed": "Не удалось показать файл в папке."
+      },
+      "Actions": {
+        "Attach": "Прикрепить",
+        "ShowInGallery": "Показать в галерее"
+      }
+    },
+    "Settings": {
+      "Title": "Настройки",
+      "Sections": {
+        "Connection": "Подключение",
+        "Appearance": "Интерфейс",
+        "StorageAndPerformance": "Прочее"
+      },
+      "Language": {
+        "Label": "Язык"
+      },
+      "ApiBaseAddress": {
+        "Label": "Адрес сервера",
+        "Placeholder": "http://localhost:5000/",
+        "Invalid": "Укажи абсолютный адрес HTTP или HTTPS."
+      },
+      "GoogleApiKey": {
+        "Label": "Google API-ключ"
+      },
+      "Appearance": {
+        "ScaleLabel": "Масштаб",
+        "PromptTextSizeLabel": "Размер текста промпта"
+      },
+      "GpuCache": {
+        "Label": "GPU-кэш",
+        "RestartNotice": "Кэш применится после перезапуска.",
+        "MegabytesFormat": "{0} МБ"
+      },
+      "DataRoot": {
+        "Label": "Папка сохранений",
+        "PickerTitle": "Выбор пустой папки для сохранений",
+        "Preparing": "Подготовка…",
+        "Copying": "Копирование…",
+        "Verifying": "Проверка…",
+        "Switching": "Переключение папки…",
+        "Cleaning": "Очистка прежней папки…",
+        "Completed": "Перенос завершён.",
+        "MigrationFailed": "Не удалось перенести сохранения. Проверь, что папка пуста, доступна для записи и на диске достаточно места. Прежняя папка продолжает использоваться.",
+        "CleanupFailed": "Новая папка уже используется, но прежнюю не удалось полностью очистить. Очистка будет повторена при следующем запуске."
+      }
+    },
+    "Updates": {
+      "Title": "Доступно обновление",
+      "AvailableFormat": "Обновление {0} готово к установке.",
+      "Actions": {
+        "Install": "Обновить",
+        "WaitAndInstall": "Дождаться и обновить",
+        "Later": "Не сейчас"
+      },
+      "States": {
+        "WaitingForGeneration": "Обновление начнётся после завершения генерации.",
+        "Downloading": "Скачивание обновления…",
+        "Restarting": "Обновление скачано. Установка…"
+      },
+      "Errors": {
+        "CheckFailed": "Не удалось проверить наличие обновлений.",
+        "InstallFailed": "Не удалось установить обновление."
+      }
+    }
+  }
+}

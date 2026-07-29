@@ -71,7 +71,10 @@ public sealed class TestGenerationModelCatalogAugmenterTests
             .Single(model => model.Id == metadata.Id);
         testMetadata.DisplayName.Should().Be(metadata.DisplayName);
         testMetadata.ProviderModelId.Should().Be(metadata.ProviderModelId);
-        testMetadata.AspectRatios.Should().Equal(metadata.AspectRatios);
+        testMetadata.AspectRatios.Select(option => option.Value)
+            .Should().Equal(metadata.AspectRatios);
+        testMetadata.AspectRatios.First().LocalizationKey.Should()
+            .Be(GenerationLocalizationKeys.OptionsAuto);
         testMetadata.Resolutions.Should().Equal(metadata.Resolutions);
     }
 }

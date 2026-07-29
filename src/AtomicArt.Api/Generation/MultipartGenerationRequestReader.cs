@@ -47,7 +47,7 @@ public sealed class MultipartGenerationRequestReader
         {
             throw new GenerationMultipartRequestException(
                 GenerationProtocolErrorCodes.InvalidMultipartRequest,
-                "Поток multipart-запроса неожиданно завершился.",
+                "The multipart request stream ended unexpectedly.",
                 exception);
         }
     }
@@ -61,7 +61,7 @@ public sealed class MultipartGenerationRequestReader
         if (request.ContentLength > _maxRequestBytes)
         {
             throw CreateInvalidRequestException(
-                "Тело запроса превышает аварийный предел.");
+                "The request body exceeds the server safety limit.");
         }
 
         MultipartReader reader = new(boundary, request.Body);
@@ -75,7 +75,7 @@ public sealed class MultipartGenerationRequestReader
                 GenerationApiRoutes.MetadataPartName))
         {
             throw CreateInvalidRequestException(
-                "Первой частью multipart-запроса должны быть метаданные.");
+                "The metadata must be the first part of the multipart request.");
         }
 
         GenerationRequestMetadataDto metadata =
@@ -104,7 +104,7 @@ public sealed class MultipartGenerationRequestReader
                         StringComparison.OrdinalIgnoreCase))
                 {
                     throw CreateInvalidRequestException(
-                        "Порядок или тип вложений не совпадает с метаданными.");
+                        "Attachment order or type does not match the metadata.");
                 }
 
                 TemporaryGenerationAttachmentSource source =
@@ -120,7 +120,7 @@ public sealed class MultipartGenerationRequestReader
             if (unexpectedSection is not null)
             {
                 throw CreateInvalidRequestException(
-                    "Multipart-запрос содержит незаявленные части.");
+                    "The multipart request contains undeclared parts.");
             }
 
             return new MultipartGenerationRequest(metadata, sources.AsReadOnly());
@@ -146,7 +146,7 @@ public sealed class MultipartGenerationRequestReader
         {
             throw new GenerationMultipartRequestException(
                 GenerationProtocolErrorCodes.InvalidAttemptNumber,
-                "Идентификатор логической генерации или номер попытки некорректен.",
+                "The logical generation ID or attempt number is invalid.",
                 metadata.LogicalGenerationId,
                 metadata.AttemptNumber);
         }
@@ -159,7 +159,7 @@ public sealed class MultipartGenerationRequestReader
         {
             throw new GenerationMultipartRequestException(
                 GenerationProtocolErrorCodes.InvalidMultipartRequest,
-                "Обязательные метаданные генерации не переданы.",
+                "Required generation metadata was not provided.",
                 metadata.LogicalGenerationId,
                 metadata.AttemptNumber);
         }
@@ -175,7 +175,7 @@ public sealed class MultipartGenerationRequestReader
         {
             throw new GenerationMultipartRequestException(
                 GenerationProtocolErrorCodes.InvalidMultipartRequest,
-                "Суммарный размер вложений некорректен.",
+                "The total attachment size is invalid.",
                 exception);
         }
 
@@ -183,7 +183,7 @@ public sealed class MultipartGenerationRequestReader
         {
             throw new GenerationMultipartRequestException(
                 GenerationProtocolErrorCodes.InvalidMultipartRequest,
-                "Суммарный размер вложений превышает аварийный предел.",
+                "The total attachment size exceeds the server safety limit.",
                 metadata.LogicalGenerationId,
                 metadata.AttemptNumber);
         }
@@ -212,13 +212,13 @@ public sealed class MultipartGenerationRequestReader
                     .ConfigureAwait(false);
 
             return metadata ?? throw CreateInvalidRequestException(
-                "Метаданные генерации не переданы.");
+                "Generation metadata was not provided.");
         }
         catch (JsonException exception)
         {
             throw new GenerationMultipartRequestException(
                 GenerationProtocolErrorCodes.InvalidMultipartRequest,
-                "Метаданные генерации содержат некорректный JSON.",
+                "Generation metadata contains invalid JSON.",
                 exception);
         }
     }
@@ -232,7 +232,7 @@ public sealed class MultipartGenerationRequestReader
             || descriptor.ByteLength > _maxRequestBytes)
         {
             throw CreateInvalidRequestException(
-                "Размер вложения не прошёл проверку.");
+                "The attachment size failed validation.");
         }
 
         string temporaryPath = Path.Combine(
@@ -258,7 +258,7 @@ public sealed class MultipartGenerationRequestReader
             if (destination.Length != descriptor.ByteLength)
             {
                 throw CreateInvalidRequestException(
-                    "Фактический размер вложения не совпадает с метаданными.");
+                    "The actual attachment size does not match the metadata.");
             }
 
             return new TemporaryGenerationAttachmentSource(
@@ -298,7 +298,7 @@ public sealed class MultipartGenerationRequestReader
             if (totalBytes > maximumBytes)
             {
                 throw CreateInvalidRequestException(
-                    "Часть multipart-запроса превышает допустимый размер.");
+                    "The multipart request part exceeds the allowed size.");
             }
 
             await destination
@@ -319,7 +319,7 @@ public sealed class MultipartGenerationRequestReader
                 StringComparison.OrdinalIgnoreCase))
         {
             throw CreateInvalidRequestException(
-                "Ожидается тип содержимого multipart/form-data.");
+                "Expected a multipart/form-data content type.");
         }
 
         string boundary = HeaderUtilities.RemoveQuotes(
@@ -329,7 +329,7 @@ public sealed class MultipartGenerationRequestReader
             || boundary.Length > _maximumBoundaryLength)
         {
             throw CreateInvalidRequestException(
-                "Граница multipart-запроса отсутствует или слишком длинна.");
+                "The multipart boundary is missing or too long.");
         }
 
         return boundary;

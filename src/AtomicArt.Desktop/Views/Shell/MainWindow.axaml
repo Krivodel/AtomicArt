@@ -19,7 +19,7 @@
                  behaviors:ImageDropBehavior.Overlay="{Binding #WindowDropOverlay}"
                  behaviors:ImageDropBehavior.TargetKind="ExternalFiles"
                  Icon="/Assets/AppIcon.ico"
-                 Title="{x:Static resources:UiStrings.AppTitle}"
+                 Title="{x:Static resources:ProductInformation.Name}"
                  TitleBarAutoHideDelay="0"
                  behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding ActiveGenerationPanel.AttachImageInputsCommand}"
                  behaviors:ImageAttachmentBehavior.ErrorCommand="{Binding HandleExternalInputErrorCommand}"
@@ -69,10 +69,10 @@
 
                 <Border x:Name="GenerationPanelHost"
                         Grid.Row="1"
-                        Width="{StaticResource GenerationPanelWidth}"
+                        MaxWidth="{StaticResource GenerationPanelWidth}"
                         Margin="{StaticResource GenerationPanelMargin}"
                         Padding="0"
-                        HorizontalAlignment="Center"
+                        HorizontalAlignment="Stretch"
                         Classes="generation-panel"
                         ClipToBounds="True">
                     <Grid>

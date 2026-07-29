@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using CommunityToolkit.Mvvm.Messaging;
 using SukiUI.Toasts;
 
 using AtomicArt.Contracts.Generation;
@@ -14,6 +15,7 @@ using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Logging;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
@@ -73,6 +75,7 @@ public static class DependencyInjection
 
     private static void AddDesktopServicesCore(this IServiceCollection services)
     {
+        services.TryAddSingleton<IMessenger, WeakReferenceMessenger>();
         services.TryAddSingleton<AtomicArtDataPathProvider>();
         services.AddSingleton<IAtomicArtDataPathProvider>(
             provider => provider.GetRequiredService<AtomicArtDataPathProvider>());
@@ -104,6 +107,9 @@ public static class DependencyInjection
                 "Storage configuration must include positive file-size and buffer limits.")
             .ValidateOnStart();
         services.AddSingleton<TrustedFileStreamFactory>();
+        services.AddSharedSingletonAliases<LocalizationService>(
+            typeof(ILocalizationService),
+            typeof(ILocalizationTextProvider));
 
         return services;
     }
@@ -133,6 +139,7 @@ public static class DependencyInjection
         services.AddViewTemplate<ApiBaseAddressSettingViewModel, ApiBaseAddressSettingView>();
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
         services.AddViewTemplate<NumericSettingViewModel, NumericSettingView>();
+        services.AddViewTemplate<LanguageSettingViewModel, LanguageSettingView>();
         services.AddViewTemplate<
             GpuResourceCacheSettingViewModel,
             GpuResourceCacheSettingView>();
@@ -250,6 +257,7 @@ public static class DependencyInjection
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
         services.AddSingleton<IFileRevealService, FileRevealService>();
         services.AddPicaViewer();
+        services.AddSingleton<AtomicArtPicaActions>();
         services.AddSingleton<PicaViewerSessionDependencies>();
         services.AddSingleton<PicaViewerSessionFactory>();
         services.AddSharedSingletonAliases<ImageViewerService>(
@@ -288,6 +296,7 @@ public static class DependencyInjection
         services.AddSingleton<GenerationDurationFormatter>();
         services.AddSingleton<GenerationPriceFormatter>();
         services.AddSingleton<GenerationPricePreviewEstimator>();
+        services.AddSingleton<NanoBanana2PanelTextFormatter>();
         services.AddSharedSingletonAliases<GenerationImageContentValidator>(
             typeof(IGenerationImageContentValidator));
         services.AddSingleton<GenerationImageFileNamePolicy>();

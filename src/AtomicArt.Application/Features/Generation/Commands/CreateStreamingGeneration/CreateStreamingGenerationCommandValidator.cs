@@ -11,30 +11,30 @@ public sealed class CreateStreamingGenerationCommandValidator
     {
         RuleFor(command => command.Metadata)
             .NotNull()
-            .WithMessage("Метаданные генерации обязательны.");
+            .WithMessage("Generation metadata is required.");
         RuleFor(command => command.Metadata.LogicalGenerationId)
             .NotEmpty()
-            .WithMessage("Идентификатор логической генерации обязателен.");
+            .WithMessage("Logical generation ID is required.");
         RuleFor(command => command.Metadata.AttemptNumber)
             .InclusiveBetween(
                 GenerationAttemptLimits.MinimumAttemptNumber,
                 GenerationAttemptLimits.MaximumAttemptNumber)
             .WithMessage(
-                $"Номер попытки должен находиться в диапазоне от {GenerationAttemptLimits.MinimumAttemptNumber} до {GenerationAttemptLimits.MaximumAttemptNumber}.");
+                $"Attempt number must be between {GenerationAttemptLimits.MinimumAttemptNumber} and {GenerationAttemptLimits.MaximumAttemptNumber}.");
         RuleFor(command => command.Metadata.ModelId)
             .NotEmpty()
-            .WithMessage("Модель генерации обязательна.");
+            .WithMessage("Generation model is required.");
         RuleFor(command => command.Metadata.Prompt)
             .NotEmpty()
-            .WithMessage("Запрос генерации обязателен.");
+            .WithMessage("Generation prompt is required.");
         RuleFor(command => command.Metadata.Parameters)
             .NotNull()
-            .WithMessage("Параметры генерации обязательны.");
+            .WithMessage("Generation parameters are required.");
         RuleFor(command => command.Metadata.Attachments)
             .NotNull()
-            .WithMessage("Метаданные вложений обязательны.");
+            .WithMessage("Attachment metadata is required.");
         RuleFor(command => command.Attachments)
             .NotNull()
-            .WithMessage("Вложения обязательны.");
+            .WithMessage("Attachments are required.");
     }
 }

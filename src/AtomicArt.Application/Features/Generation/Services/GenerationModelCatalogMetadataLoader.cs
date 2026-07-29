@@ -267,15 +267,15 @@ public static class GenerationModelCatalogMetadataLoader
         {
             GenerationModelThinkingLevelMetadataDto? level = metadata.Levels[index];
 
-            if (level is null || string.IsNullOrWhiteSpace(level.DisplayName))
+            if (level is null || string.IsNullOrWhiteSpace(level.LocalizationKey))
             {
                 throw new InvalidOperationException(
-                    $"Model metadata source '{sourceName}' contains model '{modelId}' without a display name for thinking level at index {index}.");
+                    $"Model metadata source '{sourceName}' contains model '{modelId}' without a localization key for thinking level at index {index}.");
             }
 
             levels.Add(new GenerationModelThinkingLevelMetadataDto(
                 constraints.Levels[index],
-                level.DisplayName.Trim()));
+                level.LocalizationKey.Trim()));
         }
 
         return new GenerationModelThinkingMetadataDto(

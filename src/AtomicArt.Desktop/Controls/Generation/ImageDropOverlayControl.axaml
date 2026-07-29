@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
              xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
@@ -83,7 +84,7 @@
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource SukiText}"
                        Opacity="0.8"
-                       Text="{x:Static resources:UiStrings.ImageDropLabel}" />
+                       Text="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys.ImageDropLabel}}" />
         </StackPanel>
     </Grid>
 </UserControl>

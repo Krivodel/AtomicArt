@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
@@ -15,6 +16,7 @@ public sealed partial class DataRootSettingViewModel : SettingItemViewModel
     private readonly IFolderPickerService _folderPickerService;
     private readonly IAtomicArtDataRootMigrationService _migrationService;
     private readonly IAtomicArtDataPathProvider _pathProvider;
+    private DataRootMigrationProgressStage? _progressStage;
 
     [ObservableProperty]
     private string _value;
@@ -30,8 +32,9 @@ public sealed partial class DataRootSettingViewModel : SettingItemViewModel
         IFolderPickerService folderPickerService,
         IAtomicArtDataRootMigrationService migrationService,
         IAtomicArtDataPathProvider pathProvider,
-        IViewModelErrorHandler errorHandler)
-        : base(definition, errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
+        : base(definition, errorHandler, textProvider)
     {
         _definition = definition;
         _folderPickerService = folderPickerService
@@ -40,6 +43,16 @@ public sealed partial class DataRootSettingViewModel : SettingItemViewModel
             ?? throw new ArgumentNullException(nameof(migrationService));
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _value = pathProvider.RootDirectory;
+    }
+
+    public override void RefreshLocalization()
+    {
+        base.RefreshLocalization();
+
+        if (_progressStage is DataRootMigrationProgressStage progressStage)
+        {
+            ProgressText = GetProgressText(progressStage);
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanChangeDirectory))]
@@ -81,15 +94,27 @@ public sealed partial class DataRootSettingViewModel : SettingItemViewModel
         ProgressPercentage = progress.Percentage;
         IsProgressIndeterminate =
             progress.Stage == DataRootMigrationProgressStage.Preparing;
-        ProgressText = progress.Stage switch
+        _progressStage = progress.Stage;
+        ProgressText = GetProgressText(progress.Stage);
+    }
+
+    private string GetProgressText(DataRootMigrationProgressStage stage)
+    {
+        return stage switch
         {
-            DataRootMigrationProgressStage.Preparing => UiStrings.SettingsDataRootPreparing,
-            DataRootMigrationProgressStage.Copying => UiStrings.SettingsDataRootCopying,
-            DataRootMigrationProgressStage.Verifying => UiStrings.SettingsDataRootVerifying,
-            DataRootMigrationProgressStage.Switching => UiStrings.SettingsDataRootSwitching,
-            DataRootMigrationProgressStage.Cleaning => UiStrings.SettingsDataRootCleaning,
-            DataRootMigrationProgressStage.Completed => UiStrings.SettingsDataRootCompleted,
-            _ => UiStrings.SettingsDataRootPreparing
+            DataRootMigrationProgressStage.Preparing => TextProvider.Get(
+                SettingsLocalizationKeys.DataRoot.Preparing),
+            DataRootMigrationProgressStage.Copying => TextProvider.Get(
+                SettingsLocalizationKeys.DataRoot.Copying),
+            DataRootMigrationProgressStage.Verifying => TextProvider.Get(
+                SettingsLocalizationKeys.DataRoot.Verifying),
+            DataRootMigrationProgressStage.Switching => TextProvider.Get(
+                SettingsLocalizationKeys.DataRoot.Switching),
+            DataRootMigrationProgressStage.Cleaning => TextProvider.Get(
+                SettingsLocalizationKeys.DataRoot.Cleaning),
+            DataRootMigrationProgressStage.Completed => TextProvider.Get(
+                SettingsLocalizationKeys.DataRoot.Completed),
+            _ => TextProvider.Get(SettingsLocalizationKeys.DataRoot.Preparing)
         };
     }
 }

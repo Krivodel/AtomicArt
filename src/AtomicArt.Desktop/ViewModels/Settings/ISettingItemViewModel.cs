@@ -10,4 +10,6 @@ public interface ISettingItemViewModel
     string Key { get; }
     int Order { get; }
     SettingsSection Section { get; }
+
+    void RefreshLocalization();
 }

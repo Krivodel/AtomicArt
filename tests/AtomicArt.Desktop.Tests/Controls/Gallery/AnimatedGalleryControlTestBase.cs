@@ -156,7 +156,8 @@ public abstract class AnimatedGalleryControlTestBase
             item,
             0,
             null,
-            GenerationItemStatusDescriptorRegistryTestFactory.Create());
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
     }
 
     private static Grid GetRootGrid(AnimatedGalleryControl control)

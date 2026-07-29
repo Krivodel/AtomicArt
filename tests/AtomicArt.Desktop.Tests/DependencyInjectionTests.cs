@@ -13,6 +13,7 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Windowing;
@@ -29,6 +30,20 @@ namespace AtomicArt.Desktop.Tests;
 
 public sealed class DependencyInjectionTests
 {
+    [Fact]
+    public void AddDesktopServices_WithLocalizationInterfaces_RegistersSharedService()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+
+        ILocalizationService localizationService =
+            serviceProvider.GetRequiredService<ILocalizationService>();
+        ILocalizationTextProvider textProvider =
+            serviceProvider.GetRequiredService<ILocalizationTextProvider>();
+
+        localizationService.Should().BeSameAs(textProvider);
+        localizationService.Should().BeOfType<LocalizationService>();
+    }
+
     [Fact]
     public void AddDesktopServices_WithWindowPlacement_RegistersSharedServicesAndStateSection()
     {
@@ -145,10 +160,10 @@ public sealed class DependencyInjectionTests
         IDialogService dialogService =
             serviceProvider.GetRequiredService<IDialogService>();
 
-        dialogService.ShowError(UiStrings.GenerationApiUnavailable);
+        dialogService.ShowError(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.ApiUnavailable));
 
         dialogService.Should().BeOfType<DialogService>();
-        viewModel.Message.Should().Be(UiStrings.GenerationApiUnavailable);
+        viewModel.Message.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.ApiUnavailable));
         viewModel.IsOpen.Should().BeTrue();
     }
 
@@ -230,6 +245,7 @@ public sealed class DependencyInjectionTests
             typeof(ApiBaseAddressSettingViewModel),
             typeof(SecretSettingViewModel),
             typeof(NumericSettingViewModel),
+            typeof(LanguageSettingViewModel),
             typeof(GpuResourceCacheSettingViewModel),
             typeof(GenerationMetadataViewModel)
         ];

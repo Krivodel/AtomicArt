@@ -10,7 +10,7 @@ public sealed record ImageModelOption(
     string PanelId,
     int ContextWindowTokens,
     int MaxOutputTokens,
-    IReadOnlyList<string> AspectRatios,
+    IReadOnlyList<GenerationModelOptionMetadataDto> AspectRatioOptions,
     IReadOnlyList<string> Resolutions,
     IReadOnlyList<int> GenerationCounts,
     GenerationModelTemperatureMetadataDto Temperature,
@@ -19,4 +19,8 @@ public sealed record ImageModelOption(
     long MaxTotalAttachedImageBytes,
     IReadOnlyList<string> SupportedAttachmentContentTypes,
     GenerationModelPricingMetadataDto Pricing,
-    GenerationModelThinkingMetadataDto? Thinking = null);
+    GenerationModelThinkingMetadataDto? Thinking = null)
+{
+    public IReadOnlyList<string> AspectRatios =>
+        AspectRatioOptions.Select(option => option.Value).ToList();
+}

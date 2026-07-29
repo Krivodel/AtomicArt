@@ -30,7 +30,7 @@ public sealed class NanoBanana2AttachmentValidator : INanoBanana2AttachmentValid
             .Concat(incomingImages)
             .ToList();
 
-        // Предварительная клиентская подсказка по metadata каталога; серверные инварианты проверяются в Domain/Application.
+        // Preliminary client-side hint based on catalog metadata; server invariants are enforced in Domain/Application.
         if (!HasValidClientPreviewResources(selectedModel, candidateImages))
         {
             return null;

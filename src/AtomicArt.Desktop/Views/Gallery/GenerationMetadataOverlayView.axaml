@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
              xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
@@ -13,7 +14,7 @@
                                   Height="{StaticResource MetadataOverlayHeight}"
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Center"
-                                  Title="{x:Static resources:UiStrings.MetadataTitle}"
+                                  Title="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Title}}"
                                   CloseCommand="{Binding CloseCommand}">
         <overlays:ModalOverlayControl.Body>
             <Grid x:Name="ContentGrid"
@@ -222,7 +223,7 @@
                             <TextBlock FontSize="15"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource MetadataMutedTextBrush}"
-                                       Text="{x:Static resources:UiStrings.MetadataPrompt}" />
+                                       Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Prompt}}" />
                             <TextBox x:Name="PromptText"
                                      Grid.Row="1"
                                      Padding="{StaticResource ZeroThickness}"
@@ -316,7 +317,7 @@
                         <Path Classes="metadata-outline-icon"
                               Data="{StaticResource MetadataRepeatIcon}" />
                         <TextBlock Classes="metadata-compact-text"
-                                   Text="{x:Static resources:UiStrings.MetadataRepeat}" />
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Repeat}}" />
                     </StackPanel>
                 </Button>
             </Grid>

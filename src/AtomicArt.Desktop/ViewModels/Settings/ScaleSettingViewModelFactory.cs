@@ -1,5 +1,6 @@
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
@@ -12,13 +13,15 @@ public sealed class ScaleSettingViewModelFactory :
     private readonly ISettingsStateService _settingsStateService;
     private readonly IDoubleSettingValueConverter _valueConverter;
     private readonly IViewModelErrorHandler _errorHandler;
+    private readonly ILocalizationTextProvider _textProvider;
 
     public ScaleSettingViewModelFactory(
         ISettingsDefinitionCatalog settingsDefinitionCatalog,
         IUiScaleService uiScaleService,
         ISettingsStateService settingsStateService,
         IDoubleSettingValueConverter valueConverter,
-        IViewModelErrorHandler errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
         : base("Scale setting definition expected.")
     {
         ArgumentNullException.ThrowIfNull(settingsDefinitionCatalog);
@@ -26,12 +29,14 @@ public sealed class ScaleSettingViewModelFactory :
         ArgumentNullException.ThrowIfNull(settingsStateService);
         ArgumentNullException.ThrowIfNull(valueConverter);
         ArgumentNullException.ThrowIfNull(errorHandler);
+        ArgumentNullException.ThrowIfNull(textProvider);
 
         _settingsDefinitionCatalog = settingsDefinitionCatalog;
         _uiScaleService = uiScaleService;
         _settingsStateService = settingsStateService;
         _valueConverter = valueConverter;
         _errorHandler = errorHandler;
+        _textProvider = textProvider;
     }
 
     protected override ISettingItemViewModel CreateItemViewModel(
@@ -45,6 +50,7 @@ public sealed class ScaleSettingViewModelFactory :
             new UiScaleNumericSettingValueSource(_uiScaleService),
             _settingsStateService,
             _valueConverter,
-            _errorHandler);
+            _errorHandler,
+            _textProvider);
     }
 }

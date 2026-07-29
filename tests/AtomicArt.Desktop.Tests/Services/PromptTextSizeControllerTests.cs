@@ -55,7 +55,8 @@ public sealed class PromptTextSizeControllerTests
             context.PromptTextSizeService,
             context.SettingsStateService,
             context.ValueConverter,
-            new TestViewModelErrorHandler());
+            new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default);
         using NumericSettingViewModel viewModel = factory.Create(context.Definition)
             as NumericSettingViewModel
             ?? throw new InvalidOperationException("Numeric setting view model was not created.");

@@ -322,7 +322,8 @@ public sealed class AnimatedGalleryControlEmptyGenerationTests : AnimatedGallery
             item,
             index,
             null,
-            GenerationItemStatusDescriptorRegistryTestFactory.Create());
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
     }
 
     private static void UpdateItemsFromResults(

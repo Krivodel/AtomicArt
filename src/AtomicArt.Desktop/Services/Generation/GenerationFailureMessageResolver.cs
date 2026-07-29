@@ -8,58 +8,69 @@ internal static class GenerationFailureMessageResolver
     private static readonly IReadOnlyDictionary<string, string> MessagesByErrorCode =
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            [GenerationProtocolErrorCodes.ModelNotFound] =
+                GenerationUiLocalizationKeys.Errors.ModelNotFound,
+            [GenerationProtocolErrorCodes.UnsupportedResolution] =
+                GenerationUiLocalizationKeys.Errors.UnsupportedResolution,
+            [GenerationProtocolErrorCodes.UnsupportedAspectRatio] =
+                GenerationUiLocalizationKeys.Errors.UnsupportedAspectRatio,
+            [GenerationProtocolErrorCodes.ModelRequestValidation] =
+                GenerationUiLocalizationKeys.Errors.ModelRequestValidation,
             [GenerationProviderFailureErrorCodes.Authentication] =
-                UiStrings.GenerationAuthenticationFailed,
+                GenerationUiLocalizationKeys.Errors.AuthenticationFailed,
             [GenerationProviderFailureErrorCodes.Authorization] =
-                UiStrings.GenerationAuthorizationFailed,
+                GenerationUiLocalizationKeys.Errors.AuthorizationFailed,
             [GenerationProviderFailureErrorCodes.RateLimited] =
-                UiStrings.GenerationRateLimited,
+                GenerationUiLocalizationKeys.Errors.RateLimited,
             [GenerationProviderFailureErrorCodes.InvalidResponse] =
-                UiStrings.GenerationInvalidResponse,
+                GenerationUiLocalizationKeys.Errors.InvalidResponse,
             [GenerationProviderFailureErrorCodes.Timeout] =
-                UiStrings.GenerationTimedOut,
+                GenerationUiLocalizationKeys.Errors.TimedOut,
             [GenerationProviderFailureErrorCodes.Unavailable] =
-                UiStrings.GenerationProviderUnavailable,
+                GenerationUiLocalizationKeys.Errors.ProviderUnavailable,
             [GenerationProviderFailureErrorCodes.RequestRejected] =
-                UiStrings.GenerationRequestRejected,
+                GenerationUiLocalizationKeys.Errors.RequestRejected,
             [GenerationProviderFailureErrorCodes.ResourceNotFound] =
-                UiStrings.GenerationResourceNotFound,
+                GenerationUiLocalizationKeys.Errors.ResourceNotFound,
             [GenerationProviderFailureErrorCodes.InternalError] =
-                UiStrings.GenerationProviderInternalError,
+                GenerationUiLocalizationKeys.Errors.ProviderInternalError,
             [GenerationProviderFailureErrorCodes.Unknown] =
-                UiStrings.GenerationFailed,
+                GenerationUiLocalizationKeys.Errors.Failed,
             [GenerationProtocolErrorCodes.ConcurrencyLimitReached] =
-                UiStrings.GenerationConcurrencyLimitReached,
+                GenerationUiLocalizationKeys.Errors.ConcurrencyLimitReached,
             [GenerationProtocolErrorCodes.InvalidMultipartRequest] =
-                UiStrings.GenerationInvalidRequest,
+                GenerationUiLocalizationKeys.Errors.InvalidRequest,
             [GenerationProtocolErrorCodes.InvalidAttemptNumber] =
-                UiStrings.GenerationInvalidAttempt,
+                GenerationUiLocalizationKeys.Errors.InvalidAttempt,
             [GenerationProtocolErrorCodes.InvalidParameters] =
-                UiStrings.GenerationInvalidParameters,
+                GenerationUiLocalizationKeys.Errors.InvalidParameters,
             [GenerationProtocolErrorCodes.ResponseTooLarge] =
-                UiStrings.GenerationResponseTooLarge,
+                GenerationUiLocalizationKeys.Errors.ResponseTooLarge,
             [GenerationProtocolErrorCodes.TransportInterrupted] =
-                UiStrings.GenerationTransportInterrupted,
+                GenerationUiLocalizationKeys.Errors.TransportInterrupted,
             [GenerationClientFailureCodes.ApiUnavailable] =
-                UiStrings.GenerationApiUnavailable,
+                GenerationUiLocalizationKeys.Errors.ApiUnavailable,
             [GenerationClientFailureCodes.Unknown] =
-                UiStrings.GenerationFailed
+                GenerationUiLocalizationKeys.Errors.Failed
         };
 
-    public static string GetUserMessage(string? failureCode)
+    public static string GetLocalizationKey(string? failureCode)
     {
-        string normalizedFailureCode = GenerationFailureCodeResolver.Normalize(failureCode);
+        string normalizedFailureCode =
+            GenerationFailureCodeResolver.Normalize(failureCode);
 
-        return MessagesByErrorCode.TryGetValue(normalizedFailureCode, out string? message)
-            ? message
-            : UiStrings.GenerationFailed;
+        return MessagesByErrorCode.TryGetValue(
+            normalizedFailureCode,
+            out string? localizationKey)
+            ? localizationKey
+            : GenerationUiLocalizationKeys.Errors.Failed;
     }
 
-    public static string GetUserMessage(Exception exception)
+    public static string GetLocalizationKey(Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        return GetUserMessage(
+        return GetLocalizationKey(
             GenerationFailureCodeResolver.GetFailureCode(exception));
     }
 }

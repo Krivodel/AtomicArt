@@ -29,6 +29,8 @@ public sealed class GenerationModelCatalogContractsSerializationTests
         json.Should().Contain("\"default\":1");
         json.Should().Contain("\"thinking\"");
         json.Should().Contain("\"value\":\"high\"");
+        json.Should().Contain(
+            $"\"localizationKey\":\"{GenerationLocalizationKeys.ThinkingHigh}\"");
         json.Should().Contain("\"pricing\"");
         json.Should().Contain("\"cachedInputTokenPriceMultiplier\":0.1");
         json.Should().Contain("\"outputImageTokensByResolution\"");
@@ -50,7 +52,11 @@ public sealed class GenerationModelCatalogContractsSerializationTests
                     1000,
                     500,
                     100,
-                    [GenerationAspectRatios.Auto],
+                    [
+                        new GenerationModelOptionMetadataDto(
+                            GenerationAspectRatios.Auto,
+                            GenerationLocalizationKeys.OptionsAuto)
+                    ],
                     ["1k"],
                     [1],
                     new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),
@@ -73,8 +79,8 @@ public sealed class GenerationModelCatalogContractsSerializationTests
                         }),
                     new GenerationModelThinkingMetadataDto(
                         [
-                            new("minimal", "Минимальный"),
-                            new("high", "Максимальный")
+                            new("minimal", GenerationLocalizationKeys.ThinkingLow),
+                            new("high", GenerationLocalizationKeys.ThinkingHigh)
                         ],
                         "minimal"))
         ]);

@@ -2,6 +2,6 @@ namespace AtomicArt.Desktop.Services;
 
 public interface IDisplaySettingDefinition : ISettingsDefinition
 {
-    string DisplayName { get; }
+    string DisplayNameKey { get; }
     SettingsSection Section { get; }
 }

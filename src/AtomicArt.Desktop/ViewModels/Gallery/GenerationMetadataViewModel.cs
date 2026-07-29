@@ -8,6 +8,7 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Localization;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -16,24 +17,28 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     public GenerationItemViewModel Item { get; }
     public string CreatedDate => Item.CreatedAtUtc
         .ToLocalTime()
-        .ToString("d MMM yyyy 'г.'", RussianCulture);
+        .ToString("d", CultureInfo.CurrentCulture);
     public string CreatedTime => Item.CreatedAtUtc
         .ToLocalTime()
-        .ToString("HH:mm", RussianCulture);
+        .ToString("t", CultureInfo.CurrentCulture);
     public string Prompt => Item.Prompt;
     public string ModelDisplayName => Item.ModelDisplayName;
     public string Resolution => Item.Resolution;
-    public string AspectRatio => Item.AspectRatio;
-    public string AttachedImagesCount => Item.AttachedImagesCount.ToString(CultureInfo.InvariantCulture);
+    public string AspectRatio => GenerationAspectRatios.IsAuto(Item.AspectRatio)
+        ? _textProvider.Get(GenerationLocalizationKeys.OptionsAuto)
+        : Item.AspectRatio;
+    public string AttachedImagesCount =>
+        Item.AttachedImagesCount.ToString(CultureInfo.CurrentCulture);
     public string PriceCurrency => Item.Price is GenerationPriceDto price
         ? _priceFormatter.FormatCurrency(price)
         : string.Empty;
     public string PriceAmount => Item.Price is GenerationPriceDto price
         ? _priceFormatter.FormatAmount(price)
-        : UiStrings.MetadataUnavailable;
+        : _textProvider.Get(GalleryLocalizationKeys.Metadata.Unavailable);
     public string GenerationDuration => _durationFormatter.Format(Item.GenerationDuration)
-        ?? UiStrings.MetadataUnavailable;
-    public string ImagePath => Item.ImagePath ?? UiStrings.MetadataNoFilePath;
+        ?? _textProvider.Get(GalleryLocalizationKeys.Metadata.Unavailable);
+    public string ImagePath => Item.ImagePath
+        ?? _textProvider.Get(GalleryLocalizationKeys.Metadata.NoFilePath);
     public string Status => Item.Status;
     public bool IsGenerated => Item.IsGenerated;
     public bool IsGenerating => Item.IsGenerating;
@@ -45,12 +50,11 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     public IAsyncRelayCommand CopyPromptCommand { get; }
     public IAsyncRelayCommand CopyImagePathCommand { get; }
 
-    private static readonly CultureInfo RussianCulture = CultureInfo.GetCultureInfo("ru-RU");
-
     private readonly ITextClipboardService _textClipboardService;
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly GenerationPriceFormatter _priceFormatter;
     private readonly GenerationDurationFormatter _durationFormatter;
+    private readonly ILocalizationTextProvider _textProvider;
 
     private GenerationMetadataViewModel(
         GenerationItemViewModel item,
@@ -61,7 +65,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         ITextClipboardService textClipboardService,
         IViewModelErrorHandler errorHandler,
         GenerationPriceFormatter priceFormatter,
-        GenerationDurationFormatter durationFormatter)
+        GenerationDurationFormatter durationFormatter,
+        ILocalizationTextProvider textProvider)
     {
         Item = item;
         CloseCommand = closeCommand;
@@ -72,6 +77,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         _errorHandler = errorHandler;
         _priceFormatter = priceFormatter;
         _durationFormatter = durationFormatter;
+        _textProvider = textProvider;
         CopyPromptCommand = new AsyncRelayCommand(CopyPromptAsync);
         CopyImagePathCommand = new AsyncRelayCommand(CopyImagePathAsync, CanCopyImagePath);
         Item.PropertyChanged += OnItemPropertyChanged;
@@ -86,7 +92,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         ITextClipboardService textClipboardService,
         IViewModelErrorHandler errorHandler,
         GenerationPriceFormatter priceFormatter,
-        GenerationDurationFormatter durationFormatter)
+        GenerationDurationFormatter durationFormatter,
+        ILocalizationTextProvider textProvider)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(closeCommand);
@@ -97,6 +104,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         ArgumentNullException.ThrowIfNull(errorHandler);
         ArgumentNullException.ThrowIfNull(priceFormatter);
         ArgumentNullException.ThrowIfNull(durationFormatter);
+        ArgumentNullException.ThrowIfNull(textProvider);
 
         return new GenerationMetadataViewModel(
             item,
@@ -107,7 +115,20 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
             textClipboardService,
             errorHandler,
             priceFormatter,
-            durationFormatter);
+            durationFormatter,
+            textProvider);
+    }
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(CreatedDate));
+        OnPropertyChanged(nameof(CreatedTime));
+        OnPropertyChanged(nameof(AttachedImagesCount));
+        OnPropertyChanged(nameof(AspectRatio));
+        OnPropertyChanged(nameof(PriceAmount));
+        OnPropertyChanged(nameof(GenerationDuration));
+        OnPropertyChanged(nameof(ImagePath));
+        OnPropertyChanged(nameof(Status));
     }
 
     public void Dispose()

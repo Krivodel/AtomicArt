@@ -140,8 +140,8 @@ static ProblemDetails CreateUnhandledProblemDetails()
     return new ProblemDetails
     {
         Status = StatusCodes.Status500InternalServerError,
-        Title = "Внутренняя ошибка сервера.",
-        Detail = "Не удалось обработать запрос."
+        Title = "Internal server error.",
+        Detail = "The request could not be processed."
     };
 }
 

@@ -1,4 +1,4 @@
-using AtomicArt.Desktop.Models;
+using AtomicArt.Desktop.Resources;
 
 namespace AtomicArt.Desktop.Services.Settings;
 
@@ -9,20 +9,20 @@ public static class GpuResourceCacheSettingOptions
 
     private const string MegabyteSuffix = "mb";
 
-    public static IReadOnlyList<GpuResourceCacheOption> Options { get; } =
+    public static IReadOnlyList<GpuResourceCacheOptionDefinition> Options { get; } =
     [
-        new("Авто", AutoValue, null),
-        new("64мб", FormatMegabytes(64), 64),
-        new("128мб", FormatMegabytes(128), 128),
-        new("256мб", FormatMegabytes(256), 256),
-        new("512мб", FormatMegabytes(512), 512)
+        new(CommonLocalizationKeys.Auto, AutoValue, null),
+        new(SettingsLocalizationKeys.GpuCache.MegabytesFormat, FormatMegabytes(64), 64),
+        new(SettingsLocalizationKeys.GpuCache.MegabytesFormat, FormatMegabytes(128), 128),
+        new(SettingsLocalizationKeys.GpuCache.MegabytesFormat, FormatMegabytes(256), 256),
+        new(SettingsLocalizationKeys.GpuCache.MegabytesFormat, FormatMegabytes(512), 512)
     ];
 
-    public static GpuResourceCacheOption DefaultOption => Options[0];
+    public static GpuResourceCacheOptionDefinition DefaultOption => Options[0];
 
     public static int ResolveMegabytes(string? value)
     {
-        GpuResourceCacheOption? option = FindByValueOrDefaultOrNull(value);
+        GpuResourceCacheOptionDefinition? option = FindByValueOrDefaultOrNull(value);
 
         if (option is not null)
         {
@@ -37,16 +37,17 @@ public static class GpuResourceCacheSettingOptions
         return ResolveMegabytes(value) * 1024L * 1024L;
     }
 
-    public static GpuResourceCacheOption FindByValueOrDefault(string? value)
+    public static GpuResourceCacheOptionDefinition FindByValueOrDefault(string? value)
     {
-        GpuResourceCacheOption? option = FindByValueOrDefaultOrNull(value);
+        GpuResourceCacheOptionDefinition? option = FindByValueOrDefaultOrNull(value);
 
         return option ?? DefaultOption;
     }
 
-    private static GpuResourceCacheOption? FindByValueOrDefaultOrNull(string? value)
+    private static GpuResourceCacheOptionDefinition? FindByValueOrDefaultOrNull(
+        string? value)
     {
-        foreach (GpuResourceCacheOption option in Options)
+        foreach (GpuResourceCacheOptionDefinition option in Options)
         {
             if (string.Equals(option.Value, value, StringComparison.Ordinal))
             {

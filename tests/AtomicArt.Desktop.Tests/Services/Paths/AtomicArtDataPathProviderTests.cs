@@ -17,6 +17,9 @@ public sealed class AtomicArtDataPathProviderTests
 
         provider.RootDirectory.Should().Be(Path.GetFullPath(rootDirectory));
         provider.ArtDirectory.Should().Be(Path.Combine(provider.RootDirectory, "Art"));
+        provider.LocalizationsDirectory.Should().Be(Path.Combine(
+            provider.RootDirectory,
+            "Localizations"));
         provider.SecretsDirectory.Should().Be(Path.Combine(provider.RootDirectory, "Secrets"));
         provider.ThumbnailsDirectory.Should().Be(Path.Combine(provider.RootDirectory, "Thumbnails"));
         provider.StateDirectory.Should().Be(Path.Combine(provider.RootDirectory, "State"));
@@ -38,6 +41,9 @@ public sealed class AtomicArtDataPathProviderTests
 
         provider.RootDirectory.Should().Be(Path.GetFullPath(nextRootDirectory));
         provider.ArtDirectory.Should().Be(Path.Combine(provider.RootDirectory, "Art"));
+        provider.LocalizationsDirectory.Should().Be(Path.Combine(
+            provider.RootDirectory,
+            "Localizations"));
         provider.StateDirectory.Should().Be(Path.Combine(provider.RootDirectory, "State"));
     }
 

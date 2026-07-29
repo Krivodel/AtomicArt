@@ -1,3 +1,4 @@
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
 
 namespace AtomicArt.Tests.Common.Generation;
@@ -57,7 +58,7 @@ public static class TestGenerationTestOptions
     {
         return new TestGenerationModelMetadata
         {
-            AspectRatios = ["Авто", "1:1", "16:9"],
+            AspectRatios = [GenerationAspectRatios.Auto, "1:1", "16:9"],
             DisplayName = DisplayName,
             Id = ModelId,
             ProviderModelId = ProviderModelId,

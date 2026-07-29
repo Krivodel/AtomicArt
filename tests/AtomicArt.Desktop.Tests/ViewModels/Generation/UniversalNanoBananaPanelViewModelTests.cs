@@ -1,5 +1,6 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
+using CommunityToolkit.Mvvm.Messaging;
 using FluentAssertions;
 using Xunit;
 
@@ -73,7 +74,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         string resolution = model.Resolutions.Last();
         GenerationPanelPreset preset = new(
             model.Id,
-            "Промпт из галереи",
+            "Prompt from the gallery",
             aspectRatio,
             resolution);
 
@@ -91,7 +92,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
         GenerationPanelPreset preset = new(
             "missing-model",
-            "Промпт из галереи",
+            "Prompt from the gallery",
             GenerationAspectRatios.Auto,
             "1K");
 
@@ -160,7 +161,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         await viewModel.GenerateCommand.ExecuteAsync(null);
 
         lifecycleEventHub.PublishedEvents.Should().BeEmpty();
-        viewModel.ErrorMessage.Should().Be(UiStrings.GenerationFailed);
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.Failed));
     }
 
     [Fact]
@@ -368,7 +369,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         await viewModel.GenerateCommand.ExecuteAsync(null);
 
         viewModel.IsLoading.Should().BeFalse();
-        viewModel.ErrorMessage.Should().Be(UiStrings.GoogleApiKeyMissing);
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.GoogleApiKeyMissing));
         lifecycleEventHub.PublishedEvents.Should().BeEmpty();
     }
 
@@ -418,7 +419,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         await AttachValidImagesAsync(viewModel, count);
 
         viewModel.AttachedImages.Should().HaveCount(selectedModel.MaxAttachedImages);
-        viewModel.ErrorMessage.Should().Be(UiStrings.ImageAttachmentFailed);
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Attachments.Failed));
     }
 
     [Fact]
@@ -436,7 +437,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         await viewModel.AttachImagesCommand.ExecuteAsync(images);
 
         viewModel.AttachedImages.Should().HaveCount(4);
-        viewModel.ErrorMessage.Should().Be(UiStrings.ImageAttachmentFailed);
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Attachments.Failed));
     }
 
     [Fact]
@@ -588,7 +589,8 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
         ImageModelOption selectedModel = GetSelectedModel(viewModel);
         selectedModel.Id.Should().Be(ApiModelMetadataTestCatalog.NanoBanana2ModelId);
-        selectedModel.AspectRatios.Should().Equal(metadata.AspectRatios);
+        selectedModel.AspectRatios.Should().Equal(
+            metadata.AspectRatios.Select(option => option.Value));
         selectedModel.Resolutions.Should().Equal(metadata.Resolutions);
         selectedModel.GenerationCounts.Should().Equal(metadata.GenerationCounts);
         selectedModel.Temperature.Should().Be(metadata.Temperature);
@@ -598,7 +600,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         selectedModel.MaxTotalAttachedImageBytes.Should().Be(metadata.Attachments.MaxTotalBytes);
         selectedModel.SupportedAttachmentContentTypes.Should().Equal(metadata.Attachments.SupportedContentTypes);
         selectedModel.PanelId.Should().Be(metadata.PanelId);
-        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.First());
+        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.First().Value);
         viewModel.SelectedAspectRatio.Should().Be(GenerationAspectRatios.Auto);
         viewModel.SelectedResolution.Should().Be(metadata.Resolutions.First());
         viewModel.MinimumTemperature.Should().Be(metadata.Temperature.Minimum);
@@ -607,7 +609,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         viewModel.TemperatureStep.Should().Be(metadata.Temperature.Step);
         viewModel.Temperature.Should().Be(metadata.Temperature.Default);
         viewModel.SupportsThinkingLevel.Should().BeTrue();
-        viewModel.ThinkingLevels.Select(level => level.DisplayName).Should().Equal("Минимальный", "Максимальный");
+        viewModel.ThinkingLevels.Select(level => level.LocalizationKey).Should().Equal(
+            GenerationLocalizationKeys.ThinkingLow,
+            GenerationLocalizationKeys.ThinkingHigh);
         viewModel.SelectedThinkingLevel?.Value.Should().Be(metadata.Thinking?.Default);
         viewModel.GenerationCount.Should().Be(metadata.GenerationCounts.First());
         viewModel.ErrorMessage.Should().BeNull();
@@ -629,10 +633,11 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         viewModel.SupportsModel(ApiModelMetadataTestCatalog.NanoBananaProModelId).Should().BeTrue();
         metadata.PanelId.Should().Be(ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().PanelId);
         viewModel.SelectedModel.Id.Should().Be(ApiModelMetadataTestCatalog.NanoBananaProModelId);
-        viewModel.AspectRatios.Should().Equal(metadata.AspectRatios);
+        viewModel.AspectRatios.Should().Equal(
+            metadata.AspectRatios.Select(option => option.Value));
         viewModel.Resolutions.Should().Equal(metadata.Resolutions);
         viewModel.GenerationCounts.Should().Equal(metadata.GenerationCounts);
-        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.First());
+        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.First().Value);
         viewModel.SelectedResolution.Should().Be(metadata.Resolutions.First());
         viewModel.MaxAttachedImageBytes.Should().Be((int)metadata.Attachments.MaxSingleFileBytes);
         viewModel.SupportsThinkingLevel.Should().BeFalse();
@@ -646,7 +651,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
         RecordingGenerationPanelStateService stateService = CreateStateService(
             metadata,
-            metadata.AspectRatios.Last(),
+            metadata.AspectRatios.Last().Value,
             metadata.Resolutions.Last(),
             metadata.GenerationCounts.Last(),
             "restored prompt",
@@ -659,7 +664,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
 
         viewModel.PanelId.Should().Be(GenerationPanelIds.NanoBanana);
         viewModel.SelectedModel?.Id.Should().Be(metadata.Id);
-        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.Last());
+        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.Last().Value);
         viewModel.SelectedResolution.Should().Be(metadata.Resolutions.Last());
         viewModel.Temperature.Should().Be(1.7d);
         viewModel.GenerationCount.Should().Be(metadata.GenerationCounts.Last());
@@ -672,7 +677,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
         RecordingGenerationPanelStateService stateService = CreateStateService(
             metadata,
-            metadata.AspectRatios.Last(),
+            metadata.AspectRatios.Last().Value,
             metadata.Resolutions.Last(),
             metadata.GenerationCounts.Last(),
             "constructor restored prompt");
@@ -684,7 +689,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         stateService.LoadCallCount.Should().Be(1);
         viewModel.LoadModelCatalogCommand.CanExecute(null).Should().BeFalse();
         viewModel.SelectedModel?.Id.Should().Be(metadata.Id);
-        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.Last());
+        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.Last().Value);
         viewModel.SelectedResolution.Should().Be(metadata.Resolutions.Last());
         viewModel.GenerationCount.Should().Be(metadata.GenerationCounts.Last());
     }
@@ -695,7 +700,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata();
         RecordingGenerationPanelStateService stateService = CreateStateService(
             metadata,
-            metadata.AspectRatios.Last(),
+            metadata.AspectRatios.Last().Value,
             metadata.Resolutions.Last(),
             metadata.GenerationCounts.Last(),
             "restored prompt");
@@ -705,7 +710,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         await viewModel.RestorePanelStateCommand.ExecuteAsync(null);
 
         viewModel.SelectedModel?.Id.Should().Be(metadata.Id);
-        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.Last());
+        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.Last().Value);
         viewModel.SelectedResolution.Should().Be(metadata.Resolutions.Last());
         viewModel.GenerationCount.Should().Be(metadata.GenerationCounts.Last());
         viewModel.Prompt.Should().Be("restored prompt");
@@ -733,7 +738,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         await viewModel.RestorePanelStateCommand.ExecuteAsync(null);
 
         viewModel.SelectedModel?.Id.Should().Be(metadata.Id);
-        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.First());
+        viewModel.SelectedAspectRatio.Should().Be(metadata.AspectRatios.First().Value);
         viewModel.SelectedResolution.Should().Be(metadata.Resolutions.First());
         viewModel.GenerationCount.Should().Be(metadata.GenerationCounts.First());
         viewModel.Prompt.Should().Be("restored prompt");
@@ -753,7 +758,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         await viewModel.RestorePanelStateCommand.ExecuteAsync(null);
 
         errorHandler.LogCallCount.Should().Be(1);
-        viewModel.ErrorMessage.Should().Be(UiStrings.GenerationFailed);
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.Failed));
         viewModel.ErrorMessage.Should().NotContain(exceptionMessage);
     }
 
@@ -841,7 +846,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
 
         viewModel.HasLoadedCatalog.Should().BeFalse();
         viewModel.GenerateCommand.CanExecute(null).Should().BeFalse();
-        viewModel.ErrorMessage.Should().Be(UiStrings.ModelCatalogLoadFailed);
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.ModelCatalogLoadFailed));
         errorHandler.LogCallCount.Should().Be(1);
     }
 
@@ -900,7 +905,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         SetApiBaseAddress(endpointService, "https://unavailable.atomicart.test/");
         await AsyncTestWaiter.WaitForConditionAsync(
             () => !viewModel.IsCatalogLoading
-                && viewModel.ErrorMessage == UiStrings.ModelCatalogLoadFailed,
+                && viewModel.ErrorMessage == TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.ModelCatalogLoadFailed),
             CancellationToken.None);
 
         endpointService.BaseAddress.ToString().Should().Be(
@@ -1574,8 +1579,14 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             imageViewerService ?? new RecordingImageViewerService(),
             new RecordingPromptTextSizeController(),
             new NanoBanana2QuoteViewModel(
-                new GenerationPricePreviewEstimator()),
+                new GenerationPricePreviewEstimator(),
+                new NanoBanana2PanelTextFormatter(
+                    TestLocalizationTextProvider.Default)),
+            new WeakReferenceMessenger(),
             viewModelErrorHandler,
+            TestLocalizationTextProvider.Default,
+            new NanoBanana2PanelTextFormatter(
+                TestLocalizationTextProvider.Default),
             TestApiConfiguration.CreateStateWritePolicy());
 
         return viewModel;
@@ -1721,7 +1732,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
                     1000,
                     500,
                     100,
-                    [GenerationAspectRatios.Auto],
+                    [new GenerationModelOptionMetadataDto(
+                        GenerationAspectRatios.Auto,
+                        GenerationLocalizationKeys.OptionsAuto)],
                     ["1k"],
                     [1],
                     new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),
@@ -1779,7 +1792,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             1000,
             500,
             1000,
-            aspectRatios,
+            aspectRatios
+                .Select(aspectRatio => new GenerationModelOptionMetadataDto(aspectRatio))
+                .ToList(),
             resolutions,
             generationCounts,
             new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),
@@ -1881,7 +1896,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         await viewModel.AttachImagesCommand.ExecuteAsync(images);
 
         viewModel.AttachedImages.Should().BeEmpty();
-        viewModel.ErrorMessage.Should().Be(UiStrings.ImageAttachmentFailed);
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Attachments.Failed));
     }
 
     private sealed class SelectionValueResetRecorder

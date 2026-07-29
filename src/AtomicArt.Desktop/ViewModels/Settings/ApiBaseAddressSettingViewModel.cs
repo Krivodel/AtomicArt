@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.ViewModels;
 
@@ -12,7 +13,7 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewModel, IDisposable
 {
-    public string Placeholder { get; }
+    public string Placeholder => TextProvider.Get(_definition.PlaceholderKey);
 
     protected override IRelayCommand OperationCommand => SaveCommand;
 
@@ -22,6 +23,7 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
     private readonly ISettingsStateService _settingsStateService;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
     private string _committedValue;
+    private bool _hasValidationErrorMessage;
     private bool _isDisposed;
 
     [ObservableProperty]
@@ -37,8 +39,9 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         IApiEndpointService apiEndpointService,
         IUiThreadDispatcher uiThreadDispatcher,
         ISettingsStateService settingsStateService,
-        IViewModelErrorHandler errorHandler)
-        : base(definition, errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
+        : base(definition, errorHandler, textProvider)
     {
         ArgumentNullException.ThrowIfNull(apiEndpointService);
         ArgumentNullException.ThrowIfNull(uiThreadDispatcher);
@@ -50,7 +53,6 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         _settingsStateService = settingsStateService;
         _value = apiEndpointService.BaseAddress.ToString();
         _committedValue = _value;
-        Placeholder = definition.Placeholder;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
     }
 
@@ -58,9 +60,32 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        return ApiBaseAddress.TryCreate(value, out _)
-            ? ValidationResult.Success
-            : new ValidationResult(UiStrings.SettingsApiBaseAddressInvalid);
+        if (ApiBaseAddress.TryCreate(value, out _))
+        {
+            return ValidationResult.Success;
+        }
+
+        if (context.ObjectInstance is not ApiBaseAddressSettingViewModel viewModel)
+        {
+            throw new InvalidOperationException(
+                "API base address validation requires its owning view model.");
+        }
+
+        return new ValidationResult(viewModel.TextProvider.Get(
+            SettingsLocalizationKeys.ApiBaseAddress.Invalid));
+    }
+
+    public override void RefreshLocalization()
+    {
+        base.RefreshLocalization();
+        OnPropertyChanged(nameof(Placeholder));
+        ValidateAllProperties();
+
+        if (_hasValidationErrorMessage)
+        {
+            ErrorMessage = TextProvider.Get(
+                SettingsLocalizationKeys.ApiBaseAddress.Invalid);
+        }
     }
 
     public void Dispose()
@@ -85,7 +110,9 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
             || !ApiBaseAddress.TryCreate(Value, out ApiBaseAddress? baseAddress)
             || baseAddress is null)
         {
-            ErrorMessage = UiStrings.SettingsApiBaseAddressInvalid;
+            _hasValidationErrorMessage = true;
+            ErrorMessage = TextProvider.Get(
+                SettingsLocalizationKeys.ApiBaseAddress.Invalid);
             return;
         }
 
@@ -128,6 +155,7 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
 
     partial void OnValueChanged(string value)
     {
+        _hasValidationErrorMessage = false;
         ErrorMessage = null;
     }
 

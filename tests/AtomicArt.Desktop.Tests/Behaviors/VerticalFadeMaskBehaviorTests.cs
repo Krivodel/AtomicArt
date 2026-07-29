@@ -96,7 +96,7 @@ public sealed class VerticalFadeMaskBehaviorTests : AnimatedGalleryControlTestBa
                 LineHeight = 24d,
                 Text = string.Join(
                     Environment.NewLine,
-                    Enumerable.Range(1, 20).Select(lineNumber => $"Строка {lineNumber}"))
+                    Enumerable.Range(1, 20).Select(lineNumber => $"Line {lineNumber}"))
             };
             Window window = Show(textBox, 200d, 80d);
 

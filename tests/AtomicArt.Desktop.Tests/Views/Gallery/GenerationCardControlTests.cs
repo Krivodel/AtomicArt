@@ -16,7 +16,7 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 public sealed class GenerationCardControlTests
 {
     private const string Prompt = "Prompt";
-    private const string AspectRatio = "Авто";
+    private const string AspectRatio = GenerationAspectRatios.Auto;
 
     private static readonly Guid ItemId = Guid.Parse("99999999-9999-9999-9999-999999999999");
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 8, 12, 0, 0, DateTimeKind.Utc);
@@ -184,7 +184,8 @@ public sealed class GenerationCardControlTests
             item,
             0,
             imagePath,
-            GenerationItemStatusDescriptorRegistryTestFactory.Create())
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default)
         {
             ThumbnailPath = thumbnailPath
         };

@@ -1,4 +1,5 @@
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
@@ -10,12 +11,14 @@ public sealed class DataRootSettingViewModelFactory :
     private readonly IAtomicArtDataRootMigrationService _migrationService;
     private readonly IAtomicArtDataPathProvider _pathProvider;
     private readonly IViewModelErrorHandler _errorHandler;
+    private readonly ILocalizationTextProvider _textProvider;
 
     public DataRootSettingViewModelFactory(
         IFolderPickerService folderPickerService,
         IAtomicArtDataRootMigrationService migrationService,
         IAtomicArtDataPathProvider pathProvider,
-        IViewModelErrorHandler errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
         : base("Data root setting definition expected.")
     {
         _folderPickerService = folderPickerService
@@ -24,6 +27,7 @@ public sealed class DataRootSettingViewModelFactory :
             ?? throw new ArgumentNullException(nameof(migrationService));
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
+        _textProvider = textProvider ?? throw new ArgumentNullException(nameof(textProvider));
     }
 
     protected override ISettingItemViewModel CreateItemViewModel(
@@ -34,6 +38,7 @@ public sealed class DataRootSettingViewModelFactory :
             _folderPickerService,
             _migrationService,
             _pathProvider,
-            _errorHandler);
+            _errorHandler,
+            _textProvider);
     }
 }

@@ -14,6 +14,7 @@ public sealed class PicaViewerSessionDependencies
     public IUiThreadDispatcher UiThreadDispatcher { get; }
     public IWindowStateService WindowStateService { get; }
     public IAnimatedGalleryOperations GalleryOperations { get; }
+    public AtomicArtPicaActions Actions { get; }
 
     internal ILogger<PicaViewerSession> Logger { get; }
 
@@ -24,6 +25,7 @@ public sealed class PicaViewerSessionDependencies
         IUiThreadDispatcher uiThreadDispatcher,
         IWindowStateService windowStateService,
         IAnimatedGalleryOperations galleryOperations,
+        AtomicArtPicaActions actions,
         ILoggerFactory loggerFactory)
     {
         ClipboardImageWriter = clipboardImageWriter
@@ -37,6 +39,7 @@ public sealed class PicaViewerSessionDependencies
             ?? throw new ArgumentNullException(nameof(windowStateService));
         GalleryOperations = galleryOperations
             ?? throw new ArgumentNullException(nameof(galleryOperations));
+        Actions = actions ?? throw new ArgumentNullException(nameof(actions));
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         Logger = loggerFactory.CreateLogger<PicaViewerSession>();

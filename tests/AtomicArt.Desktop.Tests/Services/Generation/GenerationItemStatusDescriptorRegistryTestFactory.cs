@@ -29,7 +29,9 @@ internal static class GenerationItemStatusDescriptorRegistryTestFactory
 
     private static IGenerationItemStatusDescriptor CreateDescriptor(Type descriptorType)
     {
-        object descriptor = Activator.CreateInstance(descriptorType)
+        object descriptor = Activator.CreateInstance(
+            descriptorType,
+            TestLocalizationTextProvider.Default)
             ?? throw new InvalidOperationException(
                 $"Generation item status descriptor '{descriptorType.FullName}' could not be created.");
 

@@ -5,6 +5,7 @@ public interface IAtomicArtDataPathProvider
     string RootDirectory { get; }
     string ArtDirectory { get; }
     string LogsDirectory { get; }
+    string LocalizationsDirectory { get; }
     string SecretsDirectory { get; }
     string ThumbnailsDirectory { get; }
     string StateDirectory { get; }

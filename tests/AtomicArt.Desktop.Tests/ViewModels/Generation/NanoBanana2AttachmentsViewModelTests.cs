@@ -261,7 +261,10 @@ public sealed class NanoBanana2AttachmentsViewModelTests
             "panel",
             1024,
             1024,
-            new List<string> { "1:1" },
+            new List<GenerationModelOptionMetadataDto>
+            {
+                new GenerationModelOptionMetadataDto("1:1")
+            },
             new List<string> { "1K" },
             new List<int> { 1 },
             new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),

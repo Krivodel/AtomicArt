@@ -14,6 +14,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Generation;
 
@@ -610,6 +611,16 @@ public partial class NanoBanana2PanelView : UserControl
             && !GenerationAspectRatios.IsAuto(aspectRatio);
     }
 
+    internal static string? GetAspectRatioHintValue(object? option)
+    {
+        if (option is not GenerationOptionViewModel localizedOption)
+        {
+            return null;
+        }
+
+        return localizedOption.Value;
+    }
+
     private void SubscribeSelectionResetEvents(UniversalNanoBananaPanelViewModel viewModel)
     {
         if (ReferenceEquals(_selectionResetViewModel, viewModel))
@@ -796,7 +807,7 @@ public partial class NanoBanana2PanelView : UserControl
     private void OnAspectRatioDropDownOpened(object? sender, EventArgs e)
     {
         _isAspectRatioDropDownOpen = true;
-        ShowAspectRatioHint(AspectRatioComboBox.SelectedItem as string);
+        ShowAspectRatioHint(GetAspectRatioHintValue(AspectRatioComboBox.SelectedItem));
         Dispatcher.UIThread.Post(AttachAspectRatioScrollHandlers);
     }
 
@@ -847,7 +858,8 @@ public partial class NanoBanana2PanelView : UserControl
             return;
         }
 
-        if (sender is ComboBoxItem { DataContext: string aspectRatio })
+        if (sender is ComboBoxItem item
+            && GetAspectRatioHintValue(item.DataContext) is string aspectRatio)
         {
             RememberAspectRatioPointerPosition(e);
             ShowAspectRatioHint(aspectRatio);
@@ -1136,7 +1148,9 @@ public partial class NanoBanana2PanelView : UserControl
 
         foreach (ComboBoxItem item in _aspectRatioItems)
         {
-            if (!item.IsVisible || item.DataContext is not string aspectRatio)
+            string? aspectRatio = GetAspectRatioHintValue(item.DataContext);
+
+            if (!item.IsVisible || aspectRatio is null)
             {
                 continue;
             }

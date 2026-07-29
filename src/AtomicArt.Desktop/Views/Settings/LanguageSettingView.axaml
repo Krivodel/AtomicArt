@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
+             xmlns:localization="using:AtomicArt.Desktop.Services.Localization"
+             xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
+             x:Class="AtomicArt.Desktop.Views.Settings.LanguageSettingView"
+             x:DataType="settings:LanguageSettingViewModel">
+    <controls:SettingItemControl>
+        <controls:SettingItemControl.Editor>
+            <ComboBox IsEnabled="{Binding !IsLoading}"
+                      DropDownOpened="OnDropDownOpened"
+                      ItemsSource="{Binding Options}"
+                      SelectedItem="{Binding SelectedOption, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="localization:LocalizationOption">
+                        <TextBlock Text="{Binding Id}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </controls:SettingItemControl.Editor>
+    </controls:SettingItemControl>
+</UserControl>

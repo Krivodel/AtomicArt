@@ -62,7 +62,7 @@ public sealed class ImageModelOptionCatalogTests
         string? modelId = "test-model",
         string? displayName = "Test Model")
     {
-        string[] aspectRatios = ["авто"];
+        string[] aspectRatios = [GenerationAspectRatios.Auto];
 
         return GenerationModelCatalogJsonTestFactory.CreateCatalog(
             modelId,

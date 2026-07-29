@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using AtomicArt.Contracts.Generation;
@@ -5,6 +7,7 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
@@ -29,10 +32,11 @@ public sealed partial class GenerationItemViewModel :
     public bool ShowsGeneratedImage => HasDisplayImagePath && !IsFailed;
     public bool ShowsGenerationProgress => IsGenerating && !HasDisplayImagePath && !IsFailed;
     public bool ShowsEmptyPreview => !ShowsGeneratedImage && !ShowsGenerationProgress && !IsFailed;
-    public string DeleteOrCancelGlyph => IsGenerating ? UiStrings.CancelGlyph : UiStrings.DeleteGlyph;
+    public string DeleteOrCancelGlyph => IsGenerating ? UiGlyphs.Cancel : UiGlyphs.Delete;
     private IGenerationItemStatusDescriptor StatusDescriptor => _statusDescriptorRegistry.Get(StatusKind);
 
     private readonly IGenerationItemStatusDescriptorRegistry _statusDescriptorRegistry;
+    private readonly ILocalizationTextProvider _textProvider;
 
     [ObservableProperty]
     private Guid _id;
@@ -86,12 +90,15 @@ public sealed partial class GenerationItemViewModel :
         GenerationItemDto item,
         int attachedImagesCount,
         string? imagePath,
-        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry)
+        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry,
+        ILocalizationTextProvider textProvider)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(statusDescriptorRegistry);
+        ArgumentNullException.ThrowIfNull(textProvider);
 
         _statusDescriptorRegistry = statusDescriptorRegistry;
+        _textProvider = textProvider;
 
         ApplyItem(item);
         GalleryOrderTimestampUtc = item.CreatedAtUtc;
@@ -105,11 +112,14 @@ public sealed partial class GenerationItemViewModel :
         Guid correlationId,
         int generationOrdinal,
         DateTime galleryOrderTimestampUtc,
-        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry)
+        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry,
+        ILocalizationTextProvider textProvider)
     {
         ArgumentNullException.ThrowIfNull(statusDescriptorRegistry);
+        ArgumentNullException.ThrowIfNull(textProvider);
 
         _statusDescriptorRegistry = statusDescriptorRegistry;
+        _textProvider = textProvider;
         Id = Guid.NewGuid();
         ModelId = start.ModelId;
         ModelDisplayName = start.ModelDisplayName;
@@ -135,27 +145,32 @@ public sealed partial class GenerationItemViewModel :
         Guid correlationId,
         int generationOrdinal,
         DateTime galleryOrderTimestampUtc,
-        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry)
+        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry,
+        ILocalizationTextProvider textProvider)
     {
         ArgumentNullException.ThrowIfNull(start);
         ArgumentNullException.ThrowIfNull(statusDescriptorRegistry);
+        ArgumentNullException.ThrowIfNull(textProvider);
 
         return new GenerationItemViewModel(
             start,
             correlationId,
             generationOrdinal,
             galleryOrderTimestampUtc,
-            statusDescriptorRegistry);
+            statusDescriptorRegistry,
+            textProvider);
     }
 
     public static GenerationItemViewModel Restore(
         GalleryItemState state,
         string? imagePath,
         string? thumbnailPath,
-        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry)
+        IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry,
+        ILocalizationTextProvider textProvider)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(statusDescriptorRegistry);
+        ArgumentNullException.ThrowIfNull(textProvider);
 
         GalleryItemState normalizedState = GalleryItemStateMapper.NormalizeForViewModel(
             state,
@@ -166,7 +181,8 @@ public sealed partial class GenerationItemViewModel :
             item,
             normalizedState.AttachedImagesCount,
             normalizedState.ImagePath,
-            statusDescriptorRegistry)
+            statusDescriptorRegistry,
+            textProvider)
         {
             CorrelationId = normalizedState.CorrelationId,
             GenerationOrdinal = normalizedState.GenerationOrdinal,
@@ -224,7 +240,9 @@ public sealed partial class GenerationItemViewModel :
 
         if (totalSeconds < 60)
         {
-            ElapsedText = $"{totalSeconds}с";
+            ElapsedText = FormatElapsed(
+                totalSeconds,
+                CommonLocalizationKeys.TimeUnits.SecondShort);
             return;
         }
 
@@ -232,7 +250,9 @@ public sealed partial class GenerationItemViewModel :
 
         if (totalMinutes < 60)
         {
-            ElapsedText = $"{totalMinutes}м";
+            ElapsedText = FormatElapsed(
+                totalMinutes,
+                CommonLocalizationKeys.TimeUnits.MinuteShort);
             return;
         }
 
@@ -240,7 +260,9 @@ public sealed partial class GenerationItemViewModel :
 
         if (totalHours < 24)
         {
-            ElapsedText = $"{totalHours}ч";
+            ElapsedText = FormatElapsed(
+                totalHours,
+                CommonLocalizationKeys.TimeUnits.HourShort);
             return;
         }
 
@@ -254,18 +276,30 @@ public sealed partial class GenerationItemViewModel :
         if (fullMonths < 1)
         {
             int totalDays = Math.Max(1, (int)elapsed.TotalDays);
-            ElapsedText = $"{totalDays}д";
+            ElapsedText = FormatElapsed(
+                totalDays,
+                CommonLocalizationKeys.TimeUnits.DayShort);
             return;
         }
 
         if (fullMonths < 12)
         {
-            ElapsedText = $"{fullMonths}мес";
+            ElapsedText = FormatElapsed(
+                fullMonths,
+                CommonLocalizationKeys.TimeUnits.MonthShort);
             return;
         }
 
         int fullYears = fullMonths / 12;
-        ElapsedText = $"{fullYears}г";
+        ElapsedText = FormatElapsed(
+            fullYears,
+            CommonLocalizationKeys.TimeUnits.YearShort);
+    }
+
+    public void RefreshLocalization(DateTime utcNow)
+    {
+        RefreshElapsedText(utcNow);
+        RefreshComputedState();
     }
 
     public void RebaseDataRootPaths(
@@ -289,6 +323,13 @@ public sealed partial class GenerationItemViewModel :
     internal void SetGalleryOrderTimestamp(DateTime galleryOrderTimestampUtc)
     {
         GalleryOrderTimestampUtc = galleryOrderTimestampUtc;
+    }
+
+    private string FormatElapsed(int value, string unitKey)
+    {
+        return string.Concat(
+            value.ToString(CultureInfo.CurrentCulture),
+            _textProvider.Get(unitKey));
     }
 
     private void ApplyItem(GenerationItemDto item)

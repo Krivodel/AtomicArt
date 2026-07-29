@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "culture": "en-US",
+  "strings": {
+    "Common": {
+      "Error": "Error",
+      "Copy": "Copy",
+      "UnknownError": "An unexpected error occurred.",
+      "Auto": "Auto",
+      "TimeUnits": {
+        "SecondShort": "s",
+        "MinuteShort": "m",
+        "HourShort": "h",
+        "DayShort": "d",
+        "MonthShort": "mo",
+        "YearShort": "y"
+      }
+    },
+    "Shell": {
+      "ShowWindow": "Show window",
+      "Exit": "Exit"
+    },
+    "Generation": {
+      "Prompt": {
+        "Placeholder": "Generate a new season of Rick and Morty…"
+      },
+      "Actions": {
+        "Generate": "Generate",
+        "GenerateWithPrice": "Generate ({0})",
+        "PickImagesTitle": "Select images"
+      },
+      "Attachments": {
+        "CounterFormat": "{0}/{1}",
+        "Failed": "Could not attach the image."
+      },
+      "Temperature": {
+        "ValueFormat": "{0:0.0}"
+      },
+      "Errors": {
+        "ApiUnavailable": "The server is unavailable.",
+        "Failed": "Could not generate the image.",
+        "AuthenticationFailed": "The provider rejected the API key. Check the key in settings.",
+        "AuthorizationFailed": "The API key does not have access to the selected model.",
+        "RateLimited": "The provider temporarily limited the number of requests. Try again later.",
+        "InvalidResponse": "The provider returned an invalid response.",
+        "TimedOut": "The provider did not finish the generation in time.",
+        "ProviderUnavailable": "The provider service is temporarily unavailable. Try again later.",
+        "RequestRejected": "The provider rejected the request. Check the prompt, parameters, and attachments.",
+        "ResourceNotFound": "The selected model is unavailable from the provider.",
+        "ProviderInternalError": "The provider encountered an internal error. Try again later.",
+        "ConcurrencyLimitReached": "The concurrent generation limit has been reached.",
+        "InvalidRequest": "The server could not process the generation request.",
+        "InvalidAttempt": "The server rejected the generation attempt number.",
+        "InvalidParameters": "The generation parameters did not pass validation.",
+        "ResponseTooLarge": "The generation result exceeded the allowed size.",
+        "TransportInterrupted": "The connection was interrupted while receiving the result.",
+        "ModelNotFound": "The selected model is unavailable.",
+        "UnsupportedResolution": "The selected model does not support this resolution.",
+        "UnsupportedAspectRatio": "The selected model does not support this aspect ratio.",
+        "ModelRequestValidation": "The generation request did not pass validation.",
+        "GoogleApiKeyMissing": "Enter a Google API key in settings.",
+        "ModelCatalogLoadFailed": "Could not load the model list."
+      },
+      "ImageDropLabel": "DROP",
+      "Status": {
+        "Generated": "Done",
+        "Generating": "Generating…"
+      },
+      "Options": {
+        "Auto": "Auto"
+      },
+      "Thinking": {
+        "Low": "Low",
+        "High": "High"
+      }
+    },
+    "Gallery": {
+      "Empty": "The gallery is empty",
+      "Metadata": {
+        "Title": "Properties",
+        "CreatedAt": "Date",
+        "Prompt": "PROMPT",
+        "Model": "Model",
+        "Resolution": "Resolution",
+        "AspectRatio": "Aspect ratio",
+        "Attachments": "Attachments",
+        "Price": "Price",
+        "GenerationDuration": "Generation time",
+        "ImagePath": "Path",
+        "Status": "Status",
+        "NoFilePath": "No file",
+        "Unavailable": "Unavailable",
+        "Repeat": "Repeat"
+      },
+      "Errors": {
+        "FileRevealFailed": "Could not show the file in its folder."
+      },
+      "Actions": {
+        "Attach": "Attach",
+        "ShowInGallery": "Show in gallery"
+      }
+    },
+    "Settings": {
+      "Title": "Settings",
+      "Sections": {
+        "Connection": "Connection",
+        "Appearance": "Interface",
+        "StorageAndPerformance": "Other"
+      },
+      "Language": {
+        "Label": "Language"
+      },
+      "ApiBaseAddress": {
+        "Label": "Server address",
+        "Placeholder": "http://localhost:5000/",
+        "Invalid": "Enter an absolute HTTP or HTTPS address."
+      },
+      "GoogleApiKey": {
+        "Label": "Google API key"
+      },
+      "Appearance": {
+        "ScaleLabel": "Scale",
+        "PromptTextSizeLabel": "Prompt text size"
+      },
+      "GpuCache": {
+        "Label": "GPU cache",
+        "RestartNotice": "The cache setting will apply after restart.",
+        "MegabytesFormat": "{0} MB"
+      },
+      "DataRoot": {
+        "Label": "Save folder",
+        "PickerTitle": "Select an empty folder for saves",
+        "Preparing": "Preparing…",
+        "Copying": "Copying…",
+        "Verifying": "Verifying…",
+        "Switching": "Switching folders…",
+        "Cleaning": "Cleaning the previous folder…",
+        "Completed": "Migration complete.",
+        "MigrationFailed": "Could not move the saved data. Check that the folder is empty and writable and that the disk has enough free space. The previous folder remains in use.",
+        "CleanupFailed": "The new folder is already in use, but the previous folder could not be fully cleaned. Cleanup will be retried the next time the application starts."
+      }
+    },
+    "Updates": {
+      "Title": "Update available",
+      "AvailableFormat": "Update {0} is ready to install.",
+      "Actions": {
+        "Install": "Update",
+        "WaitAndInstall": "Wait and update",
+        "Later": "Not now"
+      },
+      "States": {
+        "WaitingForGeneration": "The update will start after generation finishes.",
+        "Downloading": "Downloading the update…",
+        "Restarting": "The update has been downloaded. Installing…"
+      },
+      "Errors": {
+        "CheckFailed": "Could not check for updates.",
+        "InstallFailed": "Could not install the update."
+      }
+    }
+  }
+}

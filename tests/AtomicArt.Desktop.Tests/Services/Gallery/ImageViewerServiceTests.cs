@@ -33,6 +33,7 @@ public sealed class ImageViewerServiceTests
             uiThreadDispatcherMock.Object,
             windowStateServiceMock.Object,
             galleryOperationsMock.Object,
+            new AtomicArtPicaActions(TestLocalizationTextProvider.Default),
             NullLoggerFactory.Instance);
         PicaViewerSessionFactory sessionFactory = new(sessionDependencies);
         ImageViewerService service = new(

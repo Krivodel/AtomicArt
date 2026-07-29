@@ -1,8 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.ViewModels.Dialogs;
@@ -18,6 +21,7 @@ public sealed partial class MainWindowViewModel :
     IAppStateRestoreTarget,
     IAppStateFlushTarget,
     IDataRootMigrationTarget,
+    IRecipient<LocalizationChangedMessage>,
     IDisposable
 {
     public GalleryViewModel Gallery { get; }
@@ -34,7 +38,9 @@ public sealed partial class MainWindowViewModel :
     private readonly IUiScaleService _uiScaleService;
     private readonly IWindowStateService _windowStateService;
     private readonly IViewModelErrorHandler _errorHandler;
+    private readonly ILocalizationTextProvider _textProvider;
     private readonly SettingsViewModel _settings;
+    private string? _errorLocalizationKey;
     [ObservableProperty]
     private bool _isSettingsOpen;
     [ObservableProperty]
@@ -57,7 +63,9 @@ public sealed partial class MainWindowViewModel :
         IWindowStateService windowStateService,
         IAppStateBootstrapper appStateBootstrapper,
         ApplicationUpdateViewModel applicationUpdate,
-        IViewModelErrorHandler errorHandler)
+        IMessenger messenger,
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
     {
         ArgumentNullException.ThrowIfNull(gallery);
         ArgumentNullException.ThrowIfNull(errorDialog);
@@ -69,7 +77,9 @@ public sealed partial class MainWindowViewModel :
         ArgumentNullException.ThrowIfNull(windowStateService);
         ArgumentNullException.ThrowIfNull(appStateBootstrapper);
         ArgumentNullException.ThrowIfNull(applicationUpdate);
+        ArgumentNullException.ThrowIfNull(messenger);
         ArgumentNullException.ThrowIfNull(errorHandler);
+        ArgumentNullException.ThrowIfNull(textProvider);
 
         IReadOnlyList<IModelPanelViewModel> panels = modelPanels.ToList();
         Gallery = gallery;
@@ -95,8 +105,10 @@ public sealed partial class MainWindowViewModel :
         _trayService = trayService;
         _windowStateService = windowStateService;
         _errorHandler = errorHandler;
+        _textProvider = textProvider;
         ApplicationUpdate = applicationUpdate;
         SubscribeToEvents();
+        messenger.Register<LocalizationChangedMessage>(this);
     }
 
     public async Task RestoreGenerationPanelsAsync(CancellationToken ct)
@@ -130,6 +142,16 @@ public sealed partial class MainWindowViewModel :
             sourceRootDirectory,
             destinationRootDirectory,
             ct);
+    }
+
+    public void Receive(LocalizationChangedMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        if (_errorLocalizationKey is not null)
+        {
+            ErrorMessage = _textProvider.Get(_errorLocalizationKey);
+        }
     }
 
     public void Dispose()
@@ -184,13 +206,19 @@ public sealed partial class MainWindowViewModel :
             _errorHandler,
             nameof(RestoreAppStateAsync),
             value => IsLoading = value,
-            value => ErrorMessage = value);
+            value => ErrorMessage = value,
+            value => _errorLocalizationKey = value);
     }
 
     private void SubscribeToEvents()
     {
         _settings.CloseRequested += OnSettingsCloseRequested;
         _uiScaleService.ScaleChanged += OnUiScaleChanged;
+    }
+
+    private bool CanRestoreAppState()
+    {
+        return !IsLoading;
     }
 
     private void OnSettingsCloseRequested(object? sender, EventArgs e)
@@ -201,10 +229,5 @@ public sealed partial class MainWindowViewModel :
     private void OnUiScaleChanged(object? sender, EventArgs e)
     {
         UiScale = _uiScaleService.CurrentScale;
-    }
-
-    private bool CanRestoreAppState()
-    {
-        return !IsLoading;
     }
 }

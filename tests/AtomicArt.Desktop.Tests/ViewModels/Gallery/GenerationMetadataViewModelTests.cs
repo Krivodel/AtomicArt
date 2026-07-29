@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
 using Xunit;
@@ -30,8 +32,12 @@ public sealed class GenerationMetadataViewModelTests
         GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
 
         viewModel.PriceCurrency.Should().Be("$");
-        viewModel.PriceAmount.Should().Be("0.0678");
-        viewModel.GenerationDuration.Should().Be("30с");
+        viewModel.PriceAmount.Should().Be(
+            0.0678m.ToString("0.####", CultureInfo.CurrentCulture));
+        viewModel.GenerationDuration.Should().Be(
+            new GenerationDurationFormatter(
+                TestLocalizationTextProvider.Default).Format(
+                TimeSpan.FromSeconds(30)));
     }
 
     [Fact]
@@ -42,8 +48,8 @@ public sealed class GenerationMetadataViewModelTests
         GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
 
         viewModel.PriceCurrency.Should().BeEmpty();
-        viewModel.PriceAmount.Should().Be(UiStrings.MetadataUnavailable);
-        viewModel.GenerationDuration.Should().Be(UiStrings.MetadataUnavailable);
+        viewModel.PriceAmount.Should().Be(TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Metadata.Unavailable));
+        viewModel.GenerationDuration.Should().Be(TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Metadata.Unavailable));
     }
 
     [Fact]
@@ -85,8 +91,12 @@ public sealed class GenerationMetadataViewModelTests
         viewModel.IsGenerating.Should().BeFalse();
         viewModel.ImagePath.Should().Be("result.png");
         viewModel.PriceCurrency.Should().Be("$");
-        viewModel.PriceAmount.Should().Be("0.0678");
-        viewModel.GenerationDuration.Should().Be("30с");
+        viewModel.PriceAmount.Should().Be(
+            0.0678m.ToString("0.####", CultureInfo.CurrentCulture));
+        viewModel.GenerationDuration.Should().Be(
+            new GenerationDurationFormatter(
+                TestLocalizationTextProvider.Default).Format(
+                TimeSpan.FromSeconds(30)));
         viewModel.CopyImagePathCommand.CanExecute(null).Should().BeTrue();
     }
 
@@ -130,7 +140,8 @@ public sealed class GenerationMetadataViewModelTests
             item,
             0,
             item.ImagePath,
-            GenerationItemStatusDescriptorRegistryTestFactory.Create());
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
 
         return GenerationMetadataViewModel.FromItem(
             itemViewModel,
@@ -141,7 +152,8 @@ public sealed class GenerationMetadataViewModelTests
             textClipboardService ?? new RecordingTextClipboardService(),
             new TestViewModelErrorHandler(),
             new GenerationPriceFormatter(),
-            new GenerationDurationFormatter());
+            new GenerationDurationFormatter(TestLocalizationTextProvider.Default),
+            TestLocalizationTextProvider.Default);
     }
 
     private static GenerationItemDto CreateItem(

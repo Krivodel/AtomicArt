@@ -4,6 +4,7 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Localization;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -16,20 +17,24 @@ public sealed class GalleryItemsController
     private readonly ITrustedImageFileService _trustedImageFileService;
     private readonly IGenerationItemStatusDescriptorRegistry _statusDescriptorRegistry;
     private readonly GalleryOrderTimestampPolicy _timestampPolicy;
+    private readonly ILocalizationTextProvider _textProvider;
     private readonly ObservableCollection<GenerationItemViewModel> _items = [];
 
     public GalleryItemsController(
         ITrustedImageFileService trustedImageFileService,
         IGenerationItemStatusDescriptorRegistry statusDescriptorRegistry,
-        GalleryOrderTimestampPolicy timestampPolicy)
+        GalleryOrderTimestampPolicy timestampPolicy,
+        ILocalizationTextProvider textProvider)
     {
         ArgumentNullException.ThrowIfNull(trustedImageFileService);
         ArgumentNullException.ThrowIfNull(statusDescriptorRegistry);
         ArgumentNullException.ThrowIfNull(timestampPolicy);
+        ArgumentNullException.ThrowIfNull(textProvider);
 
         _trustedImageFileService = trustedImageFileService;
         _statusDescriptorRegistry = statusDescriptorRegistry;
         _timestampPolicy = timestampPolicy;
+        _textProvider = textProvider;
         Items = new ReadOnlyObservableCollection<GenerationItemViewModel>(_items);
     }
 
@@ -133,7 +138,8 @@ public sealed class GalleryItemsController
                 lifecycleEvent.CorrelationId,
                 index,
                 galleryOrderTimestamps[index],
-                _statusDescriptorRegistry);
+                _statusDescriptorRegistry,
+                _textProvider);
             placeholders.Add(placeholder);
         }
 
@@ -261,7 +267,8 @@ public sealed class GalleryItemsController
             item,
             attachedImagesCount,
             trustedImagePath,
-            _statusDescriptorRegistry);
+            _statusDescriptorRegistry,
+            _textProvider);
 
         return viewModel;
     }
@@ -279,7 +286,8 @@ public sealed class GalleryItemsController
             item,
             trustedImagePath,
             trustedThumbnailPath,
-            _statusDescriptorRegistry);
+            _statusDescriptorRegistry,
+            _textProvider);
     }
 
     private DateTime? GetCurrentNewestGalleryOrderTimestamp()

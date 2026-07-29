@@ -10,6 +10,6 @@ public sealed class DataRootSettingDefinition :
 
     public string Key => KeyValue;
     public int Order => 250;
-    public string DisplayName => UiStrings.SettingsDataRootLabel;
+    public string DisplayNameKey => SettingsLocalizationKeys.DataRoot.Label;
     public SettingsSection Section => SettingsSections.StorageAndPerformance;
 }

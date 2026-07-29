@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using FluentAssertions;
 using Xunit;
 
@@ -11,7 +13,7 @@ public sealed class GenerationPriceFormatterTests
     private readonly GenerationPriceFormatter _formatter = new();
 
     [Fact]
-    public void FormatAmount_WithPrice_ReturnsInvariantAmount()
+    public void FormatAmount_WithPrice_ReturnsCurrentCultureAmount()
     {
         GenerationPriceDto price = new(
             0.0678m,
@@ -20,7 +22,7 @@ public sealed class GenerationPriceFormatterTests
 
         string result = _formatter.FormatAmount(price);
 
-        result.Should().Be("0.0678");
+        result.Should().Be(0.0678m.ToString("0.####", CultureInfo.CurrentCulture));
     }
 
     [Fact]

@@ -346,7 +346,7 @@ public sealed class AttachedImagePreparationServiceTests
             "panel",
             1024,
             1024,
-            ["1:1"],
+            [new GenerationModelOptionMetadataDto("1:1")],
             ["1K"],
             [1],
             new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),

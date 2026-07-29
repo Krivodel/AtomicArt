@@ -19,9 +19,15 @@ public sealed class JsonModelMetadataStartupLoaderTests
         GenerationModelCatalogDto catalog = LoadRealCatalogWithExpectedModelCount();
 
         catalog.Models.Should().OnlyContain(model =>
-            model.AspectRatios.First() == GenerationAspectRatios.Auto);
+            model.AspectRatios.First().Value == GenerationAspectRatios.Auto);
         catalog.Models.Should().OnlyContain(model =>
-            model.AspectRatios.Contains(GenerationAspectRatios.Auto, StringComparer.Ordinal));
+            model.AspectRatios.Any(option => string.Equals(
+                option.Value,
+                GenerationAspectRatios.Auto,
+                StringComparison.Ordinal)));
+        catalog.Models.Should().OnlyContain(model =>
+            model.AspectRatios.First().LocalizationKey
+                == GenerationLocalizationKeys.OptionsAuto);
     }
 
     [Fact]
@@ -45,8 +51,8 @@ public sealed class JsonModelMetadataStartupLoaderTests
         GenerationModelMetadataDto nanoBananaPro = catalog.Models.Single(model => model.Id == "nano-banana-pro");
         GenerationModelThinkingMetadataDto expectedThinking = new(
             [
-                new("low", "Минимальный"),
-                new("high", "Максимальный")
+                new("low", GenerationLocalizationKeys.ThinkingLow),
+                new("high", GenerationLocalizationKeys.ThinkingHigh)
             ],
             "low");
 
@@ -69,7 +75,8 @@ public sealed class JsonModelMetadataStartupLoaderTests
             GenerationModelCatalogTestSnapshot snapshot =
                 GenerationModelCatalogJsonTestFactory.CreateSnapshot(metadata);
             snapshot.Should().Be(GenerationModelCatalogJsonTestFactory.ExpectedModelSnapshot);
-            metadata.AspectRatios.Should().Equal("Авто", "1:1");
+            metadata.AspectRatios.Select(option => option.Value)
+                .Should().Equal(GenerationAspectRatios.Auto, "1:1");
             metadata.Attachments.SupportedContentTypes.Should().Equal(GenerationImageContentTypes.Png);
         }
         finally

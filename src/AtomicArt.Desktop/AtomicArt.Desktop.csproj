@@ -39,6 +39,7 @@
     <PackageReference Include="Avalonia.Skia" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Lang.Avalonia" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
@@ -55,6 +56,7 @@
     <AssemblyAttribute Include="AtomicArt.Desktop.DesktopConfigurationFileAttribute">
       <_Parameter1>$(DesktopConfigurationFileName)</_Parameter1>
     </AssemblyAttribute>
+    <EmbeddedResource Include="Resources\Localizations\*.json" />
     <None Update="$(DesktopConfigurationFileName)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

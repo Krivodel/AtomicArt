@@ -11,9 +11,11 @@ using Xunit;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Dialogs;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -32,7 +34,12 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     private const int GenerationPanelRowIndex = 1;
     private const int ExpectedShellRowCount = 2;
     private const double HeightTolerance = 0.1d;
+    private const double PositionTolerance = 0.1d;
+    private const double UiScale = 1.5d;
+    private const string GenerationPanelHostName = "GenerationPanelHost";
     private const string GenerationPanelResizeGripName = "GenerationPanelResizeGrip";
+    private const string GenerationPanelWidthResourceKey = "GenerationPanelWidth";
+    private const string ShellContentGridName = "ShellContentGrid";
 
     [Fact]
     public async Task MainWindow_WhenUpdateIsAvailable_ShowsSukiToastActions()
@@ -74,7 +81,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             actionButtons
                 .Select(button => button.Content)
                 .Should()
-                .Equal(UiStrings.UpdateLater, UiStrings.UpdateInstall);
+                .Equal(
+                    context.TextProvider.Get(UpdateLocalizationKeys.Actions.Later),
+                    context.TextProvider.Get(UpdateLocalizationKeys.Actions.Install));
         });
     }
 
@@ -112,6 +121,46 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
+    public void GenerationPanel_WhenScaledWindowNarrows_ShrinksFromPreferredWidthAndRemainsContained()
+    {
+        Dispatch(() =>
+        {
+            RecordingUiScaleService uiScaleService = new(UiScale);
+            using MainWindowTestContext context = new(services =>
+            {
+                services.AddSingleton<IUiScaleService>(uiScaleService);
+            });
+            MainWindow window = context.Window;
+            window.Show();
+            window.CaptureRenderedFrame();
+            Border generationPanel = window
+                .GetVisualDescendants()
+                .OfType<Border>()
+                .Single(border => border.Name == GenerationPanelHostName);
+            Grid shellContentGrid = window
+                .GetVisualDescendants()
+                .OfType<Grid>()
+                .Single(grid => grid.Name == ShellContentGridName);
+            double preferredWidth = GetDoubleResource(
+                generationPanel,
+                GenerationPanelWidthResourceKey);
+
+            generationPanel.Bounds.Width.Should().Be(preferredWidth);
+
+            window.Width = window.MinWidth;
+            window.CaptureRenderedFrame();
+
+            generationPanel.Bounds.Width.Should().BeLessThan(preferredWidth);
+            generationPanel.Bounds.Left.Should().BeGreaterThanOrEqualTo(0d);
+            generationPanel.Bounds.Right.Should().BeLessThanOrEqualTo(
+                shellContentGrid.Bounds.Width);
+            generationPanel.Bounds.Center.X.Should().BeApproximately(
+                shellContentGrid.Bounds.Width / 2d,
+                PositionTolerance);
+        });
+    }
+
+    [Fact]
     public void MainWindow_WhenErrorIsShown_DisplaysSharedModalOverlay()
     {
         Dispatch(() =>
@@ -124,7 +173,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 .Subject;
             window.Show();
 
-            context.DialogService.ShowError(UiStrings.GenerationApiUnavailable);
+            context.DialogService.ShowError(
+                context.TextProvider.Get(
+                    GenerationUiLocalizationKeys.Errors.ApiUnavailable));
             window.CaptureRenderedFrame();
 
             ModalOverlayPresenterControl presenter = window
@@ -148,6 +199,17 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         });
     }
 
+    private static double GetDoubleResource(Control control, string resourceKey)
+    {
+        if (control.TryFindResource(resourceKey, out object? value)
+            && (value is double doubleValue))
+        {
+            return doubleValue;
+        }
+
+        throw new InvalidOperationException($"Double resource '{resourceKey}' was not found.");
+    }
+
     private static void RegisterViewTemplates(IServiceProvider serviceProvider)
     {
         Avalonia.Application.Current?.DataTemplates.Add(
@@ -169,6 +231,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     {
         public MainWindow Window { get; }
         public IDialogService DialogService { get; }
+        public ILocalizationTextProvider TextProvider { get; }
 
         private readonly ServiceProvider _serviceProvider;
 
@@ -182,6 +245,8 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             _serviceProvider = services.BuildServiceProvider();
             RegisterViewTemplates(_serviceProvider);
             DialogService = _serviceProvider.GetRequiredService<IDialogService>();
+            TextProvider =
+                _serviceProvider.GetRequiredService<ILocalizationTextProvider>();
             Window = _serviceProvider.GetRequiredService<MainWindow>();
         }
 

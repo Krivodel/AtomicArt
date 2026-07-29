@@ -2,16 +2,18 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class SecretSettingViewModel : SettingItemViewModel
 {
     public string SecretName { get; }
-    public string Placeholder { get; }
+    public string Placeholder => TextProvider.Get(_definition.PlaceholderKey);
 
     protected override IRelayCommand OperationCommand => SaveCommand;
 
+    private readonly ISecretSettingDefinition _definition;
     private readonly ISecretStore _secretStore;
     private bool _hasPendingValue;
     private bool _isLoaded;
@@ -23,14 +25,21 @@ public sealed partial class SecretSettingViewModel : SettingItemViewModel
     public SecretSettingViewModel(
         ISecretSettingDefinition definition,
         ISecretStore secretStore,
-        IViewModelErrorHandler errorHandler)
-        : base(definition, errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
+        : base(definition, errorHandler, textProvider)
     {
         ArgumentNullException.ThrowIfNull(secretStore);
 
+        _definition = definition;
         SecretName = definition.SecretName;
-        Placeholder = definition.Placeholder;
         _secretStore = secretStore;
+    }
+
+    public override void RefreshLocalization()
+    {
+        base.RefreshLocalization();
+        OnPropertyChanged(nameof(Placeholder));
     }
 
     protected override void NotifyOperationCanExecuteChanged()

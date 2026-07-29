@@ -5,6 +5,7 @@ internal static class AtomicArtPathNames
     internal const string RootDirectory = "AtomicArt";
     internal const string ArtDirectory = "Art";
     internal const string LogsDirectory = "Logs";
+    internal const string LocalizationsDirectory = "Localizations";
     internal const string SecretsDirectory = "Secrets";
     internal const string ThumbnailsDirectory = "Thumbnails";
     internal const string StateDirectory = "State";

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
              xmlns:generation="using:AtomicArt.Desktop.Controls.Generation"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
@@ -46,7 +47,7 @@
                 Cursor="Hand"
                 PointerReleased="OnFailurePreviewPointerReleased">
             <TextBlock Classes="generation-card-error-text"
-                       Text="{x:Static resources:UiStrings.Error}" />
+                       Text="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Error}}" />
         </Border>
 
         <Border x:Name="PreviewDragSource"

@@ -111,7 +111,8 @@ internal static class GalleryLifecycleTestFactory
         GalleryItemsController itemsController = new(
             new PassthroughTrustedImageFileService(),
             statusRegistry,
-            TestApiConfiguration.CreateGalleryOrderTimestampPolicy());
+            TestApiConfiguration.CreateGalleryOrderTimestampPolicy(),
+            TestLocalizationTextProvider.Default);
 
         return new GalleryLifecycleViewStateController(
             new ImmediateUiThreadDispatcher(),

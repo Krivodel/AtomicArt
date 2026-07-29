@@ -1,4 +1,5 @@
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
@@ -31,8 +32,9 @@ public abstract class SelectableSettingItemViewModel<TOption> : SettingItemViewM
         IDisplaySettingDefinition definition,
         IReadOnlyList<TOption> options,
         TOption? selectedOption,
-        IViewModelErrorHandler errorHandler)
-        : base(definition, errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
+        : base(definition, errorHandler, textProvider)
     {
         ArgumentNullException.ThrowIfNull(options);
 

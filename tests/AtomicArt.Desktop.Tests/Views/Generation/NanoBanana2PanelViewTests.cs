@@ -9,11 +9,13 @@ using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
+using CommunityToolkit.Mvvm.Messaging;
 using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Behaviors;
+using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
@@ -37,12 +39,15 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 {
     private const double ExpandedPanelWidth = 640d;
     private const double ExpandedPanelHeight = 560d;
+    private const double WidePanelWidth = 800d;
+    private const string GenerationOptionComboMinWidthResourceKey =
+        "GenerationOptionComboMinWidth";
     private const string PromptHeightResourceKey = "PromptHeight";
 
     [Theory]
     [InlineData(null, false)]
     [InlineData("", false)]
-    [InlineData("Авто", false)]
+    [InlineData(GenerationAspectRatios.Auto, false)]
     [InlineData("1:1", true)]
     [InlineData("16:9", true)]
     public void CanShowAspectRatioHint_WithAspectRatio_ReturnsOnlyConcreteAspectRatios(
@@ -52,6 +57,19 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         bool result = NanoBanana2PanelView.CanShowAspectRatioHint(aspectRatio);
 
         result.Should().Be(expectedResult);
+    }
+
+    [Fact]
+    public void GetAspectRatioHintValue_WithLocalizedOption_ReturnsMachineValue()
+    {
+        GenerationOptionViewModel option = new(
+            "16:9",
+            null,
+            TestLocalizationTextProvider.Default);
+
+        string? result = NanoBanana2PanelView.GetAspectRatioHintValue(option);
+
+        result.Should().Be("16:9");
     }
 
     [Fact]
@@ -143,6 +161,35 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
             promptTextBox.MinHeight.Should().Be(promptMinimumHeight);
             promptTextBox.Bounds.Height.Should().BeGreaterThan(promptMinimumHeight);
+        });
+    }
+
+    [Fact]
+    public void GenerationCountComboBox_WhenPanelNarrows_ShrinksFromPreferredWidthAndKeepsRightAlignment()
+    {
+        Dispatch(() =>
+        {
+            using ShownPanelContext context = new(WidePanelWidth, ExpandedPanelHeight);
+            ComboBox generationCountComboBox = GetComboBox(
+                context.View,
+                "GenerationCountComboBox");
+            double preferredWidth = GetDoubleResource(
+                context.View,
+                GenerationOptionComboMinWidthResourceKey);
+            double preferredRightGap = GetRightGap(generationCountComboBox, context.View);
+
+            generationCountComboBox.Bounds.Width.Should().Be(preferredWidth);
+            preferredRightGap.Should().BeApproximately(
+                generationCountComboBox.Margin.Right,
+                0.01d);
+
+            context.Window.Width = 500d;
+            context.Window.CaptureRenderedFrame();
+
+            generationCountComboBox.Bounds.Width.Should().BeLessThan(preferredWidth);
+            GetRightGap(generationCountComboBox, context.View)
+                .Should()
+                .BeApproximately(preferredRightGap, 0.01d);
         });
     }
 
@@ -412,7 +459,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                     .OfType<string>()
                     .Should()
                     .NotContain(text => text.Contains("Температура", StringComparison.Ordinal));
-                thinkingLevels.Select(level => level.DisplayName).Should().Equal("Минимальный", "Максимальный");
+                thinkingLevels.Select(level => level.LocalizationKey).Should().Equal(
+                    GenerationLocalizationKeys.ThinkingLow,
+                    GenerationLocalizationKeys.ThinkingHigh);
                 slider.Cursor.Should().Be(new Cursor(StandardCursorType.Hand));
                 thinkingControls.IsVisible.Should().BeTrue();
                 thinkingResetButton.Command.Should().BeSameAs(viewModel.ResetThinkingLevelCommand);
@@ -740,8 +789,14 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             new NullImageViewerService(),
             new RecordingPromptTextSizeController(),
             new NanoBanana2QuoteViewModel(
-                new GenerationPricePreviewEstimator()),
+                new GenerationPricePreviewEstimator(),
+                new NanoBanana2PanelTextFormatter(
+                    TestLocalizationTextProvider.Default)),
+            new WeakReferenceMessenger(),
             new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default,
+            new NanoBanana2PanelTextFormatter(
+                TestLocalizationTextProvider.Default),
             TestApiConfiguration.CreateStateWritePolicy());
     }
 
@@ -773,6 +828,18 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         return origin.Value + new Vector(
             control.Bounds.Width / 2d,
             control.Bounds.Height / 2d);
+    }
+
+    private static double GetRightGap(Control control, Visual target)
+    {
+        Point? origin = control.TranslatePoint(new Point(0d, 0d), target);
+
+        if (origin is null)
+        {
+            throw new InvalidOperationException("Control position was not found.");
+        }
+
+        return target.Bounds.Width - origin.Value.X - control.Bounds.Width;
     }
 
     private static Button GetTemperatureButton(NanoBanana2PanelView view)
@@ -844,13 +911,18 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
     private static double GetPromptMinimumHeight(NanoBanana2PanelView view)
     {
-        if (view.TryFindResource(PromptHeightResourceKey, out object? value)
-            && (value is double promptHeight))
+        return GetDoubleResource(view, PromptHeightResourceKey);
+    }
+
+    private static double GetDoubleResource(Control control, string resourceKey)
+    {
+        if (control.TryFindResource(resourceKey, out object? value)
+            && (value is double doubleValue))
         {
-            return promptHeight;
+            return doubleValue;
         }
 
-        throw new InvalidOperationException("Prompt height resource was not found.");
+        throw new InvalidOperationException($"Double resource '{resourceKey}' was not found.");
     }
 
     private static Color GetColorResource(Control control, string resourceKey)

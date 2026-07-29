@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Xunit;
 
+using CommunityToolkit.Mvvm.Messaging;
+
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
@@ -89,7 +91,7 @@ public sealed class SettingsViewModelTests
     {
         await AssertSecretStoreFailureAsync(
             new InvalidOperationException("Failed"),
-            UiStrings.GenerationFailed,
+            TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.Failed),
             "value-for-test-only");
     }
 
@@ -98,7 +100,7 @@ public sealed class SettingsViewModelTests
     {
         await AssertSecretStoreFailureAsync(
             new OperationCanceledException(),
-            UiStrings.UnhandledExceptionMessage,
+            TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.UnknownError),
             null);
     }
 
@@ -118,7 +120,7 @@ public sealed class SettingsViewModelTests
         await scaleSetting.ApplyCommand.ExecuteAsync(null);
 
         errorHandler.LogCallCount.Should().Be(1);
-        scaleSetting.ErrorMessage.Should().Be(UiStrings.GenerationFailed);
+        scaleSetting.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.Failed));
     }
 
     [Fact]
@@ -153,7 +155,7 @@ public sealed class SettingsViewModelTests
 
         secretSetting.Key.Should().Be(GoogleApiKeySettingDefinition.KeyValue);
         secretSetting.SecretName.Should().Be(GoogleApiKeySettingDefinition.SecretNameValue);
-        secretSetting.DisplayName.Should().Be(UiStrings.SettingsGoogleApiKeyLabel);
+        secretSetting.DisplayName.Should().Be(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.GoogleApiKey.Label));
     }
 
     [Fact]
@@ -181,10 +183,10 @@ public sealed class SettingsViewModelTests
             new TestViewModelErrorHandler());
 
         viewModel.Groups.Should().HaveCount(2);
-        viewModel.Groups[0].Title.Should().Be(UiStrings.SettingsConnectionSection);
+        viewModel.Groups[0].Title.Should().Be(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.Sections.Connection));
         viewModel.Groups[0].Settings.Should()
             .ContainSingle(setting => setting.Key == GoogleApiKeySettingDefinition.KeyValue);
-        viewModel.Groups[1].Title.Should().Be(UiStrings.SettingsAppearanceSection);
+        viewModel.Groups[1].Title.Should().Be(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.Sections.Appearance));
         viewModel.Groups[1].Settings.Should()
             .ContainSingle(setting => setting.Key == UiScaleSettingDefinition.KeyValue);
     }
@@ -337,7 +339,10 @@ public sealed class SettingsViewModelTests
             settingsStateService);
         SettingsItemViewModelProvider provider = new(catalog, factories);
 
-        return new SettingsViewModel(provider);
+        return new SettingsViewModel(
+            provider,
+            TestLocalizationTextProvider.Default,
+            new WeakReferenceMessenger());
     }
 
     private static SettingsDefinitionCatalog CreateSettingsDefinitionCatalog(
@@ -369,15 +374,21 @@ public sealed class SettingsViewModelTests
         ISettingsDefinitionCatalog catalog,
         ISettingsStateService settingsStateService)
     {
+        TestLocalizationTextProvider textProvider = new();
+
         return
         [
-            new SecretSettingViewModelFactory(secretStore, errorHandler),
+            new SecretSettingViewModelFactory(
+                secretStore,
+                errorHandler,
+                textProvider),
             new ScaleSettingViewModelFactory(
                 catalog,
                 uiScaleService,
                 settingsStateService,
                 new DoubleSettingValueConverter(),
-                errorHandler)
+                errorHandler,
+                textProvider)
         ];
     }
 
@@ -388,9 +399,9 @@ public sealed class SettingsViewModelTests
         public string Key => "test.secondarySecret";
         public int Order => 150;
         public string SecretName => SecretNameValue;
-        public string DisplayName => "Второй ключ";
+        public string DisplayNameKey => "Test.SecondarySecret.DisplayName";
         public SettingsSection Section => SettingsSections.Connection;
-        public string Placeholder => "Второе значение";
+        public string PlaceholderKey => "Test.SecondarySecret.Placeholder";
     }
 
     private sealed class RecordingSettingsStateService : ISettingsStateService

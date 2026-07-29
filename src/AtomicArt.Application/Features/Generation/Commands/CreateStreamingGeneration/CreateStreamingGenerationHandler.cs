@@ -6,7 +6,6 @@ using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
-using DomainGenerationErrorCodes = AtomicArt.Domain.Generation.GenerationErrorCodes;
 using MediatR;
 
 namespace AtomicArt.Application.Features.Generation.Commands.CreateStreamingGeneration;
@@ -63,7 +62,7 @@ public sealed class CreateStreamingGenerationHandler
         if (modelDefinition is null)
         {
             return GenerationAttemptPreparation.NotFound(
-                DomainGenerationErrorCodes.ModelNotFound);
+                GenerationProtocolErrorCodes.ModelNotFound);
         }
 
         Result<StreamingImageGenerationRequest> validationResult =
@@ -79,7 +78,7 @@ public sealed class CreateStreamingGenerationHandler
         {
             return GenerationAttemptPreparation.Validation(
                 validationResult.ErrorCode
-                    ?? DomainGenerationErrorCodes.ModelRequestValidation);
+                    ?? GenerationProtocolErrorCodes.ModelRequestValidation);
         }
 
         GenerationProviderCredentialRequirement credentialRequirement =

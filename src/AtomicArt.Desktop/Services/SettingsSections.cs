@@ -6,14 +6,14 @@ public static class SettingsSections
 {
     public static SettingsSection Connection { get; } = new SettingsSection(
         "connection",
-        UiStrings.SettingsConnectionSection,
+        SettingsLocalizationKeys.Sections.Connection,
         100);
     public static SettingsSection Appearance { get; } = new SettingsSection(
         "appearance",
-        UiStrings.SettingsAppearanceSection,
+        SettingsLocalizationKeys.Sections.Appearance,
         200);
     public static SettingsSection StorageAndPerformance { get; } = new SettingsSection(
         "storage-and-performance",
-        UiStrings.SettingsStorageAndPerformanceSection,
+        SettingsLocalizationKeys.Sections.StorageAndPerformance,
         300);
 }

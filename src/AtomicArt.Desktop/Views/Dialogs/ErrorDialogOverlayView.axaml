@@ -1,12 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
              xmlns:dialogs="using:AtomicArt.Desktop.ViewModels.Dialogs"
              xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              x:Class="AtomicArt.Desktop.Views.Dialogs.ErrorDialogOverlayView"
              x:DataType="dialogs:ErrorDialogViewModel">
     <overlays:ModalOverlayControl Width="{StaticResource ErrorDialogOverlayWidth}"
-                                  Title="{x:Static resources:UiStrings.Error}"
+                                  Title="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Error}}"
                                   CloseCommand="{Binding CloseCommand}">
         <overlays:ModalOverlayControl.Body>
             <StackPanel Margin="{StaticResource ErrorDialogContentMargin}"
@@ -15,7 +16,7 @@
                            Text="{Binding Message}" />
                 <Button MinWidth="{StaticResource ErrorDialogActionButtonMinWidth}"
                         HorizontalAlignment="Right"
-                        Content="{x:Static resources:UiStrings.Copy}"
+                        Content="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Copy}}"
                         Command="{Binding CopyCommand}" />
             </StackPanel>
         </overlays:ModalOverlayControl.Body>

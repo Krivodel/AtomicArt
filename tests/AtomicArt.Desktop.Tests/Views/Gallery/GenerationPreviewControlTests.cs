@@ -36,7 +36,8 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
                 item,
                 0,
                 null,
-                GenerationItemStatusDescriptorRegistryTestFactory.Create());
+                GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+                TestLocalizationTextProvider.Default);
             GenerationPreviewControl control = new()
             {
                 DataContext = viewModel
@@ -53,7 +54,7 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
                 indicator.GridSize.Should().Be(16);
                 indicator.IsActive.Should().BeTrue();
 
-                viewModel.MarkFailed(UiStrings.GenerationFailed);
+                viewModel.MarkFailed(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.Failed));
                 window.CaptureRenderedFrame();
 
                 indicator.IsActive.Should().BeFalse();
@@ -72,7 +73,8 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
                 item,
                 0,
                 null,
-                GenerationItemStatusDescriptorRegistryTestFactory.Create());
+                GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+                TestLocalizationTextProvider.Default);
             GenerationPreviewControl control = new()
             {
                 DataContext = viewModel
@@ -87,7 +89,7 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
                 failurePreview.IsVisible.Should().BeFalse();
                 previewDragSource.IsVisible.Should().BeTrue();
 
-                viewModel.MarkFailed(UiStrings.GenerationFailed);
+                viewModel.MarkFailed(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Errors.Failed));
                 window.CaptureRenderedFrame();
 
                 failurePreview.IsVisible.Should().BeTrue();

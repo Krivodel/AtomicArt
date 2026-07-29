@@ -252,7 +252,7 @@ public sealed class GenerationModelRulesTests
         return new GenerationModelConstraints(
             modelId ?? metadata.Id,
             metadata.MaxPromptLength,
-            metadata.AspectRatios,
+            metadata.AspectRatios.Select(option => option.Value).ToList(),
             metadata.Resolutions,
             metadata.GenerationCounts,
             new GenerationModelTemperatureConstraints(

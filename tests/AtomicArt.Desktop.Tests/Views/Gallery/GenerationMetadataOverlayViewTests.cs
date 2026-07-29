@@ -136,7 +136,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             string imagePath = CreateImageFile();
             string prompt = string.Join(
                 Environment.NewLine,
-                Enumerable.Range(1, 20).Select(lineNumber => $"Строка {lineNumber}"));
+                Enumerable.Range(1, 20).Select(lineNumber => $"Line {lineNumber}"));
 
             try
             {
@@ -325,7 +325,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
 
     private static GenerationMetadataOverlayView CreateView(
         string imagePath,
-        string prompt = "Промпт",
+        string prompt = "Prompt",
         IGenerationPreviewSessionFactory? previewSessionFactory = null)
     {
         GenerationItemDto itemDto = GenerationItemDtoTestFactory.Create(
@@ -344,7 +344,8 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             itemDto,
             2,
             imagePath,
-            GenerationItemStatusDescriptorRegistryTestFactory.Create());
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
         GenerationMetadataViewModel viewModel = GenerationMetadataViewModel.FromItem(
             item,
             new RelayCommand(() => { }),
@@ -354,7 +355,8 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             new RecordingTextClipboardService(),
             new TestViewModelErrorHandler(),
             new GenerationPriceFormatter(),
-            new GenerationDurationFormatter());
+            new GenerationDurationFormatter(TestLocalizationTextProvider.Default),
+            TestLocalizationTextProvider.Default);
         GenerationMetadataOverlayView view = previewSessionFactory is null
             ? new GenerationMetadataOverlayView()
             : new GenerationMetadataOverlayView(previewSessionFactory);

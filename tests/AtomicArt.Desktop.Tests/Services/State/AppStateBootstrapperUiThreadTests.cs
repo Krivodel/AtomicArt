@@ -12,6 +12,7 @@ using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
+using AtomicArt.Desktop.Tests.TestDoubles;
 
 namespace AtomicArt.Desktop.Tests.Services.State;
 
@@ -29,6 +30,7 @@ public sealed class AppStateBootstrapperUiThreadTests : AnimatedGalleryControlTe
             };
             Window window = Show(button);
             AppStateBootstrapper bootstrapper = new(
+                new TestLocalizationService(),
                 new BackgroundCompletingSettingsStateService(),
                 new NoOpGalleryStateConsistencyService(),
                 new EmptyGalleryStateService(),

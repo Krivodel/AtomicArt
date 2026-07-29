@@ -2,26 +2,41 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
 using Avalonia.Platform;
 
+using CommunityToolkit.Mvvm.Messaging;
+
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Localization;
 
 namespace AtomicArt.Desktop.Services;
 
-public sealed class TrayService : ITrayService, ITrayAttachmentService, IDisposable
+public sealed class TrayService :
+    ITrayService,
+    ITrayAttachmentService,
+    IRecipient<LocalizationChangedMessage>,
+    IDisposable
 {
+    public bool IsExitRequested { get; private set; }
+
     private static readonly Uri AppIconUri = new("avares://AtomicArt/Assets/AppIcon.ico");
     private readonly IWindowStateService _windowStateService;
+    private readonly ILocalizationTextProvider _textProvider;
     private TrayIcon? _trayIcon;
     private NativeMenuItem? _showWindowItem;
     private NativeMenuItem? _exitItem;
     private Window? _window;
 
-    public bool IsExitRequested { get; private set; }
-
-    public TrayService(IWindowStateService windowStateService)
+    public TrayService(
+        IWindowStateService windowStateService,
+        ILocalizationTextProvider textProvider,
+        IMessenger messenger)
     {
         ArgumentNullException.ThrowIfNull(windowStateService);
+        ArgumentNullException.ThrowIfNull(textProvider);
+        ArgumentNullException.ThrowIfNull(messenger);
 
         _windowStateService = windowStateService;
+        _textProvider = textProvider;
+        messenger.Register<LocalizationChangedMessage>(this);
     }
 
     public void Attach(Window window)
@@ -70,6 +85,22 @@ public sealed class TrayService : ITrayService, ITrayAttachmentService, IDisposa
         }
     }
 
+    public void Receive(LocalizationChangedMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        if (_showWindowItem is not null)
+        {
+            _showWindowItem.Header = _textProvider.Get(
+                ShellLocalizationKeys.ShowWindow);
+        }
+
+        if (_exitItem is not null)
+        {
+            _exitItem.Header = _textProvider.Get(ShellLocalizationKeys.Exit);
+        }
+    }
+
     public void Dispose()
     {
         if (_trayIcon is not null)
@@ -94,9 +125,11 @@ public sealed class TrayService : ITrayService, ITrayAttachmentService, IDisposa
 
     private TrayIcon CreateTrayIcon()
     {
-        _showWindowItem = new NativeMenuItem(UiStrings.ShowWindow);
+        _showWindowItem = new NativeMenuItem(
+            _textProvider.Get(ShellLocalizationKeys.ShowWindow));
         _showWindowItem.Click += OnShowWindowClicked;
-        _exitItem = new NativeMenuItem(UiStrings.Exit);
+        _exitItem = new NativeMenuItem(
+            _textProvider.Get(ShellLocalizationKeys.Exit));
         _exitItem.Click += OnExitClicked;
         NativeMenu menu = [];
         menu.Items.Add(_showWindowItem);
@@ -106,7 +139,7 @@ public sealed class TrayService : ITrayService, ITrayAttachmentService, IDisposa
         {
             Icon = new WindowIcon(iconStream),
             Menu = menu,
-            ToolTipText = UiStrings.AppTitle
+            ToolTipText = ProductInformation.Name
         };
         trayIcon.Clicked += OnTrayIconClicked;
 

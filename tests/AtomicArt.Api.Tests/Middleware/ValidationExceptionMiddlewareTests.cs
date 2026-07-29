@@ -30,7 +30,7 @@ public sealed class ValidationExceptionMiddlewareTests
         };
         List<ValidationFailure> failures =
         [
-            new("Prompt", "Промпт обязателен.")
+            new("Prompt", "Prompt is required.")
         ];
         RequestDelegate next = _ => throw new ValidationException(failures);
         ValidationExceptionMiddleware middleware = new(
@@ -45,8 +45,8 @@ public sealed class ValidationExceptionMiddlewareTests
         using JsonDocument document = JsonDocument.Parse(responseBody);
         JsonElement root = document.RootElement;
         root.GetProperty("status").GetInt32().Should().Be(StatusCodes.Status400BadRequest);
-        root.GetProperty("title").GetString().Should().Be("Ошибка валидации запроса.");
-        root.GetProperty("detail").GetString().Should().Be("Запрос не прошёл проверку.");
+        root.GetProperty("title").GetString().Should().Be("Request validation failed.");
+        root.GetProperty("detail").GetString().Should().Be("The request failed validation.");
         root.GetProperty("fields").EnumerateArray()
             .Select(field => field.GetString())
             .Should()

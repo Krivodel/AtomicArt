@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
              xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
              xmlns:contracts="using:AtomicArt.Contracts.Generation"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
@@ -12,7 +13,7 @@
     <Grid x:Name="PanelRoot">
         <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
             <Grid Grid.Row="0"
-                  ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+                  ColumnDefinitions="Auto,Auto,Auto,Auto,*">
                 <ComboBox Grid.Column="0"
                           MinWidth="{StaticResource GenerationModelComboMinWidth}"
                           Margin="-5,0,0,0"
@@ -31,12 +32,18 @@
                           Grid.Column="1"
                           MinWidth="{StaticResource GenerationOptionComboMinWidth}"
                           IsEnabled="{Binding HasLoadedCatalog}"
-                          ItemsSource="{Binding AspectRatios}"
-                          SelectedItem="{Binding SelectedAspectRatio}"
-                          DropDownOpened="OnAspectRatioDropDownOpened"
-                          DropDownClosed="OnAspectRatioDropDownClosed"
+                          ContainerClearing="OnAspectRatioContainerClearing"
                           ContainerPrepared="OnAspectRatioContainerPrepared"
-                          ContainerClearing="OnAspectRatioContainerClearing" />
+                          DropDownClosed="OnAspectRatioDropDownClosed"
+                          DropDownOpened="OnAspectRatioDropDownOpened"
+                          ItemsSource="{Binding AspectRatioOptions}"
+                          SelectedItem="{Binding SelectedAspectRatioOption}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="generation:GenerationOptionViewModel">
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
 
                 <ComboBox x:Name="ResolutionComboBox"
                           Grid.Column="2"
@@ -126,7 +133,7 @@
                                                   SelectedItem="{Binding SelectedThinkingLevel}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="contracts:GenerationModelThinkingLevelMetadataDto">
-                                                    <TextBlock Text="{Binding DisplayName}" />
+                                                    <TextBlock Text="{i18n:I18n {Binding LocalizationKey}}" />
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
@@ -144,8 +151,8 @@
                 </Popup>
 
                 <ComboBox x:Name="GenerationCountComboBox"
-                          Grid.Column="5"
-                          MinWidth="{StaticResource GenerationOptionComboMinWidth}"
+                          Grid.Column="4"
+                          MaxWidth="{StaticResource GenerationOptionComboMinWidth}"
                           Margin="0,0,-5,0"
                           HorizontalAlignment="Right"
                           IsEnabled="{Binding HasLoadedCatalog}"
@@ -192,7 +199,7 @@
                      AcceptsReturn="True"
                      behaviors:ClipboardPasteBehavior.IsEnabled="True"
                      LostFocus="OnPromptLostFocus"
-                     PlaceholderText="{x:Static resources:UiStrings.PromptPlaceholder}"
+                     PlaceholderText="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Prompt.Placeholder}}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                      TextWrapping="Wrap"
                      FontSize="{Binding PromptTextSize}"

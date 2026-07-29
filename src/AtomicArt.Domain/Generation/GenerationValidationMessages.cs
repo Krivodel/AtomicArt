@@ -2,5 +2,6 @@ namespace AtomicArt.Domain.Generation;
 
 public static class GenerationValidationMessages
 {
-    public const string MissingAttachedImageContent = "Содержимое вложения не передано.";
+    public const string MissingAttachedImageContent =
+        "Attached image content was not provided.";
 }

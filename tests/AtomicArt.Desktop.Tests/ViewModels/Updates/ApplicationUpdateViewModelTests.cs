@@ -2,11 +2,15 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 
+using CommunityToolkit.Mvvm.Messaging;
+
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Updates;
 
@@ -28,7 +32,7 @@ public sealed class ApplicationUpdateViewModelTests
 
         context.ViewModel.IsNotificationOpen.Should().BeTrue();
         context.ViewModel.State.Should().Be(ApplicationUpdateState.Available);
-        context.ViewModel.UpdateActionText.Should().Be(UiStrings.UpdateWaitAndInstall);
+        context.ViewModel.UpdateActionText.Should().Be(TestLocalizationTextProvider.Default.Get(UpdateLocalizationKeys.Actions.WaitAndInstall));
         context.ViewModel.Message.Should().Contain(UpdateVersion);
     }
 
@@ -92,6 +96,17 @@ public sealed class ApplicationUpdateViewModelTests
         context.ViewModel.State.Should().Be(ApplicationUpdateState.Hidden);
     }
 
+    [Fact]
+    public void LocalizationChangedMessage_WhenSent_RefreshesLocalizationRevision()
+    {
+        using ApplicationUpdateTestContext context = new();
+        int initialRevision = context.ViewModel.LocalizationRevision;
+
+        context.Messenger.Send(new LocalizationChangedMessage());
+
+        context.ViewModel.LocalizationRevision.Should().Be(initialRevision + 1);
+    }
+
     private static Task StartMonitoringAsync(ApplicationUpdateViewModel viewModel)
     {
         return viewModel.StartMonitoringCommand.ExecuteAsync(null);
@@ -102,6 +117,7 @@ public sealed class ApplicationUpdateViewModelTests
         public Mock<IApplicationUpdateService> UpdateServiceMock { get; }
         public Mock<IApplicationUpdateRestartCoordinator> RestartCoordinatorMock { get; }
         public IGenerationActivityTracker ActivityTracker { get; }
+        public IMessenger Messenger { get; }
         public ApplicationUpdateViewModel ViewModel { get; }
 
         public ApplicationUpdateTestContext()
@@ -115,12 +131,15 @@ public sealed class ApplicationUpdateViewModelTests
                 .ReturnsAsync(new ApplicationUpdate(UpdateVersion));
             RestartCoordinatorMock = new Mock<IApplicationUpdateRestartCoordinator>();
             ActivityTracker = TestGenerationActivityTrackerFactory.Create();
+            Messenger = new WeakReferenceMessenger();
             ViewModel = new ApplicationUpdateViewModel(
                 UpdateServiceMock.Object,
                 RestartCoordinatorMock.Object,
                 ActivityTracker,
                 new ImmediateUiThreadDispatcher(),
+                Messenger,
                 new TestViewModelErrorHandler(),
+                TestLocalizationTextProvider.Default,
                 TestApiConfiguration.CreateApplicationUpdateOptionsWrapper());
         }
 

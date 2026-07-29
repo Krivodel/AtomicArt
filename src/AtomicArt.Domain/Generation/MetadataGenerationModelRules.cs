@@ -33,7 +33,7 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
-                "Промпт превышает допустимую длину для выбранной модели.");
+                "The prompt exceeds the maximum length for the selected model.");
         }
 
         if (!request.Constraints.Resolutions.Contains(
@@ -42,7 +42,7 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.UnsupportedResolution,
-                "Выбранное разрешение не поддерживается моделью.");
+                "The selected resolution is not supported by the model.");
         }
 
         if (!request.Constraints.AspectRatios.Contains(
@@ -51,14 +51,14 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.UnsupportedAspectRatio,
-                "Выбранное соотношение сторон не поддерживается моделью.");
+                "The selected aspect ratio is not supported by the model.");
         }
 
         if (!request.Constraints.Temperature.IsSupported(request.Temperature))
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
-                "Выбранная температура не поддерживается моделью.");
+                "The selected temperature is not supported by the model.");
         }
 
         bool isThinkingLevelSupported = request.Constraints.Thinking is null
@@ -69,7 +69,7 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
-                "Выбранный уровень рассуждения не поддерживается моделью.");
+                "The selected thinking level is not supported by the model.");
         }
 
         return ValidateGenerationCount(request);
@@ -82,7 +82,7 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
-                "Выбранное количество изображений не поддерживается моделью.");
+                "The selected image count is not supported by the model.");
         }
 
         return null;
@@ -95,7 +95,7 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
-                "К запросу прикреплено слишком много изображений.");
+                "Too many images are attached to the request.");
         }
 
         return ValidateAttachedImageSizes(request);
@@ -123,7 +123,7 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
             {
                 return GenerationValidationResult.Invalid(
                     GenerationErrorCodes.ModelRequestValidation,
-                    "Суммарный размер вложений превышает допустимый лимит.");
+                    "The total attachment size exceeds the allowed limit.");
             }
         }
 
@@ -136,7 +136,9 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
     {
         if (attachedImage is null)
         {
-            return GenerationValidationResult.Invalid(GenerationErrorCodes.ModelRequestValidation, "Вложение не передано.");
+            return GenerationValidationResult.Invalid(
+                GenerationErrorCodes.ModelRequestValidation,
+                "The attached image was not provided.");
         }
 
         GenerationValidationResult? sizeResult = ValidateAttachedImageSize(constraints, attachedImage.SizeInBytes);
@@ -150,7 +152,7 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
         {
             return GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
-                "Тип содержимого вложения не поддерживается выбранной моделью.");
+                "The attachment content type is not supported by the selected model.");
         }
 
         return null;
@@ -165,7 +167,10 @@ public sealed class MetadataGenerationModelRules : IGenerationModelRules
             <= 0 => GenerationValidationResult.Invalid(
                 GenerationErrorCodes.ModelRequestValidation,
                 GenerationValidationMessages.MissingAttachedImageContent),
-            var size when size > constraints.MaxAttachedImageBytes => GenerationValidationResult.Invalid(GenerationErrorCodes.ModelRequestValidation, "Размер вложения превышает допустимый лимит."),
+            long size when size > constraints.MaxAttachedImageBytes =>
+                GenerationValidationResult.Invalid(
+                    GenerationErrorCodes.ModelRequestValidation,
+                    "The attachment size exceeds the allowed limit."),
             _ => null
         };
     }

@@ -16,7 +16,7 @@ internal static class GenerationModelMetadataDomainMapper
         return new GenerationModelConstraints(
             metadata.Id,
             metadata.MaxPromptLength,
-            metadata.AspectRatios,
+            CreateOptionValueSnapshot(metadata.AspectRatios),
             metadata.Resolutions,
             metadata.GenerationCounts,
             new GenerationModelTemperatureConstraints(
@@ -63,7 +63,9 @@ internal static class GenerationModelMetadataDomainMapper
         return metadata with
         {
             MaxPromptLength = constraints.MaxPromptLength,
-            AspectRatios = constraints.AspectRatios,
+            AspectRatios = CreateOptionMetadataSnapshot(
+                metadata.AspectRatios,
+                constraints.AspectRatios),
             Resolutions = constraints.Resolutions,
             GenerationCounts = constraints.GenerationCounts,
             Temperature = new GenerationModelTemperatureMetadataDto(
@@ -93,6 +95,48 @@ internal static class GenerationModelMetadataDomainMapper
                 metadata.TransportLimits,
                 constraints)
         };
+    }
+
+    private static IReadOnlyList<string> CreateOptionValueSnapshot(
+        IReadOnlyList<GenerationModelOptionMetadataDto>? options)
+    {
+        if (options is null)
+        {
+            return new List<string>();
+        }
+
+        return options
+            .Select(option => option?.Value ?? string.Empty)
+            .ToList();
+    }
+
+    private static IReadOnlyList<GenerationModelOptionMetadataDto>
+        CreateOptionMetadataSnapshot(
+            IReadOnlyList<GenerationModelOptionMetadataDto>? metadata,
+            IReadOnlyList<string> values)
+    {
+        IReadOnlyList<GenerationModelOptionMetadataDto> source =
+            metadata ?? new List<GenerationModelOptionMetadataDto>();
+
+        return values
+            .Select(value =>
+            {
+                GenerationModelOptionMetadataDto? option = source
+                    .FirstOrDefault(candidate => candidate is not null
+                        && string.Equals(
+                            candidate.Value?.Trim(),
+                            value,
+                            StringComparison.Ordinal));
+                string? localizationKey =
+                    string.IsNullOrWhiteSpace(option?.LocalizationKey)
+                        ? null
+                        : option.LocalizationKey.Trim();
+
+                return new GenerationModelOptionMetadataDto(
+                    value,
+                    localizationKey);
+            })
+            .ToList();
     }
 
     private static GenerationModelTransportLimitsDto CreateTransportLimitsSnapshot(

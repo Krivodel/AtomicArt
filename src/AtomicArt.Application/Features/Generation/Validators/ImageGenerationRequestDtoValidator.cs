@@ -10,26 +10,26 @@ public sealed class ImageGenerationRequestDtoValidator : AbstractValidator<Image
     {
         RuleFor(request => request.ModelId)
             .Must(modelId => !string.IsNullOrWhiteSpace(modelId))
-            .WithMessage("Идентификатор модели обязателен.");
+            .WithMessage("Model ID is required.");
 
         RuleFor(request => request.Prompt)
             .Must(prompt => !string.IsNullOrWhiteSpace(prompt))
-            .WithMessage("Промпт обязателен.");
+            .WithMessage("Prompt is required.");
 
         RuleFor(request => request.AspectRatio)
             .Must(aspectRatio => !string.IsNullOrWhiteSpace(aspectRatio))
-            .WithMessage("Соотношение сторон обязательно.");
+            .WithMessage("Aspect ratio is required.");
 
         RuleFor(request => request.Resolution)
             .Must(resolution => !string.IsNullOrWhiteSpace(resolution))
-            .WithMessage("Разрешение обязательно.");
+            .WithMessage("Resolution is required.");
 
         RuleFor(request => request.Temperature)
             .Must(double.IsFinite)
-            .WithMessage("Температура должна быть конечным числом.");
+            .WithMessage("Temperature must be a finite number.");
 
         RuleFor(request => request.GenerationCount)
             .GreaterThan(0)
-            .WithMessage("Количество изображений должно быть положительным.");
+            .WithMessage("Generation count must be positive.");
     }
 }

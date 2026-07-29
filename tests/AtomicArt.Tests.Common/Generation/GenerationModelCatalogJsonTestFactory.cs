@@ -32,9 +32,20 @@ public static class GenerationModelCatalogJsonTestFactory
     {
         string[] defaultAspectRatios = [GenerationAspectRatios.Auto, "1:1"];
         IReadOnlyList<string> effectiveAspectRatios = aspectRatios ?? defaultAspectRatios;
+        IReadOnlyList<GenerationModelOptionMetadataDto> aspectRatioOptions =
+            effectiveAspectRatios
+                .Select(value => new GenerationModelOptionMetadataDto(
+                    value,
+                    string.Equals(
+                        value,
+                        GenerationAspectRatios.Auto,
+                        StringComparison.Ordinal)
+                        ? GenerationLocalizationKeys.OptionsAuto
+                        : null))
+                .ToList();
         string modelIdJson = JsonSerializer.Serialize(modelId, JsonOptions);
         string displayNameJson = JsonSerializer.Serialize(displayName, JsonOptions);
-        string aspectRatiosJson = JsonSerializer.Serialize(effectiveAspectRatios, JsonOptions);
+        string aspectRatiosJson = JsonSerializer.Serialize(aspectRatioOptions, JsonOptions);
 
         return
             $$"""

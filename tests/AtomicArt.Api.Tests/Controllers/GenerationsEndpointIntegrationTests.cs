@@ -13,7 +13,6 @@ using Xunit;
 
 using AtomicArt.Api.Tests.ModelMetadata;
 using AtomicArt.Contracts.Generation;
-using AtomicArt.Domain.Generation;
 using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Api.Tests.Controllers;
@@ -80,7 +79,7 @@ public sealed class GenerationsEndpointIntegrationTests
                 GenerationApiRoutes.ProblemDetailsErrorCodeExtensionName)
             .GetString()
             .Should()
-            .Be(GenerationErrorCodes.ModelNotFound);
+            .Be(GenerationProtocolErrorCodes.ModelNotFound);
     }
 
     private static MultipartFormDataContent CreateRequestContent()

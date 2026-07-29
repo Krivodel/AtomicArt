@@ -58,7 +58,8 @@ public sealed class DataRootSettingViewModelTests
             folderPickerMock.Object,
             migrationServiceMock.Object,
             pathProvider,
-            Mock.Of<IViewModelErrorHandler>());
+            Mock.Of<IViewModelErrorHandler>(),
+            TestLocalizationTextProvider.Default);
 
         using CancellationTokenSource waitCancellation = new(TimeSpan.FromSeconds(2));
         Task commandTask = viewModel.ChangeDirectoryCommand.ExecuteAsync(null);
@@ -68,7 +69,7 @@ public sealed class DataRootSettingViewModelTests
         continueMigrationSource.SetResult();
         await commandTask;
         await AsyncTestWaiter.WaitForConditionAsync(
-            () => viewModel.ProgressText == UiStrings.SettingsDataRootCompleted,
+            () => viewModel.ProgressText == TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.DataRoot.Completed),
             waitCancellation.Token);
 
         viewModel.Value.Should().Be(Path.GetFullPath(destinationDirectory));
@@ -94,7 +95,8 @@ public sealed class DataRootSettingViewModelTests
             folderPickerMock.Object,
             migrationServiceMock.Object,
             pathProvider,
-            Mock.Of<IViewModelErrorHandler>());
+            Mock.Of<IViewModelErrorHandler>(),
+            TestLocalizationTextProvider.Default);
 
         await viewModel.ChangeDirectoryCommand.ExecuteAsync(null);
 
@@ -130,20 +132,21 @@ public sealed class DataRootSettingViewModelTests
         Mock<IViewModelErrorHandler> errorHandlerMock = new();
         errorHandlerMock
             .Setup(handler => handler.GetUserMessage(exception))
-            .Returns(UiStrings.SettingsDataRootMigrationFailed);
+            .Returns(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.DataRoot.MigrationFailed));
         DataRootSettingViewModel viewModel = new(
             new DataRootSettingDefinition(),
             folderPickerMock.Object,
             migrationServiceMock.Object,
             pathProvider,
-            errorHandlerMock.Object);
+            errorHandlerMock.Object,
+            TestLocalizationTextProvider.Default);
 
         await viewModel.ChangeDirectoryCommand.ExecuteAsync(null);
 
         errorHandlerMock.Verify(
             handler => handler.Log(exception, "ChangeDirectoryAsync"),
             Times.Once);
-        viewModel.ErrorMessage.Should().Be(UiStrings.SettingsDataRootMigrationFailed);
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.DataRoot.MigrationFailed));
         viewModel.Value.Should().Be(Path.GetFullPath(sourceDirectory));
         viewModel.IsLoading.Should().BeFalse();
     }

@@ -1,45 +1,53 @@
 using System.Globalization;
 
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Localization;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
-internal static class NanoBanana2PanelTextFormatter
+public sealed class NanoBanana2PanelTextFormatter
 {
-    public static string FormatAttachmentCounterText(int attachedImagesCount, int maxAttachedImages)
+    private readonly ILocalizationTextProvider _textProvider;
+
+    public NanoBanana2PanelTextFormatter(ILocalizationTextProvider textProvider)
     {
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            UiStrings.AttachmentCounterFormat,
+        _textProvider = textProvider
+            ?? throw new ArgumentNullException(nameof(textProvider));
+    }
+
+    public string FormatAttachmentCounterText(
+        int attachedImagesCount,
+        int maxAttachedImages)
+    {
+        return _textProvider.Format(
+            GenerationUiLocalizationKeys.Attachments.CounterFormat,
             attachedImagesCount,
             maxAttachedImages);
     }
 
-    public static string FormatGenerateButtonText(decimal price, string? currency)
+    public string FormatGenerateButtonText(decimal price, string? currency)
     {
         if (string.IsNullOrWhiteSpace(currency))
         {
-            return UiStrings.GenerateButtonText;
+            return _textProvider.Get(GenerationUiLocalizationKeys.Actions.Generate);
         }
 
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            UiStrings.GenerateButtonFormat,
+        return _textProvider.Format(
+            GenerationUiLocalizationKeys.Actions.GenerateWithPrice,
             FormatPrice(price, currency));
     }
 
-    public static string FormatTemperatureText(double temperature)
+    public string FormatTemperatureText(double temperature)
     {
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            UiStrings.TemperatureValueFormat,
+        return _textProvider.Format(
+            GenerationUiLocalizationKeys.Temperature.ValueFormat,
             temperature);
     }
 
     private static string FormatPrice(decimal price, string currency)
     {
         return string.Create(
-            CultureInfo.InvariantCulture,
+            CultureInfo.CurrentCulture,
             $"{price:0.##} {currency}");
     }
 }

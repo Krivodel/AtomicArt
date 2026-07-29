@@ -9,7 +9,7 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Dialogs;
 
 public sealed class ErrorDialogViewModelTests
 {
-    private const string ErrorMessage = "Не удалось выполнить действие.";
+    private const string ErrorMessage = "The action could not be completed.";
 
     [Fact]
     public void Open_WithMessage_OpensDialog()

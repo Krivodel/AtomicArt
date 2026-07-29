@@ -8,7 +8,8 @@ namespace AtomicArt.Desktop.Services;
 
 internal static class SafeApiProblemDetailsReader
 {
-    private const string ErrorCodePrefix = "ERR-";
+    private const string ProviderErrorCodePrefix = "ERR-";
+    private const string ProtocolErrorCodePrefix = "GENERATION_";
 
     internal static async Task<SafeApiProblemDetailsReadResult> TryReadErrorCodeAsync(
         HttpContent content,
@@ -130,7 +131,12 @@ internal static class SafeApiProblemDetailsReader
 
         if (string.IsNullOrWhiteSpace(errorCode)
             || errorCode.Length > maximumErrorCodeCharacters
-            || !errorCode.StartsWith(ErrorCodePrefix, StringComparison.Ordinal))
+            || (!errorCode.StartsWith(
+                    ProviderErrorCodePrefix,
+                    StringComparison.Ordinal)
+                && !errorCode.StartsWith(
+                    ProtocolErrorCodePrefix,
+                    StringComparison.Ordinal)))
         {
             return null;
         }
@@ -138,7 +144,8 @@ internal static class SafeApiProblemDetailsReader
         return errorCode.All(character =>
             character is >= 'A' and <= 'Z'
                 or >= '0' and <= '9'
-                or '-')
+                or '-'
+                or '_')
             ? errorCode
             : null;
     }

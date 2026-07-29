@@ -197,7 +197,8 @@ public sealed class GalleryItemsControllerTests
         return new GalleryItemsController(
             trustedImageFileService,
             GenerationItemStatusDescriptorRegistryTestFactory.Create(),
-            TestApiConfiguration.CreateGalleryOrderTimestampPolicy());
+            TestApiConfiguration.CreateGalleryOrderTimestampPolicy(),
+            TestLocalizationTextProvider.Default);
     }
 
     private static GalleryItemState CreateState(string? imagePath, string? thumbnailPath)

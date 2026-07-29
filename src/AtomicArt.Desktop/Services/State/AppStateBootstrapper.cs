@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.Services.State;
@@ -8,7 +9,9 @@ namespace AtomicArt.Desktop.Services.State;
 public sealed class AppStateBootstrapper : IAppStateBootstrapper
 {
     private const string GenerationPanelsSectionName = "generation panels";
+    private const string LocalizationsSectionName = "localizations";
 
+    private readonly ILocalizationService _localizationService;
     private readonly ISettingsStateService _settingsStateService;
     private readonly IGalleryStateConsistencyService _galleryStateConsistencyService;
     private readonly IGalleryStateService _galleryStateService;
@@ -17,6 +20,7 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
     private readonly ILogger<AppStateBootstrapper> _logger;
 
     public AppStateBootstrapper(
+        ILocalizationService localizationService,
         ISettingsStateService settingsStateService,
         IGalleryStateConsistencyService galleryStateConsistencyService,
         IGalleryStateService galleryStateService,
@@ -24,6 +28,8 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
         IUiThreadDispatcher uiThreadDispatcher,
         ILogger<AppStateBootstrapper> logger)
     {
+        _localizationService = localizationService
+            ?? throw new ArgumentNullException(nameof(localizationService));
         _settingsStateService = settingsStateService
             ?? throw new ArgumentNullException(nameof(settingsStateService));
         _galleryStateConsistencyService = galleryStateConsistencyService
@@ -41,6 +47,10 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
         ArgumentNullException.ThrowIfNull(target);
         _logger.LogInformation("Atomic Art state restore started.");
 
+        await RestoreSectionAsync(
+            LocalizationsSectionName,
+            () => RestoreLocalizationsAsync(ct),
+            ct).ConfigureAwait(false);
         await RestoreSectionAsync(
             SettingsStateSection.KeyValue,
             () => _settingsStateService.ApplySavedSettingsAsync(ct),
@@ -95,6 +105,16 @@ public sealed class AppStateBootstrapper : IAppStateBootstrapper
         GalleryState state = await _galleryStateService.LoadAsync(ct).ConfigureAwait(false);
         await _uiThreadDispatcher.InvokeAsync(
             () => target.RestoreGalleryAsync(state.Items, ct),
+            ct).ConfigureAwait(false);
+    }
+
+    private async Task RestoreLocalizationsAsync(CancellationToken ct)
+    {
+        await _localizationService
+            .RefreshAvailableLocalizationsAsync(ct)
+            .ConfigureAwait(false);
+        await _uiThreadDispatcher.InvokeAsync(
+            _localizationService.ReconcileCurrentOrSystemDefault,
             ct).ConfigureAwait(false);
     }
 

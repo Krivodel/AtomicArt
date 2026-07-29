@@ -29,6 +29,7 @@ internal sealed class PicaViewerSessionTestDependencies
             UiThreadDispatcher.Object,
             WindowStateService.Object,
             GalleryOperations.Object,
+            new AtomicArtPicaActions(TestLocalizationTextProvider.Default),
             NullLoggerFactory.Instance);
 
         return new PicaViewerSession(dependencies);

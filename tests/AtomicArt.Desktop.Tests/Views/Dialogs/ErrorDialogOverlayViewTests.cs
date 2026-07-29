@@ -18,7 +18,7 @@ namespace AtomicArt.Desktop.Tests.Views.Dialogs;
 public sealed class ErrorDialogOverlayViewTests : AnimatedGalleryControlTestBase
 {
     private const double ExpectedOverlayWidth = 480d;
-    private const string ErrorMessage = "Сервер недоступен.";
+    private const string ErrorMessage = "The server is unavailable.";
 
     [Fact]
     public void ErrorDialogOverlayView_WhenShown_UsesSharedModalWithCopyAction()
@@ -47,9 +47,9 @@ public sealed class ErrorDialogOverlayViewTests : AnimatedGalleryControlTestBase
                     .OfType<Button>()
                     .Single(button => object.Equals(
                         button.Content,
-                        UiStrings.Copy));
+                        TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.Copy)));
 
-                overlay.Title.Should().Be(UiStrings.Error);
+                overlay.Title.Should().Be(TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.Error));
                 overlay.Bounds.Width.Should().Be(ExpectedOverlayWidth);
                 overlay.Bounds.Height.Should().BeLessThan(window.Bounds.Height);
                 copyButton.IsVisible.Should().BeTrue();

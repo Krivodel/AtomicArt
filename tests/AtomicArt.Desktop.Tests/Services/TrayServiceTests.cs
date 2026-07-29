@@ -1,6 +1,8 @@
 using Moq;
 using Xunit;
 
+using CommunityToolkit.Mvvm.Messaging;
+
 using AtomicArt.Desktop.Services;
 
 namespace AtomicArt.Desktop.Tests.Services;
@@ -14,7 +16,10 @@ public sealed class TrayServiceTests
             MockBehavior.Strict);
         windowStateService
             .Setup(service => service.Hide());
-        using TrayService trayService = new(windowStateService.Object);
+        using TrayService trayService = new(
+            windowStateService.Object,
+            TestLocalizationTextProvider.Default,
+            new WeakReferenceMessenger());
 
         trayService.HideToTray();
 

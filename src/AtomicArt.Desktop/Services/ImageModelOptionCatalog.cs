@@ -87,6 +87,9 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
                 $"Generation model '{modelId}' must contain pricing metadata.");
         }
 
+        IReadOnlyList<GenerationModelOptionMetadataDto> aspectRatioOptions =
+            CreateOptionSnapshot(model.AspectRatios);
+
         return new ImageModelOption(
             modelId,
             displayName,
@@ -95,7 +98,7 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
             panelId,
             model.ContextWindowTokens,
             model.MaxOutputTokens,
-            CreateStringSnapshot(model.AspectRatios),
+            aspectRatioOptions,
             CreateStringSnapshot(model.Resolutions),
             CreateIntSnapshot(model.GenerationCounts),
             CreateTemperatureSnapshot(modelId, model.Temperature),
@@ -146,6 +149,38 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
         }
 
         return values.ToList();
+    }
+
+    private static IReadOnlyList<GenerationModelOptionMetadataDto> CreateOptionSnapshot(
+        IReadOnlyList<GenerationModelOptionMetadataDto>? options)
+    {
+        if (options is null)
+        {
+            return new List<GenerationModelOptionMetadataDto>();
+        }
+
+        List<GenerationModelOptionMetadataDto> snapshot = [];
+
+        foreach (GenerationModelOptionMetadataDto? option in options)
+        {
+            if (option is null)
+            {
+                throw new InvalidOperationException(
+                    "Generation model aspect ratio metadata contains an empty option.");
+            }
+
+            string value = CreateRequiredSafeText(option.Value, nameof(option.Value));
+            string? localizationKey = string.IsNullOrWhiteSpace(option.LocalizationKey)
+                ? null
+                : CreateRequiredSafeText(
+                    option.LocalizationKey,
+                    nameof(option.LocalizationKey));
+            snapshot.Add(new GenerationModelOptionMetadataDto(
+                value,
+                localizationKey));
+        }
+
+        return snapshot;
     }
 
     private static GenerationModelTemperatureMetadataDto CreateTemperatureSnapshot(
@@ -204,7 +239,9 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
             }
 
             string value = CreateRequiredSafeText(level.Value, nameof(level.Value));
-            string displayName = CreateRequiredSafeText(level.DisplayName, nameof(level.DisplayName));
+            string localizationKey = CreateRequiredSafeText(
+                level.LocalizationKey,
+                nameof(level.LocalizationKey));
 
             if (!uniqueValues.Add(value))
             {
@@ -212,7 +249,9 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
                     $"Generation model '{modelId}' contains duplicated thinking level '{value}'.");
             }
 
-            levels.Add(new GenerationModelThinkingLevelMetadataDto(value, displayName));
+            levels.Add(new GenerationModelThinkingLevelMetadataDto(
+                value,
+                localizationKey));
         }
 
         string defaultValue = CreateRequiredSafeText(thinking.Default, nameof(thinking.Default));

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
@@ -8,7 +9,7 @@
     <controls:ModalOverlayControl Width="{StaticResource SettingsOverlayWidth}"
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Top"
-                                  Title="{x:Static resources:UiStrings.SettingsTitle}"
+                                  Title="{i18n:I18n {x:Static resources:SettingsLocalizationKeys.Title}}"
                                   CloseCommand="{Binding CloseCommand}">
         <controls:ModalOverlayControl.Body>
             <ScrollViewer MaxHeight="{StaticResource SettingsOverlayContentMaxHeight}"

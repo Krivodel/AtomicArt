@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Gallery"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
@@ -10,7 +11,7 @@
         <TextBlock HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    IsVisible="{Binding IsEmpty}"
-                   Text="{x:Static resources:UiStrings.GalleryPlaceholder}" />
+                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys.Empty}}" />
 
         <controls:AnimatedGalleryControl x:Name="GalleryControl"
                                          Operations="{Binding GalleryOperations, ElementName=GalleryRoot}"

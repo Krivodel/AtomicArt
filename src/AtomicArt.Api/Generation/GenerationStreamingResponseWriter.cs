@@ -110,8 +110,8 @@ public sealed class GenerationStreamingResponseWriter
         ProblemDetails problemDetails = new()
         {
             Status = statusCode,
-            Title = "Ошибка запроса генерации.",
-            Detail = "Запрос генерации не удалось обработать."
+            Title = "Generation request failed.",
+            Detail = "The generation request could not be processed."
         };
 
         if (!string.IsNullOrWhiteSpace(safeErrorCode))

@@ -431,7 +431,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         {
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
-            Content = UiStrings.DeleteGlyph,
+            Content = UiGlyphs.Delete,
             Command = RemoveAttachmentCommand,
             CommandParameter = item
         };

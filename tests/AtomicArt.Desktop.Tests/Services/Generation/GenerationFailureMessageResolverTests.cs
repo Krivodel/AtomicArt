@@ -10,40 +10,52 @@ namespace AtomicArt.Desktop.Tests.Services.Generation;
 public sealed class GenerationFailureMessageResolverTests
 {
     [Fact]
-    public void GetUserMessage_WithKnownProviderCode_ReturnsSpecificMessage()
+    public void GetLocalizationKey_WithKnownProviderCode_ReturnsSpecificKey()
     {
-        string message = GenerationFailureMessageResolver.GetUserMessage(
+        string localizationKey = GenerationFailureMessageResolver.GetLocalizationKey(
             GenerationProviderFailureErrorCodes.Authentication);
 
-        message.Should().Be(UiStrings.GenerationAuthenticationFailed);
+        localizationKey.Should().Be(
+            GenerationUiLocalizationKeys.Errors.AuthenticationFailed);
     }
 
     [Fact]
-    public void GetUserMessage_WithUnknownCode_ReturnsGenericMessage()
+    public void GetLocalizationKey_WithKnownProtocolCode_ReturnsSpecificKey()
     {
-        string message = GenerationFailureMessageResolver.GetUserMessage(
+        string localizationKey = GenerationFailureMessageResolver.GetLocalizationKey(
+            GenerationProtocolErrorCodes.ModelNotFound);
+
+        localizationKey.Should().Be(GenerationUiLocalizationKeys.Errors.ModelNotFound);
+    }
+
+    [Fact]
+    public void GetLocalizationKey_WithUnknownCode_ReturnsGenericKey()
+    {
+        string localizationKey = GenerationFailureMessageResolver.GetLocalizationKey(
             "UNKNOWN_ERROR_CODE");
 
-        message.Should().Be(UiStrings.GenerationFailed);
+        localizationKey.Should().Be(GenerationUiLocalizationKeys.Errors.Failed);
     }
 
     [Fact]
-    public void GetUserMessage_WithHttpRequestException_ReturnsServerUnavailableMessage()
+    public void GetLocalizationKey_WithHttpRequestException_ReturnsServerUnavailableKey()
     {
         HttpRequestException exception = new("Connection refused.");
 
-        string message = GenerationFailureMessageResolver.GetUserMessage(exception);
+        string localizationKey =
+            GenerationFailureMessageResolver.GetLocalizationKey(exception);
 
-        message.Should().Be(UiStrings.GenerationApiUnavailable);
+        localizationKey.Should().Be(GenerationUiLocalizationKeys.Errors.ApiUnavailable);
     }
 
     [Fact]
-    public void GetUserMessage_WithUnexpectedException_ReturnsGenericMessage()
+    public void GetLocalizationKey_WithUnexpectedException_ReturnsGenericKey()
     {
         InvalidOperationException exception = new("Unexpected failure.");
 
-        string message = GenerationFailureMessageResolver.GetUserMessage(exception);
+        string localizationKey =
+            GenerationFailureMessageResolver.GetLocalizationKey(exception);
 
-        message.Should().Be(UiStrings.GenerationFailed);
+        localizationKey.Should().Be(GenerationUiLocalizationKeys.Errors.Failed);
     }
 }

@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Xunit;
 
+using CommunityToolkit.Mvvm.Messaging;
+
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels;
@@ -10,13 +12,16 @@ namespace AtomicArt.Desktop.Tests.Services;
 
 public sealed class DialogServiceTests
 {
-    private const string ErrorMessage = "Не удалось выполнить действие.";
+    private const string ErrorMessage = "The action could not be completed.";
 
     [Fact]
     public void ShowError_WithMessage_OpensDialog()
     {
         ErrorDialogViewModel viewModel = CreateViewModel();
-        DialogService dialogService = new(viewModel);
+        DialogService dialogService = new(
+            viewModel,
+            TestLocalizationTextProvider.Default,
+            new WeakReferenceMessenger());
 
         dialogService.ShowError(ErrorMessage);
 
@@ -28,7 +33,10 @@ public sealed class DialogServiceTests
     public async Task ShowErrorAsync_WhenCanceled_DoesNotOpenDialog()
     {
         ErrorDialogViewModel viewModel = CreateViewModel();
-        DialogService dialogService = new(viewModel);
+        DialogService dialogService = new(
+            viewModel,
+            TestLocalizationTextProvider.Default,
+            new WeakReferenceMessenger());
         using CancellationTokenSource cancellationTokenSource = new();
         await cancellationTokenSource.CancelAsync();
 

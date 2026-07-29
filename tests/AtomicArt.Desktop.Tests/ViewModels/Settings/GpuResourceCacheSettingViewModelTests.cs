@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Xunit;
 
-using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.ViewModels.Settings;
@@ -13,15 +12,22 @@ public sealed class GpuResourceCacheSettingViewModelTests
     [Fact]
     public async Task SelectedOption_WhenChanged_SavesValue()
     {
-        GpuResourceCacheOption firstOption = GpuResourceCacheSettingOptions.Options[0];
-        GpuResourceCacheOption secondOption = GpuResourceCacheSettingOptions.Options[1];
+        GpuResourceCacheOptionViewModel firstOption = new(
+            GpuResourceCacheSettingOptions.Options[0],
+            TestLocalizationTextProvider.Default);
+        GpuResourceCacheOptionViewModel secondOption = new(
+            GpuResourceCacheSettingOptions.Options[1],
+            TestLocalizationTextProvider.Default);
+        IReadOnlyList<GpuResourceCacheOptionViewModel> options =
+            [firstOption, secondOption];
         RecordingSettingsStateService settingsStateService = new();
         GpuResourceCacheSettingViewModel viewModel = new(
             new GpuResourceCacheSettingDefinition(),
-            GpuResourceCacheSettingOptions.Options,
+            options,
             firstOption,
             settingsStateService,
-            new TestViewModelErrorHandler());
+            new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default);
 
         viewModel.SelectedOption = secondOption;
         Task? executionTask = viewModel.SaveCommand.ExecutionTask;

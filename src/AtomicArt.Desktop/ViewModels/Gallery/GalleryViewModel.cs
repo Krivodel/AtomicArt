@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
@@ -10,13 +11,17 @@ using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.ViewModels.Generation;
 
 using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
 
-public sealed partial class GalleryViewModel : ObservableObject, IDisposable
+public sealed partial class GalleryViewModel :
+    ObservableObject,
+    IRecipient<LocalizationChangedMessage>,
+    IDisposable
 {
     public ReadOnlyObservableCollection<GenerationItemViewModel> Items { get; }
     public bool IsEmpty => _itemsController.IsEmpty;
@@ -50,9 +55,11 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     private readonly GenerationPriceFormatter _priceFormatter;
     private readonly GenerationDurationFormatter _durationFormatter;
     private readonly IGenerationCancellationService _generationCancellationService;
+    private readonly ILocalizationTextProvider _textProvider;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
     private IGenerationPanelPresetTarget? _generationPanelPresetTarget;
     private GenerationMetadataViewModel? _selectedMetadata;
+    private string? _errorLocalizationKey;
     [ObservableProperty]
     private bool _isMetadataOpen;
     [ObservableProperty]
@@ -79,6 +86,8 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         ITextClipboardService textClipboardService,
         GenerationPriceFormatter priceFormatter,
         GenerationDurationFormatter durationFormatter,
+        IMessenger messenger,
+        ILocalizationTextProvider textProvider,
         IGenerationCancellationService? generationCancellationService = null)
     {
         ArgumentNullException.ThrowIfNull(fileRevealService);
@@ -93,6 +102,8 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         ArgumentNullException.ThrowIfNull(textClipboardService);
         ArgumentNullException.ThrowIfNull(priceFormatter);
         ArgumentNullException.ThrowIfNull(durationFormatter);
+        ArgumentNullException.ThrowIfNull(messenger);
+        ArgumentNullException.ThrowIfNull(textProvider);
 
         _fileRevealService = fileRevealService;
         _imageViewerService = imageViewerService;
@@ -108,8 +119,10 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         _textClipboardService = textClipboardService;
         _priceFormatter = priceFormatter;
         _durationFormatter = durationFormatter;
+        _textProvider = textProvider;
         _generationCancellationService = generationCancellationService
             ?? NullGenerationCancellationService.Instance;
+        messenger.Register<LocalizationChangedMessage>(this);
     }
 
     public void ConfigureImageViewerAttachments(
@@ -171,6 +184,25 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             ct);
         IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
         await _galleryStateService.SaveAsync(snapshot, ct);
+    }
+
+    public void Receive(LocalizationChangedMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        DateTime utcNow = DateTime.UtcNow;
+
+        foreach (GenerationItemViewModel item in Items)
+        {
+            item.RefreshLocalization(utcNow);
+        }
+
+        SelectedMetadata?.RefreshLocalization();
+
+        if (_errorLocalizationKey is not null)
+        {
+            ErrorMessage = _textProvider.Get(_errorLocalizationKey);
+        }
     }
 
     public void Dispose()
@@ -268,7 +300,8 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             _textClipboardService,
             _errorHandler,
             _priceFormatter,
-            _durationFormatter);
+            _durationFormatter,
+            _textProvider);
         IsMetadataOpen = true;
     }
 
@@ -339,21 +372,6 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             && target.CanApplyPreset(CreateGenerationPanelPreset(item));
     }
 
-    private void OnItemsEmptyChanged()
-    {
-        OnPropertyChanged(nameof(IsEmpty));
-    }
-
-    private void OnItemsEmptyChanged(object? sender, EventArgs args)
-    {
-        OnItemsEmptyChanged();
-    }
-
-    private void OnGenerationPresetAvailabilityChanged(object? sender, EventArgs args)
-    {
-        ReuseGenerationCommand.NotifyCanExecuteChanged();
-    }
-
     private bool CanRunCommand()
     {
         return !IsLoading;
@@ -379,7 +397,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        ErrorMessage = null;
+        ClearErrorMessage();
         await ExecuteUserOperationAsync(
             operationCt => OpenViewerCoreAsync(item, operationCt),
             nameof(OpenViewerAsync),
@@ -396,9 +414,9 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        string failureMessage =
-            GenerationFailureMessageResolver.GetUserMessage(item.FailureCode);
-        await _dialogService.ShowErrorAsync(failureMessage, ct);
+        string localizationKey =
+            GenerationFailureMessageResolver.GetLocalizationKey(item.FailureCode);
+        await _dialogService.ShowLocalizedErrorAsync(localizationKey, ct);
     }
 
     private async Task DeleteItemAsync(GenerationItemViewModel item, CancellationToken ct)
@@ -490,6 +508,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         return ViewModelAsyncOperation.ExecuteAsync(
             _errorHandler,
             errorMessage => ErrorMessage = errorMessage,
+            localizationKey => _errorLocalizationKey = localizationKey,
             operation,
             operationName,
             ct);
@@ -503,12 +522,33 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         try
         {
             IsLoading = true;
-            ErrorMessage = null;
+            ClearErrorMessage();
             await ExecuteUserOperationAsync(operation, operationName, ct);
         }
         finally
         {
             IsLoading = false;
         }
+    }
+
+    private void ClearErrorMessage()
+    {
+        _errorLocalizationKey = null;
+        ErrorMessage = null;
+    }
+
+    private void OnItemsEmptyChanged()
+    {
+        OnPropertyChanged(nameof(IsEmpty));
+    }
+
+    private void OnItemsEmptyChanged(object? sender, EventArgs args)
+    {
+        OnItemsEmptyChanged();
+    }
+
+    private void OnGenerationPresetAvailabilityChanged(object? sender, EventArgs args)
+    {
+        ReuseGenerationCommand.NotifyCanExecuteChanged();
     }
 }

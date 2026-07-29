@@ -123,7 +123,7 @@ public sealed class ImageModelRegistryTests
             4_000,
             1_000,
             4_000,
-            [GenerationAspectRatios.Auto],
+            [new GenerationModelOptionMetadataDto(GenerationAspectRatios.Auto)],
             ["4k"],
             [1],
             new GenerationModelTemperatureMetadataDto(0.1d, 2d, 1d, 0.1d),

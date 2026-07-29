@@ -22,7 +22,8 @@ public sealed class SecretSettingViewTests : AnimatedGalleryControlTestBase
             SecretSettingViewModel viewModel = new(
                 new GoogleApiKeySettingDefinition(),
                 new StoredSecretStore(),
-                new TestViewModelErrorHandler());
+                new TestViewModelErrorHandler(),
+                TestLocalizationTextProvider.Default);
             SecretSettingView view = new()
             {
                 DataContext = viewModel

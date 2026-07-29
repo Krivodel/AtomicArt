@@ -18,7 +18,8 @@ public sealed class SecretSettingViewModelTests
         SecretSettingViewModel viewModel = new(
             new GoogleApiKeySettingDefinition(),
             secretStore,
-            new TestViewModelErrorHandler());
+            new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default);
 
         await viewModel.LoadCommand.ExecuteAsync(null);
 
@@ -33,7 +34,8 @@ public sealed class SecretSettingViewModelTests
         SecretSettingViewModel viewModel = new(
             new GoogleApiKeySettingDefinition(),
             new RecordingSecretStore(),
-            new TestViewModelErrorHandler())
+            new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default)
         {
             Value = "value-for-test-only"
         };
@@ -51,7 +53,8 @@ public sealed class SecretSettingViewModelTests
         SecretSettingViewModel viewModel = new(
             new GoogleApiKeySettingDefinition(),
             secretStore,
-            new TestViewModelErrorHandler())
+            new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default)
         {
             Value = "value-for-test-only"
         };

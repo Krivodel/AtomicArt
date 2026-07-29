@@ -53,7 +53,7 @@ public sealed class GlobalExceptionService : IDisposable
     {
         try
         {
-            _dialogService.ShowError(UiStrings.UnhandledExceptionMessage);
+            _dialogService.ShowLocalizedError(CommonLocalizationKeys.UnknownError);
         }
         catch (Exception exception)
         {

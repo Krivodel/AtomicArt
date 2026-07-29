@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
@@ -23,12 +24,14 @@ public sealed partial class NumericSettingViewModel :
         INumericSettingValueSource valueSource,
         ISettingsStateService settingsStateService,
         IDoubleSettingValueConverter valueConverter,
-        IViewModelErrorHandler errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
         : base(
             definition,
             options,
             FindSelectedOption(options, valueSource),
-            errorHandler)
+            errorHandler,
+            textProvider)
     {
         ArgumentNullException.ThrowIfNull(valueSource);
         ArgumentNullException.ThrowIfNull(settingsStateService);

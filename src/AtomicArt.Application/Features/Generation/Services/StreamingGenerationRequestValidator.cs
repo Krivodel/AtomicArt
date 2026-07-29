@@ -42,8 +42,8 @@ public sealed class StreamingGenerationRequestValidator
                 > transportLimits.MaxRequestBytes)
         {
             return Result<StreamingImageGenerationRequest>.ValidationError(
-                DomainGenerationErrorCodes.ModelRequestValidation,
-                "Запрос превышает транспортный предел выбранной модели.");
+                GenerationProtocolErrorCodes.ModelRequestValidation,
+                "The request exceeds the transport limit for the selected model.");
         }
 
         Result<IReadOnlyDictionary<string, JsonElement>> parametersResult =
@@ -55,7 +55,7 @@ public sealed class StreamingGenerationRequestValidator
                 parametersResult.ErrorCode
                     ?? GenerationProtocolErrorCodes.InvalidParameters,
                 parametersResult.ErrorMessage
-                    ?? "Параметры генерации не прошли проверку.");
+                    ?? "Generation parameters failed validation.");
         }
 
         Result<IReadOnlyList<GenerationAttachedImage>> attachmentMetadataResult =
@@ -70,9 +70,9 @@ public sealed class StreamingGenerationRequestValidator
         {
             return Result<StreamingImageGenerationRequest>.ValidationError(
                 attachmentMetadataResult.ErrorCode
-                    ?? DomainGenerationErrorCodes.ModelRequestValidation,
+                    ?? GenerationProtocolErrorCodes.ModelRequestValidation,
                 attachmentMetadataResult.ErrorMessage
-                    ?? "Вложения не прошли проверку.");
+                    ?? "Attachments failed validation.");
         }
 
         if (!TryReadString(
@@ -90,7 +90,7 @@ public sealed class StreamingGenerationRequestValidator
         {
             return Result<StreamingImageGenerationRequest>.ValidationError(
                 GenerationProtocolErrorCodes.InvalidParameters,
-                "Обязательные параметры генерации не переданы.");
+                "Required generation parameters were not provided.");
         }
 
         TryReadString(
@@ -113,10 +113,9 @@ public sealed class StreamingGenerationRequestValidator
         if (!validationResult.IsValid)
         {
             return Result<StreamingImageGenerationRequest>.ValidationError(
-                validationResult.ErrorCode
-                    ?? DomainGenerationErrorCodes.ModelRequestValidation,
+                MapDomainValidationErrorCode(validationResult.ErrorCode),
                 validationResult.ErrorMessage
-                    ?? "Запрос генерации не прошёл проверку.");
+                    ?? "The generation request failed validation.");
         }
 
         StreamingImageGenerationRequest request = new(
@@ -142,7 +141,7 @@ public sealed class StreamingGenerationRequestValidator
         {
             return Result<IReadOnlyDictionary<string, JsonElement>>.ValidationError(
                 GenerationProtocolErrorCodes.InvalidParameters,
-                "Каталог модели не содержит определения параметров.");
+                "The model catalog does not contain parameter definitions.");
         }
 
         Dictionary<string, GenerationModelParameterMetadataDto> definitionsByName =
@@ -162,7 +161,7 @@ public sealed class StreamingGenerationRequestValidator
             {
                 return Result<IReadOnlyDictionary<string, JsonElement>>.ValidationError(
                     GenerationProtocolErrorCodes.InvalidParameters,
-                    "Передан неизвестный или недопустимый параметр генерации.");
+                    "An unknown or invalid generation parameter was provided.");
             }
 
             normalizedParameters[parameter.Key] = parameter.Value.Clone();
@@ -186,12 +185,28 @@ public sealed class StreamingGenerationRequestValidator
             {
                 return Result<IReadOnlyDictionary<string, JsonElement>>.ValidationError(
                     GenerationProtocolErrorCodes.InvalidParameters,
-                    "Обязательный параметр генерации не передан.");
+                    "A required generation parameter was not provided.");
             }
         }
 
         return Result<IReadOnlyDictionary<string, JsonElement>>.Success(
             normalizedParameters);
+    }
+
+    private static string MapDomainValidationErrorCode(string? errorCode)
+    {
+        return errorCode switch
+        {
+            DomainGenerationErrorCodes.ModelNotFound =>
+                GenerationProtocolErrorCodes.ModelNotFound,
+            DomainGenerationErrorCodes.UnsupportedResolution =>
+                GenerationProtocolErrorCodes.UnsupportedResolution,
+            DomainGenerationErrorCodes.UnsupportedAspectRatio =>
+                GenerationProtocolErrorCodes.UnsupportedAspectRatio,
+            DomainGenerationErrorCodes.ModelRequestValidation =>
+                GenerationProtocolErrorCodes.ModelRequestValidation,
+            _ => GenerationProtocolErrorCodes.ModelRequestValidation
+        };
     }
 
     private async Task<Result<IReadOnlyList<GenerationAttachedImage>>> ValidateAttachmentsAsync(
@@ -201,7 +216,8 @@ public sealed class StreamingGenerationRequestValidator
     {
         if (metadata is null || metadata.Count != attachments.Count)
         {
-            return CreateAttachmentFailure("Число вложений не совпадает с метаданными.");
+            return CreateAttachmentFailure(
+                "The attachment count does not match the metadata.");
         }
 
         List<GenerationAttachedImage> validatedAttachments = [];
@@ -220,7 +236,8 @@ public sealed class StreamingGenerationRequestValidator
                     out IAttachedImageFormat? format)
                 || format is null)
             {
-                return CreateAttachmentFailure("Метаданные вложения не прошли проверку.");
+                return CreateAttachmentFailure(
+                    "Attachment metadata failed validation.");
             }
 
             byte[] signatureProbe = new byte[SignatureProbeLength];
@@ -234,7 +251,7 @@ public sealed class StreamingGenerationRequestValidator
             if (!format.MatchesSignature(signatureProbe.AsSpan(0, bytesRead)))
             {
                 return CreateAttachmentFailure(
-                    "Сигнатура вложения не соответствует типу содержимого.");
+                    "The attachment signature does not match its content type.");
             }
 
             validatedAttachments.Add(new GenerationAttachedImage(
@@ -360,7 +377,7 @@ public sealed class StreamingGenerationRequestValidator
         string message)
     {
         return Result<IReadOnlyList<GenerationAttachedImage>>.ValidationError(
-            DomainGenerationErrorCodes.ModelRequestValidation,
+            GenerationProtocolErrorCodes.ModelRequestValidation,
             message);
     }
 }

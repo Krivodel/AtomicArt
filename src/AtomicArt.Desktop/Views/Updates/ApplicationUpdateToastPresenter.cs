@@ -7,6 +7,7 @@ using SukiUI.Enums;
 using SukiUI.Toasts;
 
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.ViewModels.Updates;
 
 namespace AtomicArt.Desktop.Views.Updates;
@@ -16,6 +17,7 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
     public ISukiToastManager Manager => _manager;
 
     private readonly ISukiToastManager _manager;
+    private readonly ILocalizationTextProvider _textProvider;
     private ApplicationUpdateViewModel? _viewModel;
     private ISukiToast? _toast;
     private TextBlock? _messageText;
@@ -25,9 +27,13 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
     private ApplicationUpdateState _presentedState;
     private bool _isDisposed;
 
-    public ApplicationUpdateToastPresenter(ISukiToastManager manager)
+    public ApplicationUpdateToastPresenter(
+        ISukiToastManager manager,
+        ILocalizationTextProvider textProvider)
     {
         _manager = manager ?? throw new ArgumentNullException(nameof(manager));
+        _textProvider = textProvider
+            ?? throw new ArgumentNullException(nameof(textProvider));
     }
 
     public void Attach(ApplicationUpdateViewModel viewModel)
@@ -98,7 +104,7 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
         ShowToast(
             (viewModel, builder) => builder
                 .WithActionButton(
-                    UiStrings.UpdateLater,
+                    _textProvider.Get(UpdateLocalizationKeys.Actions.Later),
                     OnUpdateLaterRequested,
                     true,
                     SukiButtonStyles.Basic)
@@ -147,7 +153,7 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
     {
         return _manager
             .CreateToast()
-            .WithTitle(UiStrings.UpdateTitle)
+            .WithTitle(_textProvider.Get(UpdateLocalizationKeys.Title))
             .WithContent(content)
             .OfType(NotificationType.Information);
     }
@@ -264,7 +270,12 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         _ = sender;
-        _ = e;
+
+        if (e.PropertyName == nameof(ApplicationUpdateViewModel.LocalizationRevision))
+        {
+            DismissCurrentToast();
+        }
+
         RefreshNotification();
     }
 }

@@ -1,4 +1,5 @@
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
@@ -10,12 +11,14 @@ public sealed class PromptTextSizeSettingViewModelFactory :
     private readonly ISettingsStateService _settingsStateService;
     private readonly IDoubleSettingValueConverter _valueConverter;
     private readonly IViewModelErrorHandler _errorHandler;
+    private readonly ILocalizationTextProvider _textProvider;
 
     public PromptTextSizeSettingViewModelFactory(
         IPromptTextSizeService promptTextSizeService,
         ISettingsStateService settingsStateService,
         IDoubleSettingValueConverter valueConverter,
-        IViewModelErrorHandler errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
         : base("Prompt text size setting definition expected.")
     {
         _promptTextSizeService = promptTextSizeService
@@ -24,6 +27,7 @@ public sealed class PromptTextSizeSettingViewModelFactory :
             ?? throw new ArgumentNullException(nameof(settingsStateService));
         _valueConverter = valueConverter ?? throw new ArgumentNullException(nameof(valueConverter));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
+        _textProvider = textProvider ?? throw new ArgumentNullException(nameof(textProvider));
     }
 
     protected override ISettingItemViewModel CreateItemViewModel(
@@ -35,6 +39,7 @@ public sealed class PromptTextSizeSettingViewModelFactory :
             new PromptTextSizeNumericSettingValueSource(_promptTextSizeService),
             _settingsStateService,
             _valueConverter,
-            _errorHandler);
+            _errorHandler,
+            _textProvider);
     }
 }

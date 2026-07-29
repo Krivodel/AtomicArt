@@ -142,9 +142,11 @@ public sealed class PicaViewerSessionTests
             await using PicaViewerSession session = dependencies.CreateSession(formatRegistry);
             await session.PrepareAsync(request, CancellationToken.None);
             PicaViewerRequest preparedRequest = GetPreparedRequest(session);
+            PicaActionDefinition attachAction = preparedRequest.Actions.Single(action =>
+                action.Id == AtomicArtPicaActions.AttachId);
 
             await session.DispatchCurrentImageAsync(
-                AtomicArtPicaActions.Attach,
+                attachAction,
                 preparedRequest.Items.Single(),
                 CancellationToken.None);
 
@@ -181,9 +183,12 @@ public sealed class PicaViewerSessionTests
         await using PicaViewerSession session = dependencies.CreateSession();
         await session.PrepareAsync(request, CancellationToken.None);
         PicaViewerRequest preparedRequest = GetPreparedRequest(session);
+        PicaActionDefinition showInGalleryAction =
+            preparedRequest.Actions.Single(action =>
+                action.Id == AtomicArtPicaActions.ShowInGalleryId);
 
         await session.DispatchCurrentImageAsync(
-            AtomicArtPicaActions.ShowInGallery,
+            showInGalleryAction,
             preparedRequest.Items.Single(),
             CancellationToken.None);
 

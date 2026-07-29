@@ -72,7 +72,7 @@ public sealed class MultipartGenerationRequestReaderTests
                 .ThrowAsync<GenerationMultipartRequestException>())
             .Which;
         exception.Message.Should().Be(
-            "Часть multipart-запроса превышает допустимый размер.");
+            "The multipart request part exceeds the allowed size.");
         exception.InnerException.Should().BeNull();
     }
 

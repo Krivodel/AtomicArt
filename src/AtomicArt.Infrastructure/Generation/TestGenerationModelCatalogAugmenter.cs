@@ -86,7 +86,13 @@ public static class TestGenerationModelCatalogAugmenter
             DisplayName = metadata.DisplayName,
             Provider = GenerationProviderIds.Test,
             ProviderModelId = metadata.ProviderModelId,
-            AspectRatios = metadata.AspectRatios,
+            AspectRatios = metadata.AspectRatios
+                .Select(value => new GenerationModelOptionMetadataDto(
+                    value,
+                    GenerationAspectRatios.IsAuto(value)
+                        ? GenerationLocalizationKeys.OptionsAuto
+                        : null))
+                .ToList(),
             Resolutions = metadata.Resolutions,
             Attachments = attachments,
             Pricing = new GenerationModelPricingMetadataDto(

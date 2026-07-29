@@ -1,15 +1,15 @@
 using CommunityToolkit.Mvvm.Input;
 
-using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class GpuResourceCacheSettingViewModel :
-    SelectableSettingItemViewModel<GpuResourceCacheOption>
+    SelectableSettingItemViewModel<GpuResourceCacheOptionViewModel>
 {
-    public string RestartNotice { get; }
+    public string RestartNotice => TextProvider.Get(_definition.RestartNoticeKey);
 
     protected override IRelayCommand OperationCommand => SaveCommand;
 
@@ -18,21 +18,34 @@ public sealed partial class GpuResourceCacheSettingViewModel :
 
     public GpuResourceCacheSettingViewModel(
         GpuResourceCacheSettingDefinition definition,
-        IReadOnlyList<GpuResourceCacheOption> options,
-        GpuResourceCacheOption selectedOption,
+        IReadOnlyList<GpuResourceCacheOptionViewModel> options,
+        GpuResourceCacheOptionViewModel selectedOption,
         ISettingsStateService settingsStateService,
-        IViewModelErrorHandler errorHandler)
-        : base(definition, options, selectedOption, errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
+        : base(definition, options, selectedOption, errorHandler, textProvider)
     {
         ArgumentNullException.ThrowIfNull(selectedOption);
         ArgumentNullException.ThrowIfNull(settingsStateService);
 
         _definition = definition;
         _settingsStateService = settingsStateService;
-        RestartNotice = definition.RestartNotice;
     }
 
-    protected override void OnSelectedOptionChanged(GpuResourceCacheOption? selectedOption)
+    public override void RefreshLocalization()
+    {
+        base.RefreshLocalization();
+
+        foreach (GpuResourceCacheOptionViewModel option in Options)
+        {
+            option.RefreshLocalization();
+        }
+
+        OnPropertyChanged(nameof(RestartNotice));
+    }
+
+    protected override void OnSelectedOptionChanged(
+        GpuResourceCacheOptionViewModel? selectedOption)
     {
         if (selectedOption is not null)
         {

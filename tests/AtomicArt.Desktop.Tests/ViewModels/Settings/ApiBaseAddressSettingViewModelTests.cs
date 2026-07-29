@@ -38,7 +38,7 @@ public sealed class ApiBaseAddressSettingViewModelTests
         context.EndpointService.BaseAddress.ToString().Should().Be("https://atomicart.test/");
         context.SettingsStateService.AppliedValue.Should().BeNull();
         context.SettingsStateService.SavedValue.Should().BeNull();
-        context.ViewModel.ErrorMessage.Should().Be(UiStrings.SettingsApiBaseAddressInvalid);
+        context.ViewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.ApiBaseAddress.Invalid));
     }
 
     [Fact]
@@ -80,7 +80,8 @@ public sealed class ApiBaseAddressSettingViewModelTests
                 EndpointService,
                 new ImmediateUiThreadDispatcher(),
                 SettingsStateService,
-                new TestViewModelErrorHandler());
+                new TestViewModelErrorHandler(),
+                TestLocalizationTextProvider.Default);
         }
 
         public void Dispose()

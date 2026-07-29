@@ -24,7 +24,8 @@ public sealed class NumericSettingViewModelTests
             valueSource,
             settingsStateService,
             valueConverter,
-            new TestViewModelErrorHandler());
+            new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default);
 
         await viewModel.ApplyCommand.ExecuteAsync(null);
 
@@ -47,7 +48,8 @@ public sealed class NumericSettingViewModelTests
             new RecordingNumericSettingValueSource(firstOption.Value),
             settingsStateService,
             valueConverter,
-            new TestViewModelErrorHandler());
+            new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default);
 
         viewModel.SelectedOption = secondOption;
         Task? executionTask = viewModel.ApplyCommand.ExecutionTask;
@@ -74,7 +76,8 @@ public sealed class NumericSettingViewModelTests
             valueSource,
             settingsStateService,
             new DoubleSettingValueConverter(),
-            new TestViewModelErrorHandler());
+            new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default);
 
         valueSource.SetValue(secondOption.Value);
 
@@ -94,7 +97,8 @@ public sealed class NumericSettingViewModelTests
             valueSource,
             new RecordingSettingsStateService(),
             new DoubleSettingValueConverter(),
-            new TestViewModelErrorHandler());
+            new TestViewModelErrorHandler(),
+            TestLocalizationTextProvider.Default);
 
         viewModel.Dispose();
         valueSource.SetValue(secondOption.Value);

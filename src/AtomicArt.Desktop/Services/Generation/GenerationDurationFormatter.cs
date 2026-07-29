@@ -1,7 +1,20 @@
+using System.Globalization;
+
+using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Localization;
+
 namespace AtomicArt.Desktop.Services.Generation;
 
 public sealed class GenerationDurationFormatter
 {
+    private readonly ILocalizationTextProvider _textProvider;
+
+    public GenerationDurationFormatter(ILocalizationTextProvider textProvider)
+    {
+        _textProvider = textProvider
+            ?? throw new ArgumentNullException(nameof(textProvider));
+    }
+
     public string? Format(TimeSpan? duration)
     {
         if (duration is null)
@@ -16,14 +29,29 @@ public sealed class GenerationDurationFormatter
 
         if (hours > 0)
         {
-            return $"{hours}ч:{minutes}м:{seconds}с";
+            return string.Concat(
+                FormatValue(hours, CommonLocalizationKeys.TimeUnits.HourShort),
+                ":",
+                FormatValue(minutes, CommonLocalizationKeys.TimeUnits.MinuteShort),
+                ":",
+                FormatValue(seconds, CommonLocalizationKeys.TimeUnits.SecondShort));
         }
 
         if (minutes > 0)
         {
-            return $"{minutes}м:{seconds}с";
+            return string.Concat(
+                FormatValue(minutes, CommonLocalizationKeys.TimeUnits.MinuteShort),
+                ":",
+                FormatValue(seconds, CommonLocalizationKeys.TimeUnits.SecondShort));
         }
 
-        return $"{seconds}с";
+        return FormatValue(seconds, CommonLocalizationKeys.TimeUnits.SecondShort);
+    }
+
+    private string FormatValue(int value, string unitKey)
+    {
+        return string.Concat(
+            value.ToString(CultureInfo.CurrentCulture),
+            _textProvider.Get(unitKey));
     }
 }

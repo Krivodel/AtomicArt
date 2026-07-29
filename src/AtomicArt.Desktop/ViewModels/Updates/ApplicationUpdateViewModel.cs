@@ -1,18 +1,21 @@
-using System.Globalization;
-
 using Microsoft.Extensions.Options;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Updates;
 
 namespace AtomicArt.Desktop.ViewModels.Updates;
 
-public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisposable
+public sealed partial class ApplicationUpdateViewModel :
+    ObservableObject,
+    IRecipient<LocalizationChangedMessage>,
+    IDisposable
 {
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsDownloading => State == ApplicationUpdateState.Downloading;
@@ -22,19 +25,25 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
         or ApplicationUpdateState.Restarting;
     public bool IsActionVisible => State == ApplicationUpdateState.Available;
     public string UpdateActionText => IsGenerationActive
-        ? UiStrings.UpdateWaitAndInstall
-        : UiStrings.UpdateInstall;
+        ? _textProvider.Get(UpdateLocalizationKeys.Actions.WaitAndInstall)
+        : _textProvider.Get(UpdateLocalizationKeys.Actions.Install);
+    public int LocalizationRevision => _localizationRevision;
 
     private readonly IApplicationUpdateService _updateService;
     private readonly IApplicationUpdateRestartCoordinator _restartCoordinator;
     private readonly IGenerationActivityTracker _generationActivityTracker;
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly IViewModelErrorHandler _errorHandler;
+    private readonly ILocalizationTextProvider _textProvider;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
     private readonly TimeSpan _updateCheckInterval;
     private ApplicationUpdate? _availableUpdate;
     private Task? _monitoringTask;
     private string? _dismissedVersion;
+    private string? _messageLocalizationKey;
+    private string? _messageArgument;
+    private string? _errorLocalizationKey;
+    private int _localizationRevision;
     private bool _isDisposed;
     private bool _isMonitoringStarted;
     [ObservableProperty]
@@ -68,7 +77,9 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
         IApplicationUpdateRestartCoordinator restartCoordinator,
         IGenerationActivityTracker generationActivityTracker,
         IUiThreadDispatcher uiThreadDispatcher,
+        IMessenger messenger,
         IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider,
         IOptions<ApplicationUpdateOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -81,12 +92,39 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
             ?? throw new ArgumentNullException(nameof(generationActivityTracker));
         _uiThreadDispatcher = uiThreadDispatcher
             ?? throw new ArgumentNullException(nameof(uiThreadDispatcher));
+        ArgumentNullException.ThrowIfNull(messenger);
         _errorHandler = errorHandler
             ?? throw new ArgumentNullException(nameof(errorHandler));
+        _textProvider = textProvider
+            ?? throw new ArgumentNullException(nameof(textProvider));
         _updateCheckInterval = TimeSpan.FromMinutes(
             options.Value.CheckIntervalMinutes);
         IsGenerationActive = _generationActivityTracker.IsActive;
         _generationActivityTracker.ActivityChanged += OnGenerationActivityChanged;
+        messenger.Register<LocalizationChangedMessage>(this);
+    }
+
+    public void Receive(LocalizationChangedMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        _localizationRevision++;
+        OnPropertyChanged(nameof(LocalizationRevision));
+        OnPropertyChanged(nameof(UpdateActionText));
+
+        if (_messageLocalizationKey is not null)
+        {
+            Message = _messageArgument is null
+                ? _textProvider.Get(_messageLocalizationKey)
+                : _textProvider.Format(
+                    _messageLocalizationKey,
+                    _messageArgument);
+        }
+
+        if (_errorLocalizationKey is not null)
+        {
+            ErrorMessage = _textProvider.Get(_errorLocalizationKey);
+        }
     }
 
     public void Dispose()
@@ -111,18 +149,18 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
         try
         {
             IsLoading = true;
-            ErrorMessage = null;
+            ClearErrorMessage();
             await CheckForUpdateAsync(ct);
             _monitoringTask = MonitorForUpdatesAsync(_disposeCancellationSource.Token);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            ErrorMessage = null;
+            ClearErrorMessage();
         }
         catch (Exception ex)
         {
             _errorHandler.Log(ex, nameof(StartMonitoringAsync));
-            ErrorMessage = UiStrings.UpdateCheckFailed;
+            SetLocalizedErrorMessage(UpdateLocalizationKeys.Errors.CheckFailed);
             _monitoringTask = MonitorForUpdatesAsync(_disposeCancellationSource.Token);
         }
         finally
@@ -144,18 +182,18 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
         try
         {
             IsLoading = true;
-            ErrorMessage = null;
+            ClearErrorMessage();
             await WaitForGenerationIfRequiredAsync(ct);
 
             State = ApplicationUpdateState.Downloading;
-            Message = UiStrings.UpdateDownloading;
+            SetLocalizedMessage(UpdateLocalizationKeys.States.Downloading);
             DownloadProgress = 0;
             Progress<int> progress = new(value => DownloadProgress = value);
             await _updateService.DownloadUpdateAsync(update, progress, ct);
 
             await WaitForGenerationIfRequiredAsync(ct);
             State = ApplicationUpdateState.Restarting;
-            Message = UiStrings.UpdateRestarting;
+            SetLocalizedMessage(UpdateLocalizationKeys.States.Restarting);
             await _restartCoordinator.ApplyAndRestartAsync(update, ct);
             IsNotificationOpen = false;
             State = ApplicationUpdateState.Hidden;
@@ -167,7 +205,7 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
         catch (Exception ex)
         {
             _errorHandler.Log(ex, nameof(UpdateAsync));
-            ErrorMessage = UiStrings.UpdateInstallFailed;
+            SetLocalizedErrorMessage(UpdateLocalizationKeys.Errors.InstallFailed);
             RestoreAvailableState(update);
         }
         finally
@@ -249,7 +287,7 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
         }
 
         State = ApplicationUpdateState.WaitingForGeneration;
-        Message = UiStrings.UpdateWaitingForGeneration;
+        SetLocalizedMessage(UpdateLocalizationKeys.States.WaitingForGeneration);
         await _generationActivityTracker.WaitUntilIdleAsync(ct);
     }
 
@@ -260,9 +298,8 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
 
     private void ShowAvailableUpdate(ApplicationUpdate update)
     {
-        Message = string.Format(
-            CultureInfo.CurrentCulture,
-            UiStrings.UpdateAvailableFormat,
+        SetLocalizedMessage(
+            UpdateLocalizationKeys.AvailableFormat,
             update.Version);
         State = ApplicationUpdateState.Available;
         IsNotificationOpen = true;
@@ -276,6 +313,33 @@ public sealed partial class ApplicationUpdateViewModel : ObservableObject, IDisp
             _disposeCancellationSource.Token,
             _errorHandler,
             nameof(RefreshGenerationActivityAsync));
+    }
+
+    private void ClearErrorMessage()
+    {
+        _errorLocalizationKey = null;
+        ErrorMessage = null;
+    }
+
+    private void SetLocalizedErrorMessage(string localizationKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(localizationKey);
+
+        _errorLocalizationKey = localizationKey;
+        ErrorMessage = _textProvider.Get(localizationKey);
+    }
+
+    private void SetLocalizedMessage(
+        string localizationKey,
+        string? argument = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(localizationKey);
+
+        _messageLocalizationKey = localizationKey;
+        _messageArgument = argument;
+        Message = argument is null
+            ? _textProvider.Get(localizationKey)
+            : _textProvider.Format(localizationKey, argument);
     }
 
     private void OnGenerationActivityChanged(object? sender, EventArgs e)

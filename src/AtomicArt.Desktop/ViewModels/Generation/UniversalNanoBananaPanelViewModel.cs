@@ -3,13 +3,16 @@ using System.ComponentModel;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.State;
 
 namespace AtomicArt.Desktop.ViewModels.Generation;
@@ -20,9 +23,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     IGenerationPanelPresetTarget,
     IAppStateGenerationPanelRestoreTarget,
     IAppStateGenerationPanelFlushTarget,
+    IRecipient<LocalizationChangedMessage>,
     IDisposable
 {
     public ReadOnlyObservableCollection<ImageModelOption> AvailableModels { get; }
+    public ReadOnlyObservableCollection<GenerationOptionViewModel> AspectRatioOptions { get; }
     public IReadOnlyList<string> AspectRatios => SelectedModel?.AspectRatios ?? [];
     public IReadOnlyList<string> Resolutions => SelectedModel?.Resolutions ?? [];
     public IReadOnlyList<int> GenerationCounts => SelectedModel?.GenerationCounts ?? [];
@@ -30,7 +35,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     public double MaximumTemperature => SelectedModel?.Temperature.Maximum ?? 0d;
     public double DefaultTemperature => SelectedModel?.Temperature.Default ?? 0d;
     public double TemperatureStep => SelectedModel?.Temperature.Step ?? 1d;
-    public string TemperatureText => NanoBanana2PanelTextFormatter.FormatTemperatureText(Temperature);
+    public string TemperatureText => _textFormatter.FormatTemperatureText(Temperature);
     public IReadOnlyList<GenerationModelThinkingLevelMetadataDto> ThinkingLevels =>
         SelectedModel?.Thinking?.Levels ?? [];
     public bool SupportsThinkingLevel => SelectedModel?.Thinking is not null;
@@ -43,7 +48,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     public int AttachmentInputByteLimit => SelectedModel is null
         ? 0
         : (int)Math.Min(int.MaxValue, SelectedModel.MaxTotalAttachedImageBytes);
-    public string AttachmentCounterText => NanoBanana2PanelTextFormatter.FormatAttachmentCounterText(
+    public string AttachmentCounterText => _textFormatter.FormatAttachmentCounterText(
         AttachedImages.Count,
         SelectedModel?.MaxAttachedImages ?? 0);
     public string GenerateButtonText => Quote.GenerateButtonText;
@@ -61,6 +66,19 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             if (SetProperty(ref _selectedModel, value))
             {
                 OnSelectedModelChanged(value);
+            }
+        }
+    }
+    public GenerationOptionViewModel? SelectedAspectRatioOption
+    {
+        get => _selectedAspectRatioOption;
+        set
+        {
+            if (SetProperty(ref _selectedAspectRatioOption, value)
+                && !_isSynchronizingAspectRatioOption
+                && value is not null)
+            {
+                SelectedAspectRatio = value.Value;
             }
         }
     }
@@ -90,11 +108,15 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private readonly IImageViewerService _imageViewerService;
     private readonly IPromptTextSizeController _promptTextSizeController;
     private readonly IViewModelErrorHandler _errorHandler;
+    private readonly ILocalizationTextProvider _textProvider;
+    private readonly NanoBanana2PanelTextFormatter _textFormatter;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
     private readonly ObservableCollection<ImageModelOption> _availableModels = [];
+    private readonly ObservableCollection<GenerationOptionViewModel> _aspectRatioOptions = [];
     private readonly TimeSpan _promptStateSaveDelay;
     private string? _rememberedThinkingLevelValue;
     private ImageModelOption? _selectedModel;
+    private GenerationOptionViewModel? _selectedAspectRatioOption;
     private CancellationTokenSource? _promptStateSaveCancellation;
     private CancellationTokenSource? _catalogReloadCancellation;
     private long _catalogLoadOperationId;
@@ -105,6 +127,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private bool _suppressSelectionValueResetNotifications;
     private bool _hasRestoredPanelState;
     private bool _hasTemperatureValue;
+    private bool _isSynchronizingAspectRatioOption;
+    private string? _localizedErrorKey;
     [ObservableProperty]
     private string _selectedAspectRatio = string.Empty;
     [ObservableProperty]
@@ -139,7 +163,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         IImageViewerService imageViewerService,
         IPromptTextSizeController promptTextSizeController,
         NanoBanana2QuoteViewModel quote,
+        IMessenger messenger,
         IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider,
+        NanoBanana2PanelTextFormatter textFormatter,
         StateWritePolicy stateWritePolicy)
     {
         ArgumentNullException.ThrowIfNull(filePickerService);
@@ -155,7 +182,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         ArgumentNullException.ThrowIfNull(imageViewerService);
         ArgumentNullException.ThrowIfNull(promptTextSizeController);
         ArgumentNullException.ThrowIfNull(quote);
+        ArgumentNullException.ThrowIfNull(messenger);
         ArgumentNullException.ThrowIfNull(errorHandler);
+        ArgumentNullException.ThrowIfNull(textProvider);
+        ArgumentNullException.ThrowIfNull(textFormatter);
         ArgumentNullException.ThrowIfNull(stateWritePolicy);
 
         _generationModelCatalogApiClient = generationModelCatalogApiClient;
@@ -163,6 +193,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _apiEndpointService = apiEndpointService;
         _uiThreadDispatcher = uiThreadDispatcher;
         AvailableModels = new ReadOnlyObservableCollection<ImageModelOption>(_availableModels);
+        AspectRatioOptions =
+            new ReadOnlyObservableCollection<GenerationOptionViewModel>(
+                _aspectRatioOptions);
         Quote = quote;
         _filePickerService = filePickerService;
         _secretStore = secretStore;
@@ -173,10 +206,13 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _imageViewerService = imageViewerService;
         _promptTextSizeController = promptTextSizeController;
         _errorHandler = errorHandler;
+        _textProvider = textProvider;
+        _textFormatter = textFormatter;
         _promptStateSaveDelay = stateWritePolicy.DeferredWriteDelay;
         _attachmentsViewModel.AttachmentStateChanged += OnAttachmentStateChanged;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
         _promptTextSizeController.TextSizeChanged += OnPromptTextSizeChanged;
+        messenger.Register<LocalizationChangedMessage>(this);
         ApplyCatalogSnapshot(imageModelOptionCatalog.GetModels());
     }
 
@@ -254,6 +290,26 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         await SavePanelStateAsync(nameof(CommitPendingStateAsync), ct);
     }
 
+    public void Receive(LocalizationChangedMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        Quote.RefreshLocalization();
+        OnPropertyChanged(nameof(TemperatureText));
+        OnPropertyChanged(nameof(AttachmentCounterText));
+        OnPropertyChanged(nameof(GenerateButtonText));
+
+        foreach (GenerationOptionViewModel option in AspectRatioOptions)
+        {
+            option.RefreshLocalization();
+        }
+
+        if (_localizedErrorKey is not null)
+        {
+            ErrorMessage = _textProvider.Get(_localizedErrorKey);
+        }
+    }
+
     public void Dispose()
     {
         if (_isDisposed)
@@ -305,7 +361,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         try
         {
             IsCatalogLoading = true;
-            ErrorMessage = null;
+            ClearErrorMessage();
 
             if (clearExistingCatalog)
             {
@@ -328,7 +384,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         {
             if (IsCurrentCatalogLoad(operationId, endpointRevision))
             {
-                ErrorMessage = null;
+                ClearErrorMessage();
             }
         }
         catch (Exception ex)
@@ -336,7 +392,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             if (IsCurrentCatalogLoad(operationId, endpointRevision))
             {
                 _errorHandler.Log(ex, nameof(LoadModelCatalogAsync));
-                ErrorMessage = UiStrings.ModelCatalogLoadFailed;
+                SetLocalizedErrorMessage(
+                    GenerationUiLocalizationKeys.Errors.ModelCatalogLoadFailed);
             }
         }
         finally
@@ -508,7 +565,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         try
         {
-            ErrorMessage = null;
+            ClearErrorMessage();
             await SavePanelStateAsync(nameof(GenerateAsync), ct);
             ImageModelOption selectedModel = SelectedModel
                 ?? throw new InvalidOperationException(SelectedModelNotInitializedMessage);
@@ -521,7 +578,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
                 if (string.IsNullOrWhiteSpace(storedCredential))
                 {
-                    ErrorMessage = UiStrings.GoogleApiKeyMissing;
+                    SetLocalizedErrorMessage(
+                        GenerationUiLocalizationKeys.Errors.GoogleApiKeyMissing);
                     return;
                 }
 
@@ -558,7 +616,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         if (images?.Any(image => image is null) == true)
         {
-            ErrorMessage = UiStrings.ImageAttachmentFailed;
+            SetLocalizedErrorMessage(
+                GenerationUiLocalizationKeys.Attachments.Failed);
             return;
         }
 
@@ -574,7 +633,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         if (SelectedModel is null)
         {
-            ErrorMessage = UiStrings.ModelCatalogLoadFailed;
+            SetLocalizedErrorMessage(
+                GenerationUiLocalizationKeys.Errors.ModelCatalogLoadFailed);
             DisposeInputs(inputs);
             return;
         }
@@ -632,11 +692,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         string operationName,
         CancellationToken ct)
     {
-        ErrorMessage = null;
+        ClearErrorMessage();
 
         await ViewModelAsyncOperation.ExecuteAsync(
             _errorHandler,
-            errorMessage => ErrorMessage = errorMessage,
+            SetOperationErrorMessage,
+            localizationKey => _localizedErrorKey = localizationKey,
             operation,
             operationName,
             ct);
@@ -668,47 +729,23 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         RefreshPricePreview();
     }
 
-    private void OnAttachmentStateChanged(object? sender, AttachmentStateChangedEventArgs e)
+    private void ClearErrorMessage()
     {
-        _ = sender;
-
-        OnPropertyChanged(nameof(IsAttaching));
-        GenerateCommand.NotifyCanExecuteChanged();
-        RefreshAttachmentState();
-
-        if (e.Kind is AttachmentStateChangeKind.Completed or AttachmentStateChangeKind.Removed)
-        {
-            SchedulePanelStateSave(nameof(OnAttachmentStateChanged));
-        }
-
-        if (e.Kind != AttachmentStateChangeKind.Failed)
-        {
-            return;
-        }
-
-        if (e.Exception is null)
-        {
-            ErrorMessage = UiStrings.ImageAttachmentFailed;
-            return;
-        }
-
-        _errorHandler.Log(e.Exception, nameof(AttachImageInputsAsync));
-        ErrorMessage = _errorHandler.GetUserMessage(e.Exception);
+        _localizedErrorKey = null;
+        ErrorMessage = null;
     }
 
-    private void OnApiBaseAddressChanged(object? sender, EventArgs e)
+    private void SetLocalizedErrorMessage(string localizationKey)
     {
-        if (!_acceptApiEndpointChanges || _isDisposed)
-        {
-            return;
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(localizationKey);
 
-        _ = DispatchCatalogReloadAsync();
+        _localizedErrorKey = localizationKey;
+        ErrorMessage = _textProvider.Get(localizationKey);
     }
 
-    private void OnPromptTextSizeChanged(object? sender, EventArgs e)
+    private void SetOperationErrorMessage(string? errorMessage)
     {
-        OnPropertyChanged(nameof(PromptTextSize));
+        ErrorMessage = errorMessage;
     }
 
     private void OnSelectedModelChanged(ImageModelOption? value)
@@ -726,6 +763,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             ?? _rememberedThinkingLevelValue;
         int previousGenerationCount = GenerationCount;
 
+        UpdateAspectRatioOptions(value);
         NotifySelectedModelMetadataChanged();
 
         bool wasPanelStateSaveSuppressed = _suppressPanelStateSave;
@@ -758,6 +796,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     partial void OnSelectedAspectRatioChanged(string value)
     {
+        SynchronizeSelectedAspectRatioOption(value);
         RefreshPricePreviewUnlessSuppressed();
         SchedulePanelStateSave(nameof(OnSelectedAspectRatioChanged));
     }
@@ -890,7 +929,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private void HandleGenerationException(Exception exception)
     {
         _errorHandler.Log(exception, nameof(GenerateAsync));
-        ErrorMessage = _errorHandler.GetUserMessage(exception);
+        SetLocalizedErrorMessage(_errorHandler.GetUserMessageKey(exception));
     }
 
     private void ApplyCatalogSnapshot(IReadOnlyList<ImageModelOption> models)
@@ -927,7 +966,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
         if (SelectedModel is not null)
         {
-            ErrorMessage = null;
+            ClearErrorMessage();
         }
 
         NotifyCatalogStateChanged();
@@ -954,7 +993,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         catch (Exception ex)
         {
             _errorHandler.Log(ex, nameof(RestorePanelStateCoreAsync));
-            ErrorMessage = _errorHandler.GetUserMessage(ex);
+            SetLocalizedErrorMessage(_errorHandler.GetUserMessageKey(ex));
         }
     }
 
@@ -1199,6 +1238,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private void ResetSelectedModelValues()
     {
+        UpdateAspectRatioOptions(null);
+
         try
         {
             _suppressPricePreviewRefresh = true;
@@ -1253,6 +1294,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         OnPropertyChanged(nameof(ModelId));
         OnPropertyChanged(nameof(DisplayName));
         OnPropertyChanged(nameof(AspectRatios));
+        OnPropertyChanged(nameof(AspectRatioOptions));
         OnPropertyChanged(nameof(Resolutions));
         OnPropertyChanged(nameof(GenerationCounts));
         OnPropertyChanged(nameof(MinimumTemperature));
@@ -1266,6 +1308,46 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         OnPropertyChanged(nameof(AttachmentInputByteLimit));
     }
 
+    private void UpdateAspectRatioOptions(ImageModelOption? model)
+    {
+        _aspectRatioOptions.Clear();
+
+        if (model is null)
+        {
+            SynchronizeSelectedAspectRatioOption(string.Empty);
+            return;
+        }
+
+        foreach (GenerationModelOptionMetadataDto option in model.AspectRatioOptions)
+        {
+            _aspectRatioOptions.Add(new GenerationOptionViewModel(
+                option.Value,
+                option.LocalizationKey,
+                _textProvider));
+        }
+
+        SynchronizeSelectedAspectRatioOption(SelectedAspectRatio);
+    }
+
+    private void SynchronizeSelectedAspectRatioOption(string value)
+    {
+        GenerationOptionViewModel? option = _aspectRatioOptions
+            .FirstOrDefault(candidate => string.Equals(
+                candidate.Value,
+                value,
+                StringComparison.Ordinal));
+        _isSynchronizingAspectRatioOption = true;
+
+        try
+        {
+            SelectedAspectRatioOption = option;
+        }
+        finally
+        {
+            _isSynchronizingAspectRatioOption = false;
+        }
+    }
+
     private void DisposeInputs(IEnumerable<ImageAttachmentInput>? inputs)
     {
         if (inputs is null)
@@ -1277,5 +1359,49 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         {
             input.Dispose();
         }
+    }
+
+    private void OnAttachmentStateChanged(object? sender, AttachmentStateChangedEventArgs e)
+    {
+        _ = sender;
+
+        OnPropertyChanged(nameof(IsAttaching));
+        GenerateCommand.NotifyCanExecuteChanged();
+        RefreshAttachmentState();
+
+        if (e.Kind is AttachmentStateChangeKind.Completed or AttachmentStateChangeKind.Removed)
+        {
+            SchedulePanelStateSave(nameof(OnAttachmentStateChanged));
+        }
+
+        if (e.Kind != AttachmentStateChangeKind.Failed)
+        {
+            return;
+        }
+
+        if (e.Exception is null)
+        {
+            SetLocalizedErrorMessage(
+                GenerationUiLocalizationKeys.Attachments.Failed);
+            return;
+        }
+
+        _errorHandler.Log(e.Exception, nameof(AttachImageInputsAsync));
+        SetLocalizedErrorMessage(_errorHandler.GetUserMessageKey(e.Exception));
+    }
+
+    private void OnApiBaseAddressChanged(object? sender, EventArgs e)
+    {
+        if (!_acceptApiEndpointChanges || _isDisposed)
+        {
+            return;
+        }
+
+        _ = DispatchCatalogReloadAsync();
+    }
+
+    private void OnPromptTextSizeChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(PromptTextSize));
     }
 }

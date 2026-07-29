@@ -2,6 +2,7 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Generation;
@@ -22,7 +23,9 @@ public sealed class GenerationItemViewModelTests
 
         viewModel.RefreshElapsedText(utcNow);
 
-        viewModel.ElapsedText.Should().Be("50с");
+        viewModel.ElapsedText.Should().Be(string.Concat(
+            "50",
+            TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.SecondShort)));
     }
 
     [Fact]
@@ -33,7 +36,9 @@ public sealed class GenerationItemViewModelTests
 
         viewModel.RefreshElapsedText(utcNow);
 
-        viewModel.ElapsedText.Should().Be("2м");
+        viewModel.ElapsedText.Should().Be(string.Concat(
+            "2",
+            TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.MinuteShort)));
     }
 
     [Fact]
@@ -79,7 +84,7 @@ public sealed class GenerationItemViewModelTests
         DateTime completedAtUtc = CreatedAtUtc.AddSeconds(30);
         GenerationItemDto item = GenerationItemDtoTestFactory.Create(
             id: ItemId,
-            aspectRatio: "Авто",
+            aspectRatio: GenerationAspectRatios.Auto,
             createdAtUtc: CreatedAtUtc,
             completedAtUtc: completedAtUtc,
             generationDuration: TimeSpan.FromSeconds(30),
@@ -153,7 +158,7 @@ public sealed class GenerationItemViewModelTests
     {
         GenerationItemDto item = GenerationItemDtoTestFactory.Create(
             id: ItemId,
-            aspectRatio: "Авто",
+            aspectRatio: GenerationAspectRatios.Auto,
             createdAtUtc: createdAtUtc,
             status: status,
             imagePath: imagePath);
@@ -162,6 +167,7 @@ public sealed class GenerationItemViewModelTests
             item,
             0,
             imagePath,
-            GenerationItemStatusDescriptorRegistryTestFactory.Create());
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
     }
 }

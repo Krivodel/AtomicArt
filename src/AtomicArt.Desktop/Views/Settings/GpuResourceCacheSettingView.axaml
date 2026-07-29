@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
-             xmlns:models="using:AtomicArt.Desktop.Models"
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.GpuResourceCacheSettingView"
              x:DataType="settings:GpuResourceCacheSettingViewModel">
@@ -12,7 +11,7 @@
                           ItemsSource="{Binding Options}"
                           SelectedItem="{Binding SelectedOption, Mode=TwoWay}">
                     <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="models:GpuResourceCacheOption">
+                        <DataTemplate x:DataType="settings:GpuResourceCacheOptionViewModel">
                             <TextBlock Text="{Binding DisplayName}" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>

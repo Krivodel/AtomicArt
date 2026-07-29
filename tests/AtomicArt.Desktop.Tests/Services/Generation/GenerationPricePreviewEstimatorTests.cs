@@ -108,7 +108,7 @@ public sealed class GenerationPricePreviewEstimatorTests
             selectedModel,
             metadata.DisplayName,
             prompt,
-            metadata.AspectRatios.First(),
+            metadata.AspectRatios.First().Value,
             resolution,
             metadata.Temperature.Default,
             generationCount,

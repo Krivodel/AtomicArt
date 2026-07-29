@@ -10,3 +10,4 @@ global using ImageGenerationRequestDtoTestFactory =
     AtomicArt.Tests.Common.Generation.ImageGenerationRequestDtoTestFactory;
 global using TestGenerationOutputMetadata =
     AtomicArt.Tests.Common.Generation.TestGenerationOutputMetadata;
+global using AtomicArt.Desktop.Tests.TestDoubles;

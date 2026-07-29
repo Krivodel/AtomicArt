@@ -12,7 +12,7 @@ public sealed class GenerationPriceFormatter
     {
         ArgumentNullException.ThrowIfNull(price);
 
-        return price.Amount.ToString("0.####", CultureInfo.InvariantCulture);
+        return price.Amount.ToString("0.####", CultureInfo.CurrentCulture);
     }
 
     public string FormatCurrency(GenerationPriceDto price)

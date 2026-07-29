@@ -1,4 +1,5 @@
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
@@ -10,12 +11,14 @@ public sealed class ApiBaseAddressSettingViewModelFactory :
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly ISettingsStateService _settingsStateService;
     private readonly IViewModelErrorHandler _errorHandler;
+    private readonly ILocalizationTextProvider _textProvider;
 
     public ApiBaseAddressSettingViewModelFactory(
         IApiEndpointService apiEndpointService,
         IUiThreadDispatcher uiThreadDispatcher,
         ISettingsStateService settingsStateService,
-        IViewModelErrorHandler errorHandler)
+        IViewModelErrorHandler errorHandler,
+        ILocalizationTextProvider textProvider)
         : base("API base address setting definition expected.")
     {
         _apiEndpointService = apiEndpointService
@@ -25,6 +28,7 @@ public sealed class ApiBaseAddressSettingViewModelFactory :
         _settingsStateService = settingsStateService
             ?? throw new ArgumentNullException(nameof(settingsStateService));
         _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
+        _textProvider = textProvider ?? throw new ArgumentNullException(nameof(textProvider));
     }
 
     protected override ISettingItemViewModel CreateItemViewModel(
@@ -35,6 +39,7 @@ public sealed class ApiBaseAddressSettingViewModelFactory :
             _apiEndpointService,
             _uiThreadDispatcher,
             _settingsStateService,
-            _errorHandler);
+            _errorHandler,
+            _textProvider);
     }
 }

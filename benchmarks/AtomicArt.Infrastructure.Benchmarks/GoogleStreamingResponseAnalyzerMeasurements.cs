@@ -23,9 +23,9 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
 
     private static readonly ClientSignatureScenario[] ClientSignatureScenarios =
     [
-        new("Размер реального ответа", 1244508, 2932808),
+        new("Actual response size", 1244508, 2932808),
         new(
-            "Крупный искусственный ответ",
+            "Large synthetic response",
             16 * 1024 * 1024,
             32 * 1024 * 1024)
     ];
@@ -296,21 +296,21 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
         IReadOnlyList<ClientSignatureComparisonResult> clientSignatureResults)
     {
         StringBuilder report = new();
-        report.AppendLine("# Измерения GoogleStreamingResponseAnalyzer");
+        report.AppendLine("# GoogleStreamingResponseAnalyzer measurements");
         report.AppendLine();
         report.AppendLine(
-            $"Дата: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+            $"Date: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
         report.AppendLine();
         report.AppendLine(
-            $"Среда: {Environment.OSVersion}; .NET {Environment.Version}; {RuntimeInformation.ProcessArchitecture}.");
+            $"Environment: {Environment.OSVersion}; .NET {Environment.Version}; {RuntimeInformation.ProcessArchitecture}.");
         report.AppendLine();
         report.AppendLine(
-            $"Для каждой строки выполнено {WarmupCount} прогревочных и {IterationCount} измеряемых запусков; приведена медиана.");
+            $"Each row uses {WarmupCount} warm-up runs and {IterationCount} measured runs; the median is reported.");
         report.AppendLine(
-            $"Ответ подавался блоками по {BlockSize.ToString("N0", CultureInfo.InvariantCulture)} байт.");
+            $"The response was supplied in {BlockSize.ToString("N0", CultureInfo.InvariantCulture)} byte blocks.");
         report.AppendLine();
         report.AppendLine(
-            "| Base64-поле | Реализация | Время, мс | Выделено, байт | Ускорение | Сокращение выделений |");
+            "| Base64 field | Implementation | Time, ms | Allocated, bytes | Speedup | Allocation reduction |");
         report.AppendLine(
             "|---:|---|---:|---:|---:|---:|");
 
@@ -324,20 +324,20 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
             string imageSize = FormatMebibytes(result.ImageDataSize);
 
             report.AppendLine(
-                $"| {imageSize} | Прежняя | {FormatNumber(result.Previous.ElapsedMilliseconds)} | {result.Previous.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | 1,00× | 0,00% |");
+                $"| {imageSize} | Previous | {FormatNumber(result.Previous.ElapsedMilliseconds)} | {result.Previous.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | 1.00× | 0.00% |");
             report.AppendLine(
-                $"| {imageSize} | Блочная | {FormatNumber(result.Current.ElapsedMilliseconds)} | {result.Current.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | {FormatNumber(speedup)}× | {FormatPercent(allocationReduction)} |");
+                $"| {imageSize} | Block-based | {FormatNumber(result.Current.ElapsedMilliseconds)} | {result.Current.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | {FormatNumber(speedup)}× | {FormatPercent(allocationReduction)} |");
         }
 
         report.AppendLine();
         report.AppendLine(
-            "## Передача клиенту с подписью и без неё");
+            "## Client transfer with and without the signature");
         report.AppendLine();
         report.AppendLine(
-            "Измерение включает блочный анализ и формирование клиентских блоков в памяти; сетевое время не учитывается.");
+            "The measurement includes block-based analysis and building the client blocks in memory; network time is excluded.");
         report.AppendLine();
         report.AppendLine(
-            "| Сценарий | Вариант | Время, мс | Выделено, байт | Передано клиенту | Изменение времени |");
+            "| Scenario | Variant | Time, ms | Allocated, bytes | Sent to client | Time change |");
         report.AppendLine(
             "|---|---|---:|---:|---:|---:|");
 
@@ -348,9 +348,9 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
                 - 1.0;
 
             report.AppendLine(
-                $"| {result.Scenario.Name} (`data` {FormatByteSize(result.Scenario.ImageDataSize)}, `signature` {FormatByteSize(result.Scenario.SignatureSize)}) | С подписью | {FormatNumber(result.WithSignature.ElapsedMilliseconds)} | {result.WithSignature.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | {FormatByteSize(result.ResponseBytes)} | 0,00% |");
+                $"| {result.Scenario.Name} (`data` {FormatByteSize(result.Scenario.ImageDataSize)}, `signature` {FormatByteSize(result.Scenario.SignatureSize)}) | With signature | {FormatNumber(result.WithSignature.ElapsedMilliseconds)} | {result.WithSignature.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | {FormatByteSize(result.ResponseBytes)} | 0.00% |");
             report.AppendLine(
-                $"| {result.Scenario.Name} (`data` {FormatByteSize(result.Scenario.ImageDataSize)}, `signature` {FormatByteSize(result.Scenario.SignatureSize)}) | Без подписи | {FormatNumber(result.WithoutSignature.ElapsedMilliseconds)} | {result.WithoutSignature.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | {FormatByteSize(result.SanitizedResponseBytes)} | {FormatSignedPercent(elapsedChange)} |");
+                $"| {result.Scenario.Name} (`data` {FormatByteSize(result.Scenario.ImageDataSize)}, `signature` {FormatByteSize(result.Scenario.SignatureSize)}) | Without signature | {FormatNumber(result.WithoutSignature.ElapsedMilliseconds)} | {result.WithoutSignature.AllocatedBytes.ToString("N0", CultureInfo.InvariantCulture)} | {FormatByteSize(result.SanitizedResponseBytes)} | {FormatSignedPercent(elapsedChange)} |");
         }
 
         return report.ToString();
@@ -360,7 +360,7 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
     {
         int mebibytes = byteCount / (1024 * 1024);
 
-        return $"{mebibytes.ToString(CultureInfo.InvariantCulture)} МиБ";
+        return $"{mebibytes.ToString(CultureInfo.InvariantCulture)} MiB";
     }
 
     private static string FormatNumber(double value)
@@ -372,7 +372,7 @@ internal static class GoogleStreamingResponseAnalyzerMeasurements
     {
         double mebibytes = byteCount / (1024.0 * 1024.0);
 
-        return $"{mebibytes.ToString("0.00", CultureInfo.InvariantCulture)} МиБ";
+        return $"{mebibytes.ToString("0.00", CultureInfo.InvariantCulture)} MiB";
     }
 
     private static string FormatPercent(double value)

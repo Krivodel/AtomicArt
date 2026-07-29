@@ -61,8 +61,8 @@ public sealed class RequiredBodyActionFilter : IActionFilter
         ProblemDetails problemDetails = new()
         {
             Status = StatusCodes.Status400BadRequest,
-            Title = "Некорректный запрос.",
-            Detail = "Тело запроса обязательно."
+            Title = "Invalid request.",
+            Detail = "The request body is required."
         };
 
         return new BadRequestObjectResult(problemDetails);

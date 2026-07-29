@@ -9,7 +9,7 @@ public sealed record GenerationModelMetadataDto(
     int ContextWindowTokens,
     int MaxOutputTokens,
     int MaxPromptLength,
-    IReadOnlyList<string> AspectRatios,
+    IReadOnlyList<GenerationModelOptionMetadataDto> AspectRatios,
     IReadOnlyList<string> Resolutions,
     IReadOnlyList<int> GenerationCounts,
     GenerationModelTemperatureMetadataDto Temperature,

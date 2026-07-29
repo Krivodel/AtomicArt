@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CommunityToolkit.Mvvm.Messaging;
+
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
@@ -41,7 +43,8 @@ internal static class GalleryViewModelTestFactory
         IViewModelErrorHandler? errorHandler = null,
         IGalleryStateService? galleryStateService = null,
         IGalleryItemDeletionService? galleryItemDeletionService = null,
-        IGalleryThumbnailStorage? galleryThumbnailStorage = null)
+        IGalleryThumbnailStorage? galleryThumbnailStorage = null,
+        IMessenger? messenger = null)
     {
         IFileRevealService revealService =
             fileRevealService ?? new SuccessfulFileRevealService();
@@ -78,10 +81,13 @@ internal static class GalleryViewModelTestFactory
             galleryItemDeletionService ?? new NullGalleryItemDeletionService();
         IGalleryThumbnailStorage thumbnailStorage =
             galleryThumbnailStorage ?? new NullGalleryThumbnailStorage();
+        IMessenger localizationMessenger =
+            messenger ?? new WeakReferenceMessenger();
         GalleryItemsController itemsController = new(
             trustedService,
             statusRegistry,
-            TestApiConfiguration.CreateGalleryOrderTimestampPolicy());
+            TestApiConfiguration.CreateGalleryOrderTimestampPolicy(),
+            TestLocalizationTextProvider.Default);
         GalleryLifecycleViewStateController viewStateController = new(
             uiThreadService,
             galleryOperations,
@@ -124,7 +130,10 @@ internal static class GalleryViewModelTestFactory
             viewModelErrorHandler,
             new RecordingTextClipboardService(),
             new GenerationPriceFormatter(),
-            new GenerationDurationFormatter());
+            new GenerationDurationFormatter(
+                TestLocalizationTextProvider.Default),
+            localizationMessenger,
+            TestLocalizationTextProvider.Default);
     }
 
     public static GenerationLifecycleEvent CreateStartedEvent(Guid correlationId, int generationCount)

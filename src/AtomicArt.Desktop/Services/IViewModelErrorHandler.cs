@@ -5,4 +5,5 @@ public interface IViewModelErrorHandler
     void Log(Exception exception, string operationName);
 
     string GetUserMessage(Exception exception);
+    string GetUserMessageKey(Exception exception);
 }

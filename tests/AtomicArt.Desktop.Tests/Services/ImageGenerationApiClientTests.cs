@@ -53,6 +53,37 @@ public sealed class ImageGenerationApiClientTests
     }
 
     [Fact]
+    public async Task CreateGenerationAsync_WithProtocolProblemDetails_PreservesSafeErrorCode()
+    {
+        string problemDetails = $$"""
+        {
+          "status": 400,
+          "code": "{{GenerationProtocolErrorCodes.ModelNotFound}}",
+          "retryable": false
+        }
+        """;
+        CapturingHttpMessageHandler handler = new(
+            problemDetails,
+            HttpStatusCode.BadRequest);
+        using HttpClient httpClient = new(handler);
+        ImageGenerationApiClient apiClient = CreateApiClient(httpClient);
+
+        Func<Task> act = () => apiClient.CreateGenerationAsync(
+            CreateRequest(),
+            LogicalGenerationId,
+            1,
+            TestGenerationCredentials.ProviderCredential,
+            CancellationToken.None);
+
+        GenerationAttemptException exception = (await act
+                .Should()
+                .ThrowAsync<GenerationAttemptException>())
+            .Which;
+        exception.SafeErrorCode.Should().Be(
+            GenerationProtocolErrorCodes.ModelNotFound);
+    }
+
+    [Fact]
     public async Task CreateGenerationAsync_WithAttachment_SendsVersionTwoMultipartRequest()
     {
         string problemDetails = """
