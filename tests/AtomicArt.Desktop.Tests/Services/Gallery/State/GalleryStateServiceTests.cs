@@ -6,6 +6,7 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.TestDoubles;
@@ -104,6 +105,7 @@ public sealed class GalleryStateServiceTests
         item.CorrelationId.Should().BeNull();
         item.GenerationOrdinal.Should().BeNull();
         item.ImagePath.Should().BeNull();
+        item.FailureCode.Should().Be(GenerationClientFailureCodes.Unknown);
     }
 
     [Fact]

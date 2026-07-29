@@ -22,6 +22,11 @@ public partial class GenerationPreviewControl : UserControl
         get => GetValue(OpenViewerCommandProperty);
         set => SetValue(OpenViewerCommandProperty, value);
     }
+    public IRelayCommand? ShowFailureDetailsCommand
+    {
+        get => GetValue(ShowFailureDetailsCommandProperty);
+        set => SetValue(ShowFailureDetailsCommandProperty, value);
+    }
     public double PreviewSize
     {
         get => GetValue(PreviewSizeProperty);
@@ -36,6 +41,9 @@ public partial class GenerationPreviewControl : UserControl
     public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
         AvaloniaProperty.Register<GenerationPreviewControl, IRelayCommand?>(
             nameof(OpenViewerCommand));
+    public static readonly StyledProperty<IRelayCommand?> ShowFailureDetailsCommandProperty =
+        AvaloniaProperty.Register<GenerationPreviewControl, IRelayCommand?>(
+            nameof(ShowFailureDetailsCommand));
     public static readonly StyledProperty<double> PreviewSizeProperty =
         AvaloniaProperty.Register<GenerationPreviewControl, double>(
             nameof(PreviewSize),
@@ -313,6 +321,19 @@ public partial class GenerationPreviewControl : UserControl
         _imageDragCandidate = null;
     }
 
+    private void OnFailurePreviewPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _ = sender;
+
+        if (DataContext is not GenerationItemViewModel item)
+        {
+            return;
+        }
+
+        ExecuteShowFailureDetails(item);
+        e.Handled = true;
+    }
+
     private async Task StartImageFileDragAsync(
         PointerPressedEventArgs e,
         string imagePath,
@@ -433,6 +454,16 @@ public partial class GenerationPreviewControl : UserControl
         if (openViewerCommand?.CanExecute(item) == true)
         {
             openViewerCommand.Execute(item);
+        }
+    }
+
+    private void ExecuteShowFailureDetails(GenerationItemViewModel item)
+    {
+        IRelayCommand? showFailureDetailsCommand = ShowFailureDetailsCommand;
+
+        if (showFailureDetailsCommand?.CanExecute(item) == true)
+        {
+            showFailureDetailsCommand.Execute(item);
         }
     }
 

@@ -30,6 +30,7 @@ internal static class GalleryViewModelTestFactory
     public static GalleryViewModel CreateViewModel(
         IFileRevealService? fileRevealService = null,
         IImageViewerService? imageViewerService = null,
+        IDialogService? dialogService = null,
         ITrustedImageFileService? trustedImageFileService = null,
         IGenerationResultStorage? generationResultStorage = null,
         IGenerationImageContentValidator? generationImageContentValidator = null,
@@ -46,6 +47,8 @@ internal static class GalleryViewModelTestFactory
             fileRevealService ?? new SuccessfulFileRevealService();
         IImageViewerService viewerService =
             imageViewerService ?? new NullImageViewerService();
+        IDialogService dialogs =
+            dialogService ?? new RecordingDialogService();
         ITrustedImageFileService trustedService =
             trustedImageFileService ?? new PassthroughTrustedImageFileService();
         IGenerationResultStorage resultStorage =
@@ -95,7 +98,7 @@ internal static class GalleryViewModelTestFactory
                 galleryState,
                 new NoOpGalleryFileOrderSynchronizer(),
                 NullLogger<GalleryGenerationCompletedHandler>.Instance),
-            new GalleryGenerationFailedHandler(viewStateController),
+            new GalleryGenerationFailedHandler(viewStateController, galleryState),
             new GalleryGenerationStartedHandler(viewStateController, galleryState),
             new GalleryGenerationStartFailedHandler(viewStateController)
         ];
@@ -112,6 +115,7 @@ internal static class GalleryViewModelTestFactory
         return new GalleryViewModel(
             revealService,
             viewerService,
+            dialogs,
             deletionService,
             galleryState,
             viewStateController,
@@ -140,9 +144,13 @@ internal static class GalleryViewModelTestFactory
         return GalleryLifecycleTestFactory.CreateStartFailedEvent(correlationId);
     }
 
-    public static GenerationLifecycleEvent CreateFailedEvent(Guid correlationId)
+    public static GenerationLifecycleEvent CreateFailedEvent(
+        Guid correlationId,
+        string failureCode = GenerationClientFailureCodes.Unknown)
     {
-        return GalleryLifecycleTestFactory.CreateFailedEvent(correlationId);
+        return GalleryLifecycleTestFactory.CreateFailedEvent(
+            correlationId,
+            failureCode);
     }
 
     public static GenerationItemDto CreateItem(

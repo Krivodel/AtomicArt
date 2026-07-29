@@ -1,6 +1,7 @@
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -66,10 +67,17 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
         await _animatedGalleryOperations.ApplyMixedMutationAsync(finalItems, ct);
     }
 
-    public Task ApplyFailedAsync(Guid correlationId, CancellationToken ct)
+    public Task ApplyFailedAsync(
+        Guid correlationId,
+        string failureCode,
+        CancellationToken ct)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
+
         return _uiThreadDispatcher.InvokeAsync(
-            () => _itemsController.MarkFailedByCorrelationId(correlationId),
+            () => _itemsController.MarkFailedByCorrelationId(
+                correlationId,
+                failureCode),
             ct);
     }
 
@@ -151,6 +159,9 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
                 itemUpdate.ThumbnailPath);
         }
 
-        _itemsController.MarkFailedPlaceholders(placeholders, resultCount);
+        _itemsController.MarkFailedPlaceholders(
+            placeholders,
+            resultCount,
+            GenerationClientFailureCodes.Unknown);
     }
 }

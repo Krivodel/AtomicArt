@@ -8,14 +8,18 @@ using Moq;
 using SukiUI.Controls;
 using Xunit;
 
+using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.ViewModels;
+using AtomicArt.Desktop.ViewModels.Dialogs;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views;
+using AtomicArt.Desktop.Views.Dialogs;
 using AtomicArt.Desktop.Views.Gallery;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Desktop.Views.Shell;
@@ -107,6 +111,43 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         });
     }
 
+    [Fact]
+    public void MainWindow_WhenErrorIsShown_DisplaysSharedModalOverlay()
+    {
+        Dispatch(() =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+            MainWindowViewModel viewModel = window.DataContext
+                .Should()
+                .BeOfType<MainWindowViewModel>()
+                .Subject;
+            window.Show();
+
+            context.DialogService.ShowError(UiStrings.GenerationApiUnavailable);
+            window.CaptureRenderedFrame();
+
+            ModalOverlayPresenterControl presenter = window
+                .GetVisualDescendants()
+                .OfType<ModalOverlayPresenterControl>()
+                .Single(overlay => ReferenceEquals(
+                    overlay.Body,
+                    viewModel.ErrorDialog));
+
+            presenter.IsOpen.Should().BeTrue();
+            presenter
+                .GetVisualDescendants()
+                .OfType<ErrorDialogOverlayView>()
+                .Should()
+                .ContainSingle();
+            presenter
+                .GetVisualDescendants()
+                .OfType<ModalOverlayControl>()
+                .Should()
+                .ContainSingle();
+        });
+    }
+
     private static void RegisterViewTemplates(IServiceProvider serviceProvider)
     {
         Avalonia.Application.Current?.DataTemplates.Add(
@@ -117,13 +158,17 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                     serviceProvider.GetRequiredService<GalleryView>),
                 new ViewTemplateRegistration(
                     typeof(IModelPanelViewModel),
-                    serviceProvider.GetRequiredService<GenerationPanelView>)
+                    serviceProvider.GetRequiredService<GenerationPanelView>),
+                new ViewTemplateRegistration(
+                    typeof(ErrorDialogViewModel),
+                    serviceProvider.GetRequiredService<ErrorDialogOverlayView>)
             ]));
     }
 
     private sealed class MainWindowTestContext : IDisposable
     {
         public MainWindow Window { get; }
+        public IDialogService DialogService { get; }
 
         private readonly ServiceProvider _serviceProvider;
 
@@ -136,6 +181,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
 
             _serviceProvider = services.BuildServiceProvider();
             RegisterViewTemplates(_serviceProvider);
+            DialogService = _serviceProvider.GetRequiredService<IDialogService>();
             Window = _serviceProvider.GetRequiredService<MainWindow>();
         }
 

@@ -40,6 +40,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     public bool IsFailed => Item.IsFailed;
     public IRelayCommand CloseCommand { get; }
     public IRelayCommand OpenViewerCommand { get; }
+    public IRelayCommand ShowFailureDetailsCommand { get; }
     public IRelayCommand RepeatCommand { get; }
     public IAsyncRelayCommand CopyPromptCommand { get; }
     public IAsyncRelayCommand CopyImagePathCommand { get; }
@@ -55,6 +56,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         GenerationItemViewModel item,
         IRelayCommand closeCommand,
         IRelayCommand openViewerCommand,
+        IRelayCommand showFailureDetailsCommand,
         IRelayCommand repeatCommand,
         ITextClipboardService textClipboardService,
         IViewModelErrorHandler errorHandler,
@@ -64,6 +66,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         Item = item;
         CloseCommand = closeCommand;
         OpenViewerCommand = openViewerCommand;
+        ShowFailureDetailsCommand = showFailureDetailsCommand;
         RepeatCommand = repeatCommand;
         _textClipboardService = textClipboardService;
         _errorHandler = errorHandler;
@@ -78,6 +81,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         GenerationItemViewModel item,
         IRelayCommand closeCommand,
         IRelayCommand openViewerCommand,
+        IRelayCommand showFailureDetailsCommand,
         IRelayCommand repeatCommand,
         ITextClipboardService textClipboardService,
         IViewModelErrorHandler errorHandler,
@@ -87,6 +91,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(closeCommand);
         ArgumentNullException.ThrowIfNull(openViewerCommand);
+        ArgumentNullException.ThrowIfNull(showFailureDetailsCommand);
         ArgumentNullException.ThrowIfNull(repeatCommand);
         ArgumentNullException.ThrowIfNull(textClipboardService);
         ArgumentNullException.ThrowIfNull(errorHandler);
@@ -97,6 +102,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
             item,
             closeCommand,
             openViewerCommand,
+            showFailureDetailsCommand,
             repeatCommand,
             textClipboardService,
             errorHandler,

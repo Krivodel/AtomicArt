@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Services;
@@ -46,7 +47,8 @@ public sealed class ViewModelErrorHandler : IViewModelErrorHandler
             DataRootMigrationCleanupException => UiStrings.SettingsDataRootCleanupFailed,
             DataRootMigrationException => UiStrings.SettingsDataRootMigrationFailed,
             FileRevealException => UiStrings.FileRevealFailed,
-            HttpRequestException => UiStrings.GenerationApiUnavailable,
+            GenerationAttemptException or HttpRequestException =>
+                GenerationFailureMessageResolver.GetUserMessage(exception),
             TaskCanceledException => UiStrings.GenerationApiUnavailable,
             ArgumentException => UiStrings.GenerationFailed,
             InvalidOperationException => UiStrings.GenerationFailed,

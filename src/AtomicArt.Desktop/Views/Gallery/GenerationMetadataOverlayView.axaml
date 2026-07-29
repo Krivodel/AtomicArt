@@ -27,7 +27,8 @@
                                                 PreviewSize="{StaticResource MetadataPreviewSize}"
                                                 DataContext="{Binding Item}"
                                                 PreviewPath="{Binding DisplayThumbnailPath}"
-                                                OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}" />
+                                                OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}"
+                                                ShowFailureDetailsCommand="{Binding #Root.DataContext.ShowFailureDetailsCommand}" />
 
                 <Grid Grid.Row="0"
                       ClipToBounds="False"

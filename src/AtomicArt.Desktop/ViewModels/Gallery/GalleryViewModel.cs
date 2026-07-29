@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
@@ -38,6 +39,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
 
     private readonly IFileRevealService _fileRevealService;
     private readonly IImageViewerService _imageViewerService;
+    private readonly IDialogService _dialogService;
     private readonly IGalleryItemDeletionService _deletionService;
     private readonly IGalleryStateService _galleryStateService;
     private readonly GalleryLifecycleViewStateController _viewStateController;
@@ -60,12 +62,14 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     [NotifyCanExecuteChangedFor(nameof(RevealInFolderCommand))]
     [NotifyCanExecuteChangedFor(nameof(RevealInNewFolderWindowCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenViewerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ShowFailureDetailsCommand))]
     [NotifyCanExecuteChangedFor(nameof(DeleteOrCancelCommand))]
     private bool _isLoading;
 
     public GalleryViewModel(
         IFileRevealService fileRevealService,
         IImageViewerService imageViewerService,
+        IDialogService dialogService,
         IGalleryItemDeletionService deletionService,
         IGalleryStateService galleryStateService,
         GalleryLifecycleViewStateController viewStateController,
@@ -79,6 +83,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
     {
         ArgumentNullException.ThrowIfNull(fileRevealService);
         ArgumentNullException.ThrowIfNull(imageViewerService);
+        ArgumentNullException.ThrowIfNull(dialogService);
         ArgumentNullException.ThrowIfNull(deletionService);
         ArgumentNullException.ThrowIfNull(galleryStateService);
         ArgumentNullException.ThrowIfNull(viewStateController);
@@ -91,6 +96,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
 
         _fileRevealService = fileRevealService;
         _imageViewerService = imageViewerService;
+        _dialogService = dialogService;
         _deletionService = deletionService;
         _galleryStateService = galleryStateService;
         _viewStateController = viewStateController;
@@ -257,6 +263,7 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             item,
             CloseOverlayCommand,
             OpenViewerCommand,
+            ShowFailureDetailsCommand,
             ReuseGenerationCommand,
             _textClipboardService,
             _errorHandler,
@@ -352,15 +359,22 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
         return !IsLoading;
     }
 
-    [RelayCommand(CanExecute = nameof(CanRunCommand), AllowConcurrentExecutions = true)]
+    private bool CanOpenViewer(GenerationItemViewModel? item)
+    {
+        return !IsLoading
+            && item is { ShowsGeneratedImage: true }
+            && !string.IsNullOrWhiteSpace(item.ImagePath);
+    }
+
+    private bool CanShowFailureDetails(GenerationItemViewModel? item)
+    {
+        return !IsLoading && item is { IsFailed: true };
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpenViewer), AllowConcurrentExecutions = true)]
     private async Task OpenViewerAsync(GenerationItemViewModel? item, CancellationToken ct)
     {
-        if (IsLoading)
-        {
-            return;
-        }
-
-        if (item is null)
+        if (item is null || !CanOpenViewer(item))
         {
             return;
         }
@@ -370,6 +384,21 @@ public sealed partial class GalleryViewModel : ObservableObject, IDisposable
             operationCt => OpenViewerCoreAsync(item, operationCt),
             nameof(OpenViewerAsync),
             ct);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanShowFailureDetails))]
+    private async Task ShowFailureDetailsAsync(
+        GenerationItemViewModel? item,
+        CancellationToken ct)
+    {
+        if (item is null || !CanShowFailureDetails(item))
+        {
+            return;
+        }
+
+        string failureMessage =
+            GenerationFailureMessageResolver.GetUserMessage(item.FailureCode);
+        await _dialogService.ShowErrorAsync(failureMessage, ct);
     }
 
     private async Task DeleteItemAsync(GenerationItemViewModel item, CancellationToken ct)

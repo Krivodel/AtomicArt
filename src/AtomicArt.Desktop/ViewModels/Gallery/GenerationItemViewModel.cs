@@ -17,6 +17,7 @@ public sealed partial class GenerationItemViewModel :
     public Guid? CorrelationId { get; private set; }
     public int? GenerationOrdinal { get; private set; }
     public DateTime? GalleryOrderTimestampUtc { get; private set; }
+    public string? FailureCode { get; private set; }
     public string DisplayImagePath => ImagePath ?? string.Empty;
     public string DisplayThumbnailPath =>
         string.IsNullOrWhiteSpace(ThumbnailPath) ? DisplayImagePath : ThumbnailPath;
@@ -121,6 +122,7 @@ public sealed partial class GenerationItemViewModel :
         GenerationDuration = null;
         Price = null;
         Usage = null;
+        FailureCode = null;
         StatusKind = GenerationItemStatus.Generating;
         AttachedImagesCount = start.AttachedImagesCount;
         CorrelationId = correlationId;
@@ -169,7 +171,8 @@ public sealed partial class GenerationItemViewModel :
             CorrelationId = normalizedState.CorrelationId,
             GenerationOrdinal = normalizedState.GenerationOrdinal,
             GalleryOrderTimestampUtc = normalizedState.GalleryOrderTimestampUtc,
-            ThumbnailPath = normalizedState.ThumbnailPath
+            ThumbnailPath = normalizedState.ThumbnailPath,
+            FailureCode = normalizedState.FailureCode
         };
 
         return viewModel;
@@ -195,8 +198,11 @@ public sealed partial class GenerationItemViewModel :
         RefreshComputedState();
     }
 
-    public void MarkFailed()
+    public void MarkFailed(string failureCode)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
+
+        FailureCode = GenerationFailureCodeResolver.Normalize(failureCode);
         StatusKind = GenerationItemStatus.Failed;
         ImagePath = null;
         ThumbnailPath = null;
@@ -298,6 +304,9 @@ public sealed partial class GenerationItemViewModel :
         GenerationDuration = item.GenerationDuration;
         Price = item.Price;
         Usage = item.Usage;
+        FailureCode = item.Status == GenerationItemStatus.Failed
+            ? GenerationClientFailureCodes.Unknown
+            : null;
         StatusKind = item.Status;
     }
 

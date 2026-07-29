@@ -40,8 +40,11 @@
         <Border Classes="generation-card-empty"
                 IsVisible="{Binding ShowsEmptyPreview}" />
 
-        <Border Classes="generation-card-error"
-                IsVisible="{Binding IsFailed}">
+        <Border x:Name="FailurePreview"
+                Classes="generation-card-error"
+                IsVisible="{Binding IsFailed}"
+                Cursor="Hand"
+                PointerReleased="OnFailurePreviewPointerReleased">
             <TextBlock Classes="generation-card-error-text"
                        Text="{x:Static resources:UiStrings.Error}" />
         </Border>
@@ -49,6 +52,7 @@
         <Border x:Name="PreviewDragSource"
                 Background="Transparent"
                 Cursor="Hand"
+                IsVisible="{Binding !IsFailed}"
                 PointerCaptureLost="OnPreviewDragSourcePointerCaptureLost"
                 PointerMoved="OnPreviewDragSourcePointerMoved"
                 PointerPressed="OnPreviewDragSourcePointerPressed"

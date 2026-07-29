@@ -33,6 +33,11 @@ public partial class GenerationCardControl :
         get => GetValue(OpenViewerCommandProperty);
         set => SetValue(OpenViewerCommandProperty, value);
     }
+    public IRelayCommand? ShowFailureDetailsCommand
+    {
+        get => GetValue(ShowFailureDetailsCommandProperty);
+        set => SetValue(ShowFailureDetailsCommandProperty, value);
+    }
     public IRelayCommand? OpenMetadataCommand
     {
         get => GetValue(OpenMetadataCommandProperty);
@@ -53,6 +58,9 @@ public partial class GenerationCardControl :
     public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(OpenViewerCommand));
+    public static readonly StyledProperty<IRelayCommand?> ShowFailureDetailsCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(ShowFailureDetailsCommand));
     public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(OpenMetadataCommand));

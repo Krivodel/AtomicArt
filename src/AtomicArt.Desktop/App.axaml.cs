@@ -147,7 +147,6 @@ public class App : Avalonia.Application
             GetRequiredService<IWindowStateService>();
         IWindowAttachmentService windowAttachmentService = GetRequiredService<IWindowAttachmentService>();
         ITrayAttachmentService trayAttachmentService = GetRequiredService<ITrayAttachmentService>();
-        IDialogWindowAttachmentService dialogAttachmentService = GetRequiredService<IDialogWindowAttachmentService>();
         IFilePickerAttachmentService filePickerAttachmentService = GetRequiredService<IFilePickerAttachmentService>();
         IClipboardAttachmentService clipboardAttachmentService = GetRequiredService<IClipboardAttachmentService>();
         IVirtualFileDropAttachmentService virtualFileDropAttachmentService =
@@ -155,7 +154,6 @@ public class App : Avalonia.Application
 
         windowAttachmentService.Attach(mainWindow);
         trayAttachmentService.Attach(mainWindow);
-        dialogAttachmentService.Attach(mainWindow);
         filePickerAttachmentService.Attach(mainWindow.StorageProvider);
         virtualFileDropAttachmentService.Attach(mainWindow);
         s_singleInstanceCoordinator?.AttachActivationHandler(

@@ -145,7 +145,8 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         viewModel.IsLoading.Should().BeFalse();
         GenerationLifecycleEvent failedEvent = lifecycleEventHub.PublishedEvents
             .Single(lifecycleEvent => lifecycleEvent.Status == GenerationLifecycleStatus.Failed);
-        failedEvent.ErrorMessage.Should().Be(UiStrings.GenerationFailed);
+        failedEvent.FailureCode.Should().Be(
+            GenerationClientFailureCodes.ApiUnavailable);
     }
 
     [Fact]

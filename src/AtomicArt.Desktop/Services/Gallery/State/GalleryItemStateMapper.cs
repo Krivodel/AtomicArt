@@ -1,4 +1,5 @@
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Services.Gallery.State;
 
@@ -164,6 +165,7 @@ internal static class GalleryItemStateMapper
             GenerationDuration = source.GenerationDuration,
             Price = source.Price,
             Usage = source.Usage,
+            FailureCode = ResolveFailureCode(source, status),
             AttachedImagesCount = Math.Max(0, source.AttachedImagesCount),
             CorrelationId = ResolveGeneratingValue(source, status, source => source.CorrelationId),
             GenerationOrdinal = ResolveGeneratingValue(source, status, source => source.GenerationOrdinal)
@@ -202,6 +204,18 @@ internal static class GalleryItemStateMapper
         }
 
         return null;
+    }
+
+    private static string? ResolveFailureCode(
+        IGalleryItemStateSource item,
+        GenerationItemStatus status)
+    {
+        if (status != GenerationItemStatus.Failed)
+        {
+            return null;
+        }
+
+        return GenerationFailureCodeResolver.Normalize(item.FailureCode);
     }
 
     private static string? ResolveOriginalImagePath(GalleryItemState item)

@@ -17,7 +17,8 @@
                                                Grid.Row="0"
                                                PreviewSize="{StaticResource GenerationCardWidth}"
                                                PreviewPath="{Binding DisplayThumbnailPath}"
-                                               OpenViewerCommand="{Binding $parent[controls:GenerationCardControl].OpenViewerCommand}" />
+                                               OpenViewerCommand="{Binding $parent[controls:GenerationCardControl].OpenViewerCommand}"
+                                               ShowFailureDetailsCommand="{Binding $parent[controls:GenerationCardControl].ShowFailureDetailsCommand}" />
 
             <Border Grid.Row="1"
                     Classes="generation-card-info">

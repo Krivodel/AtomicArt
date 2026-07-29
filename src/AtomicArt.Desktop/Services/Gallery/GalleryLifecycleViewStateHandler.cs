@@ -2,6 +2,8 @@ namespace AtomicArt.Desktop.Services.Gallery;
 
 public abstract class GalleryLifecycleViewStateHandler : IGalleryLifecycleEventHandler
 {
+    public abstract GenerationLifecycleStatus Status { get; }
+
     protected IGalleryLifecycleViewState ViewState { get; }
 
     protected GalleryLifecycleViewStateHandler(IGalleryLifecycleViewState viewState)
@@ -11,12 +13,14 @@ public abstract class GalleryLifecycleViewStateHandler : IGalleryLifecycleEventH
         ViewState = viewState;
     }
 
-    public abstract GenerationLifecycleStatus Status { get; }
-
     public Task HandleAsync(GenerationLifecycleEvent lifecycleEvent, CancellationToken ct)
     {
-        return ApplyAsync(lifecycleEvent.CorrelationId, ct);
+        ArgumentNullException.ThrowIfNull(lifecycleEvent);
+
+        return ApplyAsync(lifecycleEvent, ct);
     }
 
-    protected abstract Task ApplyAsync(Guid correlationId, CancellationToken ct);
+    protected abstract Task ApplyAsync(
+        GenerationLifecycleEvent lifecycleEvent,
+        CancellationToken ct);
 }

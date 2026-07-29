@@ -5,6 +5,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.ViewModels.Dialogs;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Settings;
@@ -20,6 +21,7 @@ public sealed partial class MainWindowViewModel :
     IDisposable
 {
     public GalleryViewModel Gallery { get; }
+    public ErrorDialogViewModel ErrorDialog { get; }
     public IModelPanelViewModel ActiveGenerationPanel { get; }
     public SettingsViewModel Settings => _settings;
     public ApplicationUpdateViewModel ApplicationUpdate { get; }
@@ -46,6 +48,7 @@ public sealed partial class MainWindowViewModel :
 
     public MainWindowViewModel(
         GalleryViewModel gallery,
+        ErrorDialogViewModel errorDialog,
         SettingsViewModel settings,
         IEnumerable<IModelPanelViewModel> modelPanels,
         DesktopModelPanelRegistry desktopModelPanelRegistry,
@@ -57,6 +60,7 @@ public sealed partial class MainWindowViewModel :
         IViewModelErrorHandler errorHandler)
     {
         ArgumentNullException.ThrowIfNull(gallery);
+        ArgumentNullException.ThrowIfNull(errorDialog);
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(modelPanels);
         ArgumentNullException.ThrowIfNull(desktopModelPanelRegistry);
@@ -69,6 +73,7 @@ public sealed partial class MainWindowViewModel :
 
         IReadOnlyList<IModelPanelViewModel> panels = modelPanels.ToList();
         Gallery = gallery;
+        ErrorDialog = errorDialog;
         ActiveGenerationPanel = desktopModelPanelRegistry.GetDefaultPanel(panels);
         Gallery.ConfigureImageViewerAttachments(ActiveGenerationPanel.AttachImagesCommand);
 

@@ -3,7 +3,9 @@ using System.Text.Json;
 using FluentAssertions;
 using Xunit;
 
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery.State;
@@ -14,13 +16,13 @@ public sealed class GalleryStateSectionTests
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 7, 9, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void SchemaVersion_WithGalleryOrderTimestamp_ReturnsVersionThree()
+    public void SchemaVersion_WithFailureCode_ReturnsVersionFour()
     {
         GalleryStateSection section = new();
 
         int schemaVersion = section.SchemaVersion;
 
-        schemaVersion.Should().Be(3);
+        schemaVersion.Should().Be(4);
     }
 
     [Fact]
@@ -55,6 +57,22 @@ public sealed class GalleryStateSectionTests
 
         json.Should().Contain(
             "\"galleryOrderTimestampUtc\":\"2026-07-07T09:00:00Z\"");
+    }
+
+    [Fact]
+    public void SerializePayload_WithFailedItem_WritesCodeWithoutMessage()
+    {
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+        GalleryState state = new()
+        {
+            Items = [CreateFailedState()]
+        };
+
+        string json = JsonSerializer.Serialize(state, options);
+
+        json.Should().Contain(
+            $"\"failureCode\":\"{GenerationProviderFailureErrorCodes.RequestRejected}\"");
+        json.Should().NotContain("failureMessage");
     }
 
     [Fact]
@@ -94,6 +112,41 @@ public sealed class GalleryStateSectionTests
     }
 
     [Fact]
+    public void DeserializePayload_WithLegacyFailureMessage_ReplacesTextWithUnknownCode()
+    {
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+        GalleryStateSection section = new();
+        using JsonDocument document = JsonDocument.Parse(
+            """
+            {
+              "items": [
+                {
+                  "id": "55555555-5555-5555-5555-555555555555",
+                  "modelId": "nano-banana-2",
+                  "modelDisplayName": "Nano Banana 2",
+                  "prompt": "Prompt",
+                  "aspectRatio": "Авто",
+                  "resolution": "1024x1024",
+                  "createdAtUtc": "2026-07-07T09:00:00Z",
+                  "status": "Failed",
+                  "failureMessage": "Старый сохранённый текст.",
+                  "attachedImagesCount": 0
+                }
+              ]
+            }
+            """);
+
+        object payload = section.DeserializePayload(
+            3,
+            document.RootElement,
+            options);
+
+        GalleryState state = payload.Should().BeOfType<GalleryState>().Subject;
+        state.Items.Should().ContainSingle();
+        state.Items[0].FailureCode.Should().Be(GenerationClientFailureCodes.Unknown);
+    }
+
+    [Fact]
     public void NormalizeForDeserialization_WithUntrustedThumbnailPath_DropsThumbnailPath()
     {
         GalleryItemState state = CreateState("image.png", "thumbnail.png");
@@ -115,5 +168,21 @@ public sealed class GalleryStateSectionTests
             createdAtUtc: CreatedAtUtc,
             imagePath: imagePath,
             thumbnailPath: thumbnailPath);
+    }
+
+    private static GalleryItemState CreateFailedState()
+    {
+        return new GalleryItemState
+        {
+            Id = ItemId,
+            ModelId = "nano-banana-2",
+            ModelDisplayName = "Nano Banana 2",
+            Prompt = "Prompt",
+            AspectRatio = "Авто",
+            Resolution = "1024x1024",
+            CreatedAtUtc = CreatedAtUtc,
+            Status = GenerationItemStatus.Failed,
+            FailureCode = GenerationProviderFailureErrorCodes.RequestRejected
+        };
     }
 }

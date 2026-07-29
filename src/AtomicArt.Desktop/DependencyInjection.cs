@@ -22,11 +22,13 @@ using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Services.Windows;
 using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.ViewModels;
+using AtomicArt.Desktop.ViewModels.Dialogs;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Settings;
 using AtomicArt.Desktop.ViewModels.Updates;
 using AtomicArt.Desktop.Views;
+using AtomicArt.Desktop.Views.Dialogs;
 using AtomicArt.Desktop.Views.Gallery;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Desktop.Views.Settings;
@@ -126,6 +128,7 @@ public static class DependencyInjection
         services.AddViewTemplate<GalleryViewModel, GalleryView>();
         services.AddViewTemplate<IModelPanelViewModel, GenerationPanelView>();
         services.AddViewTemplate<SettingsViewModel, SettingsOverlayView>();
+        services.AddViewTemplate<ErrorDialogViewModel, ErrorDialogOverlayView>();
         services.AddViewTemplate<DataRootSettingViewModel, DataRootSettingView>();
         services.AddViewTemplate<ApiBaseAddressSettingViewModel, ApiBaseAddressSettingView>();
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
@@ -259,9 +262,8 @@ public static class DependencyInjection
 
     private static IServiceCollection AddDialogServices(this IServiceCollection services)
     {
-        services.AddSharedSingletonAliases<DialogService>(
-            typeof(IDialogService),
-            typeof(IDialogWindowAttachmentService));
+        services.AddSingleton<ErrorDialogViewModel>();
+        services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<GlobalExceptionService>();
 
         return services;

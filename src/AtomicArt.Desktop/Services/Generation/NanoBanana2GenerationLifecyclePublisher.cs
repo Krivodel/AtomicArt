@@ -1,5 +1,4 @@
 using AtomicArt.Contracts.Generation;
-using AtomicArt.Desktop.Resources;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
@@ -34,39 +33,42 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
         PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.StartFailed, null, null, null);
     }
 
-    public void PublishFailed(Guid correlationId, string errorMessage)
+    public void PublishFailed(Guid correlationId, string failureCode)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(errorMessage);
+        ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
 
-        PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.Failed, null, null, errorMessage);
+        PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.Failed, null, null, failureCode);
     }
 
     internal void PublishCanceledGeneration(Guid correlationId, GenerationRunState runState)
     {
         if (runState.IsStarted)
         {
-            PublishGenerationFailure(correlationId, runState, UiStrings.GenerationFailed);
+            PublishGenerationFailure(
+                correlationId,
+                runState,
+                GenerationClientFailureCodes.Unknown);
         }
     }
 
     internal void PublishFailedGeneration(
         Guid correlationId,
         GenerationRunState runState,
-        string errorMessage)
+        string failureCode)
     {
-        PublishGenerationFailure(correlationId, runState, errorMessage);
+        PublishGenerationFailure(correlationId, runState, failureCode);
     }
 
     private void PublishGenerationFailure(
         Guid correlationId,
         GenerationRunState runState,
-        string errorMessage)
+        string failureCode)
     {
         GenerationLifecycleStatus status = runState.IsStarted
             ? GenerationLifecycleStatus.Failed
             : GenerationLifecycleStatus.StartFailed;
 
-        PublishLifecycleEvent(correlationId, status, null, null, errorMessage);
+        PublishLifecycleEvent(correlationId, status, null, null, failureCode);
     }
 
     private void PublishLifecycleEvent(
@@ -74,14 +76,14 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
         GenerationLifecycleStatus status,
         GenerationStartSnapshot? start,
         GenerationBatchDto? batch,
-        string? errorMessage)
+        string? failureCode)
     {
         GenerationLifecycleEvent lifecycleEvent = new(
             correlationId,
             status,
             start,
             batch,
-            errorMessage);
+            failureCode);
 
         _lifecycleEventHub.Publish(lifecycleEvent);
     }

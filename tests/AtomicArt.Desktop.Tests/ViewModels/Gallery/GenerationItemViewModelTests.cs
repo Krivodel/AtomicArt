@@ -3,6 +3,7 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -129,6 +130,20 @@ public sealed class GenerationItemViewModelTests
         GalleryItemState state = viewModel.CreateState();
 
         state.ThumbnailPath.Should().Be("thumbnail.png");
+    }
+
+    [Fact]
+    public void MarkFailed_WithCode_PreservesCode()
+    {
+        GenerationItemViewModel viewModel = CreateViewModel(
+            CreatedAtUtc,
+            status: GenerationItemStatus.Generating);
+
+        viewModel.MarkFailed(GenerationProviderFailureErrorCodes.RequestRejected);
+
+        viewModel.IsFailed.Should().BeTrue();
+        viewModel.FailureCode.Should().Be(
+            GenerationProviderFailureErrorCodes.RequestRejected);
     }
 
     private static GenerationItemViewModel CreateViewModel(

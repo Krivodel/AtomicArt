@@ -8,6 +8,7 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Generation;
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
@@ -52,10 +53,45 @@ public sealed class GenerationPreviewControlTests : AnimatedGalleryControlTestBa
                 indicator.GridSize.Should().Be(16);
                 indicator.IsActive.Should().BeTrue();
 
-                viewModel.MarkFailed();
+                viewModel.MarkFailed(UiStrings.GenerationFailed);
                 window.CaptureRenderedFrame();
 
                 indicator.IsActive.Should().BeFalse();
+            });
+        });
+    }
+
+    [Fact]
+    public void FailurePreview_WhenGenerationFails_ReplacesImageInteractionLayer()
+    {
+        Dispatch(() =>
+        {
+            GenerationItemDto item = GenerationItemDtoTestFactory.Create(
+                status: GenerationItemStatus.Generating);
+            GenerationItemViewModel viewModel = new(
+                item,
+                0,
+                null,
+                GenerationItemStatusDescriptorRegistryTestFactory.Create());
+            GenerationPreviewControl control = new()
+            {
+                DataContext = viewModel
+            };
+
+            Show(control, 220d, 220d, window =>
+            {
+                Border failurePreview = control.FindControl<Border>("FailurePreview")
+                    ?? throw new InvalidOperationException("Failure preview is missing.");
+                Border previewDragSource = control.FindControl<Border>("PreviewDragSource")
+                    ?? throw new InvalidOperationException("Preview drag source is missing.");
+                failurePreview.IsVisible.Should().BeFalse();
+                previewDragSource.IsVisible.Should().BeTrue();
+
+                viewModel.MarkFailed(UiStrings.GenerationFailed);
+                window.CaptureRenderedFrame();
+
+                failurePreview.IsVisible.Should().BeTrue();
+                previewDragSource.IsVisible.Should().BeFalse();
             });
         });
     }

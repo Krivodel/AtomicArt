@@ -350,6 +350,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             new RelayCommand(() => { }),
             new RelayCommand(() => { }),
             new RelayCommand(() => { }),
+            new RelayCommand(() => { }),
             new RecordingTextClipboardService(),
             new TestViewModelErrorHandler(),
             new GenerationPriceFormatter(),

@@ -74,6 +74,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         GenerationCardControl generationCard = RequireGenerationCard(control);
 
         generationCard.OpenViewerCommand = commands.OpenViewer;
+        generationCard.ShowFailureDetailsCommand = commands.ShowFailureDetails;
         generationCard.RevealInFolderCommand = commands.RevealInFolder;
         generationCard.RevealInNewFolderWindowCommand =
             commands.RevealInNewFolderWindow;

@@ -11,6 +11,7 @@ public static class UiStrings
     public static string SettingsTitle => "Настройки";
     public static string GalleryPlaceholder => "В галерее пусто";
     public static string Error => "Ошибка";
+    public static string Copy => "Копировать";
     public static string UnhandledExceptionMessage => "Неизвестная ошибка.";
     public static string AttachmentCounterFormat => "{0}/{1}";
     public static string TemperatureValueFormat => "{0:0.0}";
@@ -18,6 +19,36 @@ public static class UiStrings
     public static string ImageAttachmentFailed => "Не удалось прикрепить.";
     public static string GenerationApiUnavailable => "Сервер недоступен.";
     public static string GenerationFailed => "Не удалось сгенерировать.";
+    public static string GenerationAuthenticationFailed =>
+        "Провайдер отклонил API-ключ. Проверь ключ в настройках.";
+    public static string GenerationAuthorizationFailed =>
+        "У API-ключа нет доступа к выбранной модели.";
+    public static string GenerationRateLimited =>
+        "Провайдер временно ограничил количество запросов. Попробуй позже.";
+    public static string GenerationInvalidResponse =>
+        "Провайдер вернул некорректный ответ.";
+    public static string GenerationTimedOut =>
+        "Провайдер не успел завершить генерацию вовремя.";
+    public static string GenerationProviderUnavailable =>
+        "Сервис провайдера временно недоступен. Попробуй позже.";
+    public static string GenerationRequestRejected =>
+        "Провайдер отклонил запрос. Проверь промпт, параметры и вложения.";
+    public static string GenerationResourceNotFound =>
+        "Выбранная модель недоступна у провайдера.";
+    public static string GenerationProviderInternalError =>
+        "У провайдера произошла внутренняя ошибка. Попробуй позже.";
+    public static string GenerationConcurrencyLimitReached =>
+        "Достигнут лимит одновременных генераций.";
+    public static string GenerationInvalidRequest =>
+        "Сервер не смог обработать запрос генерации.";
+    public static string GenerationInvalidAttempt =>
+        "Сервер отклонил номер попытки генерации.";
+    public static string GenerationInvalidParameters =>
+        "Параметры генерации не прошли проверку.";
+    public static string GenerationResponseTooLarge =>
+        "Результат генерации превысил допустимый размер.";
+    public static string GenerationTransportInterrupted =>
+        "Соединение прервалось во время получения результата.";
     public static string GoogleApiKeyMissing => "Укажи Google API-ключ в настройках.";
     public static string ModelCatalogLoadFailed => "Не удалось загрузить список моделей.";
     public static string ImageDropLabel => "ДРОП";

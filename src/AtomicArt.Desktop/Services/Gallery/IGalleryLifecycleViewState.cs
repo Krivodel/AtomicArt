@@ -10,7 +10,10 @@ public interface IGalleryLifecycleViewState
         IReadOnlyList<GalleryCompletedItemUpdate> itemUpdates,
         CancellationToken ct);
     Task ApplyStartFailedAsync(Guid correlationId, CancellationToken ct);
-    Task ApplyFailedAsync(Guid correlationId, CancellationToken ct);
+    Task ApplyFailedAsync(
+        Guid correlationId,
+        string failureCode,
+        CancellationToken ct);
     Task RefreshElapsedTextAsync(DateTime utcNow, CancellationToken ct);
     Task<IReadOnlyList<GalleryItemState>> CreateStateSnapshotAsync(CancellationToken ct);
     Task RestoreAsync(IReadOnlyList<GalleryItemState> items, CancellationToken ct);

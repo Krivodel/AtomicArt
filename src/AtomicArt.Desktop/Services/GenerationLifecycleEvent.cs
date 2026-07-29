@@ -8,14 +8,14 @@ public sealed record GenerationLifecycleEvent
     public GenerationLifecycleStatus Status { get; }
     public GenerationStartSnapshot? Start { get; }
     public GenerationBatchDto? Batch { get; }
-    public string? ErrorMessage { get; }
+    public string? FailureCode { get; }
 
     public GenerationLifecycleEvent(
         Guid correlationId,
         GenerationLifecycleStatus status,
         GenerationStartSnapshot? start,
         GenerationBatchDto? batch,
-        string? errorMessage)
+        string? failureCode)
     {
         Validate(correlationId, status, start, batch);
 
@@ -23,7 +23,7 @@ public sealed record GenerationLifecycleEvent
         Status = status;
         Start = start;
         Batch = batch;
-        ErrorMessage = errorMessage;
+        FailureCode = failureCode;
     }
 
     private static void Validate(

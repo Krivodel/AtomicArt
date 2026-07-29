@@ -86,17 +86,21 @@ internal static class GalleryLifecycleTestFactory
             GenerationLifecycleStatus.StartFailed,
             null,
             null,
-            "Failed to start.");
+            null);
     }
 
-    public static GenerationLifecycleEvent CreateFailedEvent(Guid correlationId)
+    public static GenerationLifecycleEvent CreateFailedEvent(
+        Guid correlationId,
+        string failureCode = GenerationClientFailureCodes.Unknown)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
+
         return new GenerationLifecycleEvent(
             correlationId,
             GenerationLifecycleStatus.Failed,
             null,
             null,
-            "Generation failed.");
+            failureCode);
     }
 
     public static GalleryLifecycleViewStateController CreateViewStateController(

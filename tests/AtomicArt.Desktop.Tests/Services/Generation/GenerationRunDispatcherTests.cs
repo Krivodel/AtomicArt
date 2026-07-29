@@ -4,7 +4,6 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
-using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
@@ -65,7 +64,7 @@ public sealed class GenerationRunDispatcherTests
     }
 
     [Fact]
-    public async Task EnqueueAsync_WhenApiThrows_PublishesFailedEvent()
+    public async Task EnqueueAsync_WhenServerIsUnavailable_PublishesSpecificFailedEvent()
     {
         RunTestContext context = CreateRunContext(new ThrowingImageGenerationApiClient());
 
@@ -82,7 +81,8 @@ public sealed class GenerationRunDispatcherTests
         int failedIndex = events.IndexOf(failedEvent);
         startedIndex.Should().BeLessThan(failedIndex);
         failedEvent.CorrelationId.Should().Be(startedEvent.CorrelationId);
-        failedEvent.ErrorMessage.Should().Be(UiStrings.GenerationFailed);
+        failedEvent.FailureCode.Should().Be(
+            GenerationClientFailureCodes.ApiUnavailable);
     }
 
     [Fact]
@@ -138,6 +138,11 @@ public sealed class GenerationRunDispatcherTests
                 lifecycleEvent.Status == GenerationLifecycleStatus.Failed)
             .Should()
             .Be(1);
+        context.LifecycleEventHub.PublishedEvents
+            .Single(lifecycleEvent =>
+                lifecycleEvent.Status == GenerationLifecycleStatus.Failed)
+            .FailureCode.Should()
+            .Be(GenerationProviderFailureErrorCodes.InternalError);
     }
 
     [Fact]

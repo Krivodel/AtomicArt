@@ -136,6 +136,7 @@ public sealed class GenerationMetadataViewModelTests
             itemViewModel,
             closeCommand ?? new RelayCommand(() => { }),
             new RelayCommand(() => { }),
+            new RelayCommand(() => { }),
             repeatCommand ?? new RelayCommand(() => { }),
             textClipboardService ?? new RecordingTextClipboardService(),
             new TestViewModelErrorHandler(),

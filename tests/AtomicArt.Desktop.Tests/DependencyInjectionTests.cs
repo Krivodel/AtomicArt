@@ -9,6 +9,7 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Models;
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
@@ -16,6 +17,7 @@ using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.Tests.Services;
+using AtomicArt.Desktop.ViewModels.Dialogs;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Settings;
@@ -135,6 +137,22 @@ public sealed class DependencyInjectionTests
     }
 
     [Fact]
+    public void AddDesktopServices_WithErrorDialog_ConnectsServiceToViewModel()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+        ErrorDialogViewModel viewModel =
+            serviceProvider.GetRequiredService<ErrorDialogViewModel>();
+        IDialogService dialogService =
+            serviceProvider.GetRequiredService<IDialogService>();
+
+        dialogService.ShowError(UiStrings.GenerationApiUnavailable);
+
+        dialogService.Should().BeOfType<DialogService>();
+        viewModel.Message.Should().Be(UiStrings.GenerationApiUnavailable);
+        viewModel.IsOpen.Should().BeTrue();
+    }
+
+    [Fact]
     public void AddDesktopServices_WithAttachmentPreparationLimiter_RegistersSingletonLimiter()
     {
         using ServiceProvider serviceProvider = CreateServiceProvider();
@@ -207,6 +225,7 @@ public sealed class DependencyInjectionTests
             typeof(GalleryViewModel),
             typeof(IModelPanelViewModel),
             typeof(SettingsViewModel),
+            typeof(ErrorDialogViewModel),
             typeof(DataRootSettingViewModel),
             typeof(ApiBaseAddressSettingViewModel),
             typeof(SecretSettingViewModel),

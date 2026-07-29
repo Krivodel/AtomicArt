@@ -41,6 +41,11 @@ public partial class AnimatedGalleryControl : UserControl
         get => GetValue(OpenViewerCommandProperty);
         set => SetValue(OpenViewerCommandProperty, value);
     }
+    public IRelayCommand? ShowFailureDetailsCommand
+    {
+        get => GetValue(ShowFailureDetailsCommandProperty);
+        set => SetValue(ShowFailureDetailsCommandProperty, value);
+    }
     public IRelayCommand? OpenMetadataCommand
     {
         get => GetValue(OpenMetadataCommandProperty);
@@ -69,6 +74,9 @@ public partial class AnimatedGalleryControl : UserControl
     public static readonly StyledProperty<IRelayCommand?> OpenViewerCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(OpenViewerCommand));
+    public static readonly StyledProperty<IRelayCommand?> ShowFailureDetailsCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(ShowFailureDetailsCommand));
     public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(OpenMetadataCommand));
@@ -307,6 +315,7 @@ public partial class AnimatedGalleryControl : UserControl
         return (property == RevealInFolderCommandProperty)
                || (property == RevealInNewFolderWindowCommandProperty)
                || (property == OpenViewerCommandProperty)
+               || (property == ShowFailureDetailsCommandProperty)
                || (property == OpenMetadataCommandProperty)
                || (property == DeleteOrCancelCommandProperty);
     }

@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using AtomicArt.Contracts.Generation;
-using AtomicArt.Desktop.Resources;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
@@ -191,7 +190,9 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         catch (Exception ex)
         {
             LogBackgroundFailure(ex, correlationId);
-            _lifecyclePublisher.PublishFailed(correlationId, UiStrings.GenerationFailed);
+            string failureCode =
+                GenerationFailureCodeResolver.GetFailureCode(ex);
+            _lifecyclePublisher.PublishFailed(correlationId, failureCode);
         }
         finally
         {

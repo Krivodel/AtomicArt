@@ -4,6 +4,7 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
@@ -436,6 +437,54 @@ public sealed class GalleryViewModelTests
     }
 
     [Fact]
+    public void OpenViewerCommand_WithFailedGeneration_CannotExecute()
+    {
+        using GalleryLifecycleTestContext context = new();
+        Guid correlationId = context.Start(1);
+        context.PublishFailure(
+            correlationId,
+            GenerationProviderFailureErrorCodes.Unavailable);
+        GenerationItemViewModel failedItem = context.ViewModel.Items.Single();
+
+        bool canExecute = context.ViewModel.OpenViewerCommand.CanExecute(failedItem);
+
+        canExecute.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ShowFailureDetailsCommand_WithFailedGeneration_ShowsFailureDescription()
+    {
+        RecordingDialogService dialogService = new();
+        using GalleryLifecycleTestContext context = new(
+            dialogService: dialogService);
+        Guid correlationId = context.Start(1);
+        context.PublishFailure(
+            correlationId,
+            GenerationProviderFailureErrorCodes.Unavailable);
+        GenerationItemViewModel failedItem = context.ViewModel.Items.Single();
+
+        await context.ViewModel.ShowFailureDetailsCommand.ExecuteAsync(failedItem);
+
+        dialogService.ErrorMessages.Should().ContainSingle()
+            .Which.Should().Be(UiStrings.GenerationProviderUnavailable);
+    }
+
+    [Fact]
+    public void ShowFailureDetailsCommand_WithGeneratedImage_CannotExecute()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        List<GenerationItemDto> items =
+            [GalleryViewModelTestFactory.CreateItem(imagePath: "image.png")];
+        viewModel.AddGeneratedItems(items, 0);
+        GenerationItemViewModel generatedItem = viewModel.Items.Single();
+
+        bool canExecute =
+            viewModel.ShowFailureDetailsCommand.CanExecute(generatedItem);
+
+        canExecute.Should().BeFalse();
+    }
+
+    [Fact]
     public void OnGenerationStarted_WithSingleItem_InsertsGeneratingPlaceholderAtStart()
     {
         using GalleryLifecycleTestContext context = new();
@@ -561,6 +610,24 @@ public sealed class GalleryViewModelTests
     }
 
     [Fact]
+    public void OnGenerationFailed_WithCode_SavesCode()
+    {
+        RecordingGalleryStateService galleryStateService = new();
+        using GalleryLifecycleTestContext context = new(
+            galleryStateService: galleryStateService);
+        Guid correlationId = context.Start(1);
+
+        context.PublishFailure(
+            correlationId,
+            GenerationProviderFailureErrorCodes.RequestRejected);
+
+        galleryStateService.SaveCallCount.Should().Be(2);
+        galleryStateService.SavedItems.Should().ContainSingle()
+            .Which.FailureCode.Should().Be(
+                GenerationProviderFailureErrorCodes.RequestRejected);
+    }
+
+    [Fact]
     public void OnGenerationStartFailed_WithMatchingCorrelationId_RemovesPlaceholders()
     {
         using GalleryLifecycleTestContext context = new();
@@ -683,14 +750,18 @@ public sealed class GalleryViewModelTests
         public GalleryLifecycleTestContext(
             ITrustedImageFileService? trustedImageFileService = null,
             IAnimatedGalleryOperations? animatedGalleryOperations = null,
-            IUiThreadDispatcher? uiThreadDispatcher = null)
+            IUiThreadDispatcher? uiThreadDispatcher = null,
+            IDialogService? dialogService = null,
+            IGalleryStateService? galleryStateService = null)
         {
             _lifecycleEventHub = new TestGenerationLifecycleEventHub();
             ViewModel = GalleryViewModelTestFactory.CreateViewModel(
                 trustedImageFileService: trustedImageFileService,
                 lifecycleEventHub: _lifecycleEventHub,
                 animatedGalleryOperations: animatedGalleryOperations,
-                uiThreadDispatcher: uiThreadDispatcher);
+                uiThreadDispatcher: uiThreadDispatcher,
+                dialogService: dialogService,
+                galleryStateService: galleryStateService);
         }
 
         public Guid Start(int generationCount)
@@ -715,10 +786,14 @@ public sealed class GalleryViewModelTests
             _lifecycleEventHub.Publish(completedEvent);
         }
 
-        public void PublishFailure(Guid correlationId)
+        public void PublishFailure(
+            Guid correlationId,
+            string failureCode = GenerationClientFailureCodes.Unknown)
         {
             _lifecycleEventHub.Publish(
-                GalleryViewModelTestFactory.CreateFailedEvent(correlationId));
+                GalleryViewModelTestFactory.CreateFailedEvent(
+                    correlationId,
+                    failureCode));
         }
 
         public void PublishStartFailure(Guid correlationId)

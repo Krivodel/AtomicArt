@@ -19,7 +19,8 @@
                                          OpenMetadataCommand="{Binding OpenMetadataCommand}"
                                          OpenViewerCommand="{Binding OpenViewerCommand}"
                                          RevealInFolderCommand="{Binding RevealInFolderCommand}"
-                                         RevealInNewFolderWindowCommand="{Binding RevealInNewFolderWindowCommand}" />
+                                         RevealInNewFolderWindowCommand="{Binding RevealInNewFolderWindowCommand}"
+                                         ShowFailureDetailsCommand="{Binding ShowFailureDetailsCommand}" />
 
         <TextBlock Margin="0,12,0,0"
                    HorizontalAlignment="Center"

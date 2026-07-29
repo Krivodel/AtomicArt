@@ -49,17 +49,15 @@ public sealed class GlobalExceptionService : IDisposable
         _isInitialized = false;
     }
 
-    private bool TryShowSafeError()
+    private void ShowSafeError()
     {
         try
         {
-            return _dialogService.ShowError(UiStrings.UnhandledExceptionMessage);
+            _dialogService.ShowError(UiStrings.UnhandledExceptionMessage);
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to show safe error dialog.");
-
-            return false;
         }
     }
 
@@ -68,7 +66,7 @@ public sealed class GlobalExceptionService : IDisposable
         DispatcherUnhandledExceptionEventArgs e)
     {
         _logger.LogError(e.Exception, "Unhandled Avalonia UI thread exception.");
-        TryShowSafeError();
+        ShowSafeError();
     }
 
     private void OnDomainUnhandledException(

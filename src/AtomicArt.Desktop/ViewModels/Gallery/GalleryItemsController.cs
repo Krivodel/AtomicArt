@@ -169,25 +169,31 @@ public sealed class GalleryItemsController
         NotifyIsEmptyChanged(wasEmpty);
     }
 
-    public void MarkFailedByCorrelationId(Guid correlationId)
+    public void MarkFailedByCorrelationId(
+        Guid correlationId,
+        string failureCode)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
+
         IReadOnlyList<GenerationItemViewModel> placeholders = GetItemsByCorrelationId(correlationId);
 
         foreach (GenerationItemViewModel placeholder in placeholders)
         {
-            placeholder.MarkFailed();
+            placeholder.MarkFailed(failureCode);
         }
     }
 
     public void MarkFailedPlaceholders(
         IReadOnlyList<GenerationItemViewModel> placeholders,
-        int firstFailedIndex)
+        int firstFailedIndex,
+        string failureCode)
     {
         ArgumentNullException.ThrowIfNull(placeholders);
+        ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
 
         for (int index = firstFailedIndex; index < placeholders.Count; index++)
         {
-            placeholders[index].MarkFailed();
+            placeholders[index].MarkFailed(failureCode);
         }
     }
 

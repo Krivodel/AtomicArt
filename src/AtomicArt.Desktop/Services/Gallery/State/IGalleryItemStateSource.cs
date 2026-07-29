@@ -19,6 +19,7 @@ public interface IGalleryItemStateSource
     TimeSpan? GenerationDuration { get; }
     GenerationPriceDto? Price { get; }
     GenerationUsageDto? Usage { get; }
+    string? FailureCode { get; }
     int AttachedImagesCount { get; }
     Guid? CorrelationId { get; }
     int? GenerationOrdinal { get; }

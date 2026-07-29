@@ -20,6 +20,7 @@ public sealed class GalleryItemState : IGalleryItemStateSource
     public TimeSpan? GenerationDuration { get; init; }
     public GenerationPriceDto? Price { get; init; }
     public GenerationUsageDto? Usage { get; init; }
+    public string? FailureCode { get; init; }
     public int AttachedImagesCount { get; init; }
     public Guid? CorrelationId { get; init; }
     public int? GenerationOrdinal { get; init; }
