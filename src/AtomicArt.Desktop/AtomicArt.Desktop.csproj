@@ -3,10 +3,12 @@
     <OutputType>WinExe</OutputType>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <AssemblyName>AtomicArt</AssemblyName>
-    <Version>1.2.1</Version>
+    <Version>1.3.0</Version>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <DesktopConfigurationFileName>appsettings.json</DesktopConfigurationFileName>
-    <NeutralLanguage>ru-RU</NeutralLanguage>
+    <NeutralLanguage>en</NeutralLanguage>
+    <Authors>Krivodeling</Authors>
+    <Company>Krivodeling</Company>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(PublishDir)' != ''">
