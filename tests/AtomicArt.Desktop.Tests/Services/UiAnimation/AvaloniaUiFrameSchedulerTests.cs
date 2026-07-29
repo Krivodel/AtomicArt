@@ -76,4 +76,67 @@ public sealed class AvaloniaUiFrameSchedulerTests : AnimatedGalleryControlTestBa
             }
         });
     }
+
+    [Fact]
+    public void RequestAnimationFrame_WhenSeveralFramesArePending_TracksEachFrameIndependently()
+    {
+        Dispatch(() =>
+        {
+            Window window = Show(new Border());
+            List<Action<TimeSpan>> submittedFrames = [];
+            int completedFrameCount = 0;
+
+            try
+            {
+                AvaloniaUiFrameScheduler scheduler = new(
+                    window,
+                    submittedFrames.Add);
+                scheduler.RequestAnimationFrame(_ => completedFrameCount++);
+                scheduler.RequestAnimationFrame(_ => completedFrameCount++);
+
+                submittedFrames[0](TimeSpan.FromMilliseconds(16));
+                window.Hide();
+                window.Show();
+
+                submittedFrames.Should().HaveCount(3);
+                submittedFrames[1](TimeSpan.FromMilliseconds(32));
+                completedFrameCount.Should().Be(1);
+
+                submittedFrames[2](TimeSpan.FromMilliseconds(48));
+                completedFrameCount.Should().Be(2);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void RequestAnimationFrame_AfterLastFrameCompletes_DetachesPresentationObserver()
+    {
+        Dispatch(() =>
+        {
+            Window window = Show(new Border());
+            List<Action<TimeSpan>> submittedFrames = [];
+
+            try
+            {
+                AvaloniaUiFrameScheduler scheduler = new(
+                    window,
+                    submittedFrames.Add);
+                scheduler.RequestAnimationFrame(_ => { });
+                submittedFrames[0](TimeSpan.FromMilliseconds(16));
+
+                window.Hide();
+                window.Show();
+
+                submittedFrames.Should().ContainSingle();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
 }
