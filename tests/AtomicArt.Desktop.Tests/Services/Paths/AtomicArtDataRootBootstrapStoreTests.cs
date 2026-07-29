@@ -11,11 +11,11 @@ namespace AtomicArt.Desktop.Tests.Services.Paths;
 public sealed class AtomicArtDataRootBootstrapStoreTests
 {
     [Fact]
-    public async Task SaveRootDirectoryAsync_WithCustomRoot_PersistsNormalizedRoot()
+    public async Task SaveRootDirectoryAsync_WithUnicodeRoot_PersistsReadableNormalizedRoot()
     {
         string bootstrapDirectory = TestDirectories.GetUniqueDirectoryPath(
             typeof(AtomicArtDataRootBootstrapStoreTests));
-        string rootDirectory = Path.Combine(bootstrapDirectory, "..", "Data");
+        string rootDirectory = Path.Combine(bootstrapDirectory, "..", "Данные");
 
         try
         {
@@ -23,6 +23,11 @@ public sealed class AtomicArtDataRootBootstrapStoreTests
 
             await store.SaveRootDirectoryAsync(rootDirectory, CancellationToken.None);
 
+            string json = await File.ReadAllTextAsync(
+                Path.Combine(bootstrapDirectory, "storage.json"),
+                CancellationToken.None);
+            json.Should().Contain("Данные");
+            json.Should().NotContain("\\u");
             store.LoadRootDirectory().Should().Be(Path.GetFullPath(rootDirectory));
         }
         finally

@@ -3,16 +3,15 @@ using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Services.State;
 
 public sealed class AppStateStore : IAppStateStore
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true
-    };
+    private static readonly JsonSerializerOptions JsonOptions =
+        JsonFileSerializerOptions.Create();
     private static readonly string TrustedPathFailureMessage =
         TrustedPathGuard.CreateFailureMessage(
             "State path",

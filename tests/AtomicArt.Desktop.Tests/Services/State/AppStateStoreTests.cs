@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
@@ -46,18 +47,21 @@ public sealed class AppStateStoreTests
     }
 
     [Fact]
-    public async Task SaveAsync_WithValidState_WritesUtf8JsonEnvelope()
+    public async Task SaveAsync_WithUnicodeState_WritesReadableUtf8JsonEnvelope()
     {
         await RunWithTemporaryRootDirectoryAsync(async rootDirectory =>
         {
             StateStoreTestContext context = CreateStateStoreContext(rootDirectory);
-            TestState state = new("saved");
+            TestState state = new("сохранено");
 
             await context.Store.SaveAsync(context.Section, state, CancellationToken.None);
 
             string statePath = Path.Combine(context.PathProvider.StateDirectory, context.Section.FileName);
             byte[] bytes = await File.ReadAllBytesAsync(statePath, CancellationToken.None);
             bytes.Take(3).Should().NotEqual([0xEF, 0xBB, 0xBF]);
+            string json = Encoding.UTF8.GetString(bytes);
+            json.Should().Contain(state.Value);
+            json.Should().NotContain("\\u");
             using JsonDocument document = JsonDocument.Parse(bytes);
             JsonElement root = document.RootElement;
             root.GetProperty("schemaVersion").GetInt32().Should().Be(context.Section.SchemaVersion);

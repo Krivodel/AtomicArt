@@ -1,15 +1,15 @@
 using System.Text.Json;
 
+using AtomicArt.Desktop.Services;
+
 namespace AtomicArt.Desktop.Services.Paths;
 
 internal sealed class DataRootMigrationJournalStore
 {
     private const string JournalFileName = "storage-migration.json";
 
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true
-    };
+    private static readonly JsonSerializerOptions SerializerOptions =
+        JsonFileSerializerOptions.Create();
 
     private readonly string _bootstrapDirectory;
     private readonly string _journalFilePath;
