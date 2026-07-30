@@ -162,6 +162,50 @@ public sealed class PicaViewerSessionTests
     }
 
     [Fact]
+    public async Task DispatchDerivedImageAsync_WithAttachAction_PreservesDerivedFileName()
+    {
+        const string derivedFileName = "red-channel.png";
+        byte[] derivedContent = [4, 3, 2, 1];
+        PicaViewerSessionTestDependencies dependencies = new();
+        dependencies.UiThreadDispatcher
+            .Setup(dispatcher => dispatcher.InvokeAsync(
+                It.IsAny<Func<Task>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((Func<Task> action, CancellationToken _) => action());
+        IReadOnlyList<AttachedImageDto>? attachedImages = null;
+        AsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachCommand = new(images =>
+        {
+            attachedImages = images;
+            return Task.CompletedTask;
+        });
+        AttachedImageDto image = new(
+            "reference.png",
+            GenerationImageContentTypes.Png,
+            [1, 2, 3]);
+        GalleryImageViewerRequest request = CreateRequest(
+            new GalleryAttachedImageViewerSource(image),
+            attachCommand);
+
+        await using PicaViewerSession session = dependencies.CreateSession();
+        await session.PrepareAsync(request, CancellationToken.None);
+        PicaViewerRequest preparedRequest = GetPreparedRequest(session);
+        PicaActionDefinition attachAction = preparedRequest.Actions.Single(action =>
+            action.Id == AtomicArtPicaActions.AttachId);
+
+        await session.DispatchDerivedImageAsync(
+            attachAction,
+            preparedRequest.Items.Single(),
+            derivedFileName,
+            derivedContent,
+            CancellationToken.None);
+
+        attachedImages.Should().ContainSingle();
+        attachedImages?[0].FileName.Should().Be(derivedFileName);
+        attachedImages?[0].ContentType.Should().Be(GenerationImageContentTypes.Png);
+        attachedImages?[0].Content.Should().Equal(derivedContent);
+    }
+
+    [Fact]
     public async Task DispatchCurrentImageAsync_WithShowInGalleryAction_RevealsItemAndActivatesWindow()
     {
         const string modelId = "model";

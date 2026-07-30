@@ -24,7 +24,7 @@ internal static class AnimatedGallerySceneTestFactory
         ArgumentNullException.ThrowIfNull(topLevel);
 
         IUiFrameScheduler frameScheduler = frameSchedulerOverride
-            ?? new AvaloniaUiFrameSchedulerFactory().Create(topLevel);
+            ?? new AvaloniaUiFrameScheduler(topLevel);
         GalleryLayoutService galleryLayout = new();
         UiAnimationScheduler animationScheduler = new(frameScheduler);
         GalleryOverlayEffects overlayEffects = new(animationScheduler);

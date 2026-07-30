@@ -263,7 +263,6 @@ public static class DependencyInjection
         services.AddSharedSingletonAliases<ImageViewerService>(
             typeof(IImageViewerService),
             typeof(IDataRootViewerPreparationService));
-        services.AddSingleton<IUiFrameSchedulerFactory, AvaloniaUiFrameSchedulerFactory>();
 
         return services;
     }

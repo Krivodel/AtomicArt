@@ -143,32 +143,50 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             content.Length);
     }
 
-    public async Task DispatchSelectionAsync(
+    public Task DispatchSelectionAsync(
         PicaActionDefinition action,
         PicaImageItem item,
         byte[] pngContent,
         CancellationToken ct)
     {
+        return DispatchDerivedImageAsync(
+            action,
+            item,
+            PicaImageFormats.SelectionFileName,
+            pngContent,
+            ct);
+    }
+
+    public async Task DispatchDerivedImageAsync(
+        PicaActionDefinition action,
+        PicaImageItem item,
+        string fileName,
+        byte[] pngContent,
+        CancellationToken ct)
+    {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(item);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
         ArgumentNullException.ThrowIfNull(pngContent);
 
         if (!CanDispatchAttach(action))
         {
             _dependencies.Logger.LogWarning(
-                "Embedded Pica rejected unsupported selection action {ActionId} for item {ItemId}",
+                "Embedded Pica rejected unsupported derived-image action {ActionId} for item {ItemId}",
                 action.Id,
                 item.Id);
             return;
         }
 
+        string safeFileName = Path.GetFileName(fileName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(safeFileName);
         await ExecuteAttachAsync(
-            PicaImageFormats.SelectionFileName,
+            safeFileName,
             PicaImageFormats.PngContentType,
             pngContent,
             ct).ConfigureAwait(false);
         _dependencies.Logger.LogInformation(
-            "Embedded Pica attached selection from item {ItemId} with {ByteCount} bytes",
+            "Embedded Pica attached derived image from item {ItemId} with {ByteCount} bytes",
             item.Id,
             pngContent.Length);
     }

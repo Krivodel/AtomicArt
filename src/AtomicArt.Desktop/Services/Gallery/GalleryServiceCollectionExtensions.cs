@@ -83,9 +83,12 @@ internal static class GalleryServiceCollectionExtensions
         services.AddScoped<IGalleryPreviewBitmapProvider, GalleryPreviewBitmapProvider>();
         services.AddScoped<IGalleryCardControlFactory, GenerationCardControlFactory>();
         services.AddScoped<IUiFrameScheduler>(provider =>
-            provider
-                .GetRequiredService<IUiFrameSchedulerFactory>()
-                .Create(provider.GetRequiredService<GallerySceneTopLevelContext>().TopLevel));
+        {
+            GallerySceneTopLevelContext context = provider
+                .GetRequiredService<GallerySceneTopLevelContext>();
+
+            return new AvaloniaUiFrameScheduler(context.TopLevel);
+        });
         services.AddScoped<GalleryPreviewSourceScheduler>();
         services.AddScoped<GenerationPreviewSession>();
         services.AddScoped<GalleryLayoutService>();
