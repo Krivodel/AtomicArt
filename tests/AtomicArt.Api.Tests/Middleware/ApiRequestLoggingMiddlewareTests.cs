@@ -31,7 +31,7 @@ public sealed class ApiRequestLoggingMiddlewareTests
                 Path = "/private/prompt/value"
             }
         };
-        
+
         await middleware.InvokeAsync(context);
 
         string logText = string.Join(Environment.NewLine, logger.Messages);

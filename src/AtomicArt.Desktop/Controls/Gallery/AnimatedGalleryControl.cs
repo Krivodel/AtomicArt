@@ -95,7 +95,7 @@ public partial class AnimatedGalleryControl : UserControl
 
     private AnimatedGalleryResizeController ResizeController =>
         _resizeController ?? throw new InvalidOperationException("Animated gallery resize controller was not created.");
-    
+
     private readonly AnimatedGallerySceneController _sceneController;
     private readonly CollectionChangedSubscription _itemsSubscription;
     private readonly Dictionary<Control, int> _previewOriginalZIndices = [];

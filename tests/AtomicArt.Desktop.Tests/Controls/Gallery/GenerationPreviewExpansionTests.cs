@@ -48,63 +48,63 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             originalScrollViewerClipToBounds.Should().BeFalse();
             originalScrollViewerClip.Should().BeNull();
 
-                    context.Window.MouseMove(previewCenter, RawInputModifiers.Shift);
-                    context.Window.CaptureRenderedFrame();
+            context.Window.MouseMove(previewCenter, RawInputModifiers.Shift);
+            context.Window.CaptureRenderedFrame();
 
-                    AssertExpandedPreviewAttachedToCard(
-                        context,
-                        originalParent,
-                        originalScrollViewerClipToBounds,
-                        originalScrollViewerClip);
-                    AssertPreviewIsOpaque(context);
-                    cardInfo.CornerRadius.Should().Be(new CornerRadius(0d, 0d, 8d, 8d));
-                    scrollPresenter.ClipToBounds.Should().BeFalse();
-                    context.Card.ZIndex.Should().Be(1001);
+            AssertExpandedPreviewAttachedToCard(
+                context,
+                originalParent,
+                originalScrollViewerClipToBounds,
+                originalScrollViewerClip);
+            AssertPreviewIsOpaque(context);
+            cardInfo.CornerRadius.Should().Be(new CornerRadius(0d, 0d, 8d, 8d));
+            scrollPresenter.ClipToBounds.Should().BeFalse();
+            context.Card.ZIndex.Should().Be(1001);
 
-                    bool allPreviewAncestorsAllowOverflow = context.PreviewHost
-                        .GetVisualAncestors()
-                        .TakeWhile(visual => !ReferenceEquals(visual, context.ScrollViewer))
-                        .All(visual => visual is { ClipToBounds: false, Clip: null });
-                    allPreviewAncestorsAllowOverflow.Should().BeTrue();
+            bool allPreviewAncestorsAllowOverflow = context.PreviewHost
+                .GetVisualAncestors()
+                .TakeWhile(visual => !ReferenceEquals(visual, context.ScrollViewer))
+                .All(visual => visual is { ClipToBounds: false, Clip: null });
+            allPreviewAncestorsAllowOverflow.Should().BeTrue();
 
-                    context.ScrollViewer.Offset = new Vector(0d, 40d);
-                    context.Window.CaptureRenderedFrame();
+            context.ScrollViewer.Offset = new Vector(0d, 40d);
+            context.Window.CaptureRenderedFrame();
 
-                    AssertExpandedPreviewAttachedToCard(
-                        context,
-                        originalParent,
-                        originalScrollViewerClipToBounds,
-                        originalScrollViewerClip);
+            AssertExpandedPreviewAttachedToCard(
+                context,
+                originalParent,
+                originalScrollViewerClipToBounds,
+                originalScrollViewerClip);
 
-                    Point? viewportPosition = context.ScrollViewer.TranslatePoint(
-                        new Point(0d, 0d),
-                        context.Window);
-                    viewportPosition.Should().NotBeNull();
-                    Point pointerOverInfo = new(
-                        previewCenter.X,
-                        viewportPosition.Value.Y + 200d);
-                    context.Window.MouseMove(pointerOverInfo, RawInputModifiers.Shift);
-                    context.Window.CaptureRenderedFrame();
+            Point? viewportPosition = context.ScrollViewer.TranslatePoint(
+                new Point(0d, 0d),
+                context.Window);
+            viewportPosition.Should().NotBeNull();
+            Point pointerOverInfo = new(
+                previewCenter.X,
+                viewportPosition.Value.Y + 200d);
+            context.Window.MouseMove(pointerOverInfo, RawInputModifiers.Shift);
+            context.Window.CaptureRenderedFrame();
 
-                    context.PreviewHost.Width.Should().Be(220d);
-                    context.Card.ZIndex.Should().Be(1000);
-                    AssertPreviewIsOpaque(context);
+            context.PreviewHost.Width.Should().Be(220d);
+            context.Card.ZIndex.Should().Be(1000);
+            AssertPreviewIsOpaque(context);
 
-                    context.ScrollViewer.Offset = new Vector(0d, 0d);
-                    context.Window.CaptureRenderedFrame();
+            context.ScrollViewer.Offset = new Vector(0d, 0d);
+            context.Window.CaptureRenderedFrame();
 
-                    context.PreviewHost.Width.Should().Be(748d);
-                    context.Card.ZIndex.Should().Be(1001);
-                    AssertPreviewIsOpaque(context);
+            context.PreviewHost.Width.Should().Be(748d);
+            context.Card.ZIndex.Should().Be(1001);
+            AssertPreviewIsOpaque(context);
 
-                    context.Window.Content = null;
-                    context.Window.CaptureRenderedFrame();
+            context.Window.Content = null;
+            context.Window.CaptureRenderedFrame();
 
-                    context.PreviewHost.Parent.Should().BeSameAs(originalParent);
-                    context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
-                    context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
-                    scrollPresenter.ClipToBounds.Should().Be(originalPresenterClipToBounds);
-                    cardSurface.ClipToBounds.Should().BeTrue();
+            context.PreviewHost.Parent.Should().BeSameAs(originalParent);
+            context.ScrollViewer.ClipToBounds.Should().Be(originalScrollViewerClipToBounds);
+            context.ScrollViewer.Clip.Should().BeSameAs(originalScrollViewerClip);
+            scrollPresenter.ClipToBounds.Should().Be(originalPresenterClipToBounds);
+            cardSurface.ClipToBounds.Should().BeTrue();
         });
     }
 
@@ -118,21 +118,21 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             AssertPreviewIsOpaque(context);
             Point pointerPosition = GetPointerPosition(context, 150d);
 
-                    context.Window.MouseMove(pointerPosition, RawInputModifiers.None);
-                    context.ScrollViewer.Offset = new Vector(0d, 40d);
-                    context.Window.CaptureRenderedFrame();
+            context.Window.MouseMove(pointerPosition, RawInputModifiers.None);
+            context.ScrollViewer.Offset = new Vector(0d, 40d);
+            context.Window.CaptureRenderedFrame();
 
-                    context.PreviewHost.Width.Should().Be(220d);
+            context.PreviewHost.Width.Should().Be(220d);
 
-                    context.Window.KeyPress(
-                        Key.LeftShift,
-                        RawInputModifiers.Shift,
-                        PhysicalKey.ShiftLeft,
-                        null);
-                    context.Window.CaptureRenderedFrame();
+            context.Window.KeyPress(
+                Key.LeftShift,
+                RawInputModifiers.Shift,
+                PhysicalKey.ShiftLeft,
+                null);
+            context.Window.CaptureRenderedFrame();
 
-                    context.PreviewHost.Width.Should().Be(748d);
-                    AssertPreviewIsOpaque(context);
+            context.PreviewHost.Width.Should().Be(748d);
+            AssertPreviewIsOpaque(context);
         });
     }
 

@@ -2,6 +2,7 @@
 using SkiaSharp;
 using Xunit;
 
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
 using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
@@ -86,6 +87,23 @@ public sealed class GalleryThumbnailGeneratorTests
     }
 
     [Fact]
+    public async Task CreateThumbnailAsync_WithPngImage_EncodesJpeg()
+    {
+        byte[] jpegSignature = GenerationImageFileSignatures.Jpeg.ToArray();
+
+        byte[] thumbnailBytes = await CreateThumbnailAsync(
+            nameof(CreateThumbnailAsync_WithPngImage_EncodesJpeg),
+            "source.png",
+            TestApiConfiguration.ThumbnailShortSidePixels,
+            TestApiConfiguration.ThumbnailShortSidePixels);
+
+        thumbnailBytes
+            .Take(jpegSignature.Length)
+            .Should()
+            .Equal(jpegSignature);
+    }
+
+    [Fact]
     public async Task CreateThumbnailAsync_WithInvalidImage_ThrowsInvalidDataException()
     {
         string rootDirectory = CreateCleanDirectory(nameof(CreateThumbnailAsync_WithInvalidImage_ThrowsInvalidDataException));
@@ -144,5 +162,4 @@ public sealed class GalleryThumbnailGeneratorTests
             CancellationToken.None)
             .ConfigureAwait(false);
     }
-
 }

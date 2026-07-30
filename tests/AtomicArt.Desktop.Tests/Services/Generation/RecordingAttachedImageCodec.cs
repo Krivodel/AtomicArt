@@ -14,8 +14,7 @@ internal sealed class RecordingAttachedImageCodec : IAttachedImageCodec
         BitmapHeight,
         SKAlphaType.Opaque);
     public int DecodeCallCount { get; private set; }
-    public List<(AttachedImageEncodingFormat Format, AttachedImageCompressionEffort Effort)>
-        LosslessCalls { get; } = [];
+    public List<(AttachedImageEncodingFormat Format, AttachedImageCompressionEffort Effort)> LosslessCalls { get; } = [];
     public List<(AttachedImageEncodingFormat Format, int Quality)> LossyCalls { get; } = [];
     public List<SKSizeI> ResizeCalls { get; } = [];
     public Func<AttachedImageCompressionEffort, byte[]?> LosslessEncoder { get; set; } =

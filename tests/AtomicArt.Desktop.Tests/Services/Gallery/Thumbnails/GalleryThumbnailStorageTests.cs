@@ -6,6 +6,7 @@ using Moq;
 using SkiaSharp;
 using Xunit;
 
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
@@ -39,13 +40,26 @@ public sealed class GalleryThumbnailStorageTests
     }
 
     [Fact]
+    public async Task SaveAsync_WithGeneratedImage_UsesJpegFileExtension()
+    {
+        StorageTestContext context = await CreateContextAsync(
+            nameof(SaveAsync_WithGeneratedImage_UsesJpegFileExtension));
+
+        string? thumbnailPath = await SaveAndGetThumbnailPathAsync(context);
+
+        thumbnailPath.Should().NotBeNull();
+        Path.GetExtension(thumbnailPath).Should().Be(
+            GenerationImageFileFormats.JpegExtension);
+    }
+
+    [Fact]
     public async Task SaveAsync_WithExistingThumbnail_ReplacesThumbnail()
     {
-        byte[] redThumbnail = GalleryThumbnailTestImages.CreatePngBytes(
+        byte[] redThumbnail = GalleryThumbnailTestImages.CreateJpegBytes(
             TestApiConfiguration.ThumbnailShortSidePixels,
             TestApiConfiguration.ThumbnailShortSidePixels,
             SKColors.Red);
-        byte[] blueThumbnail = GalleryThumbnailTestImages.CreatePngBytes(
+        byte[] blueThumbnail = GalleryThumbnailTestImages.CreateJpegBytes(
             TestApiConfiguration.ThumbnailShortSidePixels,
             TestApiConfiguration.ThumbnailShortSidePixels,
             SKColors.Blue);
@@ -69,7 +83,8 @@ public sealed class GalleryThumbnailStorageTests
 
         firstThumbnailPath.Should().Be(secondThumbnailPath);
         secondThumbnailPath.Should().NotBeNull();
-        GalleryThumbnailTestImages.ReadFirstPixel(secondThumbnailPath).Should().Be(SKColors.Blue);
+        byte[] savedThumbnail = await File.ReadAllBytesAsync(secondThumbnailPath);
+        savedThumbnail.Should().Equal(blueThumbnail);
     }
 
     [Fact]
