@@ -108,7 +108,8 @@
         "StorageAndPerformance": "Other"
       },
       "Language": {
-        "Label": "Language"
+        "Label": "Language",
+        "SearchPlaceholder": "Search"
       },
       "ApiBaseAddress": {
         "Label": "Server address",

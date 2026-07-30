@@ -9,8 +9,8 @@ namespace AtomicArt.Desktop.Tests.Behaviors;
 
 internal sealed class ComboBoxAnimationTestApplication : Avalonia.Application
 {
-    private const string ColorsResourcePath = "avares://AtomicArt/Resources/Colors.axaml";
     private const string ComboBoxStylesPath = "avares://AtomicArt/Resources/ComboBoxStyles.axaml";
+    private const string SharedResourcesPath = "avares://AtomicArt/Resources/SharedResources.axaml";
 
     public override void Initialize()
     {
@@ -20,7 +20,7 @@ internal sealed class ComboBoxAnimationTestApplication : Avalonia.Application
         AvaloniaTestApplicationResources.AddResourceIncludes(
             this,
             baseUri,
-            new string[] { ColorsResourcePath });
+            new string[] { SharedResourcesPath });
         Styles.Add(new FluentTheme());
         Styles.Add(new SukiTheme());
         AvaloniaTestApplicationResources.AddStyleIncludes(

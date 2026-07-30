@@ -3,11 +3,9 @@ using Avalonia.Themes.Fluent;
 
 using SukiUI;
 
-using AtomicArt.Desktop.Tests.Common;
+namespace AtomicArt.Desktop.Tests.Common;
 
-namespace AtomicArt.Desktop.Tests.Controls.Gallery;
-
-internal sealed class AnimatedGalleryControlTestApplication : Avalonia.Application
+internal sealed class DesktopControlTestApplication : Avalonia.Application
 {
     private static readonly string[] ResourcePaths =
     [
@@ -30,9 +28,15 @@ internal sealed class AnimatedGalleryControlTestApplication : Avalonia.Applicati
         Uri baseUri = new("avares://AtomicArt/");
         RequestedThemeVariant = ThemeVariant.Dark;
 
-        AvaloniaTestApplicationResources.AddResourceIncludes(this, baseUri, ResourcePaths);
+        AvaloniaTestApplicationResources.AddResourceIncludes(
+            this,
+            baseUri,
+            ResourcePaths);
         Styles.Add(new FluentTheme());
         Styles.Add(new SukiTheme());
-        AvaloniaTestApplicationResources.AddStyleIncludes(this, baseUri, StylePaths);
+        AvaloniaTestApplicationResources.AddStyleIncludes(
+            this,
+            baseUri,
+            StylePaths);
     }
 }

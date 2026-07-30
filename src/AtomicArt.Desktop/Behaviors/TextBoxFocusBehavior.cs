@@ -1,0 +1,112 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Threading;
+
+namespace AtomicArt.Desktop.Behaviors;
+
+public static class TextBoxFocusBehavior
+{
+    public static readonly AttachedProperty<bool> AutoFocusProperty =
+        AvaloniaProperty.RegisterAttached<TextBox, bool>(
+            "AutoFocus",
+            typeof(TextBoxFocusBehavior));
+    public static readonly AttachedProperty<bool> FocusOnClearProperty =
+        AvaloniaProperty.RegisterAttached<TextBox, bool>(
+            "FocusOnClear",
+            typeof(TextBoxFocusBehavior));
+
+    static TextBoxFocusBehavior()
+    {
+        AutoFocusProperty.Changed.AddClassHandler<TextBox>(
+            OnAutoFocusChanged);
+        FocusOnClearProperty.Changed.AddClassHandler<TextBox>(
+            OnFocusOnClearChanged);
+    }
+
+    public static bool GetAutoFocus(TextBox textBox)
+    {
+        return AttachedPropertyValueAccessor.Get(
+            textBox,
+            AutoFocusProperty);
+    }
+
+    public static void SetAutoFocus(TextBox textBox, bool value)
+    {
+        AttachedPropertyValueAccessor.Set(
+            textBox,
+            AutoFocusProperty,
+            value);
+    }
+
+    public static bool GetFocusOnClear(TextBox textBox)
+    {
+        return AttachedPropertyValueAccessor.Get(
+            textBox,
+            FocusOnClearProperty);
+    }
+
+    public static void SetFocusOnClear(
+        TextBox textBox,
+        bool value)
+    {
+        AttachedPropertyValueAccessor.Set(
+            textBox,
+            FocusOnClearProperty,
+            value);
+    }
+
+    private static void OnAutoFocusChanged(
+        TextBox textBox,
+        AvaloniaPropertyChangedEventArgs args)
+    {
+        if (args.NewValue is true)
+        {
+            PostFocus(textBox);
+        }
+    }
+
+    private static void OnFocusOnClearChanged(
+        TextBox textBox,
+        AvaloniaPropertyChangedEventArgs args)
+    {
+        textBox.TextChanged -= OnTextChanged;
+
+        if (args.NewValue is true)
+        {
+            textBox.TextChanged += OnTextChanged;
+        }
+    }
+
+    private static void OnTextChanged(
+        object? sender,
+        TextChangedEventArgs e)
+    {
+        _ = e;
+
+        if (sender is not TextBox textBox
+            || !string.IsNullOrEmpty(textBox.Text)
+            || !textBox.IsEffectivelyVisible)
+        {
+            return;
+        }
+
+        PostFocus(textBox);
+    }
+
+    private static void PostFocus(TextBox textBox)
+    {
+        textBox.Dispatcher.Post(
+            () => FocusIfAvailable(textBox),
+            DispatcherPriority.Input);
+    }
+
+    private static void FocusIfAvailable(TextBox textBox)
+    {
+        if ((GetAutoFocus(textBox) || GetFocusOnClear(textBox))
+            && textBox.IsEffectivelyVisible
+            && textBox.IsEnabled)
+        {
+            textBox.Focus();
+        }
+    }
+}

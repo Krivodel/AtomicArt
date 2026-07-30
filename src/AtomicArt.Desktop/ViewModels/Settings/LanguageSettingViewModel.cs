@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 
 using CommunityToolkit.Mvvm.Input;
 
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Settings;
@@ -10,8 +11,10 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class LanguageSettingViewModel : SettingItemViewModel
 {
-    public ReadOnlyObservableCollection<LocalizationOption> Options { get; }
-    public LocalizationOption? SelectedOption
+    public ReadOnlyObservableCollection<LanguageOptionViewModel> Options { get; }
+    public string SearchPlaceholder => TextProvider.Get(
+        SettingsLocalizationKeys.Language.SearchPlaceholder);
+    public LanguageOptionViewModel? SelectedOption
     {
         get => _selectedOption;
         set
@@ -27,14 +30,28 @@ public sealed partial class LanguageSettingViewModel : SettingItemViewModel
             }
         }
     }
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            string normalizedValue = value ?? string.Empty;
+
+            if (SetProperty(ref _searchText, normalizedValue))
+            {
+                ApplySearch();
+            }
+        }
+    }
 
     protected override IRelayCommand OperationCommand => ApplyCommand;
 
     private readonly LanguageSettingDefinition _definition;
     private readonly ILocalizationService _localizationService;
     private readonly ISettingsStateService _settingsStateService;
-    private readonly ObservableCollection<LocalizationOption> _options;
-    private LocalizationOption? _selectedOption;
+    private readonly ObservableCollection<LanguageOptionViewModel> _options;
+    private LanguageOptionViewModel? _selectedOption;
+    private string _searchText = string.Empty;
     private bool _isSynchronizingSelection;
 
     public LanguageSettingViewModel(
@@ -50,14 +67,15 @@ public sealed partial class LanguageSettingViewModel : SettingItemViewModel
             ?? throw new ArgumentNullException(nameof(localizationService));
         _settingsStateService = settingsStateService
             ?? throw new ArgumentNullException(nameof(settingsStateService));
-        _options = new ObservableCollection<LocalizationOption>();
-        Options = new ReadOnlyObservableCollection<LocalizationOption>(_options);
+        _options = new ObservableCollection<LanguageOptionViewModel>();
+        Options = new ReadOnlyObservableCollection<LanguageOptionViewModel>(_options);
         ReplaceOptions();
     }
 
     public override void RefreshLocalization()
     {
         base.RefreshLocalization();
+        OnPropertyChanged(nameof(SearchPlaceholder));
         ReplaceOptions();
     }
 
@@ -70,7 +88,7 @@ public sealed partial class LanguageSettingViewModel : SettingItemViewModel
     [RelayCommand(CanExecute = nameof(CanApply))]
     private async Task ApplyAsync(CancellationToken ct)
     {
-        if (SelectedOption is not LocalizationOption selectedOption)
+        if (SelectedOption is not LanguageOptionViewModel selectedOption)
         {
             return;
         }
@@ -78,10 +96,10 @@ public sealed partial class LanguageSettingViewModel : SettingItemViewModel
         await RunOperationAsync(
             async () =>
             {
-                _localizationService.Select(selectedOption.Id);
+                _localizationService.Select(selectedOption.Localization.Id);
                 await _settingsStateService.SaveValueAsync(
                     _definition,
-                    selectedOption.Id,
+                    selectedOption.Localization.Id,
                     ct);
             },
             ct,
@@ -112,6 +130,12 @@ public sealed partial class LanguageSettingViewModel : SettingItemViewModel
         return !IsLoading;
     }
 
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        SearchText = string.Empty;
+    }
+
     private void ReplaceOptions()
     {
         IReadOnlyList<LocalizationOption> available =
@@ -124,10 +148,11 @@ public sealed partial class LanguageSettingViewModel : SettingItemViewModel
 
             foreach (LocalizationOption option in available)
             {
-                _options.Add(option);
+                _options.Add(new LanguageOptionViewModel(option));
             }
         }
 
+        ApplySearch();
         SynchronizeSelectedOption(FindCurrentOption());
     }
 
@@ -140,7 +165,7 @@ public sealed partial class LanguageSettingViewModel : SettingItemViewModel
 
         for (int index = 0; index < available.Count; index++)
         {
-            if (_options[index] != available[index])
+            if (_options[index].Localization != available[index])
             {
                 return false;
             }
@@ -149,7 +174,7 @@ public sealed partial class LanguageSettingViewModel : SettingItemViewModel
         return true;
     }
 
-    private LocalizationOption? FindCurrentOption()
+    private LanguageOptionViewModel? FindCurrentOption()
     {
         LocalizationOption? current = _localizationService.CurrentLocalization;
 
@@ -159,12 +184,20 @@ public sealed partial class LanguageSettingViewModel : SettingItemViewModel
         }
 
         return _options.FirstOrDefault(option => string.Equals(
-            option.Id,
+            option.Localization.Id,
             current.Id,
             StringComparison.OrdinalIgnoreCase));
     }
 
-    private void SynchronizeSelectedOption(LocalizationOption? selectedOption)
+    private void ApplySearch()
+    {
+        foreach (LanguageOptionViewModel option in _options)
+        {
+            option.ApplySearch(SearchText);
+        }
+    }
+
+    private void SynchronizeSelectedOption(LanguageOptionViewModel? selectedOption)
     {
         _isSynchronizingSelection = true;
 

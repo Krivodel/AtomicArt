@@ -15,6 +15,8 @@ public static class SettingsLocalizationKeys
     public static class Language
     {
         public const string Label = "Settings.Language.Label";
+        public const string SearchPlaceholder =
+            "Settings.Language.SearchPlaceholder";
     }
 
     public static class ApiBaseAddress

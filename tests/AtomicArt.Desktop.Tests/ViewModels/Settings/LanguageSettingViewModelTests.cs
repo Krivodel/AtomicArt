@@ -38,8 +38,114 @@ public sealed class LanguageSettingViewModelTests
             localizationService,
             new RecordingSettingsStateService());
 
-        viewModel.Options.Should().Equal(english, custom);
-        viewModel.SelectedOption.Should().BeSameAs(custom);
+        viewModel.Options
+            .Select(option => option.Localization)
+            .Should()
+            .Equal(english, custom);
+        viewModel.SelectedOption?.Localization.Should().BeSameAs(custom);
+    }
+
+    [Fact]
+    public void SearchText_WithPartialCaseInsensitiveText_UpdatesOptionVisibility()
+    {
+        LocalizationOption english = new(
+            "English",
+            new System.Globalization.CultureInfo("en-US"),
+            true);
+        LocalizationOption russian = new(
+            "Русский",
+            new System.Globalization.CultureInfo("ru-RU"),
+            true);
+        LocalizationOption japanese = new(
+            "日本語",
+            new System.Globalization.CultureInfo("ja-JP"),
+            false);
+        TestLocalizationService localizationService = new()
+        {
+            AvailableLocalizations = new List<LocalizationOption>
+            {
+                english,
+                russian,
+                japanese
+            },
+            CurrentLocalization = english
+        };
+        LanguageSettingViewModel viewModel = CreateViewModel(
+            localizationService,
+            new RecordingSettingsStateService());
+
+        viewModel.SearchText = "РУС";
+
+        viewModel.Options.Single(option => option.Localization == english)
+            .IsSearchMatch.Should().BeFalse();
+        viewModel.Options.Single(option => option.Localization == russian)
+            .IsSearchMatch.Should().BeTrue();
+        viewModel.Options.Single(option => option.Localization == japanese)
+            .IsSearchMatch.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SearchText_WhenSelectedOptionDoesNotMatch_PreservesSelectionAndDoesNotPersist()
+    {
+        LocalizationOption english = new(
+            "English",
+            new System.Globalization.CultureInfo("en-US"),
+            true);
+        LocalizationOption russian = new(
+            "Русский",
+            new System.Globalization.CultureInfo("ru-RU"),
+            true);
+        TestLocalizationService localizationService = new()
+        {
+            AvailableLocalizations = new List<LocalizationOption>
+            {
+                english,
+                russian
+            },
+            CurrentLocalization = english
+        };
+        RecordingSettingsStateService settingsStateService = new();
+        LanguageSettingViewModel viewModel = CreateViewModel(
+            localizationService,
+            settingsStateService);
+
+        viewModel.SearchText = "Рус";
+
+        viewModel.SelectedOption?.Localization.Should().BeSameAs(english);
+        localizationService.CurrentLocalization.Should().BeSameAs(english);
+        settingsStateService.SavedKey.Should().BeNull();
+        settingsStateService.SavedValue.Should().BeNull();
+    }
+
+    [Fact]
+    public void ClearSearchCommand_WithFilteredOptions_ShowsAllOptions()
+    {
+        LocalizationOption english = new(
+            "English",
+            new System.Globalization.CultureInfo("en-US"),
+            true);
+        LocalizationOption russian = new(
+            "Русский",
+            new System.Globalization.CultureInfo("ru-RU"),
+            true);
+        TestLocalizationService localizationService = new()
+        {
+            AvailableLocalizations = new List<LocalizationOption>
+            {
+                english,
+                russian
+            },
+            CurrentLocalization = english
+        };
+        LanguageSettingViewModel viewModel = CreateViewModel(
+            localizationService,
+            new RecordingSettingsStateService());
+        viewModel.SearchText = "Рус";
+
+        viewModel.ClearSearchCommand.Execute(null);
+
+        viewModel.SearchText.Should().BeEmpty();
+        viewModel.Options.Should().OnlyContain(option => option.IsSearchMatch);
     }
 
     [Fact]
@@ -72,7 +178,7 @@ public sealed class LanguageSettingViewModelTests
         viewModel.RefreshLocalization();
 
         collectionChangeCount.Should().Be(0);
-        viewModel.SelectedOption.Should().BeSameAs(russian);
+        viewModel.SelectedOption?.Localization.Should().BeSameAs(russian);
     }
 
     [Fact]
@@ -100,7 +206,8 @@ public sealed class LanguageSettingViewModelTests
             localizationService,
             settingsStateService);
 
-        viewModel.SelectedOption = custom;
+        viewModel.SelectedOption = viewModel.Options.Single(option =>
+            option.Localization == custom);
         Task? executionTask = viewModel.ApplyCommand.ExecutionTask;
 
         if (executionTask is not null)
@@ -146,8 +253,11 @@ public sealed class LanguageSettingViewModelTests
 
         await viewModel.RefreshOptionsCommand.ExecuteAsync(null);
 
-        viewModel.Options.Should().Equal(english, japanese);
-        viewModel.SelectedOption.Should().BeSameAs(english);
+        viewModel.Options
+            .Select(option => option.Localization)
+            .Should()
+            .Equal(english, japanese);
+        viewModel.SelectedOption?.Localization.Should().BeSameAs(english);
     }
 
     private static LanguageSettingViewModel CreateViewModel(

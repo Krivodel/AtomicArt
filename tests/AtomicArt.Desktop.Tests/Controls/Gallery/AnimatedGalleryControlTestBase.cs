@@ -1,47 +1,21 @@
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Headless;
 using Avalonia.Media;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.UiAnimation;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Gallery;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views.Gallery;
-using AtomicArt.Tests.Avalonia;
 
 namespace AtomicArt.Desktop.Tests.Controls.Gallery;
 
-public abstract class AnimatedGalleryControlTestBase
+public abstract class AnimatedGalleryControlTestBase : DesktopControlTestBase
 {
     private static readonly Guid ItemId = Guid.Parse("88888888-8888-8888-8888-888888888888");
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 2, 12, 0, 0, DateTimeKind.Utc);
-    private static readonly SemaphoreSlim SessionLock = new(1, 1);
-
-    public static AppBuilder BuildAvaloniaApp()
-    {
-        return AppBuilder
-            .Configure<AnimatedGalleryControlTestApplication>()
-            .UseHeadless(new AvaloniaHeadlessPlatformOptions());
-    }
-
-    private protected static void Dispatch(Action action)
-    {
-        HeadlessTestSessionDispatcher.Dispatch(
-            typeof(AnimatedGalleryControlTestBase),
-            SessionLock,
-            action);
-    }
-
-    private protected static async Task DispatchAsync(Func<Task> action)
-    {
-        await HeadlessTestSessionDispatcher.DispatchAsync(
-            typeof(AnimatedGalleryControlTestBase),
-            SessionLock,
-            action);
-    }
 
     private protected static IAnimatedGallerySceneFactory CreateSceneFactory()
     {
@@ -54,53 +28,6 @@ public abstract class AnimatedGalleryControlTestBase
             topLevel => AnimatedGallerySceneTestFactory.Create(topLevel, frameScheduler));
 
         return new AnimatedGallerySceneFactory(servicesFactory);
-    }
-
-    private protected static Window Show(Control control)
-    {
-        return Show(control, 640d, 640d);
-    }
-
-    private protected static void Show(Control control, Action<Window> action)
-    {
-        Show(control, 640d, 640d, action);
-    }
-
-    private protected static Window Show(Control control, double width, double height)
-    {
-        ArgumentNullException.ThrowIfNull(control);
-
-        Window window = new()
-        {
-            Width = width,
-            Height = height,
-            Content = control
-        };
-
-        window.Show();
-        window.CaptureRenderedFrame();
-
-        return window;
-    }
-
-    private protected static void Show(
-        Control control,
-        double width,
-        double height,
-        Action<Window> action)
-    {
-        ArgumentNullException.ThrowIfNull(action);
-
-        Window window = Show(control, width, height);
-
-        try
-        {
-            action(window);
-        }
-        finally
-        {
-            window.Close();
-        }
     }
 
     private protected static Canvas GetGalleryPanel(AnimatedGalleryControl control)

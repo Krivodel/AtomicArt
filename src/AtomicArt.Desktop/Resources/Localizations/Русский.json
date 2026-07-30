@@ -108,7 +108,8 @@
         "StorageAndPerformance": "Прочее"
       },
       "Language": {
-        "Label": "Язык"
+        "Label": "Язык",
+        "SearchPlaceholder": "Поиск"
       },
       "ApiBaseAddress": {
         "Label": "Адрес сервера",
