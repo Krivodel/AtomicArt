@@ -190,7 +190,8 @@
                 </Grid>
             </Grid>
 
-            <TextBox Grid.Row="2"
+            <TextBox x:Name="PromptTextBox"
+                     Grid.Row="2"
                      MinHeight="{StaticResource PromptHeight}"
                      Margin="{StaticResource GenerationPanelInnerSpacing}"
                      VerticalContentAlignment="Top"
@@ -198,6 +199,7 @@
                      IsEnabled="{Binding HasLoadedCatalog}"
                      AcceptsReturn="True"
                      behaviors:ClipboardPasteBehavior.IsEnabled="True"
+                     behaviors:TextBoxFocusBehavior.AutoFocus="{Binding HasLoadedCatalog}"
                      LostFocus="OnPromptLostFocus"
                      PlaceholderText="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Prompt.Placeholder}}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"

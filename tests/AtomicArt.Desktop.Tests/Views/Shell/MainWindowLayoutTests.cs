@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAssertions;
 using Moq;
@@ -15,6 +16,7 @@ using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
+using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Dialogs;
@@ -117,6 +119,56 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeApproximately(
                 rowDefinitions[GenerationPanelRowIndex].ActualHeight,
                 HeightTolerance);
+        });
+    }
+
+    [Fact]
+    public async Task Settings_WhenClosed_RestoresPromptInputFocus()
+    {
+        await DispatchAsync(async () =>
+        {
+            ImageModelOptionCatalog modelCatalog = new();
+            modelCatalog.Initialize(ApiModelMetadataTestCatalog.LoadCatalog());
+            using MainWindowTestContext context = new(services =>
+            {
+                services.AddSingleton<IImageModelOptionCatalog>(modelCatalog);
+            });
+            MainWindow window = context.Window;
+            MainWindowViewModel viewModel = window.DataContext
+                .Should()
+                .BeOfType<MainWindowViewModel>()
+                .Subject;
+
+            window.Show();
+            await window.Dispatcher.InvokeAsync(
+                () => { },
+                DispatcherPriority.Background);
+
+            TextBox promptInput = window
+                .GetVisualDescendants()
+                .OfType<TextBox>()
+                .Single(textBox => string.Equals(
+                    textBox.Name,
+                    "PromptTextBox",
+                    StringComparison.Ordinal));
+            Button settingsButton = window
+                .GetVisualDescendants()
+                .OfType<Button>()
+                .Single(button => ReferenceEquals(
+                    button.Command,
+                    viewModel.OpenSettingsCommand));
+
+            promptInput.IsFocused.Should().BeTrue();
+            settingsButton.Focus().Should().BeTrue();
+            viewModel.OpenSettingsCommand.Execute(null);
+            promptInput.IsFocused.Should().BeFalse();
+
+            viewModel.Settings.CloseCommand.Execute(null);
+            await window.Dispatcher.InvokeAsync(
+                () => { },
+                DispatcherPriority.Background);
+
+            promptInput.IsFocused.Should().BeTrue();
         });
     }
 

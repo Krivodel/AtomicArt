@@ -8,6 +8,7 @@ using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Messaging;
 using FluentAssertions;
@@ -23,6 +24,7 @@ using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
+using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels;
@@ -40,6 +42,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     private const double ExpandedPanelWidth = 640d;
     private const double ExpandedPanelHeight = 560d;
     private const double WidePanelWidth = 800d;
+    private const string PickerAttachmentSource = "picker";
+    private const string GalleryAttachmentSource = "gallery";
+    private const string DropAttachmentSource = "drop";
     private const string GenerationOptionComboMinWidthResourceKey =
         "GenerationOptionComboMinWidth";
     private const string PromptHeightResourceKey = "PromptHeight";
@@ -70,6 +75,82 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         string? result = NanoBanana2PanelView.GetAspectRatioHintValue(option);
 
         result.Should().Be("16:9");
+    }
+
+    [Fact]
+    public async Task PromptTextBox_WhenPanelIsShown_ReceivesFocus()
+    {
+        await DispatchAsync(async () =>
+        {
+            NanoBanana2PanelView view = CreateView(
+                out UniversalNanoBananaPanelViewModel _);
+            Window window = Show(view);
+
+            try
+            {
+                await view.Dispatcher.InvokeAsync(
+                    () => { },
+                    DispatcherPriority.Background);
+
+                GetPromptTextBox(view).IsFocused.Should().BeTrue();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(PickerAttachmentSource)]
+    [InlineData(GalleryAttachmentSource)]
+    [InlineData(DropAttachmentSource)]
+    public async Task AttachedImages_WhenImageIsAddedFromSource_FocusesPromptInput(
+        string source)
+    {
+        await DispatchAsync(async () =>
+        {
+            AttachedImageDto image = new(
+                "attached.png",
+                GenerationImageContentTypes.Png,
+                GalleryThumbnailTestImages.CreatePngBytes(2, 2));
+            IFilePickerService filePickerService = string.Equals(
+                source,
+                PickerAttachmentSource,
+                StringComparison.Ordinal)
+                ? new FixedFilePickerService(image)
+                : new EmptyFilePickerService();
+            UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+                filePickerService: filePickerService);
+            NanoBanana2PanelView view = CreateView(viewModel);
+            Window window = Show(view);
+
+            try
+            {
+                await view.Dispatcher.InvokeAsync(
+                    () => { },
+                    DispatcherPriority.Background);
+
+                TextBox promptTextBox = GetPromptTextBox(view);
+                Button attachButton = view
+                    .GetVisualDescendants()
+                    .OfType<Button>()
+                    .Single(button => button.Command == viewModel.PickImageCommand);
+                attachButton.Focus().Should().BeTrue();
+                promptTextBox.IsFocused.Should().BeFalse();
+
+                await AttachImageFromSourceAsync(viewModel, image, source);
+                await view.Dispatcher.InvokeAsync(
+                    () => { },
+                    DispatcherPriority.Background);
+
+                promptTextBox.IsFocused.Should().BeTrue();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
     }
 
     [Fact]
@@ -757,7 +838,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
     private static UniversalNanoBananaPanelViewModel CreateViewModel(
         IGenerationModelCatalogApiClient? catalogApiClient = null,
-        IImageModelOptionCatalog? imageModelOptionCatalog = null)
+        IImageModelOptionCatalog? imageModelOptionCatalog = null,
+        IFilePickerService? filePickerService = null)
     {
         IImageGenerationApiClient generationApiClient = new SuccessfulImageGenerationApiClient();
         IGenerationLifecycleEventHub generationLifecycleEventHub = new TestGenerationLifecycleEventHub();
@@ -769,7 +851,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             imageModelOptionCatalog ?? CreateLoadedImageModelOptionCatalog();
 
         return new UniversalNanoBananaPanelViewModel(
-            new EmptyFilePickerService(),
+            filePickerService ?? new EmptyFilePickerService(),
             new FixedSecretStore(TestGenerationCredentials.ProviderCredential),
             catalogApiClient
                 ?? new FixedGenerationModelCatalogApiClient(
@@ -800,6 +882,27 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             TestApiConfiguration.CreateStateWritePolicy());
     }
 
+    private static Task AttachImageFromSourceAsync(
+        UniversalNanoBananaPanelViewModel viewModel,
+        AttachedImageDto image,
+        string source)
+    {
+        return source switch
+        {
+            PickerAttachmentSource =>
+                viewModel.PickImageCommand.ExecuteAsync(null),
+            GalleryAttachmentSource =>
+                viewModel.AttachImagesCommand.ExecuteAsync([image]),
+            DropAttachmentSource =>
+                viewModel.AttachImageInputsCommand.ExecuteAsync(
+                    [ImageAttachmentInput.FromImage(image)]),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(source),
+                source,
+                "Unsupported attachment input source.")
+        };
+    }
+
     private static IImageModelOptionCatalog CreateLoadedImageModelOptionCatalog()
     {
         ImageModelOptionCatalog catalog = new();
@@ -814,6 +917,17 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             .GetVisualDescendants()
             .OfType<ComboBox>()
             .Single(comboBox => string.Equals(comboBox.Name, name, StringComparison.Ordinal));
+    }
+
+    private static TextBox GetPromptTextBox(NanoBanana2PanelView view)
+    {
+        return view
+            .GetVisualDescendants()
+            .OfType<TextBox>()
+            .Single(textBox => string.Equals(
+                textBox.Name,
+                "PromptTextBox",
+                StringComparison.Ordinal));
     }
 
     private static Point GetCenterPoint(Control control, Visual target)
@@ -986,6 +1100,26 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         public Task SetSecretAsync(string key, string value, CancellationToken ct)
         {
             throw new NotSupportedException("Panel view tests do not write secrets.");
+        }
+    }
+
+    private sealed class FixedFilePickerService : IFilePickerService
+    {
+        private readonly AttachedImageDto _image;
+
+        public FixedFilePickerService(AttachedImageDto image)
+        {
+            _image = image;
+        }
+
+        public Task<IReadOnlyList<ImageAttachmentInput>> PickImagesAsync(
+            int maxInputBytes,
+            CancellationToken ct)
+        {
+            IReadOnlyList<ImageAttachmentInput> inputs =
+                [ImageAttachmentInput.FromImage(_image)];
+
+            return Task.FromResult(inputs);
         }
     }
 

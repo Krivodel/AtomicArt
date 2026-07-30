@@ -100,7 +100,8 @@
             </Grid>
 
             <overlays:ModalOverlayLayerControl ZIndex="10">
-                <overlays:ModalOverlayPresenterControl Order="{StaticResource SettingsModalOverlayOrder}"
+                <overlays:ModalOverlayPresenterControl x:Name="SettingsOverlayPresenter"
+                                                       Order="{StaticResource SettingsModalOverlayOrder}"
                                                        Body="{Binding Settings}"
                                                        IsOpen="{Binding IsSettingsOpen}"
                                                        CloseCommand="{Binding Settings.CloseCommand}" />

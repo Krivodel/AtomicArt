@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 
 namespace AtomicArt.Desktop.Behaviors;
@@ -55,13 +56,44 @@ public static class TextBoxFocusBehavior
             value);
     }
 
+    internal static void RequestFocus(TextBox textBox)
+    {
+        ArgumentNullException.ThrowIfNull(textBox);
+
+        PostFocus(textBox);
+    }
+
+    private static void PostFocus(TextBox textBox)
+    {
+        textBox.Dispatcher.Post(
+            () => FocusIfAvailable(textBox),
+            DispatcherPriority.Input);
+    }
+
+    private static void FocusIfAvailable(TextBox textBox)
+    {
+        if ((GetAutoFocus(textBox) || GetFocusOnClear(textBox))
+            && textBox.IsEffectivelyVisible
+            && textBox.IsEnabled)
+        {
+            textBox.Focus();
+        }
+    }
+
     private static void OnAutoFocusChanged(
         TextBox textBox,
         AvaloniaPropertyChangedEventArgs args)
     {
+        textBox.Loaded -= OnAutoFocusTargetLoaded;
+
         if (args.NewValue is true)
         {
-            PostFocus(textBox);
+            textBox.Loaded += OnAutoFocusTargetLoaded;
+
+            if (textBox.IsLoaded)
+            {
+                PostFocus(textBox);
+            }
         }
     }
 
@@ -93,20 +125,15 @@ public static class TextBoxFocusBehavior
         PostFocus(textBox);
     }
 
-    private static void PostFocus(TextBox textBox)
+    private static void OnAutoFocusTargetLoaded(
+        object? sender,
+        RoutedEventArgs e)
     {
-        textBox.Dispatcher.Post(
-            () => FocusIfAvailable(textBox),
-            DispatcherPriority.Input);
-    }
+        _ = e;
 
-    private static void FocusIfAvailable(TextBox textBox)
-    {
-        if ((GetAutoFocus(textBox) || GetFocusOnClear(textBox))
-            && textBox.IsEffectivelyVisible
-            && textBox.IsEnabled)
+        if (sender is TextBox textBox)
         {
-            textBox.Focus();
+            PostFocus(textBox);
         }
     }
 }

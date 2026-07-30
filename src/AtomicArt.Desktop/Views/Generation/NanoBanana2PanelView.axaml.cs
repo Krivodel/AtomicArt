@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 
@@ -14,6 +15,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Generation;
@@ -113,6 +115,7 @@ public partial class NanoBanana2PanelView : UserControl
     private OptionResetFlashState? _aspectRatioResetFlashState;
     private OptionResetFlashState? _resolutionResetFlashState;
     private OptionResetFlashState? _generationCountResetFlashState;
+    private INotifyCollectionChanged? _attachmentFocusCollection;
     private UniversalNanoBananaPanelViewModel? _selectionResetViewModel;
     private ScrollViewer? _lastAspectRatioPointerScrollViewer;
     private Point? _lastAspectRatioPointerScrollViewerPosition;
@@ -148,12 +151,17 @@ public partial class NanoBanana2PanelView : UserControl
 
         _presentationObserver.Attach(this);
         OnWindowPresentationChanged(_presentationObserver.IsPresented);
+
+        if (DataContext is UniversalNanoBananaPanelViewModel viewModel)
+        {
+            SubscribeViewModelEvents(viewModel);
+        }
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _presentationObserver.Detach();
-        UnsubscribeSelectionResetEvents();
+        UnsubscribeViewModelEvents();
         StopCatalogLoadingAnimation();
         StopAspectRatioHintAnimation();
         StopTemperatureFlyoutAnimation();
@@ -167,11 +175,11 @@ public partial class NanoBanana2PanelView : UserControl
 
         if (DataContext is UniversalNanoBananaPanelViewModel viewModel)
         {
-            SubscribeSelectionResetEvents(viewModel);
+            SubscribeViewModelEvents(viewModel);
             return;
         }
 
-        UnsubscribeSelectionResetEvents();
+        UnsubscribeViewModelEvents();
     }
 
     private async void OnPromptLostFocus(object? sender, RoutedEventArgs e)
@@ -621,6 +629,43 @@ public partial class NanoBanana2PanelView : UserControl
         return localizedOption.Value;
     }
 
+    private void SubscribeViewModelEvents(UniversalNanoBananaPanelViewModel viewModel)
+    {
+        SubscribeAttachmentFocusEvents(viewModel);
+        SubscribeSelectionResetEvents(viewModel);
+    }
+
+    private void UnsubscribeViewModelEvents()
+    {
+        UnsubscribeAttachmentFocusEvents();
+        UnsubscribeSelectionResetEvents();
+    }
+
+    private void SubscribeAttachmentFocusEvents(UniversalNanoBananaPanelViewModel viewModel)
+    {
+        INotifyCollectionChanged collection = viewModel.AttachedImages;
+        if (ReferenceEquals(_attachmentFocusCollection, collection))
+        {
+            return;
+        }
+
+        UnsubscribeAttachmentFocusEvents();
+        _attachmentFocusCollection = collection;
+        _attachmentFocusCollection.CollectionChanged += OnAttachedImagesCollectionChanged;
+    }
+
+    private void UnsubscribeAttachmentFocusEvents()
+    {
+        if (_attachmentFocusCollection is null)
+        {
+            return;
+        }
+
+        _attachmentFocusCollection.CollectionChanged -=
+            OnAttachedImagesCollectionChanged;
+        _attachmentFocusCollection = null;
+    }
+
     private void SubscribeSelectionResetEvents(UniversalNanoBananaPanelViewModel viewModel)
     {
         if (ReferenceEquals(_selectionResetViewModel, viewModel))
@@ -642,6 +687,19 @@ public partial class NanoBanana2PanelView : UserControl
 
         _selectionResetViewModel.SelectionValueReset -= OnSelectionValueReset;
         _selectionResetViewModel = null;
+    }
+
+    private void OnAttachedImagesCollectionChanged(
+        object? sender,
+        NotifyCollectionChangedEventArgs e)
+    {
+        _ = sender;
+
+        if (e.Action == NotifyCollectionChangedAction.Add
+            && e.NewItems?.Count > 0)
+        {
+            TextBoxFocusBehavior.RequestFocus(PromptTextBox);
+        }
     }
 
     private void OnSelectionValueReset(object? sender, PropertyChangedEventArgs e)

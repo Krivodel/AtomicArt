@@ -4,11 +4,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform;
+using Avalonia.VisualTree;
 using SukiUI.Controls;
 
 using Pica.Viewer.Services;
 
 using AtomicArt.Desktop.Behaviors;
+using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.Views.Updates;
@@ -20,6 +22,7 @@ public partial class MainWindow : SukiWindow
     private const int GenerationPanelRowIndex = 1;
     private const string NativeWindowHandleDescriptor = "HWND";
     private const string NonRudeWindowPropertyName = "NonRudeHWND";
+    private const string PromptTextBoxName = "PromptTextBox";
 
     private RowDefinition GenerationPanelRowDefinition => ShellContentGrid.RowDefinitions[GenerationPanelRowIndex];
 
@@ -33,6 +36,8 @@ public partial class MainWindow : SukiWindow
     {
         InitializeComponent();
         PropertyChanged += OnWindowPropertyChanged;
+        SettingsOverlayPresenter.PropertyChanged +=
+            OnSettingsOverlayPresenterPropertyChanged;
         UpdateWindowsFullscreenDetectionHint();
         Loaded += OnLoaded;
     }
@@ -72,6 +77,8 @@ public partial class MainWindow : SukiWindow
 
     protected override void OnClosed(EventArgs e)
     {
+        SettingsOverlayPresenter.PropertyChanged -=
+            OnSettingsOverlayPresenterPropertyChanged;
         _updateToastPresenter?.Dispose();
         _updateToastPresenter = null;
         base.OnClosed(e);
@@ -106,6 +113,23 @@ public partial class MainWindow : SukiWindow
         _isGenerationPanelMinimumHeightInitialized = true;
     }
 
+    private void FocusPromptInput()
+    {
+        TextBox? promptInput = this
+            .GetVisualDescendants()
+            .OfType<TextBox>()
+            .SingleOrDefault(textBox =>
+                string.Equals(
+                    textBox.Name,
+                    PromptTextBoxName,
+                    StringComparison.Ordinal));
+
+        if (promptInput is not null)
+        {
+            TextBoxFocusBehavior.RequestFocus(promptInput);
+        }
+    }
+
     private void UpdateWindowsFullscreenDetectionHint()
     {
         if (!OperatingSystem.IsWindows())
@@ -138,6 +162,20 @@ public partial class MainWindow : SukiWindow
         if (_isGenerationPanelMinimumHeightInitialized)
         {
             Loaded -= OnLoaded;
+        }
+    }
+
+    private void OnSettingsOverlayPresenterPropertyChanged(
+        object? sender,
+        AvaloniaPropertyChangedEventArgs e)
+    {
+        _ = sender;
+
+        if (e.Property == ModalOverlayPresenterControl.IsOpenProperty
+            && e.NewValue is false
+            && IsLoaded)
+        {
+            FocusPromptInput();
         }
     }
 
