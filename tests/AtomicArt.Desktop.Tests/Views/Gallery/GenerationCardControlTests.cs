@@ -1,5 +1,8 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.VisualTree;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -7,13 +10,16 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Controls;
+using AtomicArt.Desktop.Controls.Gallery;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views.Gallery;
 
 namespace AtomicArt.Desktop.Tests.Views.Gallery;
 
-public sealed class GenerationCardControlTests
+public sealed class GenerationCardControlTests : DesktopControlTestBase
 {
     private const string Prompt = "Prompt";
     private const string AspectRatio = GenerationAspectRatios.Auto;
@@ -170,13 +176,143 @@ public sealed class GenerationCardControlTests
         }
     }
 
+    [Theory]
+    [InlineData(
+        "Сделай первую картинку (игра 3 в ряд, 2д) в стиле второй " +
+        "картинки (игра borderlands 3). Не меняй игру на 1 картинке, " +
+        "нужны лишь другие текстуры/рисовка/фон.")]
+    [InlineData(
+        "Первая строка\n" +
+        "Вторая строка\n" +
+        "Третья строка\n" +
+        "Скрытая четвёртая строка")]
+    [InlineData(
+        "ОченьДлинныйНеразрывныйПромптОченьДлинныйНеразрывныйПромпт" +
+        "ОченьДлинныйНеразрывныйПромптОченьДлинныйНеразрывныйПромпт" +
+        "ОченьДлинныйНеразрывныйПромптОченьДлинныйНеразрывныйПромпт")]
+    public async Task Prompt_WhenReusedCardTextOverflows_EndsWithEllipsisAsync(
+        string overflowingPrompt)
+    {
+        await DispatchAsync(() =>
+        {
+            const string Ellipsis = "…";
+            GenerationItemViewModel initialItem = CreateItem(
+                "initial-image.png",
+                "initial-thumbnail.jpg");
+            GenerationItemViewModel overflowingItem = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg",
+                overflowingPrompt);
+            GenerationCardControl control = new()
+            {
+                DataContext = initialItem
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                TextBlock initialPrompt = GetPromptTextBlock(control, Prompt);
+                GetRenderedText(initialPrompt).Should().Be(Prompt);
+
+                control.DataContext = overflowingItem;
+                Size cardSize = new(
+                    GalleryLayoutService.CardWidth,
+                    GalleryLayoutService.CardHeight);
+                control.Measure(cardSize);
+                control.Arrange(new Rect(cardSize));
+
+                OverflowEllipsisTextBlock prompt = GetPromptTextBlock(
+                        control,
+                        overflowingPrompt)
+                    .Should()
+                    .BeOfType<OverflowEllipsisTextBlock>()
+                    .Subject;
+                prompt.TextTrimming.Should().NotBe(TextTrimming.None);
+                prompt.TextLayout.TextLines.Should().HaveCount(prompt.MaxLines);
+                string renderedText = GetRenderedText(prompt);
+                renderedText.Should().EndWith(Ellipsis);
+                renderedText.Should().NotEndWith(Ellipsis + Ellipsis);
+            }
+            finally
+            {
+                window.Close();
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task Prompt_WhenCardShown_MatchesStandardTextAppearanceAsync()
+    {
+        await DispatchAsync(() =>
+        {
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            GenerationCardControl control = new()
+            {
+                DataContext = item
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                TextBlock prompt = GetPromptTextBlock(control, Prompt);
+                TextBlock model = GetPromptTextBlock(
+                    control,
+                    item.ModelDisplayName);
+
+                prompt.FontFamily.Should().Be(model.FontFamily);
+                prompt.FontSize.Should().Be(model.FontSize);
+                prompt.FontStretch.Should().Be(model.FontStretch);
+                prompt.FontStyle.Should().Be(model.FontStyle);
+                prompt.Foreground.Should().Be(model.Foreground);
+            }
+            finally
+            {
+                window.Close();
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    private static TextBlock GetPromptTextBlock(
+        GenerationCardControl control,
+        string prompt)
+    {
+        return control
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(textBlock => string.Equals(
+                textBlock.Text,
+                prompt,
+                StringComparison.Ordinal));
+    }
+
+    private static string GetRenderedText(TextBlock textBlock)
+    {
+        return string.Concat(
+            textBlock.TextLayout.TextLines
+                .SelectMany(line => line.TextRuns)
+                .Select(run => run.Text.ToString()));
+    }
+
     private static GenerationItemViewModel CreateItem(
         string imagePath,
-        string thumbnailPath)
+        string thumbnailPath,
+        string prompt = Prompt)
     {
         GenerationItemDto item = GenerationItemDtoTestFactory.Create(
             id: ItemId,
-            prompt: Prompt,
+            prompt: prompt,
             aspectRatio: AspectRatio,
             createdAtUtc: CreatedAtUtc,
             imagePath: imagePath);

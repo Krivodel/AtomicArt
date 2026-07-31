@@ -3,6 +3,7 @@
              xmlns:controls="using:AtomicArt.Desktop.Views.Gallery"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:uiControls="using:AtomicArt.Desktop.Controls"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationCardControl"
              x:DataType="gallery:GenerationItemViewModel">
     <Border x:Name="GenerationCardRoot"
@@ -23,9 +24,9 @@
             <Border Grid.Row="1"
                     Classes="generation-card-info">
                 <Grid RowDefinitions="*,Auto">
-                    <TextBlock Grid.Row="0"
-                               Classes="generation-card-prompt"
-                               Text="{Binding Prompt}" />
+                    <uiControls:OverflowEllipsisTextBlock Grid.Row="0"
+                                                          Classes="generation-card-prompt"
+                                                          Text="{Binding Prompt}" />
                     <Grid Grid.Row="1"
                           ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0"

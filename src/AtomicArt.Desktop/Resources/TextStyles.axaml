@@ -74,8 +74,6 @@
     <Style Selector="TextBlock.generation-card-prompt">
         <Setter Property="MaxLines"
                 Value="3" />
-        <Setter Property="TextTrimming"
-                Value="CharacterEllipsis" />
         <Setter Property="TextWrapping"
                 Value="Wrap" />
     </Style>
