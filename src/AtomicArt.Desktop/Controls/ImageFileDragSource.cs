@@ -83,7 +83,17 @@ internal static class ImageFileDragSource
         using ImageDragPreviewWindow? previewWindow = previewWindowFactory();
         previewWindow?.Start(topLevel as Window);
 
-        await DragDrop.DoDragDropAsync(e, dataTransfer, DragDropEffects.Copy);
+        try
+        {
+            await DragDrop.DoDragDropAsync(e, dataTransfer, DragDropEffects.Copy);
+        }
+        finally
+        {
+            if (previewWindow is not null)
+            {
+                await previewWindow.FinishAsync();
+            }
+        }
     }
 
     private static ImageDragPreviewWindow? CreateOwnedPreviewWindowOrDefault(

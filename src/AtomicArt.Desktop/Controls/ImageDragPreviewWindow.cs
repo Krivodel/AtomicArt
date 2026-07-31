@@ -7,15 +7,17 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
-using Pica.Viewer.Services;
+using WindowsNativeLibraryNames = Pica.Viewer.Services.WindowsNativeLibraryNames;
 
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls;
 
 internal sealed class ImageDragPreviewWindow : Window, IDisposable
 {
     private const int PreviewSize = 96;
+    private const int PreviewAnimationDurationMilliseconds = 160;
     private const int CursorOffset = 14;
     private const int PollIntervalMilliseconds = 16;
     private const int ExtendedStyleIndex = -20;
@@ -28,15 +30,28 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
     private static readonly nint TopMostWindowHandle = new(-1);
 
     private readonly Bitmap? _ownedBitmap;
+    private readonly IUiFrameScheduler? _providedFrameScheduler;
+    private readonly Control _previewContent;
+    private readonly AnimatedTransformState _previewTransformState;
+    private AvaloniaUiFrameScheduler? _ownedFrameScheduler;
+    private UiAnimationScheduler? _animationScheduler;
     private Timer? _timer;
     private nint _windowHandle;
     private bool _isDisposed;
 
-    private ImageDragPreviewWindow(Bitmap bitmap, Bitmap? ownedBitmap)
+    private ImageDragPreviewWindow(
+        Bitmap bitmap,
+        Bitmap? ownedBitmap,
+        IUiFrameScheduler? frameScheduler)
     {
         ArgumentNullException.ThrowIfNull(bitmap);
 
         _ownedBitmap = ownedBitmap;
+        _providedFrameScheduler = frameScheduler;
+        _previewContent = CreateContent(bitmap);
+        _previewTransformState =
+            AnimatedTransformState.GetOrCreate(_previewContent);
+        ApplyPreviewScale(0d);
 
         Width = PreviewSize;
         Height = PreviewSize;
@@ -48,21 +63,21 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
         Background = Brushes.Transparent;
         TransparencyLevelHint = [WindowTransparencyLevel.Transparent];
         Cursor = new Cursor(StandardCursorType.None);
-        Content = CreateContent(bitmap);
+        Content = _previewContent;
     }
 
     public static ImageDragPreviewWindow CreateOwned(Bitmap bitmap)
     {
         ArgumentNullException.ThrowIfNull(bitmap);
 
-        return new ImageDragPreviewWindow(bitmap, bitmap);
+        return new ImageDragPreviewWindow(bitmap, bitmap, null);
     }
 
     public static ImageDragPreviewWindow CreateBorrowed(Bitmap bitmap)
     {
         ArgumentNullException.ThrowIfNull(bitmap);
 
-        return new ImageDragPreviewWindow(bitmap, null);
+        return new ImageDragPreviewWindow(bitmap, null, null);
     }
 
     public void Start(Window? owner)
@@ -83,6 +98,7 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
             Show();
         }
 
+        StartAppearanceAnimation();
         ApplyClickThroughStyle();
         IPlatformHandle? handle = TryGetPlatformHandle();
 
@@ -95,6 +111,25 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
         _timer = new Timer(OnTimerTick, null, 0, PollIntervalMilliseconds);
     }
 
+    public Task FinishAsync()
+    {
+        if (_isDisposed || _animationScheduler is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _animationScheduler.Cancel(_previewContent);
+
+        return _animationScheduler.AnimateValueAsync(
+            _previewContent,
+            _previewTransformState.Scale.ScaleX,
+            0d,
+            PreviewAnimationDurationMilliseconds,
+            0,
+            MotionEasing.EaseMaterial,
+            ApplyPreviewScale);
+    }
+
     public void Dispose()
     {
         if (_isDisposed)
@@ -103,10 +138,24 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
         }
 
         _isDisposed = true;
+        _animationScheduler?.Cancel(_previewContent);
+        _animationScheduler = null;
+        _ownedFrameScheduler?.Dispose();
+        _ownedFrameScheduler = null;
         _timer?.Dispose();
         _timer = null;
         _ownedBitmap?.Dispose();
         Close();
+    }
+
+    internal static ImageDragPreviewWindow CreateBorrowed(
+        Bitmap bitmap,
+        IUiFrameScheduler frameScheduler)
+    {
+        ArgumentNullException.ThrowIfNull(bitmap);
+        ArgumentNullException.ThrowIfNull(frameScheduler);
+
+        return new ImageDragPreviewWindow(bitmap, null, frameScheduler);
     }
 
     private static Control CreateContent(Bitmap bitmap)
@@ -185,6 +234,33 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
         int width,
         int height,
         int flags);
+
+    private void StartAppearanceAnimation()
+    {
+        _ownedFrameScheduler = _providedFrameScheduler is null
+            ? new AvaloniaUiFrameScheduler(this)
+            : null;
+        IUiFrameScheduler frameScheduler =
+            _providedFrameScheduler ?? _ownedFrameScheduler
+            ?? throw new InvalidOperationException(
+                "Drag preview animation scheduler was not created.");
+        _animationScheduler = new UiAnimationScheduler(frameScheduler);
+
+        _ = _animationScheduler.AnimateValueAsync(
+            _previewContent,
+            _previewTransformState.Scale.ScaleX,
+            1d,
+            PreviewAnimationDurationMilliseconds,
+            0,
+            MotionEasing.EaseMaterial,
+            ApplyPreviewScale);
+    }
+
+    private void ApplyPreviewScale(double scale)
+    {
+        _previewTransformState.Scale.ScaleX = scale;
+        _previewTransformState.Scale.ScaleY = scale;
+    }
 
     private void OnTimerTick(object? state)
     {
