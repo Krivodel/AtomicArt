@@ -80,6 +80,38 @@ public sealed class PanelAttachmentStoreTests
     }
 
     [Fact]
+    public async Task GetExistingFilePathAsync_WithSavedAttachment_ReturnsManagedFilePath()
+    {
+        using PanelAttachmentTestContext context = new();
+        (PanelAttachmentState State, string Path) savedImage =
+            await SaveImageAsync(context, RawPanelId);
+
+        string? path = await context.Store.GetExistingFilePathAsync(
+            RawPanelId,
+            savedImage.State,
+            CancellationToken.None);
+
+        path.Should().Be(Path.GetFullPath(savedImage.Path));
+    }
+
+    [Fact]
+    public async Task GetExistingFilePathAsync_WithMissingAttachment_ReturnsNull()
+    {
+        using PanelAttachmentTestContext context = new();
+        PanelAttachmentState state = CreateState(
+            "missing-attachment",
+            "missing.png",
+            "missing.png");
+
+        string? path = await context.Store.GetExistingFilePathAsync(
+            RawPanelId,
+            state,
+            CancellationToken.None);
+
+        path.Should().BeNull();
+    }
+
+    [Fact]
     public async Task SaveAsync_WithUnsafeInternalFileName_RejectsAndDoesNotWriteOutsidePanelDirectory()
     {
         using PanelAttachmentTestContext context = new();

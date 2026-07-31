@@ -13,6 +13,7 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
@@ -178,6 +179,32 @@ public sealed class DependencyInjectionTests
             serviceProvider.GetRequiredService<AttachedImagePreparationConcurrencyLimiter>();
 
         firstLimiter.Should().BeSameAs(secondLimiter);
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithAttachmentImageDrag_RegistersSingletonService()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+
+        IAttachmentImageDragService firstService =
+            serviceProvider.GetRequiredService<IAttachmentImageDragService>();
+        IAttachmentImageDragService secondService =
+            serviceProvider.GetRequiredService<IAttachmentImageDragService>();
+
+        firstService.Should().BeSameAs(secondService);
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithPanelAttachmentPathResolver_ReusesAttachmentStore()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+
+        IPanelAttachmentStore attachmentStore =
+            serviceProvider.GetRequiredService<IPanelAttachmentStore>();
+        IPanelAttachmentFilePathResolver filePathResolver =
+            serviceProvider.GetRequiredService<IPanelAttachmentFilePathResolver>();
+
+        filePathResolver.Should().BeSameAs(attachmentStore);
     }
 
     [Fact]

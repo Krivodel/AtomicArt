@@ -185,8 +185,9 @@
                       Margin="{StaticResource AttachmentListMargin}">
                     <controls:AnimatedAttachmentListControl Items="{Binding AttachedImages}"
                                                             OpenAttachmentCommand="{Binding OpenAttachmentCommand}"
-                                                            ReorderAttachmentCommand="{Binding ReorderAttachmentCommand}"
-                                                            RemoveAttachmentCommand="{Binding RemoveAttachmentCommand}" />
+                                                            PanelId="{Binding PanelId}"
+                                                            RemoveAttachmentCommand="{Binding RemoveAttachmentCommand}"
+                                                            ReorderAttachmentCommand="{Binding ReorderAttachmentCommand}" />
                 </Grid>
             </Grid>
 

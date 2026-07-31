@@ -11,9 +11,9 @@ using Pica.Viewer.Services;
 
 using AtomicArt.Desktop.Services;
 
-namespace AtomicArt.Desktop.Views.Gallery;
+namespace AtomicArt.Desktop.Controls;
 
-internal sealed class GenerationDragPreviewWindow : Window, IDisposable
+internal sealed class ImageDragPreviewWindow : Window, IDisposable
 {
     private const int PreviewSize = 96;
     private const int CursorOffset = 14;
@@ -24,18 +24,19 @@ internal sealed class GenerationDragPreviewWindow : Window, IDisposable
     private const int ToolWindowStyle = 0x00000080;
     private const int NoActivateWindowPositionFlag = 0x0010;
     private const int NoSizeWindowPositionFlag = 0x0001;
+
     private static readonly nint TopMostWindowHandle = new(-1);
 
-    private readonly Bitmap _bitmap;
+    private readonly Bitmap? _ownedBitmap;
     private Timer? _timer;
     private nint _windowHandle;
     private bool _isDisposed;
 
-    public GenerationDragPreviewWindow(Bitmap bitmap)
+    private ImageDragPreviewWindow(Bitmap bitmap, Bitmap? ownedBitmap)
     {
         ArgumentNullException.ThrowIfNull(bitmap);
 
-        _bitmap = bitmap;
+        _ownedBitmap = ownedBitmap;
 
         Width = PreviewSize;
         Height = PreviewSize;
@@ -50,6 +51,20 @@ internal sealed class GenerationDragPreviewWindow : Window, IDisposable
         Content = CreateContent(bitmap);
     }
 
+    public static ImageDragPreviewWindow CreateOwned(Bitmap bitmap)
+    {
+        ArgumentNullException.ThrowIfNull(bitmap);
+
+        return new ImageDragPreviewWindow(bitmap, bitmap);
+    }
+
+    public static ImageDragPreviewWindow CreateBorrowed(Bitmap bitmap)
+    {
+        ArgumentNullException.ThrowIfNull(bitmap);
+
+        return new ImageDragPreviewWindow(bitmap, null);
+    }
+
     public void Start(Window? owner)
     {
         if (_isDisposed)
@@ -58,6 +73,7 @@ internal sealed class GenerationDragPreviewWindow : Window, IDisposable
         }
 
         MoveToCursor();
+
         if (owner is not null)
         {
             Show(owner);
@@ -69,6 +85,7 @@ internal sealed class GenerationDragPreviewWindow : Window, IDisposable
 
         ApplyClickThroughStyle();
         IPlatformHandle? handle = TryGetPlatformHandle();
+
         if (handle is null)
         {
             return;
@@ -88,7 +105,7 @@ internal sealed class GenerationDragPreviewWindow : Window, IDisposable
         _isDisposed = true;
         _timer?.Dispose();
         _timer = null;
-        _bitmap.Dispose();
+        _ownedBitmap?.Dispose();
         Close();
     }
 
@@ -112,6 +129,63 @@ internal sealed class GenerationDragPreviewWindow : Window, IDisposable
         };
     }
 
+    private static void MoveNativeWindowToCursor(nint windowHandle)
+    {
+        if (!TryGetCursorPosition(out NativePoint point))
+        {
+            return;
+        }
+
+        _ = SetWindowPos(
+            windowHandle,
+            TopMostWindowHandle,
+            point.X + CursorOffset,
+            point.Y + CursorOffset,
+            0,
+            0,
+            NoActivateWindowPositionFlag | NoSizeWindowPositionFlag);
+    }
+
+    private static bool TryGetCursorPosition(out NativePoint point)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return GetCursorPos(out point);
+        }
+
+        point = default;
+
+        return false;
+    }
+
+    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
+    private static extern bool GetCursorPos(out NativePoint point);
+
+    [DllImport(
+        WindowsNativeLibraryNames.User32,
+        EntryPoint = "GetWindowLongPtrW",
+        SetLastError = true)]
+    private static extern nint GetWindowLongPtr(nint windowHandle, int index);
+
+    [DllImport(
+        WindowsNativeLibraryNames.User32,
+        EntryPoint = "SetWindowLongPtrW",
+        SetLastError = true)]
+    private static extern nint SetWindowLongPtr(
+        nint windowHandle,
+        int index,
+        nint value);
+
+    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
+    private static extern bool SetWindowPos(
+        nint windowHandle,
+        nint insertAfterWindowHandle,
+        int x,
+        int y,
+        int width,
+        int height,
+        int flags);
+
     private void OnTimerTick(object? state)
     {
         _ = state;
@@ -134,23 +208,6 @@ internal sealed class GenerationDragPreviewWindow : Window, IDisposable
         Position = new PixelPoint(point.X + CursorOffset, point.Y + CursorOffset);
     }
 
-    private static void MoveNativeWindowToCursor(nint windowHandle)
-    {
-        if (!TryGetCursorPosition(out NativePoint point))
-        {
-            return;
-        }
-
-        _ = SetWindowPos(
-            windowHandle,
-            TopMostWindowHandle,
-            point.X + CursorOffset,
-            point.Y + CursorOffset,
-            0,
-            0,
-            NoActivateWindowPositionFlag | NoSizeWindowPositionFlag);
-    }
-
     private void ApplyClickThroughStyle()
     {
         if (!OperatingSystem.IsWindows())
@@ -159,46 +216,19 @@ internal sealed class GenerationDragPreviewWindow : Window, IDisposable
         }
 
         IPlatformHandle? handle = TryGetPlatformHandle();
+
         if (handle is null)
         {
             return;
         }
 
         nint styles = GetWindowLongPtr(handle.Handle, ExtendedStyleIndex);
-        nint nextStyles = styles | (nint)LayeredWindowStyle | (nint)TransparentWindowStyle | (nint)ToolWindowStyle;
+        nint nextStyles = styles
+            | (nint)LayeredWindowStyle
+            | (nint)TransparentWindowStyle
+            | (nint)ToolWindowStyle;
         _ = SetWindowLongPtr(handle.Handle, ExtendedStyleIndex, nextStyles);
     }
-
-    private static bool TryGetCursorPosition(out NativePoint point)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            return GetCursorPos(out point);
-        }
-
-        point = default;
-
-        return false;
-    }
-
-    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
-    private static extern bool GetCursorPos(out NativePoint point);
-
-    [DllImport(WindowsNativeLibraryNames.User32, EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
-    private static extern nint GetWindowLongPtr(nint windowHandle, int index);
-
-    [DllImport(WindowsNativeLibraryNames.User32, EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
-    private static extern nint SetWindowLongPtr(nint windowHandle, int index, nint value);
-
-    [DllImport(WindowsNativeLibraryNames.User32, SetLastError = true)]
-    private static extern bool SetWindowPos(
-        nint windowHandle,
-        nint insertAfterWindowHandle,
-        int x,
-        int y,
-        int width,
-        int height,
-        int flags);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct NativePoint

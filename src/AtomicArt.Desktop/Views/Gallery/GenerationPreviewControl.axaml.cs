@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 
@@ -9,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -55,7 +55,6 @@ public partial class GenerationPreviewControl : UserControl
     internal IGenerationPreviewExpansionHost? ExpansionHost { get; set; }
     internal Control? OverflowOwner { get; set; }
 
-    private const int DragPreviewWidth = 256;
     private const double DefaultPreviewSize = 220d;
 
     private readonly GenerationPreviewExpansionController _previewExpansionController;
@@ -112,7 +111,9 @@ public partial class GenerationPreviewControl : UserControl
     {
         ArgumentNullException.ThrowIfNull(file);
 
-        return GalleryImageDragData.Create(file);
+        return ImageFileDragSource.CreateDataTransfer(
+            file,
+            AtomicArtImageDragSourceKind.Gallery);
     }
 
     internal void SetPreviewBitmapServices(
@@ -187,44 +188,6 @@ public partial class GenerationPreviewControl : UserControl
         if (change.Property == PreviewPathProperty)
         {
             RefreshPreviewBitmap();
-        }
-    }
-
-    private static GenerationDragPreviewWindow? CreateDragPreviewWindowOrDefault(
-        string previewPath)
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return null;
-        }
-
-        Bitmap? bitmap = CreateDragPreviewBitmapOrDefault(previewPath);
-        if (bitmap is null)
-        {
-            return null;
-        }
-
-        return new GenerationDragPreviewWindow(bitmap);
-    }
-
-    private static Bitmap? CreateDragPreviewBitmapOrDefault(string previewPath)
-    {
-        try
-        {
-            using FileStream stream = File.OpenRead(previewPath);
-
-            return Bitmap.DecodeToWidth(
-                stream,
-                DragPreviewWidth,
-                BitmapInterpolationMode.HighQuality);
-        }
-        catch (Exception ex) when (ex is IOException
-            or UnauthorizedAccessException
-            or ArgumentException
-            or InvalidOperationException
-            or NotSupportedException)
-        {
-            return null;
         }
     }
 
@@ -339,24 +302,12 @@ public partial class GenerationPreviewControl : UserControl
         string imagePath,
         string previewPath)
     {
-        TopLevel? topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel is null)
-        {
-            return;
-        }
-
-        IStorageFile? file = await topLevel.StorageProvider.TryGetFileFromPathAsync(imagePath);
-        if (file is null)
-        {
-            return;
-        }
-
-        DataTransfer dataTransfer = CreateImageFileDataTransfer(file);
-        using GenerationDragPreviewWindow? previewWindow =
-            CreateDragPreviewWindowOrDefault(previewPath);
-        previewWindow?.Start(topLevel as Window);
-
-        await DragDrop.DoDragDropAsync(e, dataTransfer, DragDropEffects.Copy);
+        await ImageFileDragSource.StartAsync(
+            this,
+            e,
+            imagePath,
+            previewPath,
+            AtomicArtImageDragSourceKind.Gallery);
     }
 
     private void RefreshPreviewBitmap()

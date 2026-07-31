@@ -254,6 +254,9 @@ public static class DependencyInjection
                 provider.GetRequiredService<ExternalImageAttachmentReader>(),
                 provider.GetRequiredService<IVirtualFileDropInputProvider>(),
                 provider.GetRequiredService<ILogger<DragDropImageService>>()));
+        services.AddSingleton<
+            IAttachmentImageDragService,
+            AttachmentImageDragService>();
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
         services.AddSingleton<IFileRevealService, FileRevealService>();
         services.AddPicaViewer();
@@ -306,7 +309,11 @@ public static class DependencyInjection
         services.AddSingleton<ProviderResponseImageDecoderRegistry>();
         services.AddSingleton<IGalleryThumbnailGenerator, GalleryThumbnailGenerator>();
         services.AddSingleton<IGalleryThumbnailStorage, GalleryThumbnailStorage>();
-        services.AddSingleton<IPanelAttachmentStore, PanelAttachmentStore>();
+        services.AddSingleton<PanelAttachmentStore>();
+        services.AddSingleton<IPanelAttachmentStore>(
+            provider => provider.GetRequiredService<PanelAttachmentStore>());
+        services.AddSingleton<IPanelAttachmentFilePathResolver>(
+            provider => provider.GetRequiredService<PanelAttachmentStore>());
         services.AddSingleton<IGenerationLifecycleEventHub, GenerationLifecycleEventHub>();
         services.AddSingleton<IGenerationActivityTracker, GenerationActivityTracker>();
         services.AddSingleton<IGenerationAdmissionGate, GenerationAdmissionGate>();

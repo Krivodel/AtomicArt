@@ -6,7 +6,9 @@ using AtomicArt.Desktop.Services.State;
 
 namespace AtomicArt.Desktop.Services.Generation.State;
 
-public sealed class PanelAttachmentStore : IPanelAttachmentStore
+public sealed class PanelAttachmentStore :
+    IPanelAttachmentStore,
+    IPanelAttachmentFilePathResolver
 {
     private static readonly string TrustedPathFailureMessage =
         TrustedPathGuard.CreateFailureMessage(
@@ -142,31 +144,13 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
 
         try
         {
-            string path = GetAttachmentPath(panelId, attachment.InternalFileName);
-            string attachmentsRootDirectory = GetAttachmentsRootDirectory();
-            string[] trustedDirectories = [attachmentsRootDirectory];
-
-            if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
-                path,
-                trustedDirectories,
-                attachmentsRootDirectory,
-                TrustedPathFailureMessage,
-                out FileStream? stream,
-                out string? _))
+            if (!TryOpenAttachmentFileForRead(
+                    panelId,
+                    attachment,
+                    out FileStream? stream,
+                    out string? _)
+                || stream is null)
             {
-                _logger.LogWarning(
-                    "Managed panel attachment {AttachmentId} is missing or outside trusted storage.",
-                    attachment.Id);
-
-                return null;
-            }
-
-            if (stream is null)
-            {
-                _logger.LogWarning(
-                    "Managed panel attachment {AttachmentId} could not be opened.",
-                    attachment.Id);
-
                 return null;
             }
 
@@ -226,6 +210,62 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
 
     }
 
+    public async Task<string?> GetExistingFilePathAsync(
+        string panelId,
+        PanelAttachmentState attachment,
+        CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(panelId);
+        ArgumentNullException.ThrowIfNull(attachment);
+        using DataRootAccessLease accessLease =
+            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            if (!TryOpenAttachmentFileForRead(
+                    panelId,
+                    attachment,
+                    out FileStream? stream,
+                    out string? trustedPath)
+                || stream is null
+                || trustedPath is null)
+            {
+                return null;
+            }
+
+            stream.Dispose();
+
+            return trustedPath;
+        }
+        catch (IOException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to resolve managed panel attachment {AttachmentId}.",
+                attachment.Id);
+
+            return null;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Access denied while resolving managed panel attachment {AttachmentId}.",
+                attachment.Id);
+
+            return null;
+        }
+        catch (NotSupportedException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Managed panel attachment path is not supported for {AttachmentId}.",
+                attachment.Id);
+
+            return null;
+        }
+    }
+
     private string GetAttachmentPath(string panelId, string internalFileName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(internalFileName);
@@ -236,6 +276,46 @@ public sealed class PanelAttachmentStore : IPanelAttachmentStore
         }
 
         return Path.GetFullPath(Path.Combine(GetPanelDirectory(panelId), internalFileName));
+    }
+
+    private bool TryOpenAttachmentFileForRead(
+        string panelId,
+        PanelAttachmentState attachment,
+        out FileStream? stream,
+        out string? trustedPath)
+    {
+        string path = GetAttachmentPath(panelId, attachment.InternalFileName);
+        string attachmentsRootDirectory = GetAttachmentsRootDirectory();
+        string[] trustedDirectories = [attachmentsRootDirectory];
+
+        if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
+                path,
+                trustedDirectories,
+                attachmentsRootDirectory,
+                TrustedPathFailureMessage,
+                out stream,
+                out trustedPath))
+        {
+            _logger.LogWarning(
+                "Managed panel attachment {AttachmentId} is missing or outside trusted storage.",
+                attachment.Id);
+
+            return false;
+        }
+
+        if (stream is not null && trustedPath is not null)
+        {
+            return true;
+        }
+
+        stream?.Dispose();
+        stream = null;
+        trustedPath = null;
+        _logger.LogWarning(
+            "Managed panel attachment {AttachmentId} could not be opened.",
+            attachment.Id);
+
+        return false;
     }
 
     private string GetPanelDirectory(string panelId)

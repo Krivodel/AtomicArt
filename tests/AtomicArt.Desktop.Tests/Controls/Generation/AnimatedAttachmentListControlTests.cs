@@ -3,16 +3,23 @@ using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Input.Raw;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
+
+using CommunityToolkit.Mvvm.Input;
+
 using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls.Generation;
-using AtomicArt.Desktop.Services.UiAnimation;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
+using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Services.Generation;
@@ -22,6 +29,7 @@ namespace AtomicArt.Desktop.Tests.Controls.Generation;
 
 public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlTestBase
 {
+    private const string TestPanelId = "test-panel";
     private const double AttachmentSlotWidth = 64d;
     private const double AttachmentViewportHeight = 96d;
 
@@ -41,6 +49,173 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
             AttachmentSlotWidth);
 
         targetIndex.Should().Be(expectedIndex);
+    }
+
+    [Theory]
+    [InlineData(20d, 20d, false)]
+    [InlineData(-23d, 20d, false)]
+    [InlineData(-24d, 20d, true)]
+    [InlineData(123d, 20d, false)]
+    [InlineData(124d, 20d, true)]
+    [InlineData(117d, 73d, true)]
+    public void IsExternalDragThresholdReached_WithPointerPosition_RequiresDistanceOutsidePanel(
+        double x,
+        double y,
+        bool expectedResult)
+    {
+        bool result = AnimatedAttachmentListControl.IsExternalDragThresholdReached(
+            new Point(x, y),
+            new Size(100d, 56d));
+
+        result.Should().Be(expectedResult);
+    }
+
+    [Fact]
+    public void PointerMoved_WhenReadyAttachmentLeavesPanel_StartsExternalDragWithoutReordering()
+    {
+        Dispatch(() =>
+        {
+            AttachedImageViewModel item = CreateItem("reference.png");
+            ObservableCollection<AttachedImageViewModel> items = [item];
+            RecordingAttachmentImageDragService dragService = new();
+            object? reorderParameter = null;
+            RelayCommand<object?> reorderCommand =
+                new(parameter => reorderParameter = parameter);
+            AnimatedAttachmentListControl control = new()
+            {
+                Items = items,
+                PanelId = TestPanelId,
+                ReorderAttachmentCommand = reorderCommand
+            };
+            Border dragBoundary = new()
+            {
+                Width = 160d,
+                Height = 120d,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+                Child = control
+            };
+            Grid root = new();
+            root.Children.Add(dragBoundary);
+            AttachmentImageDragBehavior.SetDragBoundary(
+                dragBoundary,
+                dragBoundary);
+            AttachmentImageDragBehavior.SetDragService(
+                dragBoundary,
+                dragService);
+            Window window = Show(root, 160d, 200d);
+            Bitmap displayedPreview = control
+                .GetVisualDescendants()
+                .OfType<Image>()
+                .Select(image => image.Source)
+                .OfType<Bitmap>()
+                .Single();
+
+            try
+            {
+                window.MouseDown(new Point(28d, 28d), MouseButton.Left);
+                window.MouseMove(
+                    new Point(28d, 150d),
+                    RawInputModifiers.LeftMouseButton);
+
+                dragService.PanelId.Should().Be(TestPanelId);
+                dragService.Attachment.Should().BeSameAs(item.State);
+                dragService.PreviewBitmap.Should().BeSameAs(displayedPreview);
+                reorderParameter.Should().BeNull();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void PointerMoved_WhenAttachmentLeavesListButStaysInsideBoundary_KeepsInternalDrag()
+    {
+        Dispatch(() =>
+        {
+            AttachedImageViewModel item = CreateItem("reference.png");
+            ObservableCollection<AttachedImageViewModel> items = [item];
+            RecordingAttachmentImageDragService dragService = new();
+            AnimatedAttachmentListControl control = new()
+            {
+                Items = items,
+                PanelId = TestPanelId
+            };
+            Border dragBoundary = new()
+            {
+                Width = 160d,
+                Height = 120d,
+                Child = control
+            };
+            AttachmentImageDragBehavior.SetDragBoundary(
+                dragBoundary,
+                dragBoundary);
+            AttachmentImageDragBehavior.SetDragService(
+                dragBoundary,
+                dragService);
+            Window window = Show(dragBoundary, 160d, 120d);
+
+            try
+            {
+                window.MouseDown(new Point(28d, 28d), MouseButton.Left);
+                window.MouseMove(
+                    new Point(28d, 90d),
+                    RawInputModifiers.LeftMouseButton);
+
+                dragService.Attachment.Should().BeNull();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void PointerReleased_WhenReadyAttachmentStaysInsidePanel_CommitsReordering()
+    {
+        Dispatch(() =>
+        {
+            AttachedImageViewModel firstItem = CreateItem("first.png");
+            ObservableCollection<AttachedImageViewModel> items =
+            [
+                firstItem,
+                CreateItem("second.png")
+            ];
+            AttachedImageReorderRequest? reorderRequest = null;
+            RelayCommand<AttachedImageReorderRequest?> reorderCommand =
+                new(request => reorderRequest = request);
+            RecordingAttachmentImageDragService dragService = new();
+            AnimatedAttachmentListControl control = new()
+            {
+                Items = items,
+                ReorderAttachmentCommand = reorderCommand
+            };
+            AttachmentImageDragBehavior.SetDragService(control, dragService);
+            Window window = Show(
+                control,
+                160d,
+                AttachmentViewportHeight);
+
+            try
+            {
+                window.MouseDown(new Point(28d, 28d), MouseButton.Left);
+                window.MouseMove(
+                    new Point(100d, 28d),
+                    RawInputModifiers.LeftMouseButton);
+                window.MouseUp(new Point(100d, 28d), MouseButton.Left);
+
+                reorderRequest.Should().NotBeNull();
+                reorderRequest?.AttachedImage.Should().BeSameAs(firstItem);
+                reorderRequest?.TargetIndex.Should().Be(1);
+                dragService.Attachment.Should().BeNull();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
     }
 
     [Fact]
@@ -473,5 +648,34 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
         bytes[0] = firstByte;
 
         return new Guid(bytes);
+    }
+
+    private sealed class RecordingAttachmentImageDragService
+        : IAttachmentImageDragService
+    {
+        public string? PanelId { get; private set; }
+        public PanelAttachmentState? Attachment { get; private set; }
+        public Bitmap? PreviewBitmap { get; private set; }
+
+        public Task DragAsync(
+            Control source,
+            PointerPressedEventArgs e,
+            string panelId,
+            PanelAttachmentState attachment,
+            Bitmap? previewBitmap,
+            CancellationToken ct)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(e);
+            ArgumentException.ThrowIfNullOrWhiteSpace(panelId);
+            ArgumentNullException.ThrowIfNull(attachment);
+            ct.ThrowIfCancellationRequested();
+
+            PanelId = panelId;
+            Attachment = attachment;
+            PreviewBitmap = previewBitmap;
+
+            return Task.CompletedTask;
+        }
     }
 }

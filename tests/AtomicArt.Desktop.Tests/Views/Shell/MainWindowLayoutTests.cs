@@ -9,6 +9,8 @@ using Moq;
 using SukiUI.Controls;
 using Xunit;
 
+using AtomicArt.Desktop.Behaviors;
+using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
@@ -119,6 +121,33 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeApproximately(
                 rowDefinitions[GenerationPanelRowIndex].ActualHeight,
                 HeightTolerance);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_WhenShown_ProvidesPanelBoundaryForAttachmentDrag()
+    {
+        Dispatch(() =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            Border generationPanelHost = window
+                .FindControl<Border>(GenerationPanelHostName)
+                ?? throw new InvalidOperationException(
+                    "Generation panel host was not found.");
+            AnimatedAttachmentListControl attachmentList = window
+                .GetVisualDescendants()
+                .OfType<AnimatedAttachmentListControl>()
+                .Single();
+
+            AttachmentImageDragBehavior
+                .GetDragBoundary(attachmentList)
+                .Should()
+                .BeSameAs(generationPanelHost);
         });
     }
 

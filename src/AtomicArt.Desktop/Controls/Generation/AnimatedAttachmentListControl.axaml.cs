@@ -12,6 +12,8 @@ using Avalonia.VisualTree;
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Imaging;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Generation;
@@ -32,10 +34,14 @@ public partial class AnimatedAttachmentListControl : UserControl
     public static readonly StyledProperty<ICommand?> OpenAttachmentCommandProperty =
         AvaloniaProperty.Register<AnimatedAttachmentListControl, ICommand?>(
             nameof(OpenAttachmentCommand));
+    public static readonly StyledProperty<string?> PanelIdProperty =
+        AvaloniaProperty.Register<AnimatedAttachmentListControl, string?>(
+            nameof(PanelId));
 
     private const double DefaultPreviewSize = 56d;
     private const double DefaultPreviewGap = 8d;
     private const double MovementTolerance = 0.5d;
+    private const double ExternalDragActivationDistance = 24d;
     private const int SpawnDurationMilliseconds = 280;
     private const int MoveDurationMilliseconds = 260;
     private const int RemoveDurationMilliseconds = 300;
@@ -70,6 +76,11 @@ public partial class AnimatedAttachmentListControl : UserControl
     {
         get => GetValue(OpenAttachmentCommandProperty);
         set => SetValue(OpenAttachmentCommandProperty, value);
+    }
+    public string? PanelId
+    {
+        get => GetValue(PanelIdProperty);
+        set => SetValue(PanelIdProperty, value);
     }
 
     public AnimatedAttachmentListControl()
@@ -138,6 +149,26 @@ public partial class AnimatedAttachmentListControl : UserControl
         int targetIndex = (int)Math.Floor(draggedCenterX / Math.Max(1d, slotWidth));
 
         return Math.Clamp(targetIndex, 0, itemCount - 1);
+    }
+
+    internal static bool IsExternalDragThresholdReached(
+        Point pointerPosition,
+        Size panelSize)
+    {
+        if (panelSize.Width <= 0d || panelSize.Height <= 0d)
+        {
+            return false;
+        }
+
+        double outsideX = pointerPosition.X < 0d
+            ? -pointerPosition.X
+            : Math.Max(0d, pointerPosition.X - panelSize.Width);
+        double outsideY = pointerPosition.Y < 0d
+            ? -pointerPosition.Y
+            : Math.Max(0d, pointerPosition.Y - panelSize.Height);
+
+        return Math.Sqrt((outsideX * outsideX) + (outsideY * outsideY))
+            >= ExternalDragActivationDistance;
     }
 
     private static Bitmap CreatePreviewBitmap(AttachedImageViewModel item)
@@ -533,6 +564,7 @@ public partial class AnimatedAttachmentListControl : UserControl
 
         e.Pointer.Capture(entry.Control);
         _dragCandidate = new AttachmentDragCandidate(
+            e,
             entry,
             pointerPoint.Position,
             pointerPoint.Position.X - GetCurrentX(entry.Control),
@@ -541,7 +573,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         e.Handled = true;
     }
 
-    private void OnAttachmentPointerMoved(object? sender, PointerEventArgs e)
+    private async void OnAttachmentPointerMoved(object? sender, PointerEventArgs e)
     {
         _ = sender;
 
@@ -555,6 +587,11 @@ public partial class AnimatedAttachmentListControl : UserControl
         AttachmentDragState? dragState = _dragState;
         if (dragState is not null)
         {
+            if (await TryStartExternalDragAsync(dragState, e))
+            {
+                return;
+            }
+
             UpdateActiveDrag(dragState, pointerPoint);
             e.Handled = true;
             return;
@@ -576,6 +613,11 @@ public partial class AnimatedAttachmentListControl : UserControl
         dragState = _dragState;
         if (dragState is not null)
         {
+            if (await TryStartExternalDragAsync(dragState, e))
+            {
+                return;
+            }
+
             UpdateActiveDrag(dragState, pointerPoint);
         }
 
@@ -602,6 +644,57 @@ public partial class AnimatedAttachmentListControl : UserControl
             };
             AnimateDragTargets(dragState.Entry.Item, targetIndex);
         }
+    }
+
+    private async Task<bool> TryStartExternalDragAsync(
+        AttachmentDragState dragState,
+        PointerEventArgs e)
+    {
+        Control dragBoundary =
+            AttachmentImageDragBehavior.GetDragBoundary(this)
+            ?? AttachmentPanel;
+        Point pointerPosition = e.GetPosition(dragBoundary);
+
+        string? panelId = PanelId;
+        PanelAttachmentState? attachmentState = dragState.Entry.Item.State;
+
+        if (!dragState.Entry.Item.IsReady
+            || string.IsNullOrWhiteSpace(panelId)
+            || attachmentState is null
+            || !IsExternalDragThresholdReached(
+                pointerPosition,
+                dragBoundary.Bounds.Size))
+        {
+            return false;
+        }
+
+        IAttachmentImageDragService? dragService =
+            AttachmentImageDragBehavior.GetDragService(this);
+
+        if (dragService is null)
+        {
+            return false;
+        }
+
+        CompleteDrag(AttachmentDragCompletion.Cancel);
+        e.Handled = true;
+
+        try
+        {
+            await dragService.DragAsync(
+                this,
+                dragState.PointerPressedEventArgs,
+                panelId,
+                attachmentState,
+                dragState.Entry.PreviewBitmap,
+                CancellationToken.None);
+        }
+        finally
+        {
+            e.Pointer.Capture(null);
+        }
+
+        return true;
     }
 
     private void OnAttachmentPointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -678,6 +771,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         dragCandidate.Entry.Control.ZIndex = 1000;
         _dragCandidate = null;
         _dragState = new AttachmentDragState(
+            dragCandidate.PointerPressedEventArgs,
             dragCandidate.Entry,
             dragCandidate.PointerOffsetX,
             dragCandidate.SourceIndex,
@@ -937,12 +1031,14 @@ public partial class AnimatedAttachmentListControl : UserControl
     }
 
     private sealed record AttachmentDragState(
+        PointerPressedEventArgs PointerPressedEventArgs,
         AttachmentVisualEntry Entry,
         double PointerOffsetX,
         int SourceIndex,
         int TargetIndex);
 
     private sealed record AttachmentDragCandidate(
+        PointerPressedEventArgs PointerPressedEventArgs,
         AttachmentVisualEntry Entry,
         Point Origin,
         double PointerOffsetX,

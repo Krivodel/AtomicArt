@@ -14,6 +14,7 @@ internal sealed class AttachmentVisualEntry
     public Button RemoveButton { get; }
     public Image Image { get; }
     public AttachmentPixelLoadingControl LoadingIndicator { get; }
+    public Bitmap? PreviewBitmap => _bitmap;
 
     private Bitmap? _bitmap;
     private PropertyChangedEventHandler? _propertyChangedHandler;

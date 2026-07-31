@@ -12,6 +12,7 @@ using Pica.Viewer.Services;
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.Views.Updates;
 
@@ -35,6 +36,9 @@ public partial class MainWindow : SukiWindow
     public MainWindow()
     {
         InitializeComponent();
+        AttachmentImageDragBehavior.SetDragBoundary(
+            GenerationPanelHost,
+            GenerationPanelHost);
         PropertyChanged += OnWindowPropertyChanged;
         SettingsOverlayPresenter.PropertyChanged +=
             OnSettingsOverlayPresenterPropertyChanged;
@@ -47,12 +51,14 @@ public partial class MainWindow : SukiWindow
         ITrayService trayService,
         IClipboardImageService clipboardImageService,
         IDragDropImageService dragDropImageService,
+        IAttachmentImageDragService attachmentImageDragService,
         ApplicationUpdateToastPresenter updateToastPresenter) : this()
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         ArgumentNullException.ThrowIfNull(trayService);
         ArgumentNullException.ThrowIfNull(clipboardImageService);
         ArgumentNullException.ThrowIfNull(dragDropImageService);
+        ArgumentNullException.ThrowIfNull(attachmentImageDragService);
         ArgumentNullException.ThrowIfNull(updateToastPresenter);
 
         _trayService = trayService;
@@ -62,6 +68,9 @@ public partial class MainWindow : SukiWindow
         updateToastPresenter.Attach(viewModel.ApplicationUpdate);
         ClipboardPasteBehavior.SetClipboardImageService(this, clipboardImageService);
         ImageDropBehavior.SetDragDropImageService(this, dragDropImageService);
+        AttachmentImageDragBehavior.SetDragService(
+            this,
+            attachmentImageDragService);
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)

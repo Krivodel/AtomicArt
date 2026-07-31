@@ -11,7 +11,7 @@ using Xunit;
 
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls.Generation;
-using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 
 namespace AtomicArt.Desktop.Tests.Behaviors;
@@ -36,6 +36,14 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
         DataTransfer dataTransfer = CreateGalleryImageDataTransfer();
 
         AssertAcceptedTargets(dataTransfer, false, true);
+    }
+
+    [Fact]
+    public void AcceptsData_WithPanelAttachmentImage_RejectsAllTargets()
+    {
+        DataTransfer dataTransfer = CreatePanelAttachmentImageDataTransfer();
+
+        AssertAcceptedTargets(dataTransfer, false, false);
     }
 
     [Fact]
@@ -177,6 +185,34 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
+    public void DragOver_WithPanelAttachmentImage_DoesNotActivatePanelTarget()
+    {
+        Dispatch(() =>
+        {
+            DataTransfer dataTransfer =
+                CreatePanelAttachmentImageDataTransfer();
+            OverlayPanelTestContext context = CreateOverlayPanelContext();
+            ConfigureGalleryDropTarget(context.Panel, context.Overlay);
+            Window window = ShowTestWindow(context.Panel);
+
+            try
+            {
+                RaiseDragDrop(
+                    window,
+                    new Point(160d, 90d),
+                    RawDragEventType.DragOver,
+                    dataTransfer);
+
+                context.Overlay.IsActive.Should().BeFalse();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public async Task CancelScheduledOverlayHide_AfterPendingHide_KeepsPanelTargetActive()
     {
         await DispatchAsync(async () =>
@@ -203,9 +239,24 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
 
     private static DataTransfer CreateGalleryImageDataTransfer()
     {
+        return CreateAtomicArtImageDataTransfer(
+            AtomicArtImageDragSourceKind.Gallery);
+    }
+
+    private static DataTransfer CreatePanelAttachmentImageDataTransfer()
+    {
+        return CreateAtomicArtImageDataTransfer(
+            AtomicArtImageDragSourceKind.PanelAttachment);
+    }
+
+    private static DataTransfer CreateAtomicArtImageDataTransfer(
+        AtomicArtImageDragSourceKind sourceKind)
+    {
         Mock<IStorageFile> fileMock = new();
 
-        return GalleryImageDragData.Create(fileMock.Object);
+        return AtomicArtImageDragData.Create(
+            fileMock.Object,
+            sourceKind);
     }
 
     private static OverlayPanelTestContext CreateOverlayPanelContext()

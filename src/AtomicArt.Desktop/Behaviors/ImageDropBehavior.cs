@@ -6,7 +6,6 @@ using Avalonia.Threading;
 
 using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Services;
-using AtomicArt.Desktop.Services.Gallery;
 
 namespace AtomicArt.Desktop.Behaviors;
 
@@ -107,14 +106,16 @@ public static class ImageDropBehavior
     {
         ArgumentNullException.ThrowIfNull(dataTransfer);
 
-        bool isGalleryImage = GalleryImageDragData.IsGalleryImage(dataTransfer);
+        bool isAtomicArtImage =
+            AtomicArtImageDragData.IsAtomicArtImage(dataTransfer);
 
         if (targetKind == ImageDropTargetKind.GalleryImage)
         {
-            return dataTransfer.Contains(DataFormat.File) && isGalleryImage;
+            return dataTransfer.Contains(DataFormat.File)
+                && AtomicArtImageDragData.IsGalleryImage(dataTransfer);
         }
 
-        if (targetKind != ImageDropTargetKind.ExternalFiles || isGalleryImage)
+        if (targetKind != ImageDropTargetKind.ExternalFiles || isAtomicArtImage)
         {
             return false;
         }
@@ -187,18 +188,19 @@ public static class ImageDropBehavior
             return;
         }
 
-        HandleRejectedGalleryDrag(e, targetKind);
+        HandleRejectedAtomicArtImageDrag(e, targetKind);
     }
 
-    private static void HandleRejectedGalleryDrag(
+    private static void HandleRejectedAtomicArtImageDrag(
         DragEventArgs e,
         ImageDropTargetKind targetKind)
     {
-        bool rejectsGalleryImage = targetKind == ImageDropTargetKind.ExternalFiles
+        bool rejectsAtomicArtImage =
+            targetKind == ImageDropTargetKind.ExternalFiles
             && e.DataTransfer.Contains(DataFormat.File)
-            && GalleryImageDragData.IsGalleryImage(e.DataTransfer);
+            && AtomicArtImageDragData.IsAtomicArtImage(e.DataTransfer);
 
-        if (rejectsGalleryImage)
+        if (rejectsAtomicArtImage)
         {
             e.DragEffects = DragDropEffects.None;
             e.Handled = true;
@@ -212,7 +214,7 @@ public static class ImageDropBehavior
         return e.Handled
             && targetKind == ImageDropTargetKind.ExternalFiles
             && e.DataTransfer.Contains(DataFormat.File)
-            && GalleryImageDragData.IsGalleryImage(e.DataTransfer);
+            && AtomicArtImageDragData.IsAtomicArtImage(e.DataTransfer);
     }
 
     private static bool IsInsideDropArea(Control control, DragEventArgs e)
@@ -323,7 +325,7 @@ public static class ImageDropBehavior
 
         if (!AcceptsData(e.DataTransfer, targetKind) || !IsInsideDropArea(control, e))
         {
-            HandleRejectedGalleryDrag(e, targetKind);
+            HandleRejectedAtomicArtImageDrag(e, targetKind);
             return;
         }
 
