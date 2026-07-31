@@ -7,4 +7,4 @@
 Удобное приложение для генерации изображений с помощью ИИ, созданное при участии 3D-художника с большим опытом работы в подобных инструментах.
 Имеет множество интуитивных функций, о которых часто забывают в других приложениях.
 
-<img width="1040" height="1060" alt="image" src="https://github.com/user-attachments/assets/0573fe0e-1252-40b3-8eca-bb6c300cf4f1" />
+<img width="1204" height="1088" alt="image" src="https://github.com/user-attachments/assets/997a0b56-3b6b-49c7-bb70-8f86f9775f73" />
