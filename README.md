@@ -1,8 +1,8 @@
-# <img src="src/AtomicArt.Desktop/Assets/AppIcon.ico" alt="Atomic Art" width="32" height="32"> Atomic Art
-
 **English** | [Русский](https://github.com/Krivodel/AtomicArt/blob/main/README.ru.md)
 
 [![Download for Windows](https://badgen.net/badge/icon/Download%20for%20Windows?icon=windows&label)](https://github.com/Krivodel/AtomicArt/releases/latest/download/AtomicArt-win-Setup.exe)
+
+# <img src="src/AtomicArt.Desktop/Assets/AppIcon.ico" alt="Atomic Art" width="32" height="32"> Atomic Art
 
 A convenient application for AI-powered image generation, created with the participation of a 3D artist with extensive experience working with similar tools.
 It has many intuitive features that are often overlooked in other applications.
