@@ -21,7 +21,7 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage);
 
-        AssertActualPrice(price, 0.0678m);
+        AssertActualPrice(price, 0.0339m);
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public sealed class GenerationUsagePriceCalculatorTests
         GenerationPriceDto? price = Calculate(metadata, usage);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
-            0.1364m,
+            0.0682m,
             "USD",
             GenerationPriceSources.ActualProviderUsage));
     }
@@ -63,7 +63,7 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage);
 
-        AssertActualPrice(price, 0.0678m);
+        AssertActualPrice(price, 0.0339m);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage, FourKResolution);
 
-        AssertActualPrice(price, 0.1518m);
+        AssertActualPrice(price, 0.0759m);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public sealed class GenerationUsagePriceCalculatorTests
             FourKResolution,
             generatedImageCount: 2);
 
-        AssertActualPrice(price, 0.303m);
+        AssertActualPrice(price, 0.1515m);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage, FourKResolution);
 
-        AssertActualPrice(price, 0.15395m);
+        AssertActualPrice(price, 0.076975m);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage);
 
-        AssertActualPrice(price, 0.06836m);
+        AssertActualPrice(price, 0.03418m);
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage);
 
-        AssertActualPrice(price, 0.06761m);
+        AssertActualPrice(price, 0.033805m);
     }
 
     [Fact]
@@ -219,7 +219,7 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage, FourKResolution);
 
-        AssertActualPrice(price, 0.1622019m);
+        AssertActualPrice(price, 0.08110095m);
     }
 
     [Fact]
@@ -245,7 +245,7 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage);
 
-        AssertActualPrice(price, 0.0678m);
+        AssertActualPrice(price, 0.0339m);
     }
 
     [Fact]
@@ -272,7 +272,7 @@ public sealed class GenerationUsagePriceCalculatorTests
 
         GenerationPriceDto? price = CalculateNanoBanana2(usage);
 
-        AssertActualPrice(price, 0.0678m);
+        AssertActualPrice(price, 0.0339m);
     }
 
     [Fact]

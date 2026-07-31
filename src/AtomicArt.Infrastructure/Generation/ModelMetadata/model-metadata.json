@@ -141,9 +141,9 @@
       ],
       "pricing": {
         "currencyCode": "USD",
-        "inputTokenUsdPerMillion": 0.50,
-        "textOutputTokenUsdPerMillion": 3.00,
-        "imageOutputTokenUsdPerMillion": 60.00,
+        "inputTokenUsdPerMillion": 0.25,
+        "textOutputTokenUsdPerMillion": 1.50,
+        "imageOutputTokenUsdPerMillion": 30.00,
         "inputImageTokens": 1120,
         "outputImageTokensByResolution": {
           "512": 747,
@@ -171,9 +171,9 @@
       ],
       "pricing": {
         "currencyCode": "USD",
-        "inputTokenUsdPerMillion": 0.25,
-        "textOutputTokenUsdPerMillion": 1.50,
-        "imageOutputTokenUsdPerMillion": 30.00,
+        "inputTokenUsdPerMillion": 0.125,
+        "textOutputTokenUsdPerMillion": 0.75,
+        "imageOutputTokenUsdPerMillion": 15.00,
         "inputImageTokens": 1120,
         "outputImageTokensByResolution": {
           "1K": 1120
@@ -199,9 +199,9 @@
       ],
       "pricing": {
         "currencyCode": "USD",
-        "inputTokenUsdPerMillion": 2.00,
-        "textOutputTokenUsdPerMillion": 12.00,
-        "imageOutputTokenUsdPerMillion": 120.00,
+        "inputTokenUsdPerMillion": 1.00,
+        "textOutputTokenUsdPerMillion": 6.00,
+        "imageOutputTokenUsdPerMillion": 60.00,
         "inputImageTokens": 560,
         "outputImageTokensByResolution": {
           "1K": 1120,
