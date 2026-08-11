@@ -10,6 +10,7 @@ namespace AtomicArt.Desktop.Views.Gallery;
 
 internal sealed class StandaloneGenerationPreviewExpansionHost : IGenerationPreviewExpansionHost
 {
+    public bool IsExpansionEnabled => true;
     public Control Viewport => _owner;
     public KeyModifiers CurrentKeyModifiers => _currentKeyModifiers;
     public Point? PointerPosition => _pointerPosition;

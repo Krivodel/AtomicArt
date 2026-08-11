@@ -7,6 +7,7 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class AnimatedGalleryPreviewExpansionHost : IGenerationPreviewExpansionHost
 {
+    public bool IsExpansionEnabled => !_gallery.IsSelectionMode;
     public Control Viewport => _gallery.PreviewScrollViewer;
     public KeyModifiers CurrentKeyModifiers => _gallery.GetPreviewPointerModifiers();
     public Point? PointerPosition => _gallery.GetPreviewPointerPosition();

@@ -7,6 +7,7 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal interface IGenerationPreviewExpansionHost
 {
+    bool IsExpansionEnabled { get; }
     Control Viewport { get; }
     KeyModifiers CurrentKeyModifiers { get; }
     Point? PointerPosition { get; }

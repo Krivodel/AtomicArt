@@ -311,6 +311,7 @@ public partial class AnimatedGalleryControl : UserControl
         {
             _sceneController.UpdateCardSelectionMode();
             ScheduleSelectionVisualRefresh();
+            RaisePreviewPointerStateChanged();
             return;
         }
 
@@ -537,6 +538,12 @@ public partial class AnimatedGalleryControl : UserControl
 
         _previewPointerPosition = e.GetPosition(GalleryScrollViewer);
         _previewPointerModifiers = e.KeyModifiers;
+
+        if (GenerationPreviewExpansionController.HasExpansionModifier(
+                _previewPointerModifiers))
+        {
+            SchedulePreviewPointerStateChanged();
+        }
     }
 
     private void OnPreviewPointerExited(object? sender, PointerEventArgs e)
@@ -554,6 +561,11 @@ public partial class AnimatedGalleryControl : UserControl
         _ = sender;
         _ = e;
 
+        SchedulePreviewPointerStateChanged();
+    }
+
+    private void SchedulePreviewPointerStateChanged()
+    {
         if (_isPreviewPointerRefreshPending)
         {
             return;
@@ -568,7 +580,11 @@ public partial class AnimatedGalleryControl : UserControl
     private void NotifyPreviewPointerStateChanged()
     {
         _isPreviewPointerRefreshPending = false;
+        RaisePreviewPointerStateChanged();
+    }
 
+    private void RaisePreviewPointerStateChanged()
+    {
         if (!_isAttached)
         {
             return;
@@ -634,6 +650,7 @@ public partial class AnimatedGalleryControl : UserControl
             PreviewKeyTransition.Up => e.KeyModifiers & ~modifier,
             _ => throw new ArgumentOutOfRangeException(nameof(transition), transition, null)
         };
+        RaisePreviewPointerStateChanged();
         PreviewModifiersChanged?.Invoke(this, EventArgs.Empty);
     }
 

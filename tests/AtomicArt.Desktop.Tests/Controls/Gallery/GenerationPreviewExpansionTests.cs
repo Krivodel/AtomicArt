@@ -136,6 +136,77 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         });
     }
 
+    [Fact]
+    public async Task ModifierPressedAsync_InSelectionMode_DoesNotExpandPreview()
+    {
+        await DispatchAsync(() =>
+        {
+            using PreviewTestContext context = CreateScenarioWithImage(
+                "atomic-art-selection-preview-modifier");
+            context.PreviewHost.Transitions = null;
+            context.Gallery.IsSelectionMode = true;
+            context.Window.CaptureRenderedFrame();
+            Point pointerOverPreview = GetPointerPosition(context, 110d);
+
+            context.Window.MouseMove(pointerOverPreview, RawInputModifiers.None);
+            context.Window.KeyPress(
+                Key.LeftShift,
+                RawInputModifiers.Shift,
+                PhysicalKey.ShiftLeft,
+                null);
+            context.Window.CaptureRenderedFrame();
+
+            context.PreviewHost.Width.Should().Be(220d);
+
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task ModifierScrollAsync_InSelectionMode_DoesNotExpandPreview()
+    {
+        await DispatchAsync(() =>
+        {
+            using PreviewTestContext context = CreateScenarioWithImage(
+                "atomic-art-selection-preview-pointer-move");
+            context.PreviewHost.Transitions = null;
+            context.Gallery.IsSelectionMode = true;
+            context.Window.CaptureRenderedFrame();
+            Point pointerOverPreview = GetPointerPosition(context, 150d);
+
+            context.Window.MouseMove(pointerOverPreview, RawInputModifiers.Shift);
+            context.ScrollViewer.Offset = new Vector(0d, 40d);
+            context.Window.CaptureRenderedFrame();
+
+            context.PreviewHost.Width.Should().Be(220d);
+
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task SelectionModeEnabledAsync_WithExpandedPreview_CollapsesPreview()
+    {
+        await DispatchAsync(() =>
+        {
+            using PreviewTestContext context = CreateScenarioWithImage(
+                "atomic-art-selection-preview-collapse");
+            context.PreviewHost.Transitions = null;
+            Point pointerOverPreview = GetPointerPosition(context, 110d);
+            context.Window.MouseMove(pointerOverPreview, RawInputModifiers.Shift);
+            context.Window.CaptureRenderedFrame();
+
+            context.PreviewHost.Width.Should().BeGreaterThan(220d);
+
+            context.Gallery.IsSelectionMode = true;
+            context.Window.CaptureRenderedFrame();
+
+            context.PreviewHost.Width.Should().Be(220d);
+
+            return Task.CompletedTask;
+        });
+    }
+
     [Theory]
     [InlineData(KeyModifiers.Shift)]
     [InlineData(KeyModifiers.Control)]
@@ -235,7 +306,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             .GetVisualDescendants()
             .OfType<GenerationPreviewControl>()
             .Single();
-        Grid previewHost = card.FindControl<Grid>("PreviewExpansionHost")
+        Grid previewHost = preview.FindControl<Grid>("PreviewExpansionHost")
             ?? throw new InvalidOperationException("Generation preview host was not found.");
         Image previewImage = preview.FindControl<Image>("PreviewImage")
             ?? throw new InvalidOperationException("Generation preview image was not found.");
@@ -324,6 +395,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
 
     private sealed class StalePointerExpansionHost : IGenerationPreviewExpansionHost
     {
+        public bool IsExpansionEnabled => true;
         public Control Viewport { get; }
         public KeyModifiers CurrentKeyModifiers { get; private set; }
         public Point? PointerPosition { get; private set; }

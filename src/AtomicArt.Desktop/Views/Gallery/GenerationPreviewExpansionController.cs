@@ -125,7 +125,8 @@ internal sealed class GenerationPreviewExpansionController
 
     private void UpdatePreviewExpansionState()
     {
-        bool shouldExpand = _isPointerInsidePreview
+        bool shouldExpand = _expansionHost is { IsExpansionEnabled: true }
+            && _isPointerInsidePreview
             && HasExpansionModifier(_currentKeyModifiers)
             && _previewImage.IsVisible;
 
