@@ -56,12 +56,6 @@ public sealed class GallerySelectionOutlineControlTests : AnimatedGalleryControl
             GallerySelectionOutlineControl outline = new()
             {
                 ClipToBounds = false,
-                Effect = new DropShadowEffect
-                {
-                    BlurRadius = 8d,
-                    Color = Colors.Lime,
-                    Opacity = 0.5d
-                },
                 Stroke = Brushes.Lime,
                 StrokeThickness = 3d
             };

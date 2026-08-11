@@ -2,64 +2,57 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:i18n="https://codewf.com"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
-             xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              x:Class="AtomicArt.Desktop.Views.Gallery.GallerySelectionOverlayView"
              x:DataType="gallery:GalleryViewModel"
              ClipToBounds="True"
              IsHitTestVisible="False">
-    <Grid>
-        <overlays:AnimatedBlurBackdropControl x:Name="AnimatedBackdrop"
-                                              BackdropCornerRadius="{StaticResource ShellCornerRadius}"
-                                              BlurRadius="{DynamicResource TransientOverlayBlurRadius}" />
+    <Border x:Name="SelectionPanel"
+            Padding="{StaticResource GallerySelectionOverlayPadding}"
+            RenderTransformOrigin="50%,0%">
+        <Border.RenderTransform>
+            <TranslateTransform>
+                <TranslateTransform.Transitions>
+                    <Transitions>
+                        <DoubleTransition Duration="{StaticResource GallerySelectionOverlaySlideDuration}"
+                                          Easing="{StaticResource TransientOverlayEasing}"
+                                          Property="Y" />
+                    </Transitions>
+                </TranslateTransform.Transitions>
+            </TranslateTransform>
+        </Border.RenderTransform>
+        <Border.Transitions>
+            <Transitions>
+                <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                  Easing="{StaticResource TransientOverlayEasing}"
+                                  Property="Opacity" />
+            </Transitions>
+        </Border.Transitions>
 
-        <Border x:Name="SelectionPanel"
-                Classes="gallery-selection-overlay-panel"
-                RenderTransformOrigin="50%,0%">
-            <Border.RenderTransform>
-                <TranslateTransform>
-                    <TranslateTransform.Transitions>
-                        <Transitions>
-                            <DoubleTransition Duration="{StaticResource GallerySelectionOverlaySlideDuration}"
-                                              Easing="{StaticResource TransientOverlayEasing}"
-                                              Property="Y" />
-                        </Transitions>
-                    </TranslateTransform.Transitions>
-                </TranslateTransform>
-            </Border.RenderTransform>
-            <Border.Transitions>
-                <Transitions>
-                    <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
-                                      Easing="{StaticResource TransientOverlayEasing}"
-                                      Property="Opacity" />
-                </Transitions>
-            </Border.Transitions>
+        <Grid RowDefinitions="*,Auto">
+            <TextBlock Grid.Row="0"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Classes="gallery-selection-summary"
+                       Text="{Binding SelectionSummary}" />
 
-            <Grid RowDefinitions="*,Auto">
-                <TextBlock Grid.Row="0"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Classes="gallery-selection-summary"
-                           Text="{Binding SelectionSummary}" />
-
-                <Grid Grid.Row="1"
-                      ColumnDefinitions="*,*,*"
-                      ColumnSpacing="{StaticResource GallerySelectionActionSpacing}">
-                    <Button Grid.Column="0"
-                            HorizontalAlignment="Stretch"
-                            Content="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Cancel}}"
-                            Command="{Binding ExitSelectionModeCommand}" />
-                    <Button Grid.Column="1"
-                            HorizontalAlignment="Stretch"
-                            Content="{i18n:I18n {x:Static resources:GalleryLocalizationKeys.SelectAll}}"
-                            Command="{Binding SelectAllCommand}" />
-                    <Button Grid.Column="2"
-                            HorizontalAlignment="Stretch"
-                            Classes="danger"
-                            Content="{Binding DeleteSelectedText}"
-                            Command="{Binding DeleteSelectedCommand}" />
-                </Grid>
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="*,*,*"
+                  ColumnSpacing="{StaticResource GallerySelectionActionSpacing}">
+                <Button Grid.Column="0"
+                        HorizontalAlignment="Stretch"
+                        Content="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Cancel}}"
+                        Command="{Binding ExitSelectionModeCommand}" />
+                <Button Grid.Column="1"
+                        HorizontalAlignment="Stretch"
+                        Content="{i18n:I18n {x:Static resources:GalleryLocalizationKeys.SelectAll}}"
+                        Command="{Binding SelectAllCommand}" />
+                <Button Grid.Column="2"
+                        HorizontalAlignment="Stretch"
+                        Classes="danger"
+                        Content="{Binding DeleteSelectedText}"
+                        Command="{Binding DeleteSelectedCommand}" />
             </Grid>
-        </Border>
-    </Grid>
+        </Grid>
+    </Border>
 </UserControl>

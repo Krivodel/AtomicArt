@@ -4,9 +4,6 @@
     <SolidColorBrush x:Key="GlassCardBrush"
                      Color="{DynamicResource SukiGlassCardBackground}"
                      Opacity="{DynamicResource GlassOpacity}" />
-    <SolidColorBrush x:Key="GallerySelectionOverlayTintBrush"
-                     Color="{StaticResource GallerySelectionTintColor}"
-                     Opacity="{StaticResource GallerySelectionOverlayTintOpacity}" />
     <SolidColorBrush x:Key="GalleryUnselectedCardDimBrush"
                      Color="{StaticResource GallerySelectionTintColor}"
                      Opacity="{StaticResource GalleryUnselectedCardDimOpacity}" />

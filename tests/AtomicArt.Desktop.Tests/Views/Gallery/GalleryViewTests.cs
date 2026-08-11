@@ -282,6 +282,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 selectionHighlight.Opacity.Should().Be(0d);
                 selectionHighlight.Stroke.Should().NotBeNull();
                 selectionHighlight.StrokeThickness.Should().Be(3d);
+                selectionHighlight.Effect.Should().BeNull();
                 selectionHighlight.ClipToBounds.Should().BeFalse();
                 selectionHighlight.Margin.Should().Be(default(Thickness));
                 cardRoot.ClipToBounds.Should().BeTrue();
@@ -312,7 +313,6 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 cardSurfaceRect.Should().Be(expectedCardSurfaceRect);
                 cardSurfaceCornerRadius.Should().Be(cardRoot.CornerRadius);
 
-                selectionHighlight.Effect.Should().BeOfType<DropShadowEffect>();
                 Transitions highlightTransitions = selectionHighlight.Transitions
                     ?? throw new InvalidOperationException("Selection highlight transitions were not found.");
                 DoubleTransition highlightTransition = highlightTransitions
@@ -472,7 +472,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public async Task MainWindowSelection_WithSelectedItem_ShowsGenerationPanelOverlay()
+    public async Task MainWindowSelection_WithSelectedItem_CrossfadesGenerationPanelContentWithoutBlur()
     {
         await DispatchAsync(async () =>
         {
@@ -490,22 +490,40 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     .GetVisualDescendants()
                     .OfType<GallerySelectionOverlayView>()
                     .Single();
-                AnimatedBlurBackdropControl animatedBackdrop = selectionOverlay
-                    .GetVisualDescendants()
-                    .OfType<AnimatedBlurBackdropControl>()
+                Border generationPanelContent = scenario.Window
+                    .FindControl<Border>("GenerationPanelContent")
+                    ?? throw new InvalidOperationException(
+                        "Generation panel content was not found.");
+                Transitions contentTransitions = generationPanelContent.Transitions
+                    ?? throw new InvalidOperationException(
+                        "Generation panel content transitions were not found.");
+                DoubleTransition contentTransition = contentTransitions
+                    .OfType<DoubleTransition>()
                     .Single();
                 Grid shellContent = scenario.Window.FindControl<Grid>("ShellContentGrid")
                     ?? throw new InvalidOperationException("Shell content was not found.");
                 GenerationItemViewModel item = scenario.ViewModel.Gallery.Items.Single();
 
                 selectionOverlay.IsActive.Should().BeFalse();
+                selectionOverlay.GetVisualDescendants()
+                    .OfType<BlurBackdropControl>()
+                    .Should()
+                    .BeEmpty();
+                generationPanelContent.Opacity.Should().Be(1d);
+                generationPanelContent.IsHitTestVisible.Should().BeTrue();
+                generationPanelContent.Classes.Should().NotContain("selection-mode");
+                contentTransition.Property.Should().Be(Visual.OpacityProperty);
+                contentTransition.Duration.Should().Be(TimeSpan.FromMilliseconds(180d));
                 ImageDropBehavior.GetIsEnabled(shellContent).Should().BeTrue();
+                generationPanelContent.Transitions = null;
 
                 scenario.ViewModel.Gallery.ToggleSelectionCommand.Execute(item);
                 scenario.Window.CaptureRenderedFrame();
 
                 selectionOverlay.IsActive.Should().BeTrue();
-                animatedBackdrop.IsActive.Should().BeTrue();
+                generationPanelContent.Opacity.Should().Be(0d);
+                generationPanelContent.IsHitTestVisible.Should().BeFalse();
+                generationPanelContent.Classes.Should().Contain("selection-mode");
                 ImageDropBehavior.GetIsEnabled(shellContent).Should().BeFalse();
             }
             finally

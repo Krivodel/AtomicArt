@@ -61,7 +61,6 @@ public partial class GallerySelectionOverlayView : UserControl
     private void UpdateVisualState()
     {
         IsHitTestVisible = IsActive;
-        AnimatedBackdrop.IsActive = IsActive;
         SelectionPanel.Opacity = IsActive ? 1d : 0d;
         _selectionPanelTranslation.Y = IsActive ? 0d : -GetHiddenOffset();
     }

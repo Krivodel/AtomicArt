@@ -84,7 +84,11 @@
                         Classes="generation-panel"
                         ClipToBounds="True">
                     <Grid>
-                        <Border Padding="{StaticResource GenerationPanelPadding}">
+                        <Border x:Name="GenerationPanelContent"
+                                Padding="{StaticResource GenerationPanelPadding}"
+                                Classes="generation-panel-content"
+                                Classes.selection-mode="{Binding Gallery.IsSelectionMode}"
+                                IsHitTestVisible="{Binding !Gallery.IsSelectionMode}">
                             <ContentControl Content="{Binding ActiveGenerationPanel}" />
                         </Border>
 

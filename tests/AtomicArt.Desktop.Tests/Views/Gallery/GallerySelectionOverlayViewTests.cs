@@ -1,3 +1,4 @@
+using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.VisualTree;
@@ -17,10 +18,14 @@ public sealed class GallerySelectionOverlayViewTests : AnimatedGalleryControlTes
 {
     private const double OverlayHeight = 320d;
     private const double OverlayWidth = 640d;
-    private const double SelectionPanelTintOpacity = 0.22d;
+
+    private static readonly TimeSpan SelectionFadeDuration =
+        TimeSpan.FromMilliseconds(180d);
+    private static readonly TimeSpan SelectionSlideDuration =
+        TimeSpan.FromMilliseconds(240d);
 
     [Fact]
-    public void IsActive_WhenChanged_UpdatesBlurPanelAndInputState()
+    public void IsActive_WhenChanged_UpdatesPanelAndInputState()
     {
         Dispatch(() =>
         {
@@ -33,14 +38,6 @@ public sealed class GallerySelectionOverlayViewTests : AnimatedGalleryControlTes
 
             try
             {
-                AnimatedBlurBackdropControl animatedBackdrop = overlay
-                    .GetVisualDescendants()
-                    .OfType<AnimatedBlurBackdropControl>()
-                    .Single();
-                BlurBackdropControl blurBackdrop = overlay
-                    .GetVisualDescendants()
-                    .OfType<BlurBackdropControl>()
-                    .Single();
                 Border selectionPanel = overlay.FindControl<Border>("SelectionPanel")
                     ?? throw new InvalidOperationException("Selection panel was not found.");
                 TranslateTransform translation = selectionPanel.RenderTransform
@@ -49,24 +46,16 @@ public sealed class GallerySelectionOverlayViewTests : AnimatedGalleryControlTes
                     .Subject;
                 selectionPanel.Transitions = null;
                 translation.Transitions = null;
-                animatedBackdrop.Transitions = null;
-                blurBackdrop.Transitions = null;
 
                 overlay.IsActive = true;
 
                 overlay.IsHitTestVisible.Should().BeTrue();
-                animatedBackdrop.IsActive.Should().BeTrue();
-                animatedBackdrop.Opacity.Should().Be(1d);
-                blurBackdrop.Intensity.Should().Be(1d);
                 selectionPanel.Opacity.Should().Be(1d);
                 translation.Y.Should().Be(0d);
 
                 overlay.IsActive = false;
 
                 overlay.IsHitTestVisible.Should().BeFalse();
-                animatedBackdrop.IsActive.Should().BeFalse();
-                animatedBackdrop.Opacity.Should().Be(0d);
-                blurBackdrop.Intensity.Should().Be(0d);
                 selectionPanel.Opacity.Should().Be(0d);
                 translation.Y.Should().BeLessThanOrEqualTo(-OverlayHeight);
             }
@@ -78,7 +67,7 @@ public sealed class GallerySelectionOverlayViewTests : AnimatedGalleryControlTes
     }
 
     [Fact]
-    public void Layout_WhenRendered_UsesSharedBlurAndEqualWidthActions()
+    public void Layout_WhenRendered_UsesTransparentAnimatedPanelAndEqualWidthActions()
     {
         Dispatch(() =>
         {
@@ -101,17 +90,30 @@ public sealed class GallerySelectionOverlayViewTests : AnimatedGalleryControlTes
                 IReadOnlyList<Button> buttons = actions.Children
                     .OfType<Button>()
                     .ToList();
-                SolidColorBrush panelBackground = selectionPanel.Background
+                Transitions panelTransitions = selectionPanel.Transitions
+                    ?? throw new InvalidOperationException(
+                        "Selection panel transitions were not found.");
+                DoubleTransition fadeTransition = panelTransitions
+                    .OfType<DoubleTransition>()
+                    .Single();
+                TranslateTransform translation = selectionPanel.RenderTransform
                     .Should()
-                    .BeOfType<SolidColorBrush>()
+                    .BeOfType<TranslateTransform>()
                     .Subject;
+                Transitions translationTransitions = translation.Transitions
+                    ?? throw new InvalidOperationException(
+                        "Selection panel translation transitions were not found.");
+                DoubleTransition slideTransition = translationTransitions
+                    .OfType<DoubleTransition>()
+                    .Single();
 
                 overlay.GetVisualDescendants()
-                    .OfType<AnimatedBlurBackdropControl>()
+                    .OfType<BlurBackdropControl>()
                     .Should()
-                    .ContainSingle();
-                panelBackground.Color.Should().Be(Colors.Black);
-                panelBackground.Opacity.Should().Be(SelectionPanelTintOpacity);
+                    .BeEmpty();
+                selectionPanel.Background.Should().BeNull();
+                fadeTransition.Duration.Should().Be(SelectionFadeDuration);
+                slideTransition.Duration.Should().Be(SelectionSlideDuration);
                 buttons.Should().HaveCount(3);
                 buttons.Select(button => button.Bounds.Width)
                     .Should()

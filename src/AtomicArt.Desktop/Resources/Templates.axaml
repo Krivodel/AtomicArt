@@ -13,6 +13,25 @@
                 Value="{StaticResource ShellCornerRadius}" />
     </Style>
 
+    <Style Selector="Border.generation-panel-content">
+        <Setter Property="Opacity"
+                Value="1" />
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                      Easing="{StaticResource TransientOverlayEasing}"
+                                      Property="Opacity" />
+                </Transitions>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.generation-panel-content.selection-mode">
+        <Setter Property="Opacity"
+                Value="0" />
+    </Style>
+
     <Style Selector=":is(Border).modal-glass-panel">
         <Setter Property="Padding"
                 Value="0" />
@@ -106,13 +125,6 @@
                 Value="False" />
         <Setter Property="Opacity"
                 Value="0" />
-        <Setter Property="Effect">
-            <DropShadowEffect BlurRadius="{StaticResource GallerySelectionHighlightGlowBlurRadius}"
-                              Color="{DynamicResource SukiSuccessColor}"
-                              OffsetX="0"
-                              OffsetY="0"
-                              Opacity="{StaticResource GallerySelectionHighlightGlowOpacity}" />
-        </Setter>
         <Setter Property="Transitions">
             <Setter.Value>
                 <Transitions>
@@ -126,15 +138,6 @@
     <Style Selector="galleryControls|GallerySelectionOutlineControl.gallery-selection-highlight.selected">
         <Setter Property="Opacity"
                 Value="1" />
-    </Style>
-
-    <Style Selector="Border.gallery-selection-overlay-panel">
-        <Setter Property="Padding"
-                Value="{StaticResource GallerySelectionOverlayPadding}" />
-        <Setter Property="Background"
-                Value="{StaticResource GallerySelectionOverlayTintBrush}" />
-        <Setter Property="CornerRadius"
-                Value="{StaticResource ShellCornerRadius}" />
     </Style>
 
     <Style Selector="Path.gallery-selection-check">
