@@ -1492,15 +1492,14 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
-    public async Task PricePreview_WhenAttachmentAdded_UpdatesGenerateButtonText()
+    public async Task PricePreview_WhenAttachmentAdded_IncreasesEstimatedPrice()
     {
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
-        string initialText = viewModel.GenerateButtonText;
+        decimal initialPrice = viewModel.Quote.EstimatedPrice;
 
         await AttachValidImagesAsync(viewModel, 1);
 
-        viewModel.GenerateButtonText.Should().NotBe(initialText);
-        viewModel.GenerateButtonText.Should().Contain("USD");
+        viewModel.Quote.EstimatedPrice.Should().BeGreaterThan(initialPrice);
     }
 
     private static void SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(

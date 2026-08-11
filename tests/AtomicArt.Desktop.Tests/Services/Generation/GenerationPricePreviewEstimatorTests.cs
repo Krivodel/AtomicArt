@@ -15,6 +15,10 @@ public sealed class GenerationPricePreviewEstimatorTests
     public void Estimate_WithPromptAttachmentResolutionAndGenerationCount_ReturnsEstimatedPrice()
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+        metadata = metadata with
+        {
+            Pricing = CreateTestPricing(estimatedCharactersPerTextToken: 4m)
+        };
         NanoBanana2GenerationParameters parameters = CreateParameters(
             metadata,
             prompt: "abcd",
@@ -28,7 +32,7 @@ public sealed class GenerationPricePreviewEstimatorTests
         GenerationPriceDto? price = _estimator.Estimate(parameters);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
-            0.0902005m,
+            0.001802m,
             metadata.Pricing.CurrencyCode,
             GenerationPriceSources.EstimatedModelMetadata));
     }
@@ -40,10 +44,7 @@ public sealed class GenerationPricePreviewEstimatorTests
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
         metadata = metadata with
         {
-            Pricing = metadata.Pricing with
-            {
-                EstimatedCharactersPerTextToken = 2m
-            }
+            Pricing = CreateTestPricing(estimatedCharactersPerTextToken: 2m)
         };
         NanoBanana2GenerationParameters parameters = CreateParameters(
             metadata,
@@ -58,7 +59,7 @@ public sealed class GenerationPricePreviewEstimatorTests
         GenerationPriceDto? price = estimator.Estimate(parameters);
 
         price.Should().BeEquivalentTo(new GenerationPriceDto(
-            0.090201m,
+            0.001804m,
             metadata.Pricing.CurrencyCode,
             GenerationPriceSources.EstimatedModelMetadata));
     }
@@ -77,6 +78,25 @@ public sealed class GenerationPricePreviewEstimatorTests
         GenerationPriceDto? price = _estimator.Estimate(parameters);
 
         price.Should().BeNull();
+    }
+
+    private static GenerationModelPricingMetadataDto CreateTestPricing(
+        decimal estimatedCharactersPerTextToken)
+    {
+        Dictionary<string, int> outputImageTokensByResolution = new(StringComparer.Ordinal)
+        {
+            ["512"] = 200
+        };
+
+        return new GenerationModelPricingMetadataDto(
+            "USD",
+            2m,
+            0.1m,
+            3m,
+            4m,
+            estimatedCharactersPerTextToken,
+            100,
+            outputImageTokensByResolution);
     }
 
     private static NanoBanana2GenerationParameters CreateParameters(
