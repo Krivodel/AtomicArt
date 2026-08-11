@@ -9,7 +9,6 @@
     <x:Double x:Key="OverlayBackdropOpacity">0.72</x:Double>
     <x:Double x:Key="TransientOverlayBlurRadius">24</x:Double>
     <x:Double x:Key="GalleryUnselectedCardDimOpacity">0.44</x:Double>
-    <x:Double x:Key="GallerySelectionHighlightBorderThickness">3</x:Double>
     <x:Double x:Key="GallerySelectionIndicatorSize">28</x:Double>
     <x:Double x:Key="GallerySelectionCheckStrokeThickness">2.5</x:Double>
     <x:Double x:Key="GallerySelectionShadowBlurRadius">5</x:Double>

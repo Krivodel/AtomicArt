@@ -1,7 +1,9 @@
-using Avalonia.Controls.Shapes;
-using Avalonia.Controls;
-using Avalonia.Media;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
+using Avalonia.Media;
+
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
@@ -12,15 +14,9 @@ internal sealed class GalleryOverlayEffects
     private const int RevealFirstPulseDurationMilliseconds = 270;
     private const int RevealSecondPulseDurationMilliseconds =
         RevealHighlightDurationMilliseconds - RevealFirstPulseDurationMilliseconds;
-    private const double RevealHighlightBorderThickness = 2d;
-    private const double RevealHighlightShadowBlurRadius = 18d;
-    private const double RevealHighlightShadowOpacity = 0.8d;
     private const double TargetFlashExpandedScale = 1.10d;
     private const double RevealFirstPulseExpandedScale = 1.05d;
     private const double RevealSecondPulseExpandedScale = 1.10d;
-    private const string RevealHighlightBorderColor = "#F273F2A7";
-    private const string RevealHighlightBackgroundColor = "#2434D399";
-    private const string RevealHighlightShadowColor = "#22C55E";
 
     private readonly UiAnimationScheduler _animationScheduler;
 
@@ -222,16 +218,16 @@ internal sealed class GalleryOverlayEffects
             Width = rect.Width,
             Height = rect.Height,
             CornerRadius = cornerRadius,
-            BorderBrush = Brush.Parse(RevealHighlightBorderColor),
-            BorderThickness = new Thickness(RevealHighlightBorderThickness),
-            Background = Brush.Parse(RevealHighlightBackgroundColor),
+            BorderBrush = new SolidColorBrush(GalleryHighlightPalette.BorderColor),
+            BorderThickness = GalleryHighlightPalette.BorderThickness,
+            Background = new SolidColorBrush(GalleryHighlightPalette.BackgroundColor),
             Effect = new DropShadowEffect
             {
-                BlurRadius = RevealHighlightShadowBlurRadius,
-                Color = Color.Parse(RevealHighlightShadowColor),
+                BlurRadius = GalleryHighlightPalette.ShadowBlurRadius,
+                Color = GalleryHighlightPalette.ShadowColor,
                 OffsetX = 0d,
                 OffsetY = 0d,
-                Opacity = RevealHighlightShadowOpacity
+                Opacity = GalleryHighlightPalette.ShadowOpacity
             },
             Opacity = 0d
         };

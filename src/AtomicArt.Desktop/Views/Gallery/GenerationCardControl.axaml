@@ -2,100 +2,95 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:AtomicArt.Desktop.Views.Gallery"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
-             xmlns:galleryControls="using:AtomicArt.Desktop.Controls.Gallery"
              xmlns:uiControls="using:AtomicArt.Desktop.Controls"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationCardControl"
              x:DataType="gallery:GenerationItemViewModel">
     <Border x:Name="GenerationCardContainer"
             Classes="generation-card-container">
-        <galleryControls:GallerySelectionCardPanel x:Name="SelectionCardPanel"
-                                                    ClipToBounds="False"
-                                                    OutlineThickness="{StaticResource GallerySelectionHighlightBorderThickness}">
-            <Border x:Name="GenerationCardRoot"
-                    Classes="generation-card">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="{StaticResource GenerationCardPreviewHeight}" />
-                        <RowDefinition Height="{StaticResource GenerationCardInfoHeight}" />
-                    </Grid.RowDefinitions>
+        <Border x:Name="GenerationCardRoot"
+                Classes="generation-card">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="{StaticResource GenerationCardPreviewHeight}" />
+                    <RowDefinition Height="{StaticResource GenerationCardInfoHeight}" />
+                </Grid.RowDefinitions>
 
-                    <controls:GenerationPreviewControl x:Name="GenerationPreview"
-                                                       Grid.Row="0"
-                                                       PreviewSize="{StaticResource GenerationCardWidth}"
-                                                       PreviewPath="{Binding DisplayThumbnailPath}"
-                                                       OpenViewerCommand="{Binding $parent[controls:GenerationCardControl].OpenViewerCommand}"
-                                                       ShowFailureDetailsCommand="{Binding $parent[controls:GenerationCardControl].ShowFailureDetailsCommand}" />
+                <controls:GenerationPreviewControl x:Name="GenerationPreview"
+                                                   Grid.Row="0"
+                                                   PreviewSize="{StaticResource GenerationCardWidth}"
+                                                   PreviewPath="{Binding DisplayThumbnailPath}"
+                                                   OpenViewerCommand="{Binding $parent[controls:GenerationCardControl].OpenViewerCommand}"
+                                                   ShowFailureDetailsCommand="{Binding $parent[controls:GenerationCardControl].ShowFailureDetailsCommand}" />
 
-                    <Border Grid.Row="1"
-                            Classes="generation-card-info">
-                        <Grid RowDefinitions="*,Auto">
-                            <uiControls:OverflowEllipsisTextBlock Grid.Row="0"
-                                                                  Classes="generation-card-prompt"
-                                                                  Text="{Binding Prompt}" />
-                            <Grid Grid.Row="1"
-                                  ColumnDefinitions="*,Auto">
-                                <TextBlock Grid.Column="0"
-                                           Classes="generation-card-model"
-                                           Text="{Binding ModelDisplayName}" />
-                                <TextBlock Grid.Column="1"
-                                           Classes="generation-card-time"
-                                           Text="{Binding ElapsedText}" />
-                            </Grid>
+                <Border Grid.Row="1"
+                        Classes="generation-card-info">
+                    <Grid RowDefinitions="*,Auto">
+                        <uiControls:OverflowEllipsisTextBlock Grid.Row="0"
+                                                              Classes="generation-card-prompt"
+                                                              Text="{Binding Prompt}" />
+                        <Grid Grid.Row="1"
+                              ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Classes="generation-card-model"
+                                       Text="{Binding ModelDisplayName}" />
+                            <TextBlock Grid.Column="1"
+                                       Classes="generation-card-time"
+                                       Text="{Binding ElapsedText}" />
                         </Grid>
-                    </Border>
+                    </Grid>
+                </Border>
 
-                    <Button Grid.Row="1"
-                            Classes="card-zone-hit-target"
-                            IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
-                            Cursor="Arrow"
-                            Command="{Binding $parent[controls:GenerationCardControl].OpenMetadataCommand}"
-                            CommandParameter="{Binding}" />
+                <Button Grid.Row="1"
+                        Classes="card-zone-hit-target"
+                        Cursor="Arrow"
+                        IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
+                        Command="{Binding $parent[controls:GenerationCardControl].OpenMetadataCommand}"
+                        CommandParameter="{Binding}" />
 
-                    <Border x:Name="SelectionDimmingOverlay"
-                            Grid.RowSpan="2"
-                            ZIndex="10"
-                            Classes="gallery-selection-dimming-overlay" />
+                <Border x:Name="SelectionDimmingOverlay"
+                        Grid.RowSpan="2"
+                        ZIndex="10"
+                        Classes="gallery-selection-dimming-overlay" />
 
-                    <Button x:Name="RevealInFolderButton"
-                            Grid.Row="0"
-                            ZIndex="20"
-                            Margin="{StaticResource GalleryCardActionMargin}"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Top"
-                            Classes="Icon card-action card-action-left"
-                            IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
-                            Click="OnRevealInFolderClick">
-                        <PathIcon Classes="card-action-icon"
-                                  Data="{StaticResource GalleryFolderIcon}" />
-                    </Button>
+                <Border x:Name="SelectionHighlight"
+                        Grid.RowSpan="2"
+                        ZIndex="15"
+                        Classes="gallery-selection-highlight"
+                        Classes.selected="{Binding IsSelected}" />
 
-                    <Button x:Name="ToggleSelectionButton"
-                            Grid.Row="0"
-                            ZIndex="20"
-                            Margin="{StaticResource GalleryCardActionMargin}"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Classes="Icon card-action card-action-right card-selection-toggle"
-                            Classes.selected="{Binding IsSelected}"
-                            Focusable="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
-                            IsHitTestVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
-                            Click="OnSelectionClick">
-                        <Path Classes="gallery-selection-check" />
-                    </Button>
+                <Button x:Name="RevealInFolderButton"
+                        Grid.Row="0"
+                        ZIndex="20"
+                        Margin="{StaticResource GalleryCardActionMargin}"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Classes="Icon card-action card-action-left"
+                        IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
+                        Click="OnRevealInFolderClick">
+                    <PathIcon Classes="card-action-icon"
+                              Data="{StaticResource GalleryFolderIcon}" />
+                </Button>
 
-                    <Button Grid.RowSpan="2"
-                            ZIndex="30"
-                            Classes="card-zone-hit-target"
-                            IsVisible="{Binding $parent[controls:GenerationCardControl].IsSelectionMode}"
-                            Click="OnSelectionClick" />
-                </Grid>
-            </Border>
+                <Button x:Name="ToggleSelectionButton"
+                        Grid.Row="0"
+                        ZIndex="20"
+                        Margin="{StaticResource GalleryCardActionMargin}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Classes="Icon card-action card-action-right card-selection-toggle"
+                        Classes.selected="{Binding IsSelected}"
+                        Focusable="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
+                        IsHitTestVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
+                        Click="OnSelectionClick">
+                    <Path Classes="gallery-selection-check" />
+                </Button>
 
-            <galleryControls:GallerySelectionOutlineControl x:Name="SelectionHighlight"
-                                                            ZIndex="1"
-                                                            Classes="gallery-selection-highlight"
-                                                            Classes.selected="{Binding IsSelected}"
-                                                            StrokeThickness="{Binding #SelectionCardPanel.OutlineThickness}" />
-        </galleryControls:GallerySelectionCardPanel>
+                <Button Grid.RowSpan="2"
+                        ZIndex="30"
+                        Classes="card-zone-hit-target"
+                        IsVisible="{Binding $parent[controls:GenerationCardControl].IsSelectionMode}"
+                        Click="OnSelectionClick" />
+            </Grid>
+        </Border>
     </Border>
 </UserControl>

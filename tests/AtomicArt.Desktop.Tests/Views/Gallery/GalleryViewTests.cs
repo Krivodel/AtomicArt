@@ -17,6 +17,7 @@ using Xunit;
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Controls.Overlays;
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
@@ -246,8 +247,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     .Single();
                 Button toggleSelectionButton = card.FindControl<Button>("ToggleSelectionButton")
                     ?? throw new InvalidOperationException("Selection button was not found.");
-                GallerySelectionOutlineControl selectionHighlight = card
-                    .FindControl<GallerySelectionOutlineControl>("SelectionHighlight")
+                Border selectionHighlight = card
+                    .FindControl<Border>("SelectionHighlight")
                     ?? throw new InvalidOperationException("Selection highlight was not found.");
                 Border cardRoot = card.FindControl<Border>("GenerationCardRoot")
                     ?? throw new InvalidOperationException("Generation card root was not found.");
@@ -260,6 +261,14 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 Avalonia.Media.Geometry selectionGeometry = selectionCheck.Data
                     ?? throw new InvalidOperationException("Selection geometry was not found.");
                 ISolidColorBrush toggleBackground = toggleSelectionButton.Background
+                    .Should()
+                    .BeAssignableTo<ISolidColorBrush>()
+                    .Subject;
+                ISolidColorBrush highlightBackground = selectionHighlight.Background
+                    .Should()
+                    .BeAssignableTo<ISolidColorBrush>()
+                    .Subject;
+                ISolidColorBrush highlightBorder = selectionHighlight.BorderBrush
                     .Should()
                     .BeAssignableTo<ISolidColorBrush>()
                     .Subject;
@@ -280,20 +289,22 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 selectionCheck.Stroke.Should().NotBeNull();
                 selectionCheck.Effect.Should().BeOfType<DropShadowEffect>();
                 selectionHighlight.Opacity.Should().Be(0d);
-                selectionHighlight.Stroke.Should().NotBeNull();
-                selectionHighlight.StrokeThickness.Should().Be(3d);
+                highlightBackground.Color.Should().Be(GalleryHighlightPalette.BackgroundColor);
+                highlightBorder.Color.Should().Be(GalleryHighlightPalette.BorderColor);
+                selectionHighlight.BorderThickness.Should().Be(
+                    GalleryHighlightPalette.BorderThickness);
+                selectionHighlight.CornerRadius.Should().Be(cardRoot.CornerRadius);
                 selectionHighlight.Effect.Should().BeNull();
-                selectionHighlight.ClipToBounds.Should().BeFalse();
+                selectionHighlight.IsHitTestVisible.Should().BeFalse();
                 selectionHighlight.Margin.Should().Be(default(Thickness));
                 cardRoot.ClipToBounds.Should().BeTrue();
                 cardContainer.ClipToBounds.Should().BeFalse();
                 Point highlightPosition = selectionHighlight.TranslatePoint(
-                        new Point(0d, 0d),
-                        cardRoot)
+                    new Point(0d, 0d),
+                    cardRoot)
                     ?? throw new InvalidOperationException("Selection highlight position was not found.");
-                highlightPosition.Should().Be(new Point(-3d, -3d));
-                selectionHighlight.Bounds.Width.Should().Be(cardRoot.Bounds.Width + 6d);
-                selectionHighlight.Bounds.Height.Should().Be(cardRoot.Bounds.Height + 6d);
+                highlightPosition.Should().Be(default(Point));
+                selectionHighlight.Bounds.Size.Should().Be(cardRoot.Bounds.Size);
 
                 Canvas overlayCanvas = GetOverlayCanvas(gallery);
                 GalleryLayoutService galleryLayout = new();
@@ -405,11 +416,11 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     ?? throw new InvalidOperationException("Selection dimming overlay was not found.");
                 Border secondDimmingOverlay = secondCard.FindControl<Border>("SelectionDimmingOverlay")
                     ?? throw new InvalidOperationException("Selection dimming overlay was not found.");
-                GallerySelectionOutlineControl firstSelectionHighlight = firstCard
-                    .FindControl<GallerySelectionOutlineControl>("SelectionHighlight")
+                Border firstSelectionHighlight = firstCard
+                    .FindControl<Border>("SelectionHighlight")
                     ?? throw new InvalidOperationException("Selection highlight was not found.");
-                GallerySelectionOutlineControl secondSelectionHighlight = secondCard
-                    .FindControl<GallerySelectionOutlineControl>("SelectionHighlight")
+                Border secondSelectionHighlight = secondCard
+                    .FindControl<Border>("SelectionHighlight")
                     ?? throw new InvalidOperationException("Selection highlight was not found.");
                 firstDimmingOverlay.Transitions = null;
                 secondDimmingOverlay.Transitions = null;
