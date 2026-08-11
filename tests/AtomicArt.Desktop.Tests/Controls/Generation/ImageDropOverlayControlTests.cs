@@ -57,7 +57,8 @@ public sealed class ImageDropOverlayControlTests : AnimatedGalleryControlTestBas
 
             try
             {
-                Grid overlayChrome = overlay.FindControl<Grid>("OverlayChrome")
+                ImageDropDashedBorderControl overlayChrome =
+                    overlay.FindControl<ImageDropDashedBorderControl>("OverlayChrome")
                     ?? throw new InvalidOperationException("Drop overlay chrome was not found.");
                 StackPanel animatedContent = overlay.FindControl<StackPanel>("AnimatedContent")
                     ?? throw new InvalidOperationException("Drop overlay content was not found.");
@@ -99,11 +100,16 @@ public sealed class ImageDropOverlayControlTests : AnimatedGalleryControlTestBas
                     .GetVisualDescendants()
                     .OfType<BlurBackdropControl>()
                     .Single();
+                AnimatedBlurBackdropControl animatedBackdrop = overlay
+                    .GetVisualDescendants()
+                    .OfType<AnimatedBlurBackdropControl>()
+                    .Single();
                 Border backdropChrome = blurBackdrop.GetVisualParent<Border>()
                     ?? throw new InvalidOperationException("Drop backdrop chrome was not found.");
 
                 blurBackdrop.BlurRadius.Should().Be(DefaultBlurRadius);
                 blurBackdrop.IsDynamic.Should().BeTrue();
+                animatedBackdrop.IsActive.Should().BeTrue();
                 backdropChrome.Background.Should().BeNull();
             }
             finally
@@ -155,7 +161,8 @@ public sealed class ImageDropOverlayControlTests : AnimatedGalleryControlTestBas
 
             try
             {
-                Grid overlayChrome = overlay.FindControl<Grid>("OverlayChrome")
+                ImageDropDashedBorderControl overlayChrome =
+                    overlay.FindControl<ImageDropDashedBorderControl>("OverlayChrome")
                     ?? throw new InvalidOperationException("Drop overlay chrome was not found.");
                 BlurBackdropControl blurBackdrop = overlay
                     .GetVisualDescendants()

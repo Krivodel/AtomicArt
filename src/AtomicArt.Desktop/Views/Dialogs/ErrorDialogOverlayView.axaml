@@ -6,15 +6,15 @@
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              x:Class="AtomicArt.Desktop.Views.Dialogs.ErrorDialogOverlayView"
              x:DataType="dialogs:ErrorDialogViewModel">
-    <overlays:ModalOverlayControl Width="{StaticResource ErrorDialogOverlayWidth}"
+    <overlays:ModalOverlayControl Width="{StaticResource DialogOverlayWidth}"
                                   Title="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Error}}"
                                   CloseCommand="{Binding CloseCommand}">
         <overlays:ModalOverlayControl.Body>
-            <StackPanel Margin="{StaticResource ErrorDialogContentMargin}"
-                        Spacing="{StaticResource ErrorDialogContentSpacing}">
+            <StackPanel Margin="{StaticResource DialogContentMargin}"
+                        Spacing="{StaticResource DialogContentSpacing}">
                 <TextBlock TextWrapping="Wrap"
                            Text="{Binding Message}" />
-                <Button MinWidth="{StaticResource ErrorDialogActionButtonMinWidth}"
+                <Button MinWidth="{StaticResource DialogActionButtonMinWidth}"
                         HorizontalAlignment="Right"
                         Content="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Copy}}"
                         Command="{Binding CopyCommand}" />

@@ -69,6 +69,167 @@ public sealed class GalleryViewModelTests
     }
 
     [Fact]
+    public void ToggleSelectionCommand_WhenInactive_EntersSelectionModeWithSelectedItem()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(prompt: "First"));
+
+        viewModel.ToggleSelectionCommand.Execute(item);
+
+        viewModel.IsSelectionMode.Should().BeTrue();
+        viewModel.SelectedCount.Should().Be(1);
+        item.IsSelected.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ToggleSelectionCommand_WithLastSelectedItem_ExitsSelectionMode()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(prompt: "First"));
+        viewModel.ToggleSelectionCommand.Execute(item);
+
+        viewModel.ToggleSelectionCommand.Execute(item);
+
+        item.IsSelected.Should().BeFalse();
+        viewModel.SelectedCount.Should().Be(0);
+        viewModel.IsSelectionMode.Should().BeFalse();
+        viewModel.DeleteSelectedCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void SelectRangeCommand_AfterAnchorSelection_SelectsContiguousItems()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        List<GenerationItemDto> items =
+        [
+            GalleryViewModelTestFactory.CreateItem(prompt: "First"),
+            GalleryViewModelTestFactory.CreateItem(prompt: "Second"),
+            GalleryViewModelTestFactory.CreateItem(prompt: "Third"),
+            GalleryViewModelTestFactory.CreateItem(prompt: "Fourth")
+        ];
+        viewModel.AddGeneratedItems(items, 0);
+        GenerationItemViewModel anchor = viewModel.Items[0];
+        GenerationItemViewModel target = viewModel.Items[2];
+        viewModel.ToggleSelectionCommand.Execute(anchor);
+
+        viewModel.SelectRangeCommand.Execute(target);
+
+        viewModel.Items.Take(3).Should().OnlyContain(item => item.IsSelected);
+        viewModel.Items[3].IsSelected.Should().BeFalse();
+        viewModel.SelectedCount.Should().Be(3);
+    }
+
+    [Fact]
+    public void SelectAllCommand_WhenInactive_SelectsEveryItemAndEntersSelectionMode()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        List<GenerationItemDto> items =
+        [
+            GalleryViewModelTestFactory.CreateItem(prompt: "First"),
+            GalleryViewModelTestFactory.CreateItem(prompt: "Second"),
+            GalleryViewModelTestFactory.CreateItem(prompt: "Third")
+        ];
+        viewModel.AddGeneratedItems(items, 0);
+        viewModel.SelectAllCommand.Execute(null);
+
+        viewModel.Items.Should().OnlyContain(item => item.IsSelected);
+        viewModel.SelectedCount.Should().Be(viewModel.Items.Count);
+        viewModel.IsSelectionMode.Should().BeTrue();
+        viewModel.SelectAllCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ExitSelectionModeCommand_WithSelectedItems_ClearsSelection()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(prompt: "First"));
+        viewModel.ToggleSelectionCommand.Execute(item);
+
+        viewModel.ExitSelectionModeCommand.Execute(null);
+
+        viewModel.IsSelectionMode.Should().BeFalse();
+        viewModel.SelectedCount.Should().Be(0);
+        item.IsSelected.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteSelectedCommand_WhenConfirmed_DeletesSelectionAsSingleMutation()
+    {
+        RecordingDialogService dialogService = new();
+        RecordingAnimatedGalleryOperations operations = new();
+        RecordingGalleryItemDeletionService deletionService = new();
+        RecordingGalleryStateService galleryStateService = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            dialogService: dialogService,
+            animatedGalleryOperations: operations,
+            galleryStateService: galleryStateService,
+            galleryItemDeletionService: deletionService);
+        List<GenerationItemDto> items =
+        [
+            GalleryViewModelTestFactory.CreateItem(prompt: "First", imagePath: "first.png"),
+            GalleryViewModelTestFactory.CreateItem(prompt: "Second", imagePath: "second.png"),
+            GalleryViewModelTestFactory.CreateItem(prompt: "Remaining", imagePath: "remaining.png")
+        ];
+        viewModel.AddGeneratedItems(items, 0);
+        GenerationItemViewModel first = viewModel.Items.Single(item => item.Prompt == "First");
+        GenerationItemViewModel second = viewModel.Items.Single(item => item.Prompt == "Second");
+        viewModel.ToggleSelectionCommand.Execute(first);
+        viewModel.ToggleSelectionCommand.Execute(second);
+
+        await viewModel.DeleteSelectedCommand.ExecuteAsync(null);
+
+        dialogService.ConfirmationRequests.Should().ContainSingle();
+        viewModel.Items.Should().ContainSingle()
+            .Which.Prompt.Should().Be("Remaining");
+        viewModel.IsSelectionMode.Should().BeFalse();
+        operations.MixedMutationCallCount.Should().Be(1);
+        operations.RemoveCallCount.Should().Be(0);
+        operations.LastMixedMutationItems.Should().ContainSingle()
+            .Which.Should().BeSameAs(viewModel.Items[0]);
+        deletionService.BatchCallCount.Should().Be(1);
+        deletionService.Requests.Should().HaveCount(2);
+        galleryStateService.SaveCallCount.Should().Be(1);
+        galleryStateService.SavedItems.Should().ContainSingle()
+            .Which.Prompt.Should().Be("Remaining");
+    }
+
+    [Fact]
+    public async Task DeleteSelectedCommand_WhenDeclined_KeepsSelectionAndItems()
+    {
+        RecordingDialogService dialogService = new()
+        {
+            ConfirmationResult = false
+        };
+        RecordingAnimatedGalleryOperations operations = new();
+        RecordingGalleryItemDeletionService deletionService = new();
+        RecordingGalleryStateService galleryStateService = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            dialogService: dialogService,
+            animatedGalleryOperations: operations,
+            galleryStateService: galleryStateService,
+            galleryItemDeletionService: deletionService);
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(prompt: "First"));
+        viewModel.ToggleSelectionCommand.Execute(item);
+
+        await viewModel.DeleteSelectedCommand.ExecuteAsync(null);
+
+        viewModel.Items.Should().ContainSingle();
+        viewModel.IsSelectionMode.Should().BeTrue();
+        item.IsSelected.Should().BeTrue();
+        operations.MixedMutationCallCount.Should().Be(0);
+        deletionService.BatchCallCount.Should().Be(0);
+        galleryStateService.SaveCallCount.Should().Be(0);
+    }
+
+    [Fact]
     public async Task DeleteOrCancelAsync_WithCompletedItem_SavesStateWithoutItem()
     {
         RecordingGalleryStateService galleryStateService = new();
@@ -810,13 +971,24 @@ public sealed class GalleryViewModelTests
 
     private sealed class RecordingGalleryItemDeletionService : IGalleryItemDeletionService
     {
-        private readonly List<GalleryItemDeletionRequest> _requests = [];
-
+        public int BatchCallCount { get; private set; }
         public IReadOnlyList<GalleryItemDeletionRequest> Requests => _requests;
+
+        private readonly List<GalleryItemDeletionRequest> _requests = [];
 
         public Task DeleteFilesAsync(GalleryItemDeletionRequest request, CancellationToken ct)
         {
             _requests.Add(request);
+
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteFilesAsync(
+            IReadOnlyList<GalleryItemDeletionRequest> requests,
+            CancellationToken ct)
+        {
+            BatchCallCount++;
+            _requests.AddRange(requests);
 
             return Task.CompletedTask;
         }

@@ -79,7 +79,24 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         generationCard.RevealInNewFolderWindowCommand =
             commands.RevealInNewFolderWindow;
         generationCard.OpenMetadataCommand = commands.OpenMetadata;
-        generationCard.DeleteOrCancelCommand = commands.DeleteOrCancel;
+        generationCard.ToggleSelectionCommand = commands.ToggleSelection;
+        generationCard.SelectRangeCommand = commands.SelectRange;
+    }
+
+    public void ApplySelectionMode(Control control, bool isSelectionMode)
+    {
+        ArgumentNullException.ThrowIfNull(control);
+
+        GenerationCardControl generationCard = RequireGenerationCard(control);
+        generationCard.IsSelectionMode = isSelectionMode;
+    }
+
+    public void ApplySelectionDimming(Control control, bool isDimmed)
+    {
+        ArgumentNullException.ThrowIfNull(control);
+
+        GenerationCardControl generationCard = RequireGenerationCard(control);
+        generationCard.IsSelectionDimmed = isDimmed;
     }
 
     public bool CanRetainRecycledControl(Control control)
@@ -107,6 +124,8 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         }
 
         generationCard.ZIndex = 0;
+        generationCard.IsSelectionMode = false;
+        generationCard.IsSelectionDimmed = false;
         generationCard.DataContext = null;
         generationCard.IsVisible = false;
 

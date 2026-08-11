@@ -102,8 +102,21 @@ public sealed class GalleryItemsController
     {
         ArgumentNullException.ThrowIfNull(item);
 
+        GenerationItemViewModel[] items = [item];
+        DeleteItems(items);
+    }
+
+    public void DeleteItems(IReadOnlyList<GenerationItemViewModel> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
         bool wasEmpty = IsEmpty;
-        _items.Remove(item);
+
+        foreach (GenerationItemViewModel item in items)
+        {
+            _items.Remove(item);
+        }
+
         NotifyIsEmptyChanged(wasEmpty);
     }
 

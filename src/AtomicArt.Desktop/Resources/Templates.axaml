@@ -1,5 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:galleryControls="using:AtomicArt.Desktop.Controls.Gallery"
+        xmlns:galleryViews="using:AtomicArt.Desktop.Views.Gallery">
     <Style Selector="Border.generation-panel">
         <Setter Property="Padding"
                 Value="{StaticResource GenerationPanelPadding}" />
@@ -41,13 +43,26 @@
                 Value="{StaticResource AttachmentPreviewCornerRadius}" />
     </Style>
 
-    <Style Selector="Border.generation-card">
+    <Style Selector="Border.generation-card-container">
         <Setter Property="Width"
                 Value="{StaticResource GenerationCardWidth}" />
         <Setter Property="Height"
                 Value="{StaticResource GenerationCardHeight}" />
         <Setter Property="Margin"
                 Value="{StaticResource GalleryCardMargin}" />
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="ClipToBounds"
+                Value="False" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource GenerationCardCornerRadius}" />
+    </Style>
+
+    <Style Selector="Border.generation-card">
         <Setter Property="Padding"
                 Value="{StaticResource ZeroThickness}" />
         <Setter Property="Background"
@@ -58,6 +73,98 @@
                 Value="True" />
         <Setter Property="CornerRadius"
                 Value="{StaticResource GenerationCardCornerRadius}" />
+    </Style>
+
+    <Style Selector="Border.gallery-selection-dimming-overlay">
+        <Setter Property="Background"
+                Value="{StaticResource GalleryUnselectedCardDimBrush}" />
+        <Setter Property="IsHitTestVisible"
+                Value="False" />
+        <Setter Property="Opacity"
+                Value="0" />
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <DoubleTransition Property="Opacity"
+                                      Duration="{StaticResource GenerationCardVisualStateTransitionDuration}" />
+                </Transitions>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="galleryViews|GenerationCardControl:selection-dimmed Border.gallery-selection-dimming-overlay">
+        <Setter Property="Opacity"
+                Value="1" />
+    </Style>
+
+    <Style Selector="galleryControls|GallerySelectionOutlineControl.gallery-selection-highlight">
+        <Setter Property="Stroke"
+                Value="{DynamicResource SukiSuccessColor}" />
+        <Setter Property="ClipToBounds"
+                Value="False" />
+        <Setter Property="IsHitTestVisible"
+                Value="False" />
+        <Setter Property="Opacity"
+                Value="0" />
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="{StaticResource GallerySelectionHighlightGlowBlurRadius}"
+                              Color="{DynamicResource SukiSuccessColor}"
+                              OffsetX="0"
+                              OffsetY="0"
+                              Opacity="{StaticResource GallerySelectionHighlightGlowOpacity}" />
+        </Setter>
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <DoubleTransition Property="Opacity"
+                                      Duration="{StaticResource GenerationCardVisualStateTransitionDuration}" />
+                </Transitions>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="galleryControls|GallerySelectionOutlineControl.gallery-selection-highlight.selected">
+        <Setter Property="Opacity"
+                Value="1" />
+    </Style>
+
+    <Style Selector="Border.gallery-selection-overlay-panel">
+        <Setter Property="Padding"
+                Value="{StaticResource GallerySelectionOverlayPadding}" />
+        <Setter Property="Background"
+                Value="{StaticResource GallerySelectionOverlayTintBrush}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource ShellCornerRadius}" />
+    </Style>
+
+    <Style Selector="Path.gallery-selection-check">
+        <Setter Property="Width"
+                Value="{StaticResource GenerationCardActionIconSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource GenerationCardActionIconSize}" />
+        <Setter Property="HorizontalAlignment"
+                Value="Center" />
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+        <Setter Property="Data"
+                Value="{StaticResource GallerySelectionCheckIcon}" />
+        <Setter Property="Stretch"
+                Value="None" />
+        <Setter Property="Stroke"
+                Value="{DynamicResource SukiText}" />
+        <Setter Property="StrokeLineCap"
+                Value="Round" />
+        <Setter Property="StrokeJoin"
+                Value="Round" />
+        <Setter Property="StrokeThickness"
+                Value="{StaticResource GallerySelectionCheckStrokeThickness}" />
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="{StaticResource GallerySelectionShadowBlurRadius}"
+                              Color="{StaticResource GallerySelectionTintColor}"
+                              OffsetX="0"
+                              OffsetY="{StaticResource GallerySelectionShadowOffsetY}"
+                              Opacity="{StaticResource GallerySelectionShadowOpacity}" />
+        </Setter>
     </Style>
 
     <Style Selector="Border.image-preview-shadow">

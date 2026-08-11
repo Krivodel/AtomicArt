@@ -181,5 +181,12 @@ internal static class GalleryViewModelTestFactory
         {
             return Task.CompletedTask;
         }
+
+        public Task DeleteFilesAsync(
+            IReadOnlyList<GalleryItemDeletionRequest> requests,
+            CancellationToken ct)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

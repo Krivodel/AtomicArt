@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.ComponentModel;
 
 using Avalonia;
 using Avalonia.Controls;
@@ -51,10 +52,20 @@ public partial class AnimatedGalleryControl : UserControl
         get => GetValue(OpenMetadataCommandProperty);
         set => SetValue(OpenMetadataCommandProperty, value);
     }
-    public IRelayCommand? DeleteOrCancelCommand
+    public IRelayCommand? ToggleSelectionCommand
     {
-        get => GetValue(DeleteOrCancelCommandProperty);
-        set => SetValue(DeleteOrCancelCommandProperty, value);
+        get => GetValue(ToggleSelectionCommandProperty);
+        set => SetValue(ToggleSelectionCommandProperty, value);
+    }
+    public IRelayCommand? SelectRangeCommand
+    {
+        get => GetValue(SelectRangeCommandProperty);
+        set => SetValue(SelectRangeCommandProperty, value);
+    }
+    public bool IsSelectionMode
+    {
+        get => GetValue(IsSelectionModeProperty);
+        set => SetValue(IsSelectionModeProperty, value);
     }
     public IAnimatedGalleryOperations? Operations
     {
@@ -80,9 +91,15 @@ public partial class AnimatedGalleryControl : UserControl
     public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(OpenMetadataCommand));
-    public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
+    public static readonly StyledProperty<IRelayCommand?> ToggleSelectionCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
-            nameof(DeleteOrCancelCommand));
+            nameof(ToggleSelectionCommand));
+    public static readonly StyledProperty<IRelayCommand?> SelectRangeCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(SelectRangeCommand));
+    public static readonly StyledProperty<bool> IsSelectionModeProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, bool>(
+            nameof(IsSelectionMode));
     public static readonly StyledProperty<IAnimatedGalleryOperations?> OperationsProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IAnimatedGalleryOperations?>(
             nameof(Operations));
@@ -98,6 +115,7 @@ public partial class AnimatedGalleryControl : UserControl
 
     private readonly AnimatedGallerySceneController _sceneController;
     private readonly CollectionChangedSubscription _itemsSubscription;
+    private readonly PropertyChangedItemsSubscription<IGalleryItemViewModel> _itemPropertyChangedSubscription;
     private readonly Dictionary<Control, int> _previewOriginalZIndices = [];
     private readonly Dictionary<Control, IReadOnlyList<Visual>> _previewOverflowPaths = [];
     private readonly Dictionary<Visual, PreviewClipState> _previewClipStates = [];
@@ -108,6 +126,7 @@ public partial class AnimatedGalleryControl : UserControl
     private Point? _previewPointerPosition;
     private KeyModifiers _previewPointerModifiers;
     private bool _isPreviewPointerRefreshPending;
+    private bool _isSelectionVisualRefreshPending;
     private bool _isAttached;
 
     public AnimatedGalleryControl()
@@ -118,6 +137,9 @@ public partial class AnimatedGalleryControl : UserControl
     internal AnimatedGalleryControl(IAnimatedGallerySceneFactory? sceneFactory)
     {
         _itemsSubscription = new CollectionChangedSubscription(OnItemsCollectionChanged);
+        _itemPropertyChangedSubscription =
+            new PropertyChangedItemsSubscription<IGalleryItemViewModel>(
+                OnGalleryItemPropertyChanged);
         InitializeComponent();
         PreviewExpansionHost = new AnimatedGalleryPreviewExpansionHost(this);
         _sceneController = new AnimatedGallerySceneController(
@@ -241,6 +263,7 @@ public partial class AnimatedGalleryControl : UserControl
         EnsureResizeController();
         ResizeController.Attach();
         _itemsSubscription.ReplaceSource(Items);
+        _itemPropertyChangedSubscription.ReplaceSources(Items);
         _sceneController.RefreshItems();
         _sceneController.RefreshScene();
     }
@@ -254,6 +277,8 @@ public partial class AnimatedGalleryControl : UserControl
         ResizeController.CancelResizeAnimation();
         ResizeController.Detach();
         _itemsSubscription.Clear();
+        _itemPropertyChangedSubscription.Clear();
+        _isSelectionVisualRefreshPending = false;
         _previewPointerPosition = null;
         _previewPointerModifiers = KeyModifiers.None;
         ResetPreviewOverflow();
@@ -282,6 +307,13 @@ public partial class AnimatedGalleryControl : UserControl
             return;
         }
 
+        if (change.Property == IsSelectionModeProperty)
+        {
+            _sceneController.UpdateCardSelectionMode();
+            ScheduleSelectionVisualRefresh();
+            return;
+        }
+
         if (change.Property == BoundsProperty)
         {
             UpdateGalleryOpacityMask();
@@ -294,10 +326,12 @@ public partial class AnimatedGalleryControl : UserControl
         if (_isAttached)
         {
             _itemsSubscription.ReplaceSource(Items);
+            _itemPropertyChangedSubscription.ReplaceSources(Items);
         }
         else
         {
             _itemsSubscription.Clear();
+            _itemPropertyChangedSubscription.Clear();
         }
 
         _sceneController.RefreshItems();
@@ -317,13 +351,17 @@ public partial class AnimatedGalleryControl : UserControl
                || (property == OpenViewerCommandProperty)
                || (property == ShowFailureDetailsCommandProperty)
                || (property == OpenMetadataCommandProperty)
-               || (property == DeleteOrCancelCommandProperty);
+               || (property == ToggleSelectionCommandProperty)
+               || (property == SelectRangeCommandProperty);
     }
 
     private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         _ = sender;
         _ = e;
+
+        _itemPropertyChangedSubscription.ReplaceSources(Items);
+        ScheduleSelectionVisualRefresh();
 
         if ((Operations is not null) && (_sceneController.Scene is not null))
         {
@@ -332,6 +370,47 @@ public partial class AnimatedGalleryControl : UserControl
 
         _sceneController.RefreshItems();
         _sceneController.RefreshScene();
+    }
+
+    private void OnGalleryItemPropertyChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        _ = sender;
+
+        if (!string.IsNullOrEmpty(e.PropertyName)
+            && !string.Equals(
+                e.PropertyName,
+                nameof(IGalleryItemViewModel.IsSelected),
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        ScheduleSelectionVisualRefresh();
+    }
+
+    private void ScheduleSelectionVisualRefresh()
+    {
+        if (!_isAttached || _isSelectionVisualRefreshPending)
+        {
+            return;
+        }
+
+        _isSelectionVisualRefreshPending = true;
+        Dispatcher.Post(
+            RefreshSelectionVisual,
+            DispatcherPriority.Render);
+    }
+
+    private void RefreshSelectionVisual()
+    {
+        _isSelectionVisualRefreshPending = false;
+
+        if (_isAttached)
+        {
+            _sceneController.UpdateSelectionDimming();
+        }
     }
 
     private void EnsureResizeController()

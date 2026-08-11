@@ -219,9 +219,7 @@ internal sealed class GalleryLayoutService
         ArgumentNullException.ThrowIfNull(control);
         ArgumentNullException.ThrowIfNull(overlayCanvas);
 
-        Control surface = control is ContentControl { Content: Control content }
-            ? content
-            : control;
+        Control surface = ResolveCardSurface(control);
 
         if (!TryGetOverlayRect(surface, overlayCanvas, out rect))
         {
@@ -314,6 +312,18 @@ internal sealed class GalleryLayoutService
                 context.HiddenItemIds.Add(currentId);
             }
         }
+    }
+
+    private static Control ResolveCardSurface(Control control)
+    {
+        if (control is IGalleryCardSurfaceProvider surfaceProvider)
+        {
+            return surfaceProvider.CardSurface;
+        }
+
+        return control is ContentControl { Content: Control content }
+            ? content
+            : control;
     }
 
     private static void RecycleAllControls(GalleryOperationCoordinator context)

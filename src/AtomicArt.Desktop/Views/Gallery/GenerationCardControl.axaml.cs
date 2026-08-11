@@ -16,6 +16,7 @@ namespace AtomicArt.Desktop.Views.Gallery;
 
 public partial class GenerationCardControl :
     UserControl,
+    IGalleryCardSurfaceProvider,
     IGalleryRemovalAnimationParticipant
 {
     public IRelayCommand? RevealInFolderCommand
@@ -43,10 +44,25 @@ public partial class GenerationCardControl :
         get => GetValue(OpenMetadataCommandProperty);
         set => SetValue(OpenMetadataCommandProperty, value);
     }
-    public IRelayCommand? DeleteOrCancelCommand
+    public IRelayCommand? ToggleSelectionCommand
     {
-        get => GetValue(DeleteOrCancelCommandProperty);
-        set => SetValue(DeleteOrCancelCommandProperty, value);
+        get => GetValue(ToggleSelectionCommandProperty);
+        set => SetValue(ToggleSelectionCommandProperty, value);
+    }
+    public IRelayCommand? SelectRangeCommand
+    {
+        get => GetValue(SelectRangeCommandProperty);
+        set => SetValue(SelectRangeCommandProperty, value);
+    }
+    public bool IsSelectionMode
+    {
+        get => GetValue(IsSelectionModeProperty);
+        set => SetValue(IsSelectionModeProperty, value);
+    }
+    public bool IsSelectionDimmed
+    {
+        get => GetValue(IsSelectionDimmedProperty);
+        set => SetValue(IsSelectionDimmedProperty, value);
     }
 
     public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
@@ -64,9 +80,18 @@ public partial class GenerationCardControl :
     public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(OpenMetadataCommand));
-    public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
+    public static readonly StyledProperty<IRelayCommand?> ToggleSelectionCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
-            nameof(DeleteOrCancelCommand));
+            nameof(ToggleSelectionCommand));
+    public static readonly StyledProperty<IRelayCommand?> SelectRangeCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(SelectRangeCommand));
+    public static readonly StyledProperty<bool> IsSelectionModeProperty =
+        AvaloniaProperty.Register<GenerationCardControl, bool>(
+            nameof(IsSelectionMode));
+    public static readonly StyledProperty<bool> IsSelectionDimmedProperty =
+        AvaloniaProperty.Register<GenerationCardControl, bool>(
+            nameof(IsSelectionDimmed));
 
     internal IGenerationPreviewExpansionHost? PreviewExpansionHost
     {
@@ -79,6 +104,8 @@ public partial class GenerationCardControl :
         InitializeComponent();
         GenerationPreview.OverflowOwner = this;
     }
+
+    Control IGalleryCardSurfaceProvider.CardSurface => GenerationCardRoot;
 
     void IGalleryRemovalAnimationParticipant.PrepareForRemovalTransfer()
     {
@@ -122,6 +149,16 @@ public partial class GenerationCardControl :
             : defaultCommand;
     }
 
+    internal static IRelayCommand? ResolveSelectionCommand(
+        KeyModifiers modifiers,
+        IRelayCommand? toggleCommand,
+        IRelayCommand? rangeCommand)
+    {
+        return modifiers.HasFlag(KeyModifiers.Shift)
+            ? rangeCommand
+            : toggleCommand;
+    }
+
     internal void SetPreviewBitmapServices(
         IGalleryPreviewBitmapProvider previewBitmapProvider,
         GalleryPreviewSourceScheduler previewSourceScheduler)
@@ -129,6 +166,18 @@ public partial class GenerationCardControl :
         GenerationPreview.SetPreviewBitmapServices(
             previewBitmapProvider,
             previewSourceScheduler);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == IsSelectionDimmedProperty)
+        {
+            PseudoClasses.Set(
+                ":selection-dimmed",
+                change.GetNewValue<bool>());
+        }
     }
 
     private void OnRevealInFolderClick(object? sender, RoutedEventArgs e)
@@ -146,6 +195,29 @@ public partial class GenerationCardControl :
             modifiers,
             RevealInFolderCommand,
             RevealInNewFolderWindowCommand);
+
+        if (command?.CanExecute(item) == true)
+        {
+            command.Execute(item);
+            e.Handled = true;
+        }
+    }
+
+    private void OnSelectionClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+
+        if (DataContext is not GenerationItemViewModel item)
+        {
+            return;
+        }
+
+        KeyModifiers modifiers = PreviewExpansionHost?.CurrentKeyModifiers
+            ?? KeyModifiers.None;
+        IRelayCommand? command = ResolveSelectionCommand(
+            modifiers,
+            ToggleSelectionCommand,
+            SelectRangeCommand);
 
         if (command?.CanExecute(item) == true)
         {

@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 
 using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.Controls.Gallery;
 
@@ -98,6 +99,7 @@ internal sealed class AnimatedGallerySceneController
         _scene.GalleryLayout.RenderCards(_scene.OperationCoordinator);
         HasRenderedScene = true;
         UpdateCardCommands();
+        UpdateSelectionDimming();
     }
 
     internal void RefreshVirtualizedScene()
@@ -115,6 +117,7 @@ internal sealed class AnimatedGallerySceneController
 
         _scene.GalleryLayout.RefreshGalleryVirtualization(_scene.OperationCoordinator);
         HasRenderedScene = true;
+        UpdateSelectionDimming();
     }
 
     internal void RegisterSceneOperations()
@@ -178,6 +181,47 @@ internal sealed class AnimatedGallerySceneController
         }
     }
 
+    internal void UpdateCardSelectionMode()
+    {
+        if (_scene is null)
+        {
+            return;
+        }
+
+        foreach (Control control in _scene.OperationCoordinator.CardControls.Values)
+        {
+            ApplyCurrentSelectionMode(control);
+        }
+
+        UpdateSelectionDimming();
+    }
+
+    internal void UpdateSelectionDimming()
+    {
+        if (_scene is null)
+        {
+            return;
+        }
+
+        GalleryOperationCoordinator context = _scene.OperationCoordinator;
+
+        foreach (object item in _sceneItems)
+        {
+            bool isSelected = item is IGalleryItemViewModel { IsSelected: true };
+
+            if (!context.CardControls.TryGetValue(
+                    _owner.GetItemId(item),
+                    out Control? control))
+            {
+                continue;
+            }
+
+            _scene.CardControlFactory.ApplySelectionDimming(
+                control,
+                _owner.IsSelectionMode && !isSelected);
+        }
+    }
+
     internal Task WaitForLayoutAsync()
     {
         _scrollViewer.UpdateLayout();
@@ -227,20 +271,26 @@ internal sealed class AnimatedGallerySceneController
     {
         AnimatedGalleryScene scene = AnimatedGallerySceneController.RequireScene(_scene);
 
-        return scene.CardControlFactory.Create(
+        Control control = scene.CardControlFactory.Create(
             item,
             CreateCardCommands(),
             _owner.PreviewExpansionHost);
+        ApplyCurrentSelectionMode(control);
+
+        return control;
     }
 
     private Control CreateTransientCard(object item)
     {
         AnimatedGalleryScene scene = AnimatedGallerySceneController.RequireScene(_scene);
 
-        return scene.CardControlFactory.CreateTransient(
+        Control control = scene.CardControlFactory.CreateTransient(
             item,
             CreateCardCommands(),
             _owner.PreviewExpansionHost);
+        ApplyCurrentSelectionMode(control);
+
+        return control;
     }
 
     private GalleryCardCommands CreateCardCommands()
@@ -251,7 +301,15 @@ internal sealed class AnimatedGallerySceneController
             _owner.RevealInFolderCommand,
             _owner.RevealInNewFolderWindowCommand,
             _owner.OpenMetadataCommand,
-            _owner.DeleteOrCancelCommand);
+            _owner.ToggleSelectionCommand,
+            _owner.SelectRangeCommand);
     }
 
+    private void ApplyCurrentSelectionMode(Control control)
+    {
+        AnimatedGalleryScene scene = AnimatedGallerySceneController.RequireScene(_scene);
+        scene.CardControlFactory.ApplySelectionMode(
+            control,
+            _owner.IsSelectionMode);
+    }
 }

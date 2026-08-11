@@ -55,16 +55,9 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
 
     public async Task ApplyStartFailedAsync(Guid correlationId, CancellationToken ct)
     {
-        IReadOnlyList<object> finalItems = [];
-
-        await _uiThreadDispatcher.InvokeAsync(
-            () =>
-            {
-                _itemsController.RemoveItemsByCorrelationId(correlationId);
-                finalItems = _itemsController.GetItemsSnapshot();
-            },
+        await ApplyMixedMutationAsync(
+            () => _itemsController.RemoveItemsByCorrelationId(correlationId),
             ct);
-        await _animatedGalleryOperations.ApplyMixedMutationAsync(finalItems, ct);
     }
 
     public Task ApplyFailedAsync(
@@ -127,6 +120,17 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
         return _animatedGalleryOperations.RemoveAsync(itemId, ct);
     }
 
+    public Task RemoveItemsAsync(
+        IReadOnlyList<GenerationItemViewModel> items,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        return ApplyMixedMutationAsync(
+            () => _itemsController.DeleteItems(items),
+            ct);
+    }
+
     public Task RebaseDataRootPathsAsync(
         string sourceRootDirectory,
         string destinationRootDirectory,
@@ -163,5 +167,23 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
             placeholders,
             resultCount,
             GenerationClientFailureCodes.Unknown);
+    }
+
+    private async Task ApplyMixedMutationAsync(
+        Action mutation,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(mutation);
+
+        IReadOnlyList<object> finalItems = new List<object>();
+
+        await _uiThreadDispatcher.InvokeAsync(
+            () =>
+            {
+                mutation();
+                finalItems = _itemsController.GetItemsSnapshot();
+            },
+            ct);
+        await _animatedGalleryOperations.ApplyMixedMutationAsync(finalItems, ct);
     }
 }

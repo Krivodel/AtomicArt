@@ -26,6 +26,14 @@ public sealed partial class GalleryViewModel :
     public ReadOnlyObservableCollection<GenerationItemViewModel> Items { get; }
     public bool IsEmpty => _itemsController.IsEmpty;
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
+    public bool IsSelectionMode => _selectionController.IsActive;
+    public int SelectedCount => _selectionController.SelectedCount;
+    public string SelectionSummary => _textProvider.Format(
+        GalleryLocalizationKeys.SelectedCount,
+        SelectedCount);
+    public string DeleteSelectedText => _textProvider.Format(
+        GalleryLocalizationKeys.DeleteSelected,
+        SelectedCount);
     public GenerationMetadataViewModel? SelectedMetadata
     {
         get => _selectedMetadata;
@@ -49,6 +57,7 @@ public sealed partial class GalleryViewModel :
     private readonly IGalleryStateService _galleryStateService;
     private readonly GalleryLifecycleViewStateController _viewStateController;
     private readonly GalleryItemsController _itemsController;
+    private readonly GallerySelectionController _selectionController;
     private readonly GalleryLifecycleController _lifecycleController;
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly ITextClipboardService _textClipboardService;
@@ -66,11 +75,6 @@ public sealed partial class GalleryViewModel :
     [NotifyPropertyChangedFor(nameof(HasErrorMessage))]
     private string? _errorMessage;
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RevealInFolderCommand))]
-    [NotifyCanExecuteChangedFor(nameof(RevealInNewFolderWindowCommand))]
-    [NotifyCanExecuteChangedFor(nameof(OpenViewerCommand))]
-    [NotifyCanExecuteChangedFor(nameof(ShowFailureDetailsCommand))]
-    [NotifyCanExecuteChangedFor(nameof(DeleteOrCancelCommand))]
     private bool _isLoading;
 
     public GalleryViewModel(
@@ -114,6 +118,8 @@ public sealed partial class GalleryViewModel :
         _itemsController = itemsController;
         Items = _itemsController.Items;
         _itemsController.IsEmptyChanged += OnItemsEmptyChanged;
+        _selectionController = new GallerySelectionController(Items);
+        _selectionController.StateChanged += OnSelectionStateChanged;
         _lifecycleController = lifecycleController;
         _errorHandler = errorHandler;
         _textClipboardService = textClipboardService;
@@ -203,12 +209,17 @@ public sealed partial class GalleryViewModel :
         {
             ErrorMessage = _textProvider.Get(_errorLocalizationKey);
         }
+
+        OnPropertyChanged(nameof(SelectionSummary));
+        OnPropertyChanged(nameof(DeleteSelectedText));
     }
 
     public void Dispose()
     {
         SelectedMetadata = null;
         _itemsController.IsEmptyChanged -= OnItemsEmptyChanged;
+        _selectionController.StateChanged -= OnSelectionStateChanged;
+        _selectionController.Dispose();
 
         if (_generationPanelPresetTarget is not null)
         {
@@ -236,6 +247,18 @@ public sealed partial class GalleryViewModel :
             item.ModelId,
             item.ImagePath,
             item.ThumbnailPath);
+    }
+
+    private static LocalizedConfirmationDialogRequest CreateDeletionConfirmationRequest(
+        int itemCount)
+    {
+        object?[] messageArguments = [itemCount];
+
+        return new LocalizedConfirmationDialogRequest(
+            GalleryLocalizationKeys.DeletionConfirmationTitle,
+            GalleryLocalizationKeys.DeletionConfirmationMessage,
+            GalleryLocalizationKeys.ConfirmDeletion,
+            messageArguments);
     }
 
     [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -326,15 +349,85 @@ public sealed partial class GalleryViewModel :
                     return;
                 }
 
-                if (item.IsGenerating
-                    && item.CorrelationId is Guid logicalGenerationId)
-                {
-                    _generationCancellationService.Cancel(logicalGenerationId);
-                }
-
+                CancelGenerationIfActive(item);
                 await DeleteItemAsync(item, operationCt);
             },
             nameof(DeleteOrCancelAsync),
+            ct);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanChangeSelection))]
+    private void ToggleSelection(GenerationItemViewModel? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        _selectionController.Toggle(item);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanChangeSelection))]
+    private void SelectRange(GenerationItemViewModel? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        _selectionController.SelectRange(item);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSelectAll))]
+    private void SelectAll()
+    {
+        _selectionController.SelectAll();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExitSelectionMode))]
+    private void ExitSelectionMode()
+    {
+        _selectionController.Exit();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDeleteSelected))]
+    private async Task DeleteSelectedAsync(CancellationToken ct)
+    {
+        if (!CanDeleteSelected())
+        {
+            return;
+        }
+
+        IReadOnlyList<GenerationItemViewModel> selectedItems =
+            _selectionController.GetSelectedItems();
+
+        await ExecuteLoadingUserOperationAsync(
+            async operationCt =>
+            {
+                LocalizedConfirmationDialogRequest request =
+                    CreateDeletionConfirmationRequest(selectedItems.Count);
+                bool isConfirmed = await _dialogService.ShowConfirmationAsync(
+                    request,
+                    operationCt);
+
+                if (!isConfirmed)
+                {
+                    return;
+                }
+
+                IReadOnlyList<GenerationItemViewModel> existingSelectedItems =
+                    selectedItems
+                        .Where(_itemsController.Contains)
+                        .ToList();
+
+                if (existingSelectedItems.Count == 0)
+                {
+                    return;
+                }
+
+                await DeleteItemsAsync(existingSelectedItems, operationCt);
+            },
+            nameof(DeleteSelectedAsync),
             ct);
     }
 
@@ -374,19 +467,46 @@ public sealed partial class GalleryViewModel :
 
     private bool CanRunCommand()
     {
-        return !IsLoading;
+        return !IsLoading && !IsSelectionMode;
+    }
+
+    private bool CanChangeSelection(GenerationItemViewModel? item)
+    {
+        return !IsLoading
+            && item is not null
+            && _itemsController.Contains(item);
+    }
+
+    private bool CanSelectAll()
+    {
+        return !IsLoading
+            && !IsEmpty
+            && SelectedCount < Items.Count;
+    }
+
+    private bool CanExitSelectionMode()
+    {
+        return !IsLoading && IsSelectionMode;
+    }
+
+    private bool CanDeleteSelected()
+    {
+        return !IsLoading && IsSelectionMode && SelectedCount > 0;
     }
 
     private bool CanOpenViewer(GenerationItemViewModel? item)
     {
         return !IsLoading
+            && !IsSelectionMode
             && item is { ShowsGeneratedImage: true }
             && !string.IsNullOrWhiteSpace(item.ImagePath);
     }
 
     private bool CanShowFailureDetails(GenerationItemViewModel? item)
     {
-        return !IsLoading && item is { IsFailed: true };
+        return !IsLoading
+            && !IsSelectionMode
+            && item is { IsFailed: true };
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenViewer), AllowConcurrentExecutions = true)]
@@ -428,6 +548,41 @@ public sealed partial class GalleryViewModel :
         await _deletionService.DeleteFilesAsync(deletionRequest, ct);
         IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
         await _galleryStateService.SaveAsync(snapshot, ct);
+    }
+
+    private async Task DeleteItemsAsync(
+        IReadOnlyList<GenerationItemViewModel> items,
+        CancellationToken ct)
+    {
+        IReadOnlyList<GalleryItemDeletionRequest> deletionRequests = items
+            .Select(CreateDeletionRequest)
+            .ToList();
+
+        IReadOnlyList<Guid> activeGenerationIds = items
+            .Where(item => item.IsGenerating && item.CorrelationId.HasValue)
+            .Select(item => item.CorrelationId.GetValueOrDefault())
+            .Distinct()
+            .ToList();
+
+        foreach (Guid activeGenerationId in activeGenerationIds)
+        {
+            _generationCancellationService.Cancel(activeGenerationId);
+        }
+
+        _selectionController.Exit();
+        await _viewStateController.RemoveItemsAsync(items, ct);
+        await _deletionService.DeleteFilesAsync(deletionRequests, ct);
+        IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
+        await _galleryStateService.SaveAsync(snapshot, ct);
+    }
+
+    private void CancelGenerationIfActive(GenerationItemViewModel item)
+    {
+        if (item.IsGenerating
+            && item.CorrelationId is Guid logicalGenerationId)
+        {
+            _generationCancellationService.Cancel(logicalGenerationId);
+        }
     }
 
     private async Task OpenViewerCoreAsync(GenerationItemViewModel item, CancellationToken ct)
@@ -537,6 +692,26 @@ public sealed partial class GalleryViewModel :
         ErrorMessage = null;
     }
 
+    private void NotifyInteractiveCommandsCanExecuteChanged()
+    {
+        RevealInFolderCommand.NotifyCanExecuteChanged();
+        RevealInNewFolderWindowCommand.NotifyCanExecuteChanged();
+        OpenViewerCommand.NotifyCanExecuteChanged();
+        ShowFailureDetailsCommand.NotifyCanExecuteChanged();
+        DeleteOrCancelCommand.NotifyCanExecuteChanged();
+        ToggleSelectionCommand.NotifyCanExecuteChanged();
+        SelectRangeCommand.NotifyCanExecuteChanged();
+        SelectAllCommand.NotifyCanExecuteChanged();
+        ExitSelectionModeCommand.NotifyCanExecuteChanged();
+        DeleteSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsLoadingChanged(bool value)
+    {
+        _ = value;
+        NotifyInteractiveCommandsCanExecuteChanged();
+    }
+
     private void OnItemsEmptyChanged()
     {
         OnPropertyChanged(nameof(IsEmpty));
@@ -550,5 +725,17 @@ public sealed partial class GalleryViewModel :
     private void OnGenerationPresetAvailabilityChanged(object? sender, EventArgs args)
     {
         ReuseGenerationCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnSelectionStateChanged(object? sender, EventArgs args)
+    {
+        _ = sender;
+        _ = args;
+
+        OnPropertyChanged(nameof(IsSelectionMode));
+        OnPropertyChanged(nameof(SelectedCount));
+        OnPropertyChanged(nameof(SelectionSummary));
+        OnPropertyChanged(nameof(DeleteSelectedText));
+        NotifyInteractiveCommandsCanExecuteChanged();
     }
 }

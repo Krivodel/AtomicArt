@@ -64,6 +64,29 @@
                 Value="{DynamicResource SukiPrimaryColor0}" />
     </Style>
 
+    <Style Selector="Button.danger">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiDangerColor}" />
+        <Setter Property="BorderBrush"
+                Value="{DynamicResource SukiDangerColor}" />
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiDangerForeground}" />
+    </Style>
+
+    <Style Selector="Button.danger:pointerover">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiDangerMediumColor}" />
+        <Setter Property="BorderBrush"
+                Value="{DynamicResource SukiDangerMediumColor}" />
+    </Style>
+
+    <Style Selector="Button.danger:pressed">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiDangerDarkColor}" />
+        <Setter Property="BorderBrush"
+                Value="{DynamicResource SukiDangerDarkColor}" />
+    </Style>
+
     <Style Selector="Button.Icon PathIcon">
         <Setter Property="Width"
                 Value="{StaticResource GenerationCardActionIconSize}" />
@@ -141,32 +164,8 @@
                 Value="Center" />
         <Setter Property="IsVisible"
                 Value="False" />
-        <Setter Property="Background"
-                Value="{DynamicResource SukiDangerColor}" />
-        <Setter Property="BorderBrush"
-                Value="{DynamicResource SukiDangerColor}" />
         <Setter Property="CornerRadius"
                 Value="{StaticResource AttachmentRemoveButtonCornerRadius}" />
-        <Setter Property="Foreground"
-                Value="{DynamicResource SukiDangerForeground}" />
-    </Style>
-
-    <Style Selector="Button.remove-attachment:pointerover">
-        <Setter Property="Background"
-                Value="{DynamicResource SukiDangerMediumColor}" />
-        <Setter Property="BorderBrush"
-                Value="{DynamicResource SukiDangerMediumColor}" />
-        <Setter Property="Foreground"
-                Value="{DynamicResource SukiDangerForeground}" />
-    </Style>
-
-    <Style Selector="Button.remove-attachment:pressed">
-        <Setter Property="Background"
-                Value="{DynamicResource SukiDangerDarkColor}" />
-        <Setter Property="BorderBrush"
-                Value="{DynamicResource SukiDangerDarkColor}" />
-        <Setter Property="Foreground"
-                Value="{DynamicResource SukiDangerForeground}" />
     </Style>
 
     <Style Selector="Border.attachment-preview:pointerover Button.remove-attachment">
@@ -201,6 +200,34 @@
                 </Transitions>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style Selector="Button.card-selection-toggle">
+        <Setter Property="Width"
+                Value="{StaticResource GallerySelectionIndicatorSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource GallerySelectionIndicatorSize}" />
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+
+    <Style Selector="Button.card-selection-toggle:pointerover">
+        <Setter Property="Background"
+                Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.card-selection-toggle:pressed">
+        <Setter Property="Background"
+                Value="Transparent" />
+    </Style>
+
+    <Style Selector="Button.card-selection-toggle.selected">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiSuccessColor}" />
+        <Setter Property="Opacity"
+                Value="1" />
     </Style>
 
     <Style Selector="Border.generation-card:pointerover Button.card-action">

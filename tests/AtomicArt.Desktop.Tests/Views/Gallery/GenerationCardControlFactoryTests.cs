@@ -47,6 +47,7 @@ public sealed class GenerationCardControlFactoryTests : AnimatedGalleryControlTe
                 null,
                 null,
                 null,
+                null,
                 null);
             StandaloneGenerationPreviewExpansionHost expansionHost = new(new Border());
             Control firstControl = factory.Create(
@@ -55,6 +56,7 @@ public sealed class GenerationCardControlFactoryTests : AnimatedGalleryControlTe
                 expansionHost);
             firstControl.IsVisible = true;
             firstControl.IsHitTestVisible = false;
+            factory.ApplySelectionMode(firstControl, true);
             factory.Recycle(firstControl);
             firstControl.IsVisible.Should().BeFalse();
 
@@ -71,6 +73,8 @@ public sealed class GenerationCardControlFactoryTests : AnimatedGalleryControlTe
             secondControl.Should().BeSameAs(firstControl);
             secondControl.IsVisible.Should().BeTrue();
             secondControl.IsHitTestVisible.Should().BeTrue();
+            secondControl.Should().BeOfType<GenerationCardControl>()
+                .Which.IsSelectionMode.Should().BeFalse();
         });
     }
 }

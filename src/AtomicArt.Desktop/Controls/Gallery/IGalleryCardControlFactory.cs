@@ -16,6 +16,10 @@ internal interface IGalleryCardControlFactory
 
     void ApplyCommands(Control control, GalleryCardCommands commands);
 
+    void ApplySelectionMode(Control control, bool isSelectionMode);
+
+    void ApplySelectionDimming(Control control, bool isDimmed);
+
     bool CanRetainRecycledControl(Control control);
 
     void Recycle(Control control);

@@ -5,6 +5,7 @@
     "Common": {
       "Error": "Ошибка",
       "Copy": "Копировать",
+      "Cancel": "Отмена",
       "UnknownError": "Неизвестная ошибка.",
       "Auto": "Авто",
       "TimeUnits": {
@@ -98,6 +99,16 @@
       "Actions": {
         "Attach": "Прикрепить",
         "ShowInGallery": "Показать в галерее"
+      },
+      "Selection": {
+        "SelectedCount": "Выбрано: {0}",
+        "SelectAll": "Выбрать всё",
+        "DeleteSelected": "Удалить ({0})"
+      },
+      "Deletion": {
+        "ConfirmationTitle": "Удалить генерации?",
+        "ConfirmationMessage": "Выбранные генерации ({0}) и связанные с ними файлы будут удалены без возможности восстановления.",
+        "ConfirmAction": "Удалить"
       }
     },
     "Settings": {

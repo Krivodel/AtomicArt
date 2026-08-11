@@ -2,6 +2,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
                  xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+                 xmlns:galleryViews="using:AtomicArt.Desktop.Views.Gallery"
                  xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
                  xmlns:resources="using:AtomicArt.Desktop.Resources"
                  xmlns:suki="using:SukiUI.Controls"
@@ -24,6 +25,13 @@
                  behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding ActiveGenerationPanel.AttachImageInputsCommand}"
                  behaviors:ImageAttachmentBehavior.ErrorCommand="{Binding HandleExternalInputErrorCommand}"
                  behaviors:ImageAttachmentBehavior.MaxInputBytes="{Binding ActiveGenerationPanel.AttachmentInputByteLimit}">
+    <suki:SukiWindow.KeyBindings>
+        <KeyBinding Gesture="Escape"
+                    Command="{Binding Gallery.ExitSelectionModeCommand}" />
+        <KeyBinding Gesture="Delete"
+                    Command="{Binding Gallery.DeleteSelectedCommand}" />
+    </suki:SukiWindow.KeyBindings>
+
     <suki:SukiWindow.LogoContent>
         <Image Width="{StaticResource TitleLogoSize}"
                Height="{StaticResource TitleLogoSize}"
@@ -53,7 +61,7 @@
         <Grid>
             <Grid x:Name="ShellContentGrid"
                   behaviors:ImageDropBehavior.DropArea="{Binding #GenerationPanelHost}"
-                  behaviors:ImageDropBehavior.IsEnabled="True"
+                  behaviors:ImageDropBehavior.IsEnabled="{Binding !Gallery.IsSelectionMode}"
                   behaviors:ImageDropBehavior.Overlay="{Binding #PanelDropOverlay}"
                   behaviors:ImageDropBehavior.TargetKind="GalleryImage">
                 <Grid.RowDefinitions>
@@ -83,6 +91,10 @@
                         <controls:ImageDropOverlayControl x:Name="PanelDropOverlay"
                                                           ZIndex="20"
                                                           BackdropCornerRadius="{StaticResource ShellCornerRadius}" />
+
+                        <galleryViews:GallerySelectionOverlayView ZIndex="30"
+                                                                  IsActive="{Binding IsSelectionMode}"
+                                                                  DataContext="{Binding Gallery}" />
                     </Grid>
                 </Border>
 
@@ -109,6 +121,10 @@
                                                        Body="{Binding Gallery.SelectedMetadata}"
                                                        IsOpen="{Binding Gallery.IsMetadataOpen}"
                                                        CloseCommand="{Binding Gallery.CloseOverlayCommand}" />
+                <overlays:ModalOverlayPresenterControl Order="{StaticResource ConfirmationDialogModalOverlayOrder}"
+                                                       Body="{Binding ConfirmationDialog}"
+                                                       IsOpen="{Binding ConfirmationDialog.IsOpen}"
+                                                       CloseCommand="{Binding ConfirmationDialog.CancelCommand}" />
                 <overlays:ModalOverlayPresenterControl Order="{StaticResource ErrorDialogModalOverlayOrder}"
                                                        Body="{Binding ErrorDialog}"
                                                        IsOpen="{Binding ErrorDialog.IsOpen}"

@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
+             x:Class="AtomicArt.Desktop.Controls.Overlays.AnimatedBlurBackdropControl"
+             x:Name="Root"
+             x:DataType="overlays:AnimatedBlurBackdropControl"
+             IsHitTestVisible="False"
+             Opacity="0">
+    <UserControl.Transitions>
+        <Transitions>
+            <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                              Easing="{StaticResource TransientOverlayEasing}"
+                              Property="Opacity" />
+        </Transitions>
+    </UserControl.Transitions>
+
+    <Border ClipToBounds="True"
+            CornerRadius="{Binding #Root.BackdropCornerRadius}">
+        <overlays:BlurBackdropControl x:Name="BackdropBlur"
+                                      BlurRadius="{Binding #Root.BlurRadius}"
+                                      Intensity="0"
+                                      IsDynamic="{Binding #Root.IsActive}">
+            <overlays:BlurBackdropControl.Transitions>
+                <Transitions>
+                    <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                      Easing="{StaticResource TransientOverlayEasing}"
+                                      Property="Intensity" />
+                </Transitions>
+            </overlays:BlurBackdropControl.Transitions>
+        </overlays:BlurBackdropControl>
+    </Border>
+</UserControl>

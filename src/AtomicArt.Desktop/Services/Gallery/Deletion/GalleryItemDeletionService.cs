@@ -37,8 +37,31 @@ public sealed class GalleryItemDeletionService : IGalleryItemDeletionService
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        GalleryItemDeletionRequest[] requests = [request];
+        await DeleteFilesAsync(requests, ct).ConfigureAwait(false);
+    }
+
+    public async Task DeleteFilesAsync(
+        IReadOnlyList<GalleryItemDeletionRequest> requests,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(requests);
+
         using DataRootAccessLease accessLease =
             await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+
+        foreach (GalleryItemDeletionRequest request in requests)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            DeleteFiles(request, ct);
+        }
+    }
+
+    private void DeleteFiles(
+        GalleryItemDeletionRequest request,
+        CancellationToken ct)
+    {
         _logger.LogInformation(
             "Deleting managed gallery files for item {ItemId}",
             request.ItemId);
@@ -48,7 +71,6 @@ public sealed class GalleryItemDeletionService : IGalleryItemDeletionService
         _logger.LogInformation(
             "Completed managed gallery file deletion for item {ItemId}",
             request.ItemId);
-
     }
 
     private void DeleteFileIfTrusted(

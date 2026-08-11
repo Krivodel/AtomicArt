@@ -10,17 +10,24 @@ public sealed class DialogService :
     IDialogService,
     IRecipient<LocalizationChangedMessage>
 {
-    private readonly ErrorDialogViewModel _dialog;
+    private readonly ErrorDialogViewModel _errorDialog;
+    private readonly ConfirmationDialogViewModel _confirmationDialog;
     private readonly ILocalizationTextProvider _textProvider;
-    private string? _activeLocalizationKey;
+    private string? _activeErrorLocalizationKey;
+    private LocalizedConfirmationDialogRequest? _activeConfirmationRequest;
 
     public DialogService(
-        ErrorDialogViewModel dialog,
+        ErrorDialogViewModel errorDialog,
+        ConfirmationDialogViewModel confirmationDialog,
         ILocalizationTextProvider textProvider,
         IMessenger messenger)
     {
-        _dialog = dialog ?? throw new ArgumentNullException(nameof(dialog));
-        _textProvider = textProvider ?? throw new ArgumentNullException(nameof(textProvider));
+        _errorDialog = errorDialog
+            ?? throw new ArgumentNullException(nameof(errorDialog));
+        _confirmationDialog = confirmationDialog
+            ?? throw new ArgumentNullException(nameof(confirmationDialog));
+        _textProvider = textProvider
+            ?? throw new ArgumentNullException(nameof(textProvider));
         ArgumentNullException.ThrowIfNull(messenger);
 
         messenger.Register<LocalizationChangedMessage>(this);
@@ -28,16 +35,16 @@ public sealed class DialogService :
 
     public void ShowError(string message)
     {
-        _activeLocalizationKey = null;
-        _dialog.Open(message);
+        _activeErrorLocalizationKey = null;
+        _errorDialog.Open(message);
     }
 
     public void ShowLocalizedError(string localizationKey)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(localizationKey);
 
-        _activeLocalizationKey = localizationKey;
-        _dialog.Open(_textProvider.Get(localizationKey));
+        _activeErrorLocalizationKey = localizationKey;
+        _errorDialog.Open(_textProvider.Get(localizationKey));
     }
 
     public Task ShowErrorAsync(string message, CancellationToken ct)
@@ -58,13 +65,80 @@ public sealed class DialogService :
         return Task.CompletedTask;
     }
 
+    public async Task<bool> ShowConfirmationAsync(
+        LocalizedConfirmationDialogRequest request,
+        CancellationToken ct)
+    {
+        ValidateConfirmationRequest(request);
+        _activeConfirmationRequest = request;
+
+        try
+        {
+            return await _confirmationDialog.OpenAsync(
+                    GetConfirmationTitle(request),
+                    GetConfirmationMessage(request),
+                    GetConfirmationActionText(request),
+                    ct)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            if (ReferenceEquals(_activeConfirmationRequest, request))
+            {
+                _activeConfirmationRequest = null;
+            }
+        }
+    }
+
     public void Receive(LocalizationChangedMessage message)
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        if (_activeLocalizationKey is not null && _dialog.IsOpen)
+        if (_activeErrorLocalizationKey is not null && _errorDialog.IsOpen)
         {
-            _dialog.Open(_textProvider.Get(_activeLocalizationKey));
+            _errorDialog.Open(_textProvider.Get(_activeErrorLocalizationKey));
         }
+
+        LocalizedConfirmationDialogRequest? request =
+            _activeConfirmationRequest;
+
+        if ((request is not null) && _confirmationDialog.IsOpen)
+        {
+            _confirmationDialog.UpdateText(
+                GetConfirmationTitle(request),
+                GetConfirmationMessage(request),
+                GetConfirmationActionText(request));
+        }
+    }
+
+    private static void ValidateConfirmationRequest(
+        LocalizedConfirmationDialogRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.TitleLocalizationKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.MessageLocalizationKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            request.ConfirmActionLocalizationKey);
+        ArgumentNullException.ThrowIfNull(request.MessageArguments);
+    }
+
+    private string GetConfirmationTitle(
+        LocalizedConfirmationDialogRequest request)
+    {
+        return _textProvider.Get(request.TitleLocalizationKey);
+    }
+
+    private string GetConfirmationMessage(
+        LocalizedConfirmationDialogRequest request)
+    {
+        return _textProvider.Format(
+            request.MessageLocalizationKey,
+            request.MessageArguments.ToArray());
+    }
+
+    private string GetConfirmationActionText(
+        LocalizedConfirmationDialogRequest request)
+    {
+        return _textProvider.Get(request.ConfirmActionLocalizationKey);
     }
 }

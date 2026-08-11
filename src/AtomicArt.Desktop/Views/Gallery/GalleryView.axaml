@@ -7,6 +7,11 @@
              x:Class="AtomicArt.Desktop.Views.Gallery.GalleryView"
              x:Name="GalleryRoot"
              x:DataType="gallery:GalleryViewModel">
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Ctrl+A"
+                    Command="{Binding SelectAllCommand}" />
+    </UserControl.KeyBindings>
+
     <Grid>
         <TextBlock HorizontalAlignment="Center"
                    VerticalAlignment="Center"
@@ -14,14 +19,16 @@
                    Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys.Empty}}" />
 
         <controls:AnimatedGalleryControl x:Name="GalleryControl"
-                                         Operations="{Binding GalleryOperations, ElementName=GalleryRoot}"
+                                         IsSelectionMode="{Binding IsSelectionMode}"
                                          Items="{Binding Items}"
-                                         DeleteOrCancelCommand="{Binding DeleteOrCancelCommand}"
+                                         Operations="{Binding GalleryOperations, ElementName=GalleryRoot}"
                                          OpenMetadataCommand="{Binding OpenMetadataCommand}"
                                          OpenViewerCommand="{Binding OpenViewerCommand}"
                                          RevealInFolderCommand="{Binding RevealInFolderCommand}"
                                          RevealInNewFolderWindowCommand="{Binding RevealInNewFolderWindowCommand}"
-                                         ShowFailureDetailsCommand="{Binding ShowFailureDetailsCommand}" />
+                                         SelectRangeCommand="{Binding SelectRangeCommand}"
+                                         ShowFailureDetailsCommand="{Binding ShowFailureDetailsCommand}"
+                                         ToggleSelectionCommand="{Binding ToggleSelectionCommand}" />
 
         <TextBlock Margin="0,12,0,0"
                    HorizontalAlignment="Center"

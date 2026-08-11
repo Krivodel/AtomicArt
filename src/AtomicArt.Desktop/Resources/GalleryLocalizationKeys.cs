@@ -3,6 +3,14 @@ namespace AtomicArt.Desktop.Resources;
 public static class GalleryLocalizationKeys
 {
     public const string Empty = "Gallery.Empty";
+    public const string SelectedCount = "Gallery.Selection.SelectedCount";
+    public const string SelectAll = "Gallery.Selection.SelectAll";
+    public const string DeleteSelected = "Gallery.Selection.DeleteSelected";
+    public const string DeletionConfirmationTitle =
+        "Gallery.Deletion.ConfirmationTitle";
+    public const string DeletionConfirmationMessage =
+        "Gallery.Deletion.ConfirmationMessage";
+    public const string ConfirmDeletion = "Gallery.Deletion.ConfirmAction";
 
     public static class Metadata
     {

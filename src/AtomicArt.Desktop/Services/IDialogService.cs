@@ -7,4 +7,7 @@ public interface IDialogService
 
     Task ShowErrorAsync(string message, CancellationToken ct);
     Task ShowLocalizedErrorAsync(string localizationKey, CancellationToken ct);
+    Task<bool> ShowConfirmationAsync(
+        LocalizedConfirmationDialogRequest request,
+        CancellationToken ct);
 }

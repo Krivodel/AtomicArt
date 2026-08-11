@@ -5,6 +5,7 @@
     "Common": {
       "Error": "Error",
       "Copy": "Copy",
+      "Cancel": "Cancel",
       "UnknownError": "An unexpected error occurred.",
       "Auto": "Auto",
       "TimeUnits": {
@@ -98,6 +99,16 @@
       "Actions": {
         "Attach": "Attach",
         "ShowInGallery": "Show in gallery"
+      },
+      "Selection": {
+        "SelectedCount": "Selected: {0}",
+        "SelectAll": "Select all",
+        "DeleteSelected": "Delete ({0})"
+      },
+      "Deletion": {
+        "ConfirmationTitle": "Delete generations?",
+        "ConfirmationMessage": "The selected generations ({0}) and their files will be permanently deleted.",
+        "ConfirmAction": "Delete"
       }
     },
     "Settings": {

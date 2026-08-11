@@ -402,6 +402,15 @@ public sealed class GalleryStateConsistencyServiceTests
 
             return Task.CompletedTask;
         }
+
+        public Task DeleteFilesAsync(
+            IReadOnlyList<GalleryItemDeletionRequest> requests,
+            CancellationToken ct)
+        {
+            _requests.AddRange(requests);
+
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class RecordingAppStateStore : IAppStateStore

@@ -2,13 +2,21 @@ using System.Globalization;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Avalonia;
+using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using FluentAssertions;
 using Xunit;
 
+using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls.Gallery;
+using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
@@ -24,6 +32,121 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 
 public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 {
+    [Fact]
+    public void GalleryViewKeyBindings_WhenRendered_MapSelectAllCommand()
+    {
+        Dispatch(() =>
+        {
+            using ServiceProvider serviceProvider = CreateServiceProvider();
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            Window window = Show(scenario.View);
+
+            try
+            {
+                IReadOnlyDictionary<string, KeyBinding> bindings = scenario.View.KeyBindings
+                    .OfType<KeyBinding>()
+                    .ToDictionary(
+                        binding => binding.Gesture?.ToString() ?? string.Empty,
+                        binding => binding);
+
+                bindings["Ctrl+A"].Command.Should().BeSameAs(
+                    scenario.ViewModel.SelectAllCommand);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void MainWindowKeyBindings_WhenRendered_MapGlobalSelectionCommands()
+    {
+        Dispatch(() =>
+        {
+            using ServiceProvider serviceProvider = CreateServiceProvider();
+            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
+            scenario.Window.Show();
+
+            try
+            {
+                IReadOnlyDictionary<string, KeyBinding> bindings = scenario.Window.KeyBindings
+                    .OfType<KeyBinding>()
+                    .ToDictionary(
+                        binding => binding.Gesture?.ToString() ?? string.Empty,
+                        binding => binding);
+
+                bindings["Escape"].Command.Should().BeSameAs(
+                    scenario.ViewModel.Gallery.ExitSelectionModeCommand);
+                bindings["Delete"].Command.Should().BeSameAs(
+                    scenario.ViewModel.Gallery.DeleteSelectedCommand);
+            }
+            finally
+            {
+                scenario.Window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task MainWindowEscape_AfterSelectAllButton_ClearsSelection()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
+            GalleryItemState[] items = Enumerable
+                .Range(1, 10)
+                .Select(index => GalleryItemStateTestFactory.CreateGenerated(
+                    prompt: $"Item {index}"))
+                .ToArray();
+            await scenario.ViewModel.RestoreGalleryAsync(
+                items,
+                CancellationToken.None);
+            scenario.Window.Show();
+            scenario.Window.CaptureRenderedFrame();
+
+            try
+            {
+                GalleryViewModel gallery = scenario.ViewModel.Gallery;
+                gallery.ToggleSelectionCommand.Execute(gallery.Items[0]);
+                scenario.Window.CaptureRenderedFrame();
+                GallerySelectionOverlayView selectionOverlay = scenario.Window
+                    .GetVisualDescendants()
+                    .OfType<GallerySelectionOverlayView>()
+                    .Single();
+                Button selectAllButton = selectionOverlay
+                    .GetVisualDescendants()
+                    .OfType<Button>()
+                    .Single(button => ReferenceEquals(
+                        button.Command,
+                        gallery.SelectAllCommand));
+                selectAllButton.Focus();
+
+                gallery.SelectAllCommand.Execute(null);
+                scenario.Window.CaptureRenderedFrame();
+
+                gallery.SelectedCount.Should().Be(gallery.Items.Count);
+                gallery.SelectAllCommand.CanExecute(null).Should().BeFalse();
+
+                scenario.Window.KeyPress(
+                    Key.Escape,
+                    RawInputModifiers.None,
+                    PhysicalKey.Escape,
+                    null);
+                scenario.Window.CaptureRenderedFrame();
+
+                gallery.IsSelectionMode.Should().BeFalse();
+                gallery.SelectedCount.Should().Be(0);
+                gallery.Items.Should().OnlyContain(item => !item.IsSelected);
+            }
+            finally
+            {
+                scenario.Window.Close();
+            }
+        });
+    }
+
     [Fact]
     public void GalleryViewBinding_WithViewModelFromContainer_PassesFacadeAndRegistersCoordinator()
     {
@@ -97,6 +220,242 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
+    public async Task GalleryViewSelection_WithSelectedItem_ShowsAnimatedSelectionStateOnCard()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            Window window = Show(scenario.View);
+
+            try
+            {
+                await scenario.ViewModel.RestoreStateAsync(
+                    new GalleryItemState[]
+                    {
+                        GalleryItemStateTestFactory.CreateGenerated()
+                    },
+                    CancellationToken.None);
+                scenario.ViewModel.Items.Should().ContainSingle();
+                window.CaptureRenderedFrame();
+
+                AnimatedGalleryControl gallery = GetGalleryControl(scenario.View);
+                GenerationCardControl card = GetGalleryPanel(gallery)
+                    .Children
+                    .OfType<GenerationCardControl>()
+                    .Single();
+                Button toggleSelectionButton = card.FindControl<Button>("ToggleSelectionButton")
+                    ?? throw new InvalidOperationException("Selection button was not found.");
+                GallerySelectionOutlineControl selectionHighlight = card
+                    .FindControl<GallerySelectionOutlineControl>("SelectionHighlight")
+                    ?? throw new InvalidOperationException("Selection highlight was not found.");
+                Border cardRoot = card.FindControl<Border>("GenerationCardRoot")
+                    ?? throw new InvalidOperationException("Generation card root was not found.");
+                Border cardContainer = card.FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException("Generation card container was not found.");
+                Avalonia.Controls.Shapes.Path selectionCheck = toggleSelectionButton
+                    .GetVisualDescendants()
+                    .OfType<Avalonia.Controls.Shapes.Path>()
+                    .Single();
+                Avalonia.Media.Geometry selectionGeometry = selectionCheck.Data
+                    ?? throw new InvalidOperationException("Selection geometry was not found.");
+                ISolidColorBrush toggleBackground = toggleSelectionButton.Background
+                    .Should()
+                    .BeAssignableTo<ISolidColorBrush>()
+                    .Subject;
+                toggleSelectionButton.IsVisible.Should().BeTrue(
+                    "the selection check must be available before selection mode starts");
+                toggleSelectionButton.Classes.Should().Contain("card-selection-toggle");
+                toggleSelectionButton.Classes.Should().NotContain("selected");
+                toggleSelectionButton.Width.Should().Be(28d);
+                toggleSelectionButton.BorderThickness.Left.Should().Be(0d);
+                toggleBackground.Color.Should().Be(Colors.Transparent);
+                toggleSelectionButton.Opacity.Should().Be(0d,
+                    "an unselected card shows its check only while hovered");
+                selectionGeometry.Bounds.Center.X.Should().Be(8d);
+                selectionGeometry.Bounds.Center.Y.Should().Be(8d);
+                selectionCheck.HorizontalAlignment.Should().Be(HorizontalAlignment.Center);
+                selectionCheck.VerticalAlignment.Should().Be(VerticalAlignment.Center);
+                selectionCheck.Stretch.Should().Be(Stretch.None);
+                selectionCheck.Stroke.Should().NotBeNull();
+                selectionCheck.Effect.Should().BeOfType<DropShadowEffect>();
+                selectionHighlight.Opacity.Should().Be(0d);
+                selectionHighlight.Stroke.Should().NotBeNull();
+                selectionHighlight.StrokeThickness.Should().Be(3d);
+                selectionHighlight.ClipToBounds.Should().BeFalse();
+                selectionHighlight.Margin.Should().Be(default(Thickness));
+                cardRoot.ClipToBounds.Should().BeTrue();
+                cardContainer.ClipToBounds.Should().BeFalse();
+                Point highlightPosition = selectionHighlight.TranslatePoint(
+                        new Point(0d, 0d),
+                        cardRoot)
+                    ?? throw new InvalidOperationException("Selection highlight position was not found.");
+                highlightPosition.Should().Be(new Point(-3d, -3d));
+                selectionHighlight.Bounds.Width.Should().Be(cardRoot.Bounds.Width + 6d);
+                selectionHighlight.Bounds.Height.Should().Be(cardRoot.Bounds.Height + 6d);
+
+                Canvas overlayCanvas = GetOverlayCanvas(gallery);
+                GalleryLayoutService galleryLayout = new();
+                galleryLayout.TryGetOverlayRect(
+                        cardRoot,
+                        overlayCanvas,
+                        out Rect expectedCardSurfaceRect)
+                    .Should()
+                    .BeTrue();
+                galleryLayout.TryGetCardSurface(
+                        card,
+                        overlayCanvas,
+                        out Rect cardSurfaceRect,
+                        out CornerRadius cardSurfaceCornerRadius)
+                    .Should()
+                    .BeTrue();
+                cardSurfaceRect.Should().Be(expectedCardSurfaceRect);
+                cardSurfaceCornerRadius.Should().Be(cardRoot.CornerRadius);
+
+                selectionHighlight.Effect.Should().BeOfType<DropShadowEffect>();
+                Transitions highlightTransitions = selectionHighlight.Transitions
+                    ?? throw new InvalidOperationException("Selection highlight transitions were not found.");
+                DoubleTransition highlightTransition = highlightTransitions
+                    .OfType<DoubleTransition>()
+                    .Single();
+                highlightTransition.Property.Should().Be(Visual.OpacityProperty);
+                highlightTransition.Duration.Should().Be(TimeSpan.FromMilliseconds(150));
+                toggleSelectionButton.Transitions = null;
+                selectionHighlight.Transitions = null;
+
+                Point? cardCenter = card.TranslatePoint(
+                    new Point(card.Bounds.Width / 2d, card.Bounds.Height / 2d),
+                    window);
+                cardCenter.Should().NotBeNull();
+                window.MouseMove(cardCenter.GetValueOrDefault(), RawInputModifiers.None);
+                window.CaptureRenderedFrame();
+
+                toggleSelectionButton.Opacity.Should().Be(1d,
+                    "hovering an unselected card reveals its check");
+
+                toggleSelectionButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.CaptureRenderedFrame();
+
+                gallery.IsSelectionMode.Should().BeTrue(
+                    "clicking the check starts selection mode");
+                card.IsSelectionMode.Should().BeTrue(
+                    "the rendered card follows gallery selection mode");
+                card.IsSelectionDimmed.Should().BeFalse(
+                    "selected previews remain unchanged");
+                toggleSelectionButton.IsVisible.Should().BeTrue();
+                toggleSelectionButton.Classes.Should().Contain("selected");
+                toggleSelectionButton.Opacity.Should().Be(1d);
+                toggleSelectionButton.Background.Should().NotBe(Brushes.Transparent);
+                selectionHighlight.Classes.Should().Contain("selected");
+                selectionHighlight.Opacity.Should().Be(1d);
+
+                Button selectionTarget = card
+                    .GetVisualDescendants()
+                    .OfType<Button>()
+                    .Single(button => Grid.GetRowSpan(button) == 2);
+
+                selectionTarget.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.CaptureRenderedFrame();
+
+                gallery.IsSelectionMode.Should().BeFalse(
+                    "removing the last selection closes selection mode");
+                selectionHighlight.Classes.Should().NotContain("selected");
+                selectionHighlight.Opacity.Should().Be(0d);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task GalleryViewSelection_AfterCheckStartsMode_KeepsCardHighlightsIndependent()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            Window window = Show(scenario.View);
+
+            try
+            {
+                await scenario.ViewModel.RestoreStateAsync(
+                    new GalleryItemState[]
+                    {
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "First"),
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "Second")
+                    },
+                    CancellationToken.None);
+                window.CaptureRenderedFrame();
+
+                IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
+                        GetGalleryControl(scenario.View))
+                    .Children
+                    .OfType<GenerationCardControl>()
+                    .ToList();
+                cards.Should().HaveCount(2);
+                GenerationCardControl firstCard = cards[0];
+                GenerationCardControl secondCard = cards[1];
+                Button firstCardCheck = firstCard.FindControl<Button>("ToggleSelectionButton")
+                    ?? throw new InvalidOperationException("Selection button was not found.");
+                Button secondCardCheck = secondCard.FindControl<Button>("ToggleSelectionButton")
+                    ?? throw new InvalidOperationException("Selection button was not found.");
+                Border firstDimmingOverlay = firstCard.FindControl<Border>("SelectionDimmingOverlay")
+                    ?? throw new InvalidOperationException("Selection dimming overlay was not found.");
+                Border secondDimmingOverlay = secondCard.FindControl<Border>("SelectionDimmingOverlay")
+                    ?? throw new InvalidOperationException("Selection dimming overlay was not found.");
+                GallerySelectionOutlineControl firstSelectionHighlight = firstCard
+                    .FindControl<GallerySelectionOutlineControl>("SelectionHighlight")
+                    ?? throw new InvalidOperationException("Selection highlight was not found.");
+                GallerySelectionOutlineControl secondSelectionHighlight = secondCard
+                    .FindControl<GallerySelectionOutlineControl>("SelectionHighlight")
+                    ?? throw new InvalidOperationException("Selection highlight was not found.");
+                firstDimmingOverlay.Transitions = null;
+                secondDimmingOverlay.Transitions = null;
+                firstSelectionHighlight.Transitions = null;
+                secondSelectionHighlight.Transitions = null;
+                firstCardCheck.Transitions = null;
+                secondCardCheck.Transitions = null;
+
+                firstCardCheck.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.CaptureRenderedFrame();
+
+                firstCard.IsSelectionDimmed.Should().BeFalse();
+                secondCard.IsSelectionDimmed.Should().BeTrue();
+                firstDimmingOverlay.Opacity.Should().Be(0d);
+                secondDimmingOverlay.Opacity.Should().Be(1d);
+                firstCardCheck.Classes.Should().Contain("selected");
+                secondCardCheck.Classes.Should().NotContain("selected");
+                firstSelectionHighlight.Opacity.Should().Be(1d);
+                secondSelectionHighlight.Opacity.Should().Be(0d);
+
+                Button secondCardSelectionTarget = secondCard
+                    .GetVisualDescendants()
+                    .OfType<Button>()
+                    .Single(button => Grid.GetRowSpan(button) == 2);
+                secondCardSelectionTarget.IsVisible.Should().BeTrue();
+
+                secondCardSelectionTarget.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.CaptureRenderedFrame();
+
+                scenario.ViewModel.SelectedCount.Should().Be(2);
+                scenario.ViewModel.Items.Should().OnlyContain(item => item.IsSelected);
+                firstCard.IsSelectionDimmed.Should().BeFalse();
+                secondCard.IsSelectionDimmed.Should().BeFalse();
+                secondDimmingOverlay.Opacity.Should().Be(0d);
+                secondCardCheck.Classes.Should().Contain("selected");
+                firstSelectionHighlight.Opacity.Should().Be(1d);
+                secondSelectionHighlight.Opacity.Should().Be(1d);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public async Task MainWindowRestoreGalleryAsync_BeforeShow_RendersVisibleGalleryCardAfterShow()
     {
         await DispatchAsync(async () =>
@@ -109,6 +468,50 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 CancellationToken.None);
 
             ShowAndAssertSingleVisibleCard(scenario.Window);
+        });
+    }
+
+    [Fact]
+    public async Task MainWindowSelection_WithSelectedItem_ShowsGenerationPanelOverlay()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
+            await scenario.ViewModel.RestoreGalleryAsync(
+                new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
+                CancellationToken.None);
+            scenario.Window.Show();
+            scenario.Window.CaptureRenderedFrame();
+
+            try
+            {
+                GallerySelectionOverlayView selectionOverlay = scenario.Window
+                    .GetVisualDescendants()
+                    .OfType<GallerySelectionOverlayView>()
+                    .Single();
+                AnimatedBlurBackdropControl animatedBackdrop = selectionOverlay
+                    .GetVisualDescendants()
+                    .OfType<AnimatedBlurBackdropControl>()
+                    .Single();
+                Grid shellContent = scenario.Window.FindControl<Grid>("ShellContentGrid")
+                    ?? throw new InvalidOperationException("Shell content was not found.");
+                GenerationItemViewModel item = scenario.ViewModel.Gallery.Items.Single();
+
+                selectionOverlay.IsActive.Should().BeFalse();
+                ImageDropBehavior.GetIsEnabled(shellContent).Should().BeTrue();
+
+                scenario.ViewModel.Gallery.ToggleSelectionCommand.Execute(item);
+                scenario.Window.CaptureRenderedFrame();
+
+                selectionOverlay.IsActive.Should().BeTrue();
+                animatedBackdrop.IsActive.Should().BeTrue();
+                ImageDropBehavior.GetIsEnabled(shellContent).Should().BeFalse();
+            }
+            finally
+            {
+                scenario.Window.Close();
+            }
         });
     }
 

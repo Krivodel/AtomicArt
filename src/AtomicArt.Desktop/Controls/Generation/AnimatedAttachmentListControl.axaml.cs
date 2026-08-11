@@ -467,6 +467,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             CommandParameter = item
         };
         removeButton.Classes.Add("remove-attachment");
+        removeButton.Classes.Add("danger");
 
         Grid content = new();
         content.Children.Add(image);

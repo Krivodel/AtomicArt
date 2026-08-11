@@ -41,6 +41,29 @@ public sealed class GalleryItemDeletionServiceTests
     }
 
     [Fact]
+    public async Task DeleteFilesAsync_WithMultipleRequests_DeletesEveryItemFile()
+    {
+        string directory = CreateCleanDirectory(
+            nameof(DeleteFilesAsync_WithMultipleRequests_DeletesEveryItemFile));
+        string firstImagePath = await WriteManagedFileAsync(directory, ItemId);
+        string secondImagePath = await WriteManagedFileAsync(directory, OtherItemId);
+        GalleryItemDeletionService service = CreateService(
+            new PassthroughTrustedImageFileService());
+        GalleryItemDeletionRequest firstRequest = CreateRequest(firstImagePath);
+        GalleryItemDeletionRequest secondRequest = new(
+            OtherItemId,
+            ModelId,
+            secondImagePath,
+            null);
+        GalleryItemDeletionRequest[] requests = [firstRequest, secondRequest];
+
+        await service.DeleteFilesAsync(requests, CancellationToken.None);
+
+        File.Exists(firstImagePath).Should().BeFalse();
+        File.Exists(secondImagePath).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task DeleteFilesAsync_WithMissingFiles_Completes()
     {
         string directory = CreateCleanDirectory(nameof(DeleteFilesAsync_WithMissingFiles_Completes));

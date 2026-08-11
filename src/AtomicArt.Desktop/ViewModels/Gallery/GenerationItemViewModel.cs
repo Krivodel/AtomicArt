@@ -32,7 +32,6 @@ public sealed partial class GenerationItemViewModel :
     public bool ShowsGeneratedImage => HasDisplayImagePath && !IsFailed;
     public bool ShowsGenerationProgress => IsGenerating && !HasDisplayImagePath && !IsFailed;
     public bool ShowsEmptyPreview => !ShowsGeneratedImage && !ShowsGenerationProgress && !IsFailed;
-    public string DeleteOrCancelGlyph => IsGenerating ? UiGlyphs.Cancel : UiGlyphs.Delete;
     private IGenerationItemStatusDescriptor StatusDescriptor => _statusDescriptorRegistry.Get(StatusKind);
 
     private readonly IGenerationItemStatusDescriptorRegistry _statusDescriptorRegistry;
@@ -76,6 +75,8 @@ public sealed partial class GenerationItemViewModel :
     [ObservableProperty]
     private int _attachedImagesCount;
     [ObservableProperty]
+    private bool _isSelected;
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Status))]
     [NotifyPropertyChangedFor(nameof(IsGenerated))]
     [NotifyPropertyChangedFor(nameof(IsGenerating))]
@@ -83,7 +84,6 @@ public sealed partial class GenerationItemViewModel :
     [NotifyPropertyChangedFor(nameof(ShowsGeneratedImage))]
     [NotifyPropertyChangedFor(nameof(ShowsGenerationProgress))]
     [NotifyPropertyChangedFor(nameof(ShowsEmptyPreview))]
-    [NotifyPropertyChangedFor(nameof(DeleteOrCancelGlyph))]
     private GenerationItemStatus _statusKind;
 
     public GenerationItemViewModel(
@@ -363,6 +363,5 @@ public sealed partial class GenerationItemViewModel :
         OnPropertyChanged(nameof(ShowsGeneratedImage));
         OnPropertyChanged(nameof(ShowsGenerationProgress));
         OnPropertyChanged(nameof(ShowsEmptyPreview));
-        OnPropertyChanged(nameof(DeleteOrCancelGlyph));
     }
 }

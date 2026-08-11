@@ -135,6 +135,9 @@ public static class DependencyInjection
         services.AddViewTemplate<IModelPanelViewModel, GenerationPanelView>();
         services.AddViewTemplate<SettingsViewModel, SettingsOverlayView>();
         services.AddViewTemplate<ErrorDialogViewModel, ErrorDialogOverlayView>();
+        services.AddViewTemplate<
+            ConfirmationDialogViewModel,
+            ConfirmationDialogOverlayView>();
         services.AddViewTemplate<DataRootSettingViewModel, DataRootSettingView>();
         services.AddViewTemplate<ApiBaseAddressSettingViewModel, ApiBaseAddressSettingView>();
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
@@ -273,6 +276,7 @@ public static class DependencyInjection
     private static IServiceCollection AddDialogServices(this IServiceCollection services)
     {
         services.AddSingleton<ErrorDialogViewModel>();
+        services.AddSingleton<ConfirmationDialogViewModel>();
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<GlobalExceptionService>();
 

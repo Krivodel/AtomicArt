@@ -71,6 +71,15 @@
                 Value="Center" />
     </Style>
 
+    <Style Selector="TextBlock.gallery-selection-summary">
+        <Setter Property="FontSize"
+                Value="{StaticResource GallerySelectionSummaryFontSize}" />
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+        <Setter Property="TextAlignment"
+                Value="Center" />
+    </Style>
+
     <Style Selector="TextBlock.generation-card-prompt">
         <Setter Property="MaxLines"
                 Value="3" />

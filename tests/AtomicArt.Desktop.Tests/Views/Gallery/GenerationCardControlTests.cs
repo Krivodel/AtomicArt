@@ -67,6 +67,27 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
             expectsNewWindowCommand ? newWindowCommand : defaultCommand);
     }
 
+    [Theory]
+    [InlineData(KeyModifiers.None, false)]
+    [InlineData(KeyModifiers.Control, false)]
+    [InlineData(KeyModifiers.Shift, true)]
+    [InlineData(KeyModifiers.Shift | KeyModifiers.Control, true)]
+    public void ResolveSelectionCommand_WithModifiers_SelectsExpectedCommand(
+        KeyModifiers modifiers,
+        bool expectsRangeCommand)
+    {
+        RelayCommand toggleCommand = new(() => { });
+        RelayCommand rangeCommand = new(() => { });
+
+        IRelayCommand? result = GenerationCardControl.ResolveSelectionCommand(
+            modifiers,
+            toggleCommand,
+            rangeCommand);
+
+        result.Should().BeSameAs(
+            expectsRangeCommand ? rangeCommand : toggleCommand);
+    }
+
     [Fact]
     public void Calculate_WithWideSource_ScalesFullAspectRatioAndFitsRightViewportEdge()
     {
