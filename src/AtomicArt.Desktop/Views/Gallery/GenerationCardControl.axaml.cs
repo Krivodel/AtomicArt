@@ -6,7 +6,9 @@ using Avalonia.Platform.Storage;
 
 using CommunityToolkit.Mvvm.Input;
 
+using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -99,10 +101,14 @@ public partial class GenerationCardControl :
         set => GenerationPreview.ExpansionHost = value;
     }
 
+    private PromptDragCandidate? _promptDragCandidate;
+    private bool _isPromptDragActive;
+
     public GenerationCardControl()
     {
         InitializeComponent();
         GenerationPreview.OverflowOwner = this;
+        AttachPromptDragHandlers();
     }
 
     Control IGalleryCardSurfaceProvider.CardSurface => GenerationCardRoot;
@@ -180,6 +186,37 @@ public partial class GenerationCardControl :
         }
     }
 
+    private void ExecuteOpenMetadata(GenerationItemViewModel item)
+    {
+        IRelayCommand? command = OpenMetadataCommand;
+
+        if (command?.CanExecute(item) == true)
+        {
+            command.Execute(item);
+        }
+    }
+
+    private void AttachPromptDragHandlers()
+    {
+        PromptDragSource.AddHandler(
+            PointerPressedEvent,
+            OnPromptDragSourcePointerPressed,
+            RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        PromptDragSource.AddHandler(
+            PointerMovedEvent,
+            OnPromptDragSourcePointerMoved,
+            RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        PromptDragSource.AddHandler(
+            PointerReleasedEvent,
+            OnPromptDragSourcePointerReleased,
+            RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        PromptDragSource.PointerCaptureLost +=
+            OnPromptDragSourcePointerCaptureLost;
+    }
+
     private void OnRevealInFolderClick(object? sender, RoutedEventArgs e)
     {
         _ = sender;
@@ -225,4 +262,114 @@ public partial class GenerationCardControl :
             e.Handled = true;
         }
     }
+
+    private void OnPromptDragSourcePointerPressed(
+        object? sender,
+        PointerPressedEventArgs e)
+    {
+        _ = sender;
+
+        if (DataContext is not GenerationItemViewModel item)
+        {
+            return;
+        }
+
+        PointerPoint pointerPoint = e.GetCurrentPoint(this);
+        if (!pointerPoint.Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        e.Pointer.Capture(PromptDragSource);
+        _promptDragCandidate = new PromptDragCandidate(
+            e,
+            pointerPoint.Position,
+            item.Prompt);
+    }
+
+    private async void OnPromptDragSourcePointerMoved(
+        object? sender,
+        PointerEventArgs e)
+    {
+        _ = sender;
+
+        PromptDragCandidate? dragCandidate = _promptDragCandidate;
+        if (dragCandidate is null)
+        {
+            return;
+        }
+
+        PointerPoint pointerPoint = e.GetCurrentPoint(this);
+        if (!pointerPoint.Properties.IsLeftButtonPressed)
+        {
+            _promptDragCandidate = null;
+            return;
+        }
+
+        if (!PointerDragThreshold.IsReached(
+                dragCandidate.Origin,
+                pointerPoint.Position)
+            || string.IsNullOrWhiteSpace(dragCandidate.Prompt))
+        {
+            return;
+        }
+
+        _promptDragCandidate = null;
+        _isPromptDragActive = true;
+        e.Handled = true;
+
+        try
+        {
+            DataTransfer dataTransfer = AtomicArtPromptDragData.Create(
+                dragCandidate.Prompt);
+            await DragDrop.DoDragDropAsync(
+                dragCandidate.PointerPressedEventArgs,
+                dataTransfer,
+                DragDropEffects.Copy);
+        }
+        finally
+        {
+            _isPromptDragActive = false;
+            e.Pointer.Capture(null);
+        }
+    }
+
+    private void OnPromptDragSourcePointerReleased(
+        object? sender,
+        PointerReleasedEventArgs e)
+    {
+        _ = sender;
+
+        _promptDragCandidate = null;
+        e.Pointer.Capture(null);
+    }
+
+    private void OnPromptDragSourcePointerCaptureLost(
+        object? sender,
+        PointerCaptureLostEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        _promptDragCandidate = null;
+    }
+
+    private void OnPromptDragSourceClick(object? sender, RoutedEventArgs e)
+    {
+        _ = sender;
+
+        if (_isPromptDragActive
+            || DataContext is not GenerationItemViewModel item)
+        {
+            return;
+        }
+
+        ExecuteOpenMetadata(item);
+        e.Handled = true;
+    }
+
+    private sealed record PromptDragCandidate(
+        PointerPressedEventArgs PointerPressedEventArgs,
+        Point Origin,
+        string Prompt);
 }

@@ -40,12 +40,12 @@
                     </Grid>
                 </Border>
 
-                <Button Grid.Row="1"
+                <Button x:Name="PromptDragSource"
+                        Grid.Row="1"
                         Classes="card-zone-hit-target"
-                        Cursor="Arrow"
                         IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
-                        Command="{Binding $parent[controls:GenerationCardControl].OpenMetadataCommand}"
-                        CommandParameter="{Binding}" />
+                        Click="OnPromptDragSourceClick"
+                        Cursor="Arrow" />
 
                 <Border x:Name="SelectionDimmingOverlay"
                         Grid.RowSpan="2"

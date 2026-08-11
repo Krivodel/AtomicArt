@@ -82,7 +82,10 @@
                         Padding="0"
                         HorizontalAlignment="Stretch"
                         Classes="generation-panel"
-                        ClipToBounds="True">
+                        behaviors:PromptDropBehavior.IsEnabled="{Binding !Gallery.IsSelectionMode}"
+                        behaviors:PromptDropBehavior.Overlay="{Binding #PromptDropOverlay}"
+                        ClipToBounds="True"
+                        behaviors:PromptDropBehavior.ReplacePromptCommand="{Binding ReplaceGenerationPromptCommand}">
                     <Grid>
                         <Border x:Name="GenerationPanelContent"
                                 Padding="{StaticResource GenerationPanelPadding}"
@@ -93,6 +96,10 @@
                         </Border>
 
                         <controls:ImageDropOverlayControl x:Name="PanelDropOverlay"
+                                                          ZIndex="20"
+                                                          BackdropCornerRadius="{StaticResource ShellCornerRadius}" />
+
+                        <controls:ImageDropOverlayControl x:Name="PromptDropOverlay"
                                                           ZIndex="20"
                                                           BackdropCornerRadius="{StaticResource ShellCornerRadius}" />
 

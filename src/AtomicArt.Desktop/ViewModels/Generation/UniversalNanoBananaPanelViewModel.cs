@@ -20,6 +20,7 @@ namespace AtomicArt.Desktop.ViewModels.Generation;
 public sealed partial class UniversalNanoBananaPanelViewModel :
     ObservableObject,
     IModelPanelViewModel,
+    IGenerationPromptTarget,
     IGenerationPanelPresetTarget,
     IAppStateGenerationPanelRestoreTarget,
     IAppStateGenerationPanelFlushTarget,
@@ -533,6 +534,17 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         CancelPendingPromptStateSave();
         await SavePanelStateAsync(nameof(CommitPromptAsync), ct);
+    }
+
+    [RelayCommand]
+    private void ReplacePrompt(string? prompt)
+    {
+        if (prompt is null)
+        {
+            return;
+        }
+
+        Prompt = prompt;
     }
 
     [RelayCommand]

@@ -102,6 +102,17 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
+    public void ReplacePromptCommand_WithGalleryPrompt_ReplacesCurrentPrompt()
+    {
+        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        viewModel.Prompt = "Previous prompt";
+
+        viewModel.ReplacePromptCommand.Execute("Prompt from a gallery card");
+
+        viewModel.Prompt.Should().Be("Prompt from a gallery card");
+    }
+
+    [Fact]
     public async Task GenerateCommand_WhenApiReturnsBatch_PublishesCompletedEvent()
     {
         TestGenerationLifecycleEventHub lifecycleEventHub = new();

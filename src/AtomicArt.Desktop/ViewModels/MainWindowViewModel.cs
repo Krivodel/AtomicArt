@@ -28,6 +28,8 @@ public sealed partial class MainWindowViewModel :
     public ErrorDialogViewModel ErrorDialog { get; }
     public ConfirmationDialogViewModel ConfirmationDialog { get; }
     public IModelPanelViewModel ActiveGenerationPanel { get; }
+    public IRelayCommand<string?>? ReplaceGenerationPromptCommand =>
+        (ActiveGenerationPanel as IGenerationPromptTarget)?.ReplacePromptCommand;
     public SettingsViewModel Settings => _settings;
     public ApplicationUpdateViewModel ApplicationUpdate { get; }
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);

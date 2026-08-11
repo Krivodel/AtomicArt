@@ -66,6 +66,15 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
+    public void AcceptsData_WithPromptContainingImageUrl_RejectsAllTargets()
+    {
+        DataTransfer dataTransfer = AtomicArtPromptDragData.Create(
+            "https://images.atomicart.test/reference.png");
+
+        AssertAcceptedTargets(dataTransfer, false, false);
+    }
+
+    [Fact]
     public void AcceptsData_WithBrowserHtmlFormat_AcceptsOnlyExternalTarget()
     {
         DataFormat<byte[]> htmlFormat = DataFormat.CreateBytesPlatformFormat(
@@ -204,31 +213,6 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
                     dataTransfer);
 
                 context.Overlay.IsActive.Should().BeFalse();
-            }
-            finally
-            {
-                window.Close();
-            }
-        });
-    }
-
-    [Fact]
-    public async Task CancelScheduledOverlayHide_AfterPendingHide_KeepsPanelTargetActive()
-    {
-        await DispatchAsync(async () =>
-        {
-            OverlayPanelTestContext context = CreateOverlayPanelContext();
-            Window window = ShowTestWindow(context.Panel);
-
-            try
-            {
-                context.Overlay.IsActive = true;
-                ImageDropBehavior.ScheduleOverlayHide(context.Panel);
-                ImageDropBehavior.CancelScheduledOverlayHide(context.Panel);
-
-                await Task.Delay(OverlayHideWaitMilliseconds);
-
-                context.Overlay.IsActive.Should().BeTrue();
             }
             finally
             {

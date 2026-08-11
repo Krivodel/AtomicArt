@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.VisualTree;
@@ -195,6 +196,44 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         {
             File.Delete(imagePath);
         }
+    }
+
+    [Fact]
+    public async Task PromptArea_WhenClicked_OpensMetadataAsync()
+    {
+        await DispatchAsync(() =>
+        {
+            bool isMetadataOpened = false;
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            RelayCommand command = new(() => isMetadataOpened = true);
+            GenerationCardControl control = new()
+            {
+                DataContext = item,
+                OpenMetadataCommand = command
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                Point promptAreaCenter = new(110d, 270d);
+
+                window.MouseDown(promptAreaCenter, MouseButton.Left);
+                window.MouseUp(promptAreaCenter, MouseButton.Left);
+
+                isMetadataOpened.Should().BeTrue();
+            }
+            finally
+            {
+                window.Close();
+            }
+
+            return Task.CompletedTask;
+        });
     }
 
     [Theory]

@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 
 using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Services;
@@ -37,13 +36,6 @@ public static class ImageDropBehavior
             "TargetKind",
             typeof(ImageDropBehavior),
             defaultValue: ImageDropTargetKind.ExternalFiles);
-
-    private const int DragLeaveHideDelayMilliseconds = 50;
-
-    private static readonly AttachedProperty<int> OverlayRevisionProperty =
-        AvaloniaProperty.RegisterAttached<Control, int>(
-            "OverlayRevision",
-            typeof(ImageDropBehavior));
 
     static ImageDropBehavior()
     {
@@ -108,6 +100,8 @@ public static class ImageDropBehavior
 
         bool isAtomicArtImage =
             AtomicArtImageDragData.IsAtomicArtImage(dataTransfer);
+        bool isAtomicArtPrompt =
+            AtomicArtPromptDragData.IsPrompt(dataTransfer);
 
         if (targetKind == ImageDropTargetKind.GalleryImage)
         {
@@ -115,7 +109,9 @@ public static class ImageDropBehavior
                 && AtomicArtImageDragData.IsGalleryImage(dataTransfer);
         }
 
-        if (targetKind != ImageDropTargetKind.ExternalFiles || isAtomicArtImage)
+        if (targetKind != ImageDropTargetKind.ExternalFiles
+            || isAtomicArtImage
+            || isAtomicArtPrompt)
         {
             return false;
         }
@@ -128,40 +124,6 @@ public static class ImageDropBehavior
                 dataTransfer);
     }
 
-    internal static void ScheduleOverlayHide(Control control)
-    {
-        ArgumentNullException.ThrowIfNull(control);
-
-        CancelScheduledOverlayHide(control);
-        int scheduledRevision = control.GetValue(OverlayRevisionProperty);
-
-        DispatcherTimer.RunOnce(
-            () =>
-            {
-                if (control.GetValue(OverlayRevisionProperty) != scheduledRevision)
-                {
-                    return;
-                }
-
-                ImageDropOverlayControl? overlay = GetOverlay(control);
-
-                if (overlay is not null)
-                {
-                    overlay.IsActive = false;
-                }
-            },
-            TimeSpan.FromMilliseconds(DragLeaveHideDelayMilliseconds),
-            DispatcherPriority.Input);
-    }
-
-    internal static void CancelScheduledOverlayHide(Control control)
-    {
-        ArgumentNullException.ThrowIfNull(control);
-
-        int revision = control.GetValue(OverlayRevisionProperty);
-        control.SetValue(OverlayRevisionProperty, revision + 1);
-    }
-
     private static void UpdateDragState(object? sender, DragEventArgs e)
     {
         if (sender is not Control control)
@@ -171,7 +133,7 @@ public static class ImageDropBehavior
 
         ImageDropTargetKind targetKind = GetTargetKind(control);
 
-        if (IsHandledByGalleryTarget(e, targetKind))
+        if (IsHandledByInternalTarget(e, targetKind))
         {
             SetOverlayActive(control, false);
             return;
@@ -188,33 +150,33 @@ public static class ImageDropBehavior
             return;
         }
 
-        HandleRejectedAtomicArtImageDrag(e, targetKind);
+        HandleRejectedAtomicArtDrag(e, targetKind);
     }
 
-    private static void HandleRejectedAtomicArtImageDrag(
+    private static void HandleRejectedAtomicArtDrag(
         DragEventArgs e,
         ImageDropTargetKind targetKind)
     {
-        bool rejectsAtomicArtImage =
+        bool rejectsAtomicArtData =
             targetKind == ImageDropTargetKind.ExternalFiles
-            && e.DataTransfer.Contains(DataFormat.File)
-            && AtomicArtImageDragData.IsAtomicArtImage(e.DataTransfer);
+            && (AtomicArtImageDragData.IsAtomicArtImage(e.DataTransfer)
+                || AtomicArtPromptDragData.IsPrompt(e.DataTransfer));
 
-        if (rejectsAtomicArtImage)
+        if (rejectsAtomicArtData)
         {
             e.DragEffects = DragDropEffects.None;
             e.Handled = true;
         }
     }
 
-    private static bool IsHandledByGalleryTarget(
+    private static bool IsHandledByInternalTarget(
         DragEventArgs e,
         ImageDropTargetKind targetKind)
     {
         return e.Handled
             && targetKind == ImageDropTargetKind.ExternalFiles
-            && e.DataTransfer.Contains(DataFormat.File)
-            && AtomicArtImageDragData.IsAtomicArtImage(e.DataTransfer);
+            && (AtomicArtImageDragData.IsAtomicArtImage(e.DataTransfer)
+                || AtomicArtPromptDragData.IsPrompt(e.DataTransfer));
     }
 
     private static bool IsInsideDropArea(Control control, DragEventArgs e)
@@ -229,13 +191,7 @@ public static class ImageDropBehavior
 
     private static void SetOverlayActive(Control control, bool isActive)
     {
-        CancelScheduledOverlayHide(control);
-        ImageDropOverlayControl? overlay = GetOverlay(control);
-
-        if (overlay is not null)
-        {
-            overlay.IsActive = isActive;
-        }
+        DropOverlayState.SetActive(control, GetOverlay(control), isActive);
     }
 
     private static void OnIsEnabledChanged(Control control, AvaloniaPropertyChangedEventArgs args)
@@ -293,19 +249,11 @@ public static class ImageDropBehavior
         }
 
         Control dropArea = GetDropArea(control) ?? control;
-        Point position = e.GetPosition(dropArea);
-        bool isOutside = position.X < 0d
-            || position.Y < 0d
-            || position.X > dropArea.Bounds.Width
-            || position.Y > dropArea.Bounds.Height;
-
-        if (isOutside)
-        {
-            SetOverlayActive(control, false);
-            return;
-        }
-
-        ScheduleOverlayHide(control);
+        DropOverlayState.HandleDragLeave(
+            control,
+            dropArea,
+            GetOverlay(control),
+            e);
     }
 
     private static async void OnDrop(object? sender, DragEventArgs e)
@@ -318,14 +266,14 @@ public static class ImageDropBehavior
         SetOverlayActive(control, false);
         ImageDropTargetKind targetKind = GetTargetKind(control);
 
-        if (IsHandledByGalleryTarget(e, targetKind))
+        if (IsHandledByInternalTarget(e, targetKind))
         {
             return;
         }
 
         if (!AcceptsData(e.DataTransfer, targetKind) || !IsInsideDropArea(control, e))
         {
-            HandleRejectedAtomicArtImageDrag(e, targetKind);
+            HandleRejectedAtomicArtDrag(e, targetKind);
             return;
         }
 
