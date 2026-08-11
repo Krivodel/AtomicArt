@@ -67,7 +67,7 @@ public sealed class FilePickerService :
             AllowMultiple = true,
             FileTypeFilter =
             [
-                FilePickerFileTypes.ImageAll
+                AttachmentFilePickerFileTypes.Images
             ],
             Title = _textProvider.Get(
                 GenerationUiLocalizationKeys.Actions.PickImagesTitle)
