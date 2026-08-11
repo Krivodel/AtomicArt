@@ -334,11 +334,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 toggleSelectionButton.Transitions = null;
                 selectionHighlight.Transitions = null;
 
-                Point? cardCenter = card.TranslatePoint(
-                    new Point(card.Bounds.Width / 2d, card.Bounds.Height / 2d),
-                    window);
-                cardCenter.Should().NotBeNull();
-                window.MouseMove(cardCenter.GetValueOrDefault(), RawInputModifiers.None);
+                Point cardCenter = GetControlCenter(card, window);
+                window.MouseMove(cardCenter, RawInputModifiers.None);
                 window.CaptureRenderedFrame();
 
                 toggleSelectionButton.Opacity.Should().Be(1d,
@@ -447,7 +444,9 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     .Single(button => Grid.GetRowSpan(button) == 2);
                 secondCardSelectionTarget.IsVisible.Should().BeTrue();
 
-                secondCardSelectionTarget.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Point secondCardCenter = GetControlCenter(secondCard, window);
+                window.MouseDown(secondCardCenter, MouseButton.Left);
+                window.MouseUp(secondCardCenter, MouseButton.Left);
                 window.CaptureRenderedFrame();
 
                 scenario.ViewModel.SelectedCount.Should().Be(2);
@@ -458,6 +457,180 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 secondCardCheck.Classes.Should().Contain("selected");
                 firstSelectionHighlight.Opacity.Should().Be(1d);
                 secondSelectionHighlight.Opacity.Should().Be(1d);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task GallerySelectionBrush_FromInactiveCheck_SelectsFirstAndVisitedCards()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            Window window = Show(scenario.View);
+
+            try
+            {
+                await scenario.ViewModel.RestoreStateAsync(
+                    new GalleryItemState[]
+                    {
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "First"),
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "Second"),
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "Third")
+                    },
+                    CancellationToken.None);
+                window.CaptureRenderedFrame();
+
+                IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
+                        GetGalleryControl(scenario.View))
+                    .Children
+                    .OfType<GenerationCardControl>()
+                    .ToList();
+                GenerationCardControl firstCard = cards.Single(card =>
+                    ReferenceEquals(
+                        card.DataContext,
+                        scenario.ViewModel.Items[0]));
+                GenerationCardControl secondCard = cards.Single(card =>
+                    ReferenceEquals(
+                        card.DataContext,
+                        scenario.ViewModel.Items[1]));
+                Button firstCardCheck = firstCard
+                    .FindControl<Button>("ToggleSelectionButton")
+                    ?? throw new InvalidOperationException(
+                        "Selection button was not found.");
+                Point firstCardCheckCenter = GetControlCenter(
+                    firstCardCheck,
+                    window);
+                Point secondCardCenter = GetControlCenter(secondCard, window);
+
+                window.MouseDown(firstCardCheckCenter, MouseButton.Left);
+                window.MouseMove(
+                    secondCardCenter,
+                    RawInputModifiers.LeftMouseButton);
+                window.MouseUp(secondCardCenter, MouseButton.Left);
+
+                scenario.ViewModel.SelectedCount.Should().Be(2);
+                scenario.ViewModel.Items[0].IsSelected.Should().BeTrue();
+                scenario.ViewModel.Items[1].IsSelected.Should().BeTrue();
+                scenario.ViewModel.Items[2].IsSelected.Should().BeFalse();
+                scenario.ViewModel.IsSelectionMode.Should().BeTrue();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task GallerySelectionBrush_FromUnselectedCard_SelectsVisitedCards()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            Window window = Show(scenario.View);
+
+            try
+            {
+                await scenario.ViewModel.RestoreStateAsync(
+                    new GalleryItemState[]
+                    {
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "First"),
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "Second"),
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "Third")
+                    },
+                    CancellationToken.None);
+                scenario.ViewModel.ToggleSelectionCommand.Execute(
+                    scenario.ViewModel.Items[0]);
+                window.CaptureRenderedFrame();
+
+                IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
+                        GetGalleryControl(scenario.View))
+                    .Children
+                    .OfType<GenerationCardControl>()
+                    .ToList();
+                GenerationCardControl secondCard = cards.Single(card =>
+                    ReferenceEquals(
+                        card.DataContext,
+                        scenario.ViewModel.Items[1]));
+                GenerationCardControl thirdCard = cards.Single(card =>
+                    ReferenceEquals(
+                        card.DataContext,
+                        scenario.ViewModel.Items[2]));
+                Point secondCardCenter = GetControlCenter(secondCard, window);
+                Point thirdCardCenter = GetControlCenter(thirdCard, window);
+
+                window.MouseDown(secondCardCenter, MouseButton.Left);
+                window.MouseMove(
+                    thirdCardCenter,
+                    RawInputModifiers.LeftMouseButton);
+                window.MouseUp(thirdCardCenter, MouseButton.Left);
+
+                scenario.ViewModel.SelectedCount.Should().Be(3);
+                scenario.ViewModel.Items.Should().OnlyContain(item => item.IsSelected);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task GallerySelectionBrush_FromSelectedCard_DeselectsVisitedCards()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            Window window = Show(scenario.View);
+
+            try
+            {
+                await scenario.ViewModel.RestoreStateAsync(
+                    new GalleryItemState[]
+                    {
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "First"),
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "Second"),
+                        GalleryItemStateTestFactory.CreateGenerated(prompt: "Third")
+                    },
+                    CancellationToken.None);
+                scenario.ViewModel.SelectAllCommand.Execute(null);
+                window.CaptureRenderedFrame();
+
+                IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
+                        GetGalleryControl(scenario.View))
+                    .Children
+                    .OfType<GenerationCardControl>()
+                    .ToList();
+                GenerationCardControl firstCard = cards.Single(card =>
+                    ReferenceEquals(
+                        card.DataContext,
+                        scenario.ViewModel.Items[0]));
+                GenerationCardControl secondCard = cards.Single(card =>
+                    ReferenceEquals(
+                        card.DataContext,
+                        scenario.ViewModel.Items[1]));
+                Point firstCardCenter = GetControlCenter(firstCard, window);
+                Point secondCardCenter = GetControlCenter(secondCard, window);
+
+                window.MouseDown(firstCardCenter, MouseButton.Left);
+                window.MouseMove(
+                    secondCardCenter,
+                    RawInputModifiers.LeftMouseButton);
+                window.MouseUp(secondCardCenter, MouseButton.Left);
+
+                scenario.ViewModel.SelectedCount.Should().Be(1);
+                scenario.ViewModel.Items[0].IsSelected.Should().BeFalse();
+                scenario.ViewModel.Items[1].IsSelected.Should().BeFalse();
+                scenario.ViewModel.Items[2].IsSelected.Should().BeTrue();
+                scenario.ViewModel.IsSelectionMode.Should().BeTrue();
             }
             finally
             {
@@ -716,6 +889,19 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         {
             window.Close();
         }
+    }
+
+    private static Point GetControlCenter(
+        Control control,
+        Window window)
+    {
+        Point? controlCenter = control.TranslatePoint(
+            new Point(control.Bounds.Width / 2d, control.Bounds.Height / 2d),
+            window);
+
+        return controlCenter
+            ?? throw new InvalidOperationException(
+                "Control position was not found.");
     }
 
     private static AnimatedGalleryControl GetGalleryControl(Avalonia.Visual visual)

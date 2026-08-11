@@ -45,9 +45,10 @@ internal sealed class GallerySelectionController : IDisposable
         }
 
         Activate();
-        item.IsSelected = !item.IsSelected;
+        bool isSelected = !item.IsSelected;
+        item.IsSelected = isSelected;
+        SelectedCount += isSelected ? 1 : -1;
         _anchor = item;
-        RecalculateSelectedCount();
         DeactivateWhenSelectionIsEmpty();
         NotifyStateChanged();
     }

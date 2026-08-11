@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -163,6 +164,14 @@ public partial class GenerationCardControl :
         return modifiers.HasFlag(KeyModifiers.Shift)
             ? rangeCommand
             : toggleCommand;
+    }
+
+    internal bool IsSelectionToggleHit(Visual visual)
+    {
+        ArgumentNullException.ThrowIfNull(visual);
+
+        return ReferenceEquals(visual, ToggleSelectionButton)
+            || visual.GetVisualAncestors().Contains(ToggleSelectionButton);
     }
 
     internal void SetPreviewBitmapServices(

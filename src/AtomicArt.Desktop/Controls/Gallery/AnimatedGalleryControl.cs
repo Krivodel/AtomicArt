@@ -114,6 +114,7 @@ public partial class AnimatedGalleryControl : UserControl
         _resizeController ?? throw new InvalidOperationException("Animated gallery resize controller was not created.");
 
     private readonly AnimatedGallerySceneController _sceneController;
+    private readonly AnimatedGallerySelectionBrushController _selectionBrushController;
     private readonly CollectionChangedSubscription _itemsSubscription;
     private readonly PropertyChangedItemsSubscription<IGalleryItemViewModel> _itemPropertyChangedSubscription;
     private readonly Dictionary<Control, int> _previewOriginalZIndices = [];
@@ -150,6 +151,8 @@ public partial class AnimatedGalleryControl : UserControl
             sceneFactory,
             () => _isAttached,
             CancelResizeAnimation);
+        _selectionBrushController =
+            new AnimatedGallerySelectionBrushController(this);
         AddHandler(
             PointerMovedEvent,
             OnPreviewPointerMoved,
@@ -281,6 +284,7 @@ public partial class AnimatedGalleryControl : UserControl
         _isSelectionVisualRefreshPending = false;
         _previewPointerPosition = null;
         _previewPointerModifiers = KeyModifiers.None;
+        _selectionBrushController.Cancel();
         ResetPreviewOverflow();
         _sceneController.DetachScene();
     }
@@ -309,6 +313,11 @@ public partial class AnimatedGalleryControl : UserControl
 
         if (change.Property == IsSelectionModeProperty)
         {
+            if (!change.GetNewValue<bool>())
+            {
+                _selectionBrushController.HandleSelectionModeEnded();
+            }
+
             _sceneController.UpdateCardSelectionMode();
             ScheduleSelectionVisualRefresh();
             RaisePreviewPointerStateChanged();
