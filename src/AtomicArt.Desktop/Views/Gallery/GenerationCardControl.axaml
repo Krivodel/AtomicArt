@@ -45,6 +45,18 @@
                         <PathIcon Data="{StaticResource GalleryImbaIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
+                <MenuItem x:Name="DeleteMenuItem"
+                          Command="{Binding #GenerationCard.DeleteOrCancelCommand}"
+                          CommandParameter="{Binding #GenerationCard.DataContext}">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys.ConfirmDeletion}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <PathIcon Classes="Danger"
+                                  Data="{StaticResource GalleryDeleteIcon}" />
+                    </MenuItem.Icon>
+                </MenuItem>
             </uiControls:AnimatedContextMenuFlyout>
         </Border.ContextFlyout>
 

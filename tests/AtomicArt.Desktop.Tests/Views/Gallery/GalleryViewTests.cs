@@ -162,6 +162,10 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             try
             {
                 AssertGalleryViewOperations(scenario.View);
+                AnimatedGalleryControl galleryControl =
+                    GetGalleryControl(scenario.View);
+                galleryControl.DeleteOrCancelCommand.Should().BeSameAs(
+                    scenario.ViewModel.DeleteOrCancelCommand);
             }
             finally
             {

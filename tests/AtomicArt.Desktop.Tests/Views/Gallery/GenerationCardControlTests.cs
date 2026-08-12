@@ -252,9 +252,11 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 "missing-thumbnail.jpg");
             RelayCommand selectCommand = new(() => item.IsSelected = true);
             RelayCommand revealCommand = new(() => { });
+            RelayCommand deleteCommand = new(() => { });
             GenerationCardControl control = new()
             {
                 DataContext = item,
+                DeleteOrCancelCommand = deleteCommand,
                 RevealInFolderCommand = revealCommand,
                 ToggleSelectionCommand = selectCommand
             };
@@ -285,9 +287,14 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .FindControl<MenuItem>("ImbaMenuItem")
                     ?? throw new InvalidOperationException(
                         "IMBA menu item was not found.");
+                MenuItem deleteMenuItem = control
+                    .FindControl<MenuItem>("DeleteMenuItem")
+                    ?? throw new InvalidOperationException(
+                        "Delete menu item was not found.");
 
-                menuFlyout.Items.Should().HaveCount(3);
+                menuFlyout.Items.Should().HaveCount(4);
                 menuFlyout.Items[0].Should().BeSameAs(selectMenuItem);
+                menuFlyout.Items[3].Should().BeSameAs(deleteMenuItem);
                 Avalonia.Controls.Shapes.Path selectIcon = selectMenuItem.Icon
                     .Should()
                     .BeOfType<Avalonia.Controls.Shapes.Path>()
@@ -304,6 +311,23 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 imbaMenuItem.Icon.Should().BeOfType<PathIcon>();
                 imbaMenuItem.IsEnabled.Should().BeTrue();
                 imbaMenuItem.Command.Should().BeNull();
+                PathIcon deleteIcon = deleteMenuItem.Icon
+                    .Should()
+                    .BeOfType<PathIcon>()
+                    .Subject;
+                deleteIcon.TryFindResource(
+                    "SukiDangerColor",
+                    out object? dangerResource).Should().BeTrue();
+                Color dangerColor = dangerResource
+                    .Should()
+                    .BeOfType<Color>()
+                    .Subject;
+                deleteIcon.Foreground
+                    .Should()
+                    .BeAssignableTo<ISolidColorBrush>()
+                    .Which.Color.Should().Be(dangerColor);
+                deleteMenuItem.Command.Should().BeSameAs(deleteCommand);
+                deleteMenuItem.CommandParameter.Should().BeSameAs(item);
                 menuFlyout.Popup.WindowManagerAddShadowHint.Should().BeFalse();
 
                 item.IsSelected = true;
@@ -415,7 +439,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .BeOfType<LinearGradientBrush>()
                     .Subject;
                 menuFlyout.IsOpen.Should().BeTrue();
-                menuItems.Should().HaveCount(3);
+                menuItems.Should().HaveCount(4);
                 menuItems[0].Should().BeSameAs(selectMenuItem);
                 selectMenuItem.IsSelected.Should().BeFalse();
                 selectMenuItem.IsPointerOver.Should().BeFalse();
@@ -428,11 +452,11 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     border => border.Margin == default);
                 presenterChromeBorders[0].IsVisible.Should().BeFalse();
                 presenterChromeBorders[1].IsVisible.Should().BeTrue();
-                iconSeparators.Should().HaveCount(3);
+                iconSeparators.Should().HaveCount(4);
                 iconSeparators.Should().OnlyContain(separator => separator.Opacity == 0d);
-                iconPresenters.Should().HaveCount(3);
-                headerPresenters.Should().HaveCount(3);
-                menuHeaderTextBlocks.Should().HaveCount(3);
+                iconPresenters.Should().HaveCount(4);
+                headerPresenters.Should().HaveCount(4);
+                menuHeaderTextBlocks.Should().HaveCount(4);
                 menuHeaderTextBlocks.Should().OnlyContain(
                     textBlock => textBlock.FontWeight == FontWeight.Normal);
 

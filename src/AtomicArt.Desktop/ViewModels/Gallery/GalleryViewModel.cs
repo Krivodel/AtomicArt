@@ -268,6 +268,28 @@ public sealed partial class GalleryViewModel :
             messageArguments);
     }
 
+    private async Task ExecuteConfirmedDeletionAsync(
+        int itemCount,
+        Func<CancellationToken, Task> deletion,
+        CancellationToken ct)
+    {
+        if (_deletionConfirmationService.IsConfirmationRequired)
+        {
+            LocalizedConfirmationDialogRequest request =
+                CreateDeletionConfirmationRequest(itemCount);
+            bool isConfirmed = await _dialogService.ShowConfirmationAsync(
+                request,
+                ct);
+
+            if (!isConfirmed)
+            {
+                return;
+            }
+        }
+
+        await deletion(ct);
+    }
+
     [RelayCommand(CanExecute = nameof(CanRunCommand))]
     private Task RevealInFolderAsync(
         GenerationItemViewModel? item,
@@ -356,8 +378,14 @@ public sealed partial class GalleryViewModel :
                     return;
                 }
 
-                CancelGenerationIfActive(item);
-                await DeleteItemAsync(item, operationCt);
+                await ExecuteConfirmedDeletionAsync(
+                    1,
+                    async deletionCt =>
+                    {
+                        CancelGenerationIfActive(item);
+                        await DeleteItemAsync(item, deletionCt);
+                    },
+                    operationCt);
             },
             nameof(DeleteOrCancelAsync),
             ct);
@@ -409,34 +437,23 @@ public sealed partial class GalleryViewModel :
             _selectionController.GetSelectedItems();
 
         await ExecuteLoadingUserOperationAsync(
-            async operationCt =>
-            {
-                if (_deletionConfirmationService.IsConfirmationRequired)
+            operationCt => ExecuteConfirmedDeletionAsync(
+                selectedItems.Count,
+                async deletionCt =>
                 {
-                    LocalizedConfirmationDialogRequest request =
-                        CreateDeletionConfirmationRequest(selectedItems.Count);
-                    bool isConfirmed = await _dialogService.ShowConfirmationAsync(
-                        request,
-                        operationCt);
+                    IReadOnlyList<GenerationItemViewModel> existingSelectedItems =
+                        selectedItems
+                            .Where(_itemsController.Contains)
+                            .ToList();
 
-                    if (!isConfirmed)
+                    if (existingSelectedItems.Count == 0)
                     {
                         return;
                     }
-                }
 
-                IReadOnlyList<GenerationItemViewModel> existingSelectedItems =
-                    selectedItems
-                        .Where(_itemsController.Contains)
-                        .ToList();
-
-                if (existingSelectedItems.Count == 0)
-                {
-                    return;
-                }
-
-                await DeleteItemsAsync(existingSelectedItems, operationCt);
-            },
+                    await DeleteItemsAsync(existingSelectedItems, deletionCt);
+                },
+                operationCt),
             nameof(DeleteSelectedAsync),
             ct);
     }

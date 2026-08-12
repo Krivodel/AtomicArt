@@ -69,6 +69,49 @@ public sealed class GalleryViewModelTests
     }
 
     [Fact]
+    public async Task DeleteOrCancel_WhenConfirmationDeclined_KeepsItem()
+    {
+        RecordingDialogService dialogService = new()
+        {
+            ConfirmationResult = false
+        };
+        RecordingGalleryItemDeletionService deletionService = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            dialogService: dialogService,
+            galleryItemDeletionService: deletionService);
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem());
+
+        await viewModel.DeleteOrCancelCommand.ExecuteAsync(item);
+
+        LocalizedConfirmationDialogRequest request = dialogService
+            .ConfirmationRequests
+            .Single();
+        request.MessageArguments.Should().Equal(1);
+        viewModel.Items.Should().ContainSingle().Which.Should().BeSameAs(item);
+        deletionService.Requests.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteOrCancel_WhenConfirmationDisabled_DeletesWithoutDialog()
+    {
+        RecordingDialogService dialogService = new();
+        TestDeletionConfirmationService deletionConfirmationService = new(false);
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            dialogService: dialogService,
+            deletionConfirmationService: deletionConfirmationService);
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem());
+
+        await viewModel.DeleteOrCancelCommand.ExecuteAsync(item);
+
+        dialogService.ConfirmationRequests.Should().BeEmpty();
+        viewModel.Items.Should().BeEmpty();
+    }
+
+    [Fact]
     public void ToggleSelectionCommand_WhenInactive_EntersSelectionModeWithSelectedItem()
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();

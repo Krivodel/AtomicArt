@@ -22,6 +22,7 @@
                                          IsSelectionMode="{Binding IsSelectionMode}"
                                          Items="{Binding Items}"
                                          Operations="{Binding GalleryOperations, ElementName=GalleryRoot}"
+                                         DeleteOrCancelCommand="{Binding DeleteOrCancelCommand}"
                                          OpenMetadataCommand="{Binding OpenMetadataCommand}"
                                          OpenViewerCommand="{Binding OpenViewerCommand}"
                                          RevealInFolderCommand="{Binding RevealInFolderCommand}"

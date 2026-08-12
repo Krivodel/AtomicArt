@@ -52,6 +52,11 @@ public partial class AnimatedGalleryControl : UserControl
         get => GetValue(OpenMetadataCommandProperty);
         set => SetValue(OpenMetadataCommandProperty, value);
     }
+    public IRelayCommand? DeleteOrCancelCommand
+    {
+        get => GetValue(DeleteOrCancelCommandProperty);
+        set => SetValue(DeleteOrCancelCommandProperty, value);
+    }
     public IRelayCommand? ToggleSelectionCommand
     {
         get => GetValue(ToggleSelectionCommandProperty);
@@ -91,6 +96,9 @@ public partial class AnimatedGalleryControl : UserControl
     public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(OpenMetadataCommand));
+    public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(DeleteOrCancelCommand));
     public static readonly StyledProperty<IRelayCommand?> ToggleSelectionCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(ToggleSelectionCommand));
@@ -361,6 +369,7 @@ public partial class AnimatedGalleryControl : UserControl
                || (property == OpenViewerCommandProperty)
                || (property == ShowFailureDetailsCommandProperty)
                || (property == OpenMetadataCommandProperty)
+               || (property == DeleteOrCancelCommandProperty)
                || (property == ToggleSelectionCommandProperty)
                || (property == SelectRangeCommandProperty);
     }

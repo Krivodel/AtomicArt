@@ -79,6 +79,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         generationCard.RevealInNewFolderWindowCommand =
             commands.RevealInNewFolderWindow;
         generationCard.OpenMetadataCommand = commands.OpenMetadata;
+        generationCard.DeleteOrCancelCommand = commands.DeleteOrCancel;
         generationCard.ToggleSelectionCommand = commands.ToggleSelection;
         generationCard.SelectRangeCommand = commands.SelectRange;
     }

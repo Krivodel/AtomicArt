@@ -47,6 +47,11 @@ public partial class GenerationCardControl :
         get => GetValue(OpenMetadataCommandProperty);
         set => SetValue(OpenMetadataCommandProperty, value);
     }
+    public IRelayCommand? DeleteOrCancelCommand
+    {
+        get => GetValue(DeleteOrCancelCommandProperty);
+        set => SetValue(DeleteOrCancelCommandProperty, value);
+    }
     public IRelayCommand? ToggleSelectionCommand
     {
         get => GetValue(ToggleSelectionCommandProperty);
@@ -83,6 +88,9 @@ public partial class GenerationCardControl :
     public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(OpenMetadataCommand));
+    public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(DeleteOrCancelCommand));
     public static readonly StyledProperty<IRelayCommand?> ToggleSelectionCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(ToggleSelectionCommand));
