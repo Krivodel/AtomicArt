@@ -35,8 +35,31 @@
     </Style>
 
     <Style Selector="MenuItem">
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiText}" />
         <Setter Property="Cursor"
                 Value="Hand" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPopupBackground}" />
+        <Setter Property="BorderBrush"
+                Value="{DynamicResource SukiMenuBorderBrush}" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ShellBorderThickness}" />
+        <Setter Property="CornerRadius"
+                Value="{DynamicResource SmallCornerRadius}" />
+    </Style>
+
+    <Style Selector="MenuItem:selected">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPrimaryColor5}" />
+    </Style>
+
+    <Style Selector="MenuItem:pressed">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPrimaryColor0}" />
     </Style>
 
     <Style Selector="Button.Icon">

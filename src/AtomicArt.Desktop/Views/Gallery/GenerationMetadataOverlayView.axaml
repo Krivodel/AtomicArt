@@ -14,6 +14,7 @@
                                   Height="{StaticResource MetadataOverlayHeight}"
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Center"
+                                  Classes="gradient-background"
                                   Title="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Title}}"
                                   CloseCommand="{Binding CloseCommand}">
         <overlays:ModalOverlayControl.Body>

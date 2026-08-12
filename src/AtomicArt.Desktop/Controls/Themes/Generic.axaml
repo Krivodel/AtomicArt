@@ -43,6 +43,8 @@
                                                                   BlurRadius="{TemplateBinding BlurRadius}"
                                                                   Intensity="{TemplateBinding BlurIntensity}"
                                                                   IsDynamic="{TemplateBinding IsBlurDynamic}" />
+                                    <Border Classes="opaque-background-base"
+                                            Background="Transparent" />
                                     <Border Background="{TemplateBinding Background}" />
                                 </Grid>
                             </Border>
@@ -70,4 +72,16 @@
             </Setter>
         </ControlTheme>
     </Styles.Resources>
+
+    <Style Selector="overlays|ModalOverlayControl.gradient-background">
+        <Setter Property="Background"
+                Value="{DynamicResource PopupGradientBrush}" />
+        <Setter Property="BlurRadius"
+                Value="0" />
+    </Style>
+
+    <Style Selector="overlays|ModalOverlayControl.gradient-background /template/ Border.opaque-background-base">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPopupBackground}" />
+    </Style>
 </Styles>

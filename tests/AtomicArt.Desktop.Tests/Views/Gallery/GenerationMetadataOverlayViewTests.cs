@@ -29,6 +29,53 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlTestBase
 {
     [Fact]
+    public void Background_WhenShown_UsesPopupGradientWithoutBlur()
+    {
+        Dispatch(() =>
+        {
+            string imagePath = CreateImageFile();
+
+            try
+            {
+                GenerationMetadataOverlayView view = CreateView(imagePath);
+                Window window = Show(view);
+
+                try
+                {
+                    window.CaptureRenderedFrame();
+                    ModalOverlayControl panel = view.FindControl<ModalOverlayControl>("PanelRoot")
+                        ?? throw new InvalidOperationException("Metadata panel was not found.");
+                    Border backgroundBase = panel
+                        .GetVisualDescendants()
+                        .OfType<Border>()
+                        .Single(control => control.Classes.Contains("opaque-background-base"));
+                    bool gradientFound = panel.TryFindResource(
+                        "PopupGradientBrush",
+                        out object? popupGradient);
+                    ISolidColorBrush backgroundBrush = backgroundBase.Background
+                        .Should()
+                        .BeAssignableTo<ISolidColorBrush>()
+                        .Subject;
+
+                    gradientFound.Should().BeTrue();
+                    panel.Background.Should().BeSameAs(popupGradient);
+                    panel.BlurRadius.Should().Be(0d);
+                    backgroundBrush.Color.A.Should().Be(byte.MaxValue);
+                    backgroundBrush.Opacity.Should().Be(1d);
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }
+            finally
+            {
+                File.Delete(imagePath);
+            }
+        });
+    }
+
+    [Fact]
     public void Layout_WhenShown_UsesSharedModalAtRenderedSize()
     {
         Dispatch(() =>

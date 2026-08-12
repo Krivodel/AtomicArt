@@ -9,6 +9,7 @@
     <controls:ModalOverlayControl Width="{StaticResource SettingsOverlayWidth}"
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Top"
+                                  Classes="gradient-background"
                                   Title="{i18n:I18n {x:Static resources:SettingsLocalizationKeys.Title}}"
                                   CloseCommand="{Binding CloseCommand}">
         <controls:ModalOverlayControl.Body>
