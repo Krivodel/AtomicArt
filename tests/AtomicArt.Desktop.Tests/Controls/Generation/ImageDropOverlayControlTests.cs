@@ -120,6 +120,47 @@ public sealed class ImageDropOverlayControlTests : AnimatedGalleryControlTestBas
     }
 
     [Fact]
+    public void AttachmentLimit_WhenActive_ShowsNoSlotsWithDangerTintWithoutDropIcon()
+    {
+        Dispatch(() =>
+        {
+            ImageDropOverlayControl overlay = new()
+            {
+                IsActive = true,
+                IsAttachmentLimitReached = true
+            };
+            Window window = Show(overlay, WindowWidth, WindowHeight);
+
+            try
+            {
+                Border capacityTint = overlay.FindControl<Border>("CapacityTint")
+                    ?? throw new InvalidOperationException("Drop overlay capacity tint was not found.");
+                Image dropIcon = overlay.FindControl<Image>("DropIcon")
+                    ?? throw new InvalidOperationException("Drop overlay icon was not found.");
+                TextBlock dropLabel = overlay.FindControl<TextBlock>("DropLabel")
+                    ?? throw new InvalidOperationException("Drop overlay label was not found.");
+                TextBlock noSlotsLabel = overlay.FindControl<TextBlock>("NoSlotsLabel")
+                    ?? throw new InvalidOperationException("Drop overlay no-slots label was not found.");
+                AnimatedBlurBackdropControl animatedBackdrop = overlay
+                    .GetVisualDescendants()
+                    .OfType<AnimatedBlurBackdropControl>()
+                    .Single();
+
+                capacityTint.Opacity.Should().BeGreaterThan(0d);
+                capacityTint.Background.Should().NotBeNull();
+                animatedBackdrop.IsActive.Should().BeTrue();
+                dropIcon.IsVisible.Should().BeFalse();
+                dropLabel.IsVisible.Should().BeFalse();
+                noSlotsLabel.IsVisible.Should().BeTrue();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public void IsActive_WhenChanged_UpdatesDynamicBlurCapture()
     {
         Dispatch(() =>

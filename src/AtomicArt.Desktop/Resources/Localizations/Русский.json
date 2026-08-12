@@ -34,7 +34,8 @@
       },
       "Attachments": {
         "CounterFormat": "{0}/{1}",
-        "Failed": "Не удалось прикрепить."
+        "Failed": "Не удалось прикрепить.",
+        "NoSlots": "Мест нет"
       },
       "Temperature": {
         "ValueFormat": "{0:0.0}"

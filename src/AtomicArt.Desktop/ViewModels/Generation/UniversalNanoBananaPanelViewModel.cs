@@ -49,6 +49,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     public int AttachmentInputByteLimit => SelectedModel is null
         ? 0
         : (int)Math.Min(int.MaxValue, SelectedModel.MaxTotalAttachedImageBytes);
+    public bool IsAttachmentLimitReached => SelectedModel is not null
+        && AttachedImages.Count >= SelectedModel.MaxAttachedImages;
     public string AttachmentCounterText => _textFormatter.FormatAttachmentCounterText(
         AttachedImages.Count,
         SelectedModel?.MaxAttachedImages ?? 0);
@@ -94,7 +96,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                                   && !IsAttaching
                                   && !string.IsNullOrWhiteSpace(Prompt);
     private bool CanLoadModelCatalog => !IsLoading && !IsCatalogLoading && !_imageModelOptionCatalog.IsLoaded;
-    private bool CanPickImage => !IsLoading && HasLoadedCatalog && HasAttachmentCapacity();
+    private bool CanPickImage => !IsLoading
+                                 && HasLoadedCatalog
+                                 && !IsAttachmentLimitReached;
 
     private readonly IGenerationModelCatalogApiClient _generationModelCatalogApiClient;
     private readonly IImageModelOptionCatalog _imageModelOptionCatalog;
@@ -614,12 +618,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private bool CanAttachImages(IReadOnlyList<AttachedImageDto>? attachedImages)
     {
-        return !IsLoading && HasAttachmentCapacity();
+        return !IsLoading && HasLoadedCatalog;
     }
 
     private bool CanAttachImageInputs(IReadOnlyList<ImageAttachmentInput>? inputs)
     {
-        return !IsLoading && HasAttachmentCapacity();
+        return !IsLoading && HasLoadedCatalog;
     }
 
     private async Task AttachImagesCoreAsync(
@@ -647,6 +651,14 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         {
             SetLocalizedErrorMessage(
                 GenerationUiLocalizationKeys.Errors.ModelCatalogLoadFailed);
+            DisposeInputs(inputs);
+            return;
+        }
+
+        if (IsAttachmentLimitReached)
+        {
+            SetLocalizedErrorMessage(
+                GenerationUiLocalizationKeys.Attachments.NoSlots);
             DisposeInputs(inputs);
             return;
         }
@@ -735,6 +747,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private void RefreshAttachmentState()
     {
         OnPropertyChanged(nameof(AttachmentCounterText));
+        OnPropertyChanged(nameof(IsAttachmentLimitReached));
         PickImageCommand.NotifyCanExecuteChanged();
         AttachImagesCommand.NotifyCanExecuteChanged();
         AttachImageInputsCommand.NotifyCanExecuteChanged();
@@ -926,11 +939,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private void CancelCatalogReload()
     {
         _catalogReloadCancellation?.Cancel();
-    }
-
-    private bool HasAttachmentCapacity()
-    {
-        return SelectedModel is not null && AttachedImages.Count < SelectedModel.MaxAttachedImages;
     }
 
     private static bool RequiresProviderCredential(ImageModelOption selectedModel)
@@ -1318,6 +1326,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         OnPropertyChanged(nameof(AttachmentCounterText));
         OnPropertyChanged(nameof(MaxAttachedImageBytes));
         OnPropertyChanged(nameof(AttachmentInputByteLimit));
+        OnPropertyChanged(nameof(IsAttachmentLimitReached));
     }
 
     private void UpdateAspectRatioOptions(ImageModelOption? model)
@@ -1394,7 +1403,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         if (e.Exception is null)
         {
             SetLocalizedErrorMessage(
-                GenerationUiLocalizationKeys.Attachments.Failed);
+                IsAttachmentLimitReached
+                    ? GenerationUiLocalizationKeys.Attachments.NoSlots
+                    : GenerationUiLocalizationKeys.Attachments.Failed);
             return;
         }
 

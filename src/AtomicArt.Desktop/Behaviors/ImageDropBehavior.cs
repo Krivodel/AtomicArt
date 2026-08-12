@@ -145,7 +145,9 @@ public static class ImageDropBehavior
 
         if (acceptsData)
         {
-            e.DragEffects = DragDropEffects.Copy;
+            e.DragEffects = IsAttachmentLimitReached(control)
+                ? DragDropEffects.None
+                : DragDropEffects.Copy;
             e.Handled = true;
             return;
         }
@@ -192,6 +194,11 @@ public static class ImageDropBehavior
     private static void SetOverlayActive(Control control, bool isActive)
     {
         DropOverlayState.SetActive(control, GetOverlay(control), isActive);
+    }
+
+    private static bool IsAttachmentLimitReached(Control control)
+    {
+        return GetOverlay(control)?.IsAttachmentLimitReached == true;
     }
 
     private static void OnIsEnabledChanged(Control control, AvaloniaPropertyChangedEventArgs args)
@@ -278,6 +285,12 @@ public static class ImageDropBehavior
         }
 
         e.Handled = true;
+
+        if (IsAttachmentLimitReached(control))
+        {
+            return;
+        }
+
         IDragDropImageService? dragDropImageService = GetDragDropImageService(control);
         int maxInputBytes = ImageAttachmentBehavior.GetMaxInputBytes(control);
 

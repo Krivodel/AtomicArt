@@ -34,7 +34,8 @@
       },
       "Attachments": {
         "CounterFormat": "{0}/{1}",
-        "Failed": "Could not attach the image."
+        "Failed": "Could not attach the image.",
+        "NoSlots": "No slots"
       },
       "Temperature": {
         "ValueFormat": "{0:0.0}"

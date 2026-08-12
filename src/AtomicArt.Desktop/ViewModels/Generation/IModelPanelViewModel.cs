@@ -12,6 +12,7 @@ public interface IModelPanelViewModel
     string DisplayName { get; }
     int MaxAttachedImageBytes { get; }
     int AttachmentInputByteLimit { get; }
+    bool IsAttachmentLimitReached { get; }
     IAsyncRelayCommand GenerateCommand { get; }
     IAsyncRelayCommand PickImageCommand { get; }
     IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> AttachImagesCommand { get; }

@@ -14,6 +14,19 @@
                                               BackdropCornerRadius="{Binding #Root.BackdropCornerRadius}"
                                               BlurRadius="{DynamicResource TransientOverlayBlurRadius}" />
 
+        <Border x:Name="CapacityTint"
+                Background="{DynamicResource SukiDangerColor}"
+                CornerRadius="{Binding #Root.BackdropCornerRadius}"
+                Opacity="0">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                      Easing="{StaticResource TransientOverlayEasing}"
+                                      Property="Opacity" />
+                </Transitions>
+            </Border.Transitions>
+        </Border>
+
         <controls:ImageDropDashedBorderControl x:Name="OverlayChrome"
                                                Margin="10"
                                                Opacity="0"
@@ -45,7 +58,8 @@
                 </Transitions>
             </StackPanel.Transitions>
 
-            <Image Width="{Binding #Root.IconSize}"
+            <Image x:Name="DropIcon"
+                   Width="{Binding #Root.IconSize}"
                    Height="{Binding #Root.IconSize}"
                    HorizontalAlignment="Center"
                    RenderOptions.BitmapInterpolationMode="MediumQuality"
@@ -60,12 +74,21 @@
                 </Image.Effect>
             </Image>
 
-            <TextBlock HorizontalAlignment="Center"
+            <TextBlock x:Name="DropLabel"
+                       HorizontalAlignment="Center"
                        FontSize="16"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource SukiText}"
                        Opacity="0.8"
                        Text="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys.ImageDropLabel}}" />
+
+            <TextBlock x:Name="NoSlotsLabel"
+                       HorizontalAlignment="Center"
+                       IsVisible="False"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource SukiDangerForeground}"
+                       Text="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Attachments.NoSlots}}" />
         </StackPanel>
     </Grid>
 </UserControl>

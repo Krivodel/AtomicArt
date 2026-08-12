@@ -56,6 +56,7 @@ public sealed class DesktopModelPanelRegistryTests
         public string DisplayName => "Test Model";
         public int MaxAttachedImageBytes => 1024;
         public int AttachmentInputByteLimit => 8192;
+        public bool IsAttachmentLimitReached => false;
         public IAsyncRelayCommand GenerateCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
         public IAsyncRelayCommand PickImageCommand { get; } = new AsyncRelayCommand(() => Task.CompletedTask);
         public IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> AttachImagesCommand { get; } =

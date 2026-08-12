@@ -20,6 +20,7 @@ public static class GenerationUiLocalizationKeys
     {
         public const string CounterFormat = "Generation.Attachments.CounterFormat";
         public const string Failed = "Generation.Attachments.Failed";
+        public const string NoSlots = "Generation.Attachments.NoSlots";
     }
 
     public static class Temperature

@@ -104,6 +104,7 @@
 
                             <controls:ImageDropOverlayControl x:Name="PanelDropOverlay"
                                                               ZIndex="20"
+                                                              IsAttachmentLimitReached="{Binding ActiveGenerationPanel.IsAttachmentLimitReached}"
                                                               BackdropCornerRadius="{StaticResource ShellCornerRadius}" />
 
                             <controls:ImageDropOverlayControl x:Name="PromptDropOverlay"
@@ -146,8 +147,9 @@
                 </overlays:ModalOverlayLayerControl>
 
                 <controls:ImageDropOverlayControl x:Name="WindowDropOverlay"
-                                                  IconSize="200"
-                                                  ZIndex="30" />
+                                                  ZIndex="30"
+                                                  IsAttachmentLimitReached="{Binding ActiveGenerationPanel.IsAttachmentLimitReached}"
+                                                  IconSize="200" />
             </Grid>
         </LayoutTransformControl>
 

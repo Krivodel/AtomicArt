@@ -430,7 +430,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         await AttachValidImagesAsync(viewModel, count);
 
         viewModel.AttachedImages.Should().HaveCount(selectedModel.MaxAttachedImages);
-        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Attachments.Failed));
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Attachments.NoSlots));
     }
 
     [Fact]
@@ -452,7 +452,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
-    public async Task AttachImages_WhenLimitReached_DisablesAttachmentCommands()
+    public async Task AttachImages_WhenLimitReached_ShowsNoSlotsWithoutAddingImage()
     {
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
         await FillAttachedImagesToLimitAsync(viewModel);
@@ -460,9 +460,12 @@ public sealed class UniversalNanoBananaPanelViewModelTests
 
         bool canAttachMore = viewModel.AttachImagesCommand.CanExecute(extraImages);
         bool canPickMore = viewModel.PickImageCommand.CanExecute(null);
+        await viewModel.AttachImagesCommand.ExecuteAsync(extraImages);
 
         viewModel.AttachedImages.Should().HaveCount(GetSelectedModel(viewModel).MaxAttachedImages);
-        canAttachMore.Should().BeFalse();
+        viewModel.IsAttachmentLimitReached.Should().BeTrue();
+        viewModel.ErrorMessage.Should().Be(TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Attachments.NoSlots));
+        canAttachMore.Should().BeTrue();
         canPickMore.Should().BeFalse();
     }
 

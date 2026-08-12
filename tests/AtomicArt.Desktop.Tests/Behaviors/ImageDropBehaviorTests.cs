@@ -221,6 +221,54 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
         });
     }
 
+    [Fact]
+    public void Drop_WhenAttachmentLimitReached_ShowsRejectedOverlayWithoutReadingImage()
+    {
+        Dispatch(() =>
+        {
+            DataTransfer dataTransfer = CreateGalleryImageDataTransfer();
+            OverlayPanelTestContext context = CreateOverlayPanelContext();
+            context.Overlay.IsAttachmentLimitReached = true;
+            Mock<IDragDropImageService> dragDropImageServiceMock = new();
+            ImageDropBehavior.SetDragDropImageService(
+                context.Panel,
+                dragDropImageServiceMock.Object);
+            ImageAttachmentBehavior.SetMaxInputBytes(context.Panel, 1024);
+            ConfigureGalleryDropTarget(context.Panel, context.Overlay);
+            Window window = ShowTestWindow(context.Panel);
+
+            try
+            {
+                Point pointerPosition = new(160d, 90d);
+                RaiseDragDrop(
+                    window,
+                    pointerPosition,
+                    RawDragEventType.DragOver,
+                    dataTransfer);
+
+                context.Overlay.IsActive.Should().BeTrue();
+
+                RaiseDragDrop(
+                    window,
+                    pointerPosition,
+                    RawDragEventType.Drop,
+                    dataTransfer);
+
+                context.Overlay.IsActive.Should().BeFalse();
+                dragDropImageServiceMock.Verify(
+                    service => service.ExtractImagesAsync(
+                        It.IsAny<IDataTransfer>(),
+                        It.IsAny<int>(),
+                        It.IsAny<CancellationToken>()),
+                    Times.Never);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     private static DataTransfer CreateGalleryImageDataTransfer()
     {
         return CreateAtomicArtImageDataTransfer(
