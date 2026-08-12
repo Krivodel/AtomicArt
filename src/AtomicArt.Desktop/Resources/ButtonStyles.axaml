@@ -73,6 +73,8 @@
     </Style>
 
     <Style Selector="MenuFlyoutPresenter.animated-context-menu">
+        <Setter Property="Background"
+                Value="{StaticResource ContextMenuBackgroundBrush}" />
         <Setter Property="BorderThickness"
                 Value="{StaticResource ZeroThickness}" />
         <Setter Property="CornerRadius"
@@ -84,6 +86,11 @@
     <Style Selector="MenuFlyoutPresenter.animated-context-menu MenuItem">
         <Setter Property="Theme"
                 Value="{StaticResource ContextMenuItemTheme}" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.gallery-selection-check">
+        <Setter Property="Effect"
+                Value="{x:Null}" />
     </Style>
 
     <Style Selector="MenuFlyoutPresenter.animated-context-menu /template/ Panel">

@@ -12,6 +12,18 @@
             Classes="generation-card-container">
         <Border.ContextFlyout>
             <uiControls:AnimatedContextMenuFlyout>
+                <MenuItem x:Name="SelectMenuItem"
+                          IsEnabled="{Binding !IsSelected}"
+                          Command="{Binding #GenerationCard.ToggleSelectionCommand}"
+                          CommandParameter="{Binding #GenerationCard.DataContext}">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.Select}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <Path Classes="gallery-selection-check" />
+                    </MenuItem.Icon>
+                </MenuItem>
                 <MenuItem x:Name="ShowInFolderMenuItem"
                           Command="{Binding #GenerationCard.RevealInFolderCommand}"
                           CommandParameter="{Binding #GenerationCard.DataContext}">

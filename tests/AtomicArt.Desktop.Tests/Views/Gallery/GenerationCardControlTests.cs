@@ -250,11 +250,13 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
             GenerationItemViewModel item = CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
+            RelayCommand selectCommand = new(() => item.IsSelected = true);
             RelayCommand revealCommand = new(() => { });
             GenerationCardControl control = new()
             {
                 DataContext = item,
-                RevealInFolderCommand = revealCommand
+                RevealInFolderCommand = revealCommand,
+                ToggleSelectionCommand = selectCommand
             };
             Window window = Show(
                 control,
@@ -271,6 +273,10 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .Should()
                     .BeOfType<AnimatedContextMenuFlyout>()
                     .Subject;
+                MenuItem selectMenuItem = control
+                    .FindControl<MenuItem>("SelectMenuItem")
+                    ?? throw new InvalidOperationException(
+                        "Select menu item was not found.");
                 MenuItem showInFolderMenuItem = control
                     .FindControl<MenuItem>("ShowInFolderMenuItem")
                     ?? throw new InvalidOperationException(
@@ -280,13 +286,29 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     ?? throw new InvalidOperationException(
                         "IMBA menu item was not found.");
 
+                menuFlyout.Items.Should().HaveCount(3);
+                menuFlyout.Items[0].Should().BeSameAs(selectMenuItem);
+                Avalonia.Controls.Shapes.Path selectIcon = selectMenuItem.Icon
+                    .Should()
+                    .BeOfType<Avalonia.Controls.Shapes.Path>()
+                    .Subject;
+                selectIcon.Fill.Should().BeNull();
+                selectIcon.Stroke.Should().NotBeNull();
+                selectIcon.Effect.Should().BeNull();
+                selectMenuItem.Command.Should().BeSameAs(selectCommand);
+                selectMenuItem.CommandParameter.Should().BeSameAs(item);
+                selectMenuItem.IsEnabled.Should().BeTrue();
                 showInFolderMenuItem.Icon.Should().BeOfType<PathIcon>();
-                imbaMenuItem.Icon.Should().BeOfType<PathIcon>();
                 showInFolderMenuItem.Command.Should().BeSameAs(revealCommand);
                 showInFolderMenuItem.CommandParameter.Should().BeSameAs(item);
+                imbaMenuItem.Icon.Should().BeOfType<PathIcon>();
                 imbaMenuItem.IsEnabled.Should().BeTrue();
                 imbaMenuItem.Command.Should().BeNull();
                 menuFlyout.Popup.WindowManagerAddShadowHint.Should().BeFalse();
+
+                item.IsSelected = true;
+
+                selectMenuItem.IsEnabled.Should().BeFalse();
             }
             finally
             {
@@ -330,11 +352,11 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 window.MouseUp(cardCenter, MouseButton.Right);
                 window.CaptureRenderedFrame();
 
-                MenuItem showInFolderMenuItem = control
-                    .FindControl<MenuItem>("ShowInFolderMenuItem")
+                MenuItem selectMenuItem = control
+                    .FindControl<MenuItem>("SelectMenuItem")
                     ?? throw new InvalidOperationException(
-                        "Show-in-folder menu item was not found.");
-                MenuFlyoutPresenter presenter = showInFolderMenuItem
+                        "Select menu item was not found.");
+                MenuFlyoutPresenter presenter = selectMenuItem
                     .GetVisualAncestors()
                     .OfType<MenuFlyoutPresenter>()
                     .Single();
@@ -377,11 +399,19 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 RenderTargetBitmap snapshot = revealHost.Snapshot
                     ?? throw new InvalidOperationException(
                         "Context menu snapshot was not created.");
+                bool backgroundFound = presenter.TryFindResource(
+                    "ContextMenuBackgroundBrush",
+                    out object? backgroundResource);
+                LinearGradientBrush backgroundBrush = presenter.Background
+                    .Should()
+                    .BeOfType<LinearGradientBrush>()
+                    .Subject;
                 menuFlyout.IsOpen.Should().BeTrue();
-                menuItems.Should().HaveCount(2);
-                showInFolderMenuItem.IsSelected.Should().BeFalse();
-                showInFolderMenuItem.IsPointerOver.Should().BeFalse();
-                showInFolderMenuItem.IsFocused.Should().BeFalse();
+                menuItems.Should().HaveCount(3);
+                menuItems[0].Should().BeSameAs(selectMenuItem);
+                selectMenuItem.IsSelected.Should().BeFalse();
+                selectMenuItem.IsPointerOver.Should().BeFalse();
+                selectMenuItem.IsFocused.Should().BeFalse();
                 presenter.Focusable.Should().BeTrue();
                 presenter.IsFocused.Should().BeTrue();
                 presenterTemplateRoot.Margin.Should().Be(default(Thickness));
@@ -390,10 +420,10 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     border => border.Margin == default);
                 presenterChromeBorders[0].IsVisible.Should().BeFalse();
                 presenterChromeBorders[1].IsVisible.Should().BeTrue();
-                iconSeparators.Should().HaveCount(2);
+                iconSeparators.Should().HaveCount(3);
                 iconSeparators.Should().OnlyContain(separator => separator.Opacity == 0d);
-                iconPresenters.Should().HaveCount(2);
-                menuHeaderTextBlocks.Should().HaveCount(2);
+                iconPresenters.Should().HaveCount(3);
+                menuHeaderTextBlocks.Should().HaveCount(3);
                 menuHeaderTextBlocks.Should().OnlyContain(
                     textBlock => textBlock.FontWeight == FontWeight.Normal);
 
@@ -410,6 +440,11 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 presenter.RenderTransform.Should().BeNull();
                 presenter.Opacity.Should().Be(0d);
                 presenter.IsHitTestVisible.Should().BeTrue();
+                backgroundFound.Should().BeTrue();
+                presenter.Background.Should().BeSameAs(backgroundResource);
+                backgroundBrush.GradientStops.Should().HaveCount(2);
+                backgroundBrush.GradientStops[0].Color.Should().NotBe(
+                    backgroundBrush.GradientStops[1].Color);
                 presenter.BorderThickness.Should().Be(default(Thickness));
                 presenter.CornerRadius.Should().Be(new CornerRadius(8d));
                 menuItems.Should().OnlyContain(

@@ -2,6 +2,14 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:resources="using:AtomicArt.Desktop.Resources">
     <BoxShadows x:Key="FloatingSurfaceShadow">0 18 42 0 #80000000</BoxShadows>
+    <LinearGradientBrush x:Key="ContextMenuBackgroundBrush"
+                         EndPoint="100%,100%"
+                         StartPoint="0%,0%">
+        <GradientStop Color="{StaticResource ContextMenuGradientStartColor}"
+                      Offset="0" />
+        <GradientStop Color="{StaticResource ContextMenuGradientEndColor}"
+                      Offset="1" />
+    </LinearGradientBrush>
     <SolidColorBrush x:Key="GlassCardBrush"
                      Color="{DynamicResource SukiGlassCardBackground}"
                      Opacity="{DynamicResource GlassOpacity}" />

@@ -101,6 +101,7 @@
       },
       "Actions": {
         "Attach": "Attach",
+        "Select": "Select",
         "ShowInGallery": "Show in gallery",
         "ShowInFolder": "Show in folder",
         "Imba": "IMBA"

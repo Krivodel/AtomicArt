@@ -101,6 +101,7 @@
       },
       "Actions": {
         "Attach": "Прикрепить",
+        "Select": "Выбрать",
         "ShowInGallery": "Показать в галерее",
         "ShowInFolder": "Показать в папке",
         "Imba": "ИМБА"

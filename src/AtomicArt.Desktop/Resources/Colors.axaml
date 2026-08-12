@@ -3,6 +3,8 @@
     <Color x:Key="SukiPopupBackground">#172133</Color>
     <Color x:Key="SukiLightBorderBrush">#214575</Color>
     <Color x:Key="SukiMenuBorderBrush">#2A4F80</Color>
+    <Color x:Key="ContextMenuGradientStartColor">#253D46</Color>
+    <Color x:Key="ContextMenuGradientEndColor">#1A2C33</Color>
     <Color x:Key="ImageDropBorderColor">#1E385C</Color>
     <Color x:Key="GallerySelectionTintColor">#000000</Color>
 </ResourceDictionary>
