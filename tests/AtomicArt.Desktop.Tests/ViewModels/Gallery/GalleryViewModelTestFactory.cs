@@ -33,6 +33,7 @@ internal static class GalleryViewModelTestFactory
         IFileRevealService? fileRevealService = null,
         IImageViewerService? imageViewerService = null,
         IDialogService? dialogService = null,
+        IDeletionConfirmationService? deletionConfirmationService = null,
         ITrustedImageFileService? trustedImageFileService = null,
         IGenerationResultStorage? generationResultStorage = null,
         IGenerationImageContentValidator? generationImageContentValidator = null,
@@ -52,6 +53,8 @@ internal static class GalleryViewModelTestFactory
             imageViewerService ?? new NullImageViewerService();
         IDialogService dialogs =
             dialogService ?? new RecordingDialogService();
+        IDeletionConfirmationService deletionConfirmation =
+            deletionConfirmationService ?? new TestDeletionConfirmationService();
         ITrustedImageFileService trustedService =
             trustedImageFileService ?? new PassthroughTrustedImageFileService();
         IGenerationResultStorage resultStorage =
@@ -122,6 +125,7 @@ internal static class GalleryViewModelTestFactory
             revealService,
             viewerService,
             dialogs,
+            deletionConfirmation,
             deletionService,
             galleryState,
             viewStateController,

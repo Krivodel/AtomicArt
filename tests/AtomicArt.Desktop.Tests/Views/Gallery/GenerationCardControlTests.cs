@@ -388,6 +388,14 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                         "PART_IconPresenter",
                         StringComparison.Ordinal))
                     .ToArray();
+                ContentPresenter[] headerPresenters = presenter
+                    .GetVisualDescendants()
+                    .OfType<ContentPresenter>()
+                    .Where(contentPresenter => string.Equals(
+                        contentPresenter.Name,
+                        "PART_HeaderPresenter",
+                        StringComparison.Ordinal))
+                    .ToArray();
                 TextBlock[] menuHeaderTextBlocks = menuItems
                     .Select(menuItem => menuItem.Header)
                     .OfType<TextBlock>()
@@ -423,18 +431,32 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 iconSeparators.Should().HaveCount(3);
                 iconSeparators.Should().OnlyContain(separator => separator.Opacity == 0d);
                 iconPresenters.Should().HaveCount(3);
+                headerPresenters.Should().HaveCount(3);
                 menuHeaderTextBlocks.Should().HaveCount(3);
                 menuHeaderTextBlocks.Should().OnlyContain(
                     textBlock => textBlock.FontWeight == FontWeight.Normal);
 
-                foreach (ContentPresenter iconPresenter in iconPresenters)
+                for (int index = 0; index < iconPresenters.Length; index++)
                 {
-                    TranslateTransform translateTransform = iconPresenter
+                    TranslateTransform translateTransform = iconPresenters[index]
                         .RenderTransform
                         .Should()
                         .BeOfType<TranslateTransform>()
                         .Subject;
-                    translateTransform.X.Should().Be(4d);
+                    double expectedOffset = index == 0 ? 8d : 4d;
+                    translateTransform.X.Should().Be(expectedOffset);
+                }
+
+                TranslateTransform selectHeaderTransform = headerPresenters[0]
+                    .RenderTransform
+                    .Should()
+                    .BeOfType<TranslateTransform>()
+                    .Subject;
+                selectHeaderTransform.X.Should().Be(4d);
+
+                foreach (ContentPresenter headerPresenter in headerPresenters.Skip(1))
+                {
+                    headerPresenter.RenderTransform.Should().BeNull();
                 }
 
                 presenter.RenderTransform.Should().BeNull();

@@ -138,7 +138,8 @@
       },
       "Appearance": {
         "ScaleLabel": "Масштаб",
-        "PromptTextSizeLabel": "Размер текста промпта"
+        "PromptTextSizeLabel": "Размер текста промпта",
+        "ConfirmDeletionLabel": "Подтверждать удаление"
       },
       "GpuCache": {
         "Label": "GPU-кэш",

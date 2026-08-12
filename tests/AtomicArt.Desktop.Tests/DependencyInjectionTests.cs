@@ -272,6 +272,7 @@ public sealed class DependencyInjectionTests
             typeof(ApiBaseAddressSettingViewModel),
             typeof(SecretSettingViewModel),
             typeof(NumericSettingViewModel),
+            typeof(BooleanSettingViewModel),
             typeof(LanguageSettingViewModel),
             typeof(GpuResourceCacheSettingViewModel),
             typeof(GenerationMetadataViewModel)
@@ -332,6 +333,29 @@ public sealed class DependencyInjectionTests
             .ContainSingle(setting => string.Equals(
                 setting.Key,
                 PromptTextSizeSettingDefinition.KeyValue,
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithConfirmDeletionSetting_RegistersRuntimeAndEditor()
+    {
+        using ServiceProvider serviceProvider = CreateServiceProvider();
+        ConfirmDeletionSettingDefinition definition = serviceProvider
+            .GetRequiredService<ISettingsDefinitionCatalog>()
+            .GetRequired<ConfirmDeletionSettingDefinition>();
+        IDeletionConfirmationService confirmationService = serviceProvider
+            .GetRequiredService<IDeletionConfirmationService>();
+        IReadOnlyList<ISettingItemViewModel> settingItems = serviceProvider
+            .GetRequiredService<ISettingsItemViewModelProvider>()
+            .CreateSettings();
+
+        confirmationService.IsConfirmationRequired.Should().Be(definition.DefaultValue);
+        settingItems
+            .OfType<BooleanSettingViewModel>()
+            .Should()
+            .ContainSingle(setting => string.Equals(
+                setting.Key,
+                ConfirmDeletionSettingDefinition.KeyValue,
                 StringComparison.Ordinal));
     }
 

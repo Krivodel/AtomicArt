@@ -31,9 +31,21 @@
         <ControlTheme x:Key="ContextMenuItemTheme"
                       BasedOn="{StaticResource SukiMenuItemStyle}"
                       TargetType="MenuItem">
+            <Style Selector="^.selection-context-menu-item /template/ ContentPresenter#PART_HeaderPresenter">
+                <Setter Property="RenderTransform">
+                    <TranslateTransform X="4" />
+                </Setter>
+            </Style>
+
             <Style Selector="^:icon /template/ ContentPresenter#PART_IconPresenter">
                 <Setter Property="RenderTransform">
                     <TranslateTransform X="4" />
+                </Setter>
+            </Style>
+
+            <Style Selector="^.selection-context-menu-item:icon /template/ ContentPresenter#PART_IconPresenter">
+                <Setter Property="RenderTransform">
+                    <TranslateTransform X="8" />
                 </Setter>
             </Style>
 

@@ -236,6 +236,28 @@ public sealed class GalleryViewModelTests
     }
 
     [Fact]
+    public async Task DeleteSelectedCommand_WhenConfirmationIsDisabled_DeletesWithoutDialog()
+    {
+        RecordingDialogService dialogService = new();
+        TestDeletionConfirmationService deletionConfirmationService = new(false);
+        RecordingGalleryItemDeletionService deletionService = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            dialogService: dialogService,
+            deletionConfirmationService: deletionConfirmationService,
+            galleryItemDeletionService: deletionService);
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(prompt: "First"));
+        viewModel.ToggleSelectionCommand.Execute(item);
+
+        await viewModel.DeleteSelectedCommand.ExecuteAsync(null);
+
+        dialogService.ConfirmationRequests.Should().BeEmpty();
+        viewModel.Items.Should().BeEmpty();
+        deletionService.BatchCallCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task DeleteOrCancelAsync_WithCompletedItem_SavesStateWithoutItem()
     {
         RecordingGalleryStateService galleryStateService = new();

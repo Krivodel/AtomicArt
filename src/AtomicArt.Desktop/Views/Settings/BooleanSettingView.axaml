@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
+             x:Class="AtomicArt.Desktop.Views.Settings.BooleanSettingView"
+             x:DataType="settings:BooleanSettingViewModel">
+    <Grid ColumnDefinitions="*,Auto"
+          RowDefinitions="Auto,Auto">
+        <TextBlock VerticalAlignment="Center"
+                   Classes="settings-label"
+                   Text="{Binding DisplayName}" />
+        <CheckBox Grid.Column="1"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Center"
+                  IsEnabled="{Binding !IsLoading}"
+                  IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+        <TextBlock Grid.Row="1"
+                   Grid.ColumnSpan="2"
+                   Margin="{StaticResource SettingsErrorMargin}"
+                   Classes="error-message danger-text"
+                   IsVisible="{Binding HasErrorMessage}"
+                   Text="{Binding ErrorMessage}" />
+    </Grid>
+</UserControl>

@@ -13,6 +13,7 @@
         <Border.ContextFlyout>
             <uiControls:AnimatedContextMenuFlyout>
                 <MenuItem x:Name="SelectMenuItem"
+                          Classes="selection-context-menu-item"
                           IsEnabled="{Binding !IsSelected}"
                           Command="{Binding #GenerationCard.ToggleSelectionCommand}"
                           CommandParameter="{Binding #GenerationCard.DataContext}">

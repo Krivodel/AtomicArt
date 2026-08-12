@@ -53,6 +53,7 @@ public sealed partial class GalleryViewModel :
     private readonly IFileRevealService _fileRevealService;
     private readonly IImageViewerService _imageViewerService;
     private readonly IDialogService _dialogService;
+    private readonly IDeletionConfirmationService _deletionConfirmationService;
     private readonly IGalleryItemDeletionService _deletionService;
     private readonly IGalleryStateService _galleryStateService;
     private readonly GalleryLifecycleViewStateController _viewStateController;
@@ -81,6 +82,7 @@ public sealed partial class GalleryViewModel :
         IFileRevealService fileRevealService,
         IImageViewerService imageViewerService,
         IDialogService dialogService,
+        IDeletionConfirmationService deletionConfirmationService,
         IGalleryItemDeletionService deletionService,
         IGalleryStateService galleryStateService,
         GalleryLifecycleViewStateController viewStateController,
@@ -97,6 +99,7 @@ public sealed partial class GalleryViewModel :
         ArgumentNullException.ThrowIfNull(fileRevealService);
         ArgumentNullException.ThrowIfNull(imageViewerService);
         ArgumentNullException.ThrowIfNull(dialogService);
+        ArgumentNullException.ThrowIfNull(deletionConfirmationService);
         ArgumentNullException.ThrowIfNull(deletionService);
         ArgumentNullException.ThrowIfNull(galleryStateService);
         ArgumentNullException.ThrowIfNull(viewStateController);
@@ -112,6 +115,7 @@ public sealed partial class GalleryViewModel :
         _fileRevealService = fileRevealService;
         _imageViewerService = imageViewerService;
         _dialogService = dialogService;
+        _deletionConfirmationService = deletionConfirmationService;
         _deletionService = deletionService;
         _galleryStateService = galleryStateService;
         _viewStateController = viewStateController;
@@ -407,15 +411,18 @@ public sealed partial class GalleryViewModel :
         await ExecuteLoadingUserOperationAsync(
             async operationCt =>
             {
-                LocalizedConfirmationDialogRequest request =
-                    CreateDeletionConfirmationRequest(selectedItems.Count);
-                bool isConfirmed = await _dialogService.ShowConfirmationAsync(
-                    request,
-                    operationCt);
-
-                if (!isConfirmed)
+                if (_deletionConfirmationService.IsConfirmationRequired)
                 {
-                    return;
+                    LocalizedConfirmationDialogRequest request =
+                        CreateDeletionConfirmationRequest(selectedItems.Count);
+                    bool isConfirmed = await _dialogService.ShowConfirmationAsync(
+                        request,
+                        operationCt);
+
+                    if (!isConfirmed)
+                    {
+                        return;
+                    }
                 }
 
                 IReadOnlyList<GenerationItemViewModel> existingSelectedItems =

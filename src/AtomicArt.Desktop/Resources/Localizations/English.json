@@ -138,7 +138,8 @@
       },
       "Appearance": {
         "ScaleLabel": "Scale",
-        "PromptTextSizeLabel": "Prompt text size"
+        "PromptTextSizeLabel": "Prompt text size",
+        "ConfirmDeletionLabel": "Confirm deletion"
       },
       "GpuCache": {
         "Label": "GPU cache",

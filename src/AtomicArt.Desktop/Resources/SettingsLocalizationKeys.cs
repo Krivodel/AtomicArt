@@ -36,6 +36,8 @@ public static class SettingsLocalizationKeys
         public const string ScaleLabel = "Settings.Appearance.ScaleLabel";
         public const string PromptTextSizeLabel =
             "Settings.Appearance.PromptTextSizeLabel";
+        public const string ConfirmDeletionLabel =
+            "Settings.Appearance.ConfirmDeletionLabel";
     }
 
     public static class GpuCache

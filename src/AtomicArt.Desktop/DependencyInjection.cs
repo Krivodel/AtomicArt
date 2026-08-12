@@ -140,6 +140,7 @@ public static class DependencyInjection
         services.AddViewTemplate<ApiBaseAddressSettingViewModel, ApiBaseAddressSettingView>();
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
         services.AddViewTemplate<NumericSettingViewModel, NumericSettingView>();
+        services.AddViewTemplate<BooleanSettingViewModel, BooleanSettingView>();
         services.AddViewTemplate<LanguageSettingViewModel, LanguageSettingView>();
         services.AddViewTemplate<
             GpuResourceCacheSettingViewModel,
@@ -186,6 +187,7 @@ public static class DependencyInjection
             AtomicArtDataRootMigrationService>();
         services.AddSettingsStateApplicatorsByConvention();
         services.AddSingleton<IDoubleSettingValueConverter, DoubleSettingValueConverter>();
+        services.AddSingleton<IBooleanSettingValueConverter, BooleanSettingValueConverter>();
         services.AddSingleton<ISettingsStateService, SettingsStateService>();
         services.AddSingleton<IGenerationPanelStateService, GenerationPanelStateService>();
         services.AddSingleton<GalleryStatePathConverter>();
@@ -210,6 +212,7 @@ public static class DependencyInjection
         services.AddSingleton<IUiScaleService, UiScaleService>();
         services.AddSingleton<IPromptTextSizeService, PromptTextSizeService>();
         services.AddSingleton<IPromptTextSizeController, PromptTextSizeController>();
+        services.AddSingleton<IDeletionConfirmationService, DeletionConfirmationService>();
         services.AddSettingsDefinitionsByConvention();
         services.AddSettingsItemViewModelFactoriesByConvention();
         services.AddSingleton<ISettingsDefinitionCatalog, SettingsDefinitionCatalog>();
