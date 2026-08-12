@@ -13,7 +13,7 @@
                         Content="{Binding #Root.Editor}" />
         <TextBlock Grid.Row="2"
                    Margin="{StaticResource SettingsErrorMargin}"
-                   Classes="error-message settings-error"
+                   Classes="error-message danger-text"
                    IsVisible="{Binding #Root.HasErrorMessage}"
                    Text="{Binding #Root.ErrorMessage}" />
     </Grid>

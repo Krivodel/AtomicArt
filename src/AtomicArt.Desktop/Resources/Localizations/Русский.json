@@ -62,7 +62,7 @@
         "UnsupportedAspectRatio": "Выбранная модель не поддерживает это соотношение сторон.",
         "ModelRequestValidation": "Запрос генерации не прошёл проверку.",
         "GoogleApiKeyMissing": "Укажи Google API-ключ в настройках.",
-        "ModelCatalogLoadFailed": "Не удалось загрузить список моделей."
+        "ModelCatalogLoadFailed": "Не удалось загрузить список моделей. Проверь адрес сервера в настройках."
       },
       "ImageDropLabel": "ДРОП",
       "Status": {

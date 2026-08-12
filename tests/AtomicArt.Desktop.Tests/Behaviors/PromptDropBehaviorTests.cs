@@ -53,7 +53,7 @@ public sealed class PromptDropBehaviorTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            const string Prompt = "Prompt from a gallery card";
+            const string prompt = "Prompt from a gallery card";
             string? replacedPrompt = null;
             RelayCommand<string?> command = new(value => replacedPrompt = value);
             Border target = CreateTarget(command);
@@ -61,11 +61,11 @@ public sealed class PromptDropBehaviorTests : AnimatedGalleryControlTestBase
 
             try
             {
-                DataTransfer dataTransfer = AtomicArtPromptDragData.Create(Prompt);
+                DataTransfer dataTransfer = AtomicArtPromptDragData.Create(prompt);
 
                 RaiseDragDrop(window, RawDragEventType.Drop, dataTransfer);
 
-                replacedPrompt.Should().Be(Prompt);
+                replacedPrompt.Should().Be(prompt);
             }
             finally
             {

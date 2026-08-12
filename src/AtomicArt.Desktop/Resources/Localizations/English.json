@@ -62,7 +62,7 @@
         "UnsupportedAspectRatio": "The selected model does not support this aspect ratio.",
         "ModelRequestValidation": "The generation request did not pass validation.",
         "GoogleApiKeyMissing": "Enter a Google API key in settings.",
-        "ModelCatalogLoadFailed": "Could not load the model list."
+        "ModelCatalogLoadFailed": "Could not load the model list. Check the server address in settings."
       },
       "ImageDropLabel": "DROP",
       "Status": {

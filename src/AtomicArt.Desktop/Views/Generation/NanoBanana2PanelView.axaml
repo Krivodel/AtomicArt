@@ -211,7 +211,7 @@
 
             <TextBlock Grid.Row="3"
                        Margin="{StaticResource GenerationPanelInnerSpacing}"
-                       Classes="error-message"
+                       Classes="error-message danger-text"
                        IsVisible="{Binding HasErrorMessage}"
                        Text="{Binding ErrorMessage}" />
 
