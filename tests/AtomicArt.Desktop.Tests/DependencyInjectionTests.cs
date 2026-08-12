@@ -268,7 +268,6 @@ public sealed class DependencyInjectionTests
             typeof(IModelPanelViewModel),
             typeof(SettingsViewModel),
             typeof(ErrorDialogViewModel),
-            typeof(ConfirmationDialogViewModel),
             typeof(DataRootSettingViewModel),
             typeof(ApiBaseAddressSettingViewModel),
             typeof(SecretSettingViewModel),

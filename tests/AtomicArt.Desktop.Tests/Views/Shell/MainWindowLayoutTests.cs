@@ -1,12 +1,18 @@
 using Microsoft.Extensions.DependencyInjection;
 
+using Avalonia;
+using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAssertions;
 using Moq;
 using SukiUI.Controls;
+using SukiUI.Controls.GlassMorphism;
 using Xunit;
 
 using AtomicArt.Desktop.Behaviors;
@@ -29,6 +35,7 @@ using AtomicArt.Desktop.Views.Dialogs;
 using AtomicArt.Desktop.Views.Gallery;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Desktop.Views.Shell;
+using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Desktop.Tests.Views.Shell;
 
@@ -38,25 +45,35 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     private const int GenerationPanelRowIndex = 1;
     private const int ExpectedShellRowCount = 2;
     private const double HeightTolerance = 0.1d;
+    private const double InitialUiScale = 0.6d;
     private const double PositionTolerance = 0.1d;
     private const double UiScale = 1.5d;
+    private const string ConfirmationDialogHostName = "ConfirmationDialogHost";
     private const string GenerationPanelHostName = "GenerationPanelHost";
     private const string GenerationPanelResizeGripName = "GenerationPanelResizeGrip";
     private const string GenerationPanelWidthResourceKey = "GenerationPanelWidth";
     private const string ShellContentGridName = "ShellContentGrid";
+    private const string TitleBarName = "PART_TitleBar";
+    private const string UpdateToastHostName = "UpdateToastHost";
+
+    private static readonly RelativePoint BottomRightOrigin = new(
+        1d,
+        1d,
+        RelativeUnit.Relative);
+    private static readonly TimeSpan DialogCompletionTimeout =
+        TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan ConfirmationDialogTransitionDuration =
+        TimeSpan.FromMilliseconds(200d);
+    private static readonly TimeSpan ConfirmationDialogOpacityTransitionDuration =
+        TimeSpan.FromMilliseconds(100d);
 
     [Fact]
     public async Task MainWindow_WhenUpdateIsAvailable_ShowsSukiToastActions()
     {
         await DispatchAsync(async () =>
         {
-            Mock<IApplicationUpdateService> updateServiceMock = new();
-            updateServiceMock
-                .SetupGet(service => service.CanCheckForUpdates)
-                .Returns(true);
-            updateServiceMock
-                .Setup(service => service.CheckForUpdateAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ApplicationUpdate("1.2.3"));
+            Mock<IApplicationUpdateService> updateServiceMock =
+                CreateAvailableUpdateServiceMock();
 
             using MainWindowTestContext context = new(services =>
             {
@@ -65,13 +82,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             MainWindow window = context.Window;
 
             window.Show();
-
-            MainWindowViewModel viewModel = window.DataContext
-                .Should()
-                .BeOfType<MainWindowViewModel>()
-                .Subject;
-            await viewModel.ApplicationUpdate.StartMonitoringCommand.ExecuteAsync(null);
-            window.CaptureRenderedFrame();
+            await ShowAvailableUpdateAsync(window);
 
             SukiToast toast = window
                 .GetVisualDescendants()
@@ -86,7 +97,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 .Select(button => button.Content)
                 .Should()
                 .Equal(
-                    context.TextProvider.Get(UpdateLocalizationKeys.Actions.Later),
+                    context.TextProvider.Get(CommonLocalizationKeys.NotNow),
                     context.TextProvider.Get(UpdateLocalizationKeys.Actions.Install));
         });
     }
@@ -121,6 +132,224 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeApproximately(
                 rowDefinitions[GenerationPanelRowIndex].ActualHeight,
                 HeightTolerance);
+        });
+    }
+
+    [Fact]
+    public async Task MainWindow_WhenUpdateToastIsShown_FollowsUiScaleAndKeepsBottomRightAnchor()
+    {
+        await DispatchAsync(async () =>
+        {
+            Mock<IApplicationUpdateService> updateServiceMock =
+                CreateAvailableUpdateServiceMock();
+            RecordingUiScaleService uiScaleService = new(InitialUiScale);
+            using MainWindowTestContext context = new(services =>
+            {
+                services.AddSingleton(updateServiceMock.Object);
+                services.AddSingleton<IUiScaleService>(uiScaleService);
+            });
+            MainWindow window = context.Window;
+            window.Show();
+            await ShowAvailableUpdateAsync(window);
+
+            SukiToastHost toastHost = window
+                .GetVisualDescendants()
+                .OfType<SukiToastHost>()
+                .Single(host => host.Name == UpdateToastHostName);
+            ScaleTransform scaleTransform = toastHost.RenderTransform
+                .Should()
+                .BeOfType<ScaleTransform>()
+                .Subject;
+            scaleTransform.ScaleX.Should().Be(InitialUiScale);
+            scaleTransform.ScaleY.Should().Be(InitialUiScale);
+            Point anchorBeforeScaleChange = toastHost.TranslatePoint(
+                new Point(toastHost.Bounds.Width, toastHost.Bounds.Height),
+                window)
+                ?? throw new InvalidOperationException(
+                    "The update toast anchor position is unavailable.");
+
+            uiScaleService.SetScale(UiScale);
+            window.CaptureRenderedFrame();
+
+            Point anchorAfterScaleChange = toastHost.TranslatePoint(
+                new Point(toastHost.Bounds.Width, toastHost.Bounds.Height),
+                window)
+                ?? throw new InvalidOperationException(
+                    "The updated toast anchor position is unavailable.");
+            scaleTransform.ScaleX.Should().Be(UiScale);
+            scaleTransform.ScaleY.Should().Be(UiScale);
+            toastHost.RenderTransformOrigin.Should().Be(BottomRightOrigin);
+            anchorAfterScaleChange.X.Should().BeApproximately(
+                anchorBeforeScaleChange.X,
+                PositionTolerance);
+            anchorAfterScaleChange.Y.Should().BeApproximately(
+                anchorBeforeScaleChange.Y,
+                PositionTolerance);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_WhenShown_KeepsConfirmationHostBelowTitleBar()
+    {
+        Dispatch(() =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            SukiDialogHost dialogHost = window
+                .GetVisualDescendants()
+                .OfType<SukiDialogHost>()
+                .Single(host => host.Name == ConfirmationDialogHostName);
+            Control titleBar = window
+                .GetVisualDescendants()
+                .OfType<Control>()
+                .Single(control => control.Name == TitleBarName);
+            Point dialogHostPosition = dialogHost
+                .TranslatePoint(default, window)
+                ?? throw new InvalidOperationException(
+                    "The confirmation dialog host position is unavailable.");
+            Point titleBarPosition = titleBar
+                .TranslatePoint(default, window)
+                ?? throw new InvalidOperationException(
+                    "The title bar position is unavailable.");
+
+            dialogHostPosition.Y.Should().BeGreaterThanOrEqualTo(
+                titleBarPosition.Y + titleBar.Bounds.Height);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_WhenShown_ConfiguresFasterConfirmationDialogTransitions()
+    {
+        Dispatch(() =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            SukiDialogHost dialogHost = window
+                .GetVisualDescendants()
+                .OfType<SukiDialogHost>()
+                .Single(host => host.Name == ConfirmationDialogHostName);
+            ContentControl dialogContent = dialogHost
+                .GetVisualDescendants()
+                .OfType<ContentControl>()
+                .Single(control => control.Name == "PART_DialogContent");
+            Transitions transitions = dialogContent.Transitions
+                ?? throw new InvalidOperationException(
+                    "The confirmation dialog transitions were not found.");
+            ThicknessTransition movementTransition = transitions
+                .OfType<ThicknessTransition>()
+                .Single();
+            DoubleTransition opacityTransition = transitions
+                .OfType<DoubleTransition>()
+                .Single();
+            TransformOperationsTransition transformTransition = transitions
+                .OfType<TransformOperationsTransition>()
+                .Single();
+
+            movementTransition.Duration.Should().Be(
+                ConfirmationDialogTransitionDuration);
+            opacityTransition.Duration.Should().Be(
+                ConfirmationDialogOpacityTransitionDuration);
+            transformTransition.Duration.Should().Be(
+                ConfirmationDialogTransitionDuration);
+        });
+    }
+
+    [Fact]
+    public async Task Confirmation_WhenOpen_UsesOpaquePopupBackgroundWithoutBlur()
+    {
+        await DispatchAsync(async () =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+            window.Show();
+            Task<bool> resultTask = context.DialogService.ShowConfirmationAsync(
+                CreateDeletionConfirmationRequest(),
+                CancellationToken.None);
+            window.CaptureRenderedFrame();
+
+            SukiDialog dialog = window
+                .GetVisualDescendants()
+                .OfType<SukiDialog>()
+                .Single();
+            SukiBlurBackground blurBackground = dialog
+                .GetVisualDescendants()
+                .OfType<SukiBlurBackground>()
+                .Single();
+            Border[] cardSurfaces = dialog
+                .GetVisualDescendants()
+                .OfType<Border>()
+                .Where(border => border.Classes.Contains("GlassCardBorderPartCard"))
+                .ToArray();
+            Color popupBackground = GetColorResource(
+                dialog,
+                "SukiPopupBackground");
+
+            dialog.Classes.Should().Contain("confirmation-dialog");
+            blurBackground.IsVisible.Should().BeFalse();
+            cardSurfaces.Should().NotBeEmpty();
+
+            foreach (Border cardSurface in cardSurfaces)
+            {
+                cardSurface.Opacity.Should().Be(1d);
+                ISolidColorBrush backgroundBrush = cardSurface.Background
+                    .Should()
+                    .BeAssignableTo<ISolidColorBrush>()
+                    .Subject;
+                backgroundBrush.Color.Should().Be(popupBackground);
+            }
+
+            Button cancelButton = dialog.ActionButtons
+                .OfType<Button>()
+                .First();
+            cancelButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            bool result = await resultTask.WaitAsync(DialogCompletionTimeout);
+
+            result.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task Escape_WhenConfirmationIsOpen_ClosesDialogWithoutExitingSelectionMode()
+    {
+        await DispatchAsync(async () =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+            window.Show();
+            MainWindowViewModel viewModel = window.DataContext
+                .Should()
+                .BeOfType<MainWindowViewModel>()
+                .Subject;
+            viewModel.Gallery.AddGeneratedItems(
+                [GenerationItemDtoTestFactory.Create()],
+                0);
+            GenerationItemViewModel item = viewModel.Gallery.Items.Single();
+            viewModel.Gallery.ToggleSelectionCommand.Execute(item);
+            Task<bool> resultTask = context.DialogService.ShowConfirmationAsync(
+                CreateDeletionConfirmationRequest(),
+                CancellationToken.None);
+            window.CaptureRenderedFrame();
+            KeyEventArgs keyEventArgs = new()
+            {
+                RoutedEvent = InputElement.KeyDownEvent,
+                Key = Key.Escape,
+                PhysicalKey = PhysicalKey.Escape
+            };
+
+            window.RaiseEvent(keyEventArgs);
+            bool result = await resultTask.WaitAsync(DialogCompletionTimeout);
+
+            result.Should().BeFalse();
+            viewModel.Gallery.IsSelectionMode.Should().BeTrue();
+            item.IsSelected.Should().BeTrue();
         });
     }
 
@@ -280,6 +509,30 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         });
     }
 
+    private static Mock<IApplicationUpdateService> CreateAvailableUpdateServiceMock()
+    {
+        Mock<IApplicationUpdateService> updateServiceMock = new();
+        updateServiceMock
+            .SetupGet(service => service.CanCheckForUpdates)
+            .Returns(true);
+        updateServiceMock
+            .Setup(service => service.CheckForUpdateAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ApplicationUpdate("1.2.3"));
+
+        return updateServiceMock;
+    }
+
+    private static async Task ShowAvailableUpdateAsync(MainWindow window)
+    {
+        MainWindowViewModel viewModel = window.DataContext
+            .Should()
+            .BeOfType<MainWindowViewModel>()
+            .Subject;
+
+        await viewModel.ApplicationUpdate.StartMonitoringCommand.ExecuteAsync(null);
+        window.CaptureRenderedFrame();
+    }
+
     private static double GetDoubleResource(Control control, string resourceKey)
     {
         if (control.TryFindResource(resourceKey, out object? value)
@@ -289,6 +542,31 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         }
 
         throw new InvalidOperationException($"Double resource '{resourceKey}' was not found.");
+    }
+
+    private static Color GetColorResource(Control control, string resourceKey)
+    {
+        if (control.TryFindResource(resourceKey, out object? value)
+            && (value is Color color))
+        {
+            return color;
+        }
+
+        throw new InvalidOperationException($"Color resource '{resourceKey}' was not found.");
+    }
+
+    private static LocalizedConfirmationDialogRequest CreateDeletionConfirmationRequest()
+    {
+        object?[] messageArguments = [1];
+
+        return new LocalizedConfirmationDialogRequest(
+            GalleryLocalizationKeys.DeletionConfirmationTitle,
+            GalleryLocalizationKeys.DeletionConfirmationMessage,
+            GalleryLocalizationKeys.ConfirmDeletion,
+            CommonLocalizationKeys.Cancel,
+            ConfirmationDialogKind.Destructive,
+            ConfirmationDialogBackgroundClickBehavior.Dismiss,
+            messageArguments);
     }
 
     private static void RegisterViewTemplates(IServiceProvider serviceProvider)

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using CommunityToolkit.Mvvm.Messaging;
+using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
 using AtomicArt.Contracts.Generation;
@@ -135,9 +136,6 @@ public static class DependencyInjection
         services.AddViewTemplate<IModelPanelViewModel, GenerationPanelView>();
         services.AddViewTemplate<SettingsViewModel, SettingsOverlayView>();
         services.AddViewTemplate<ErrorDialogViewModel, ErrorDialogOverlayView>();
-        services.AddViewTemplate<
-            ConfirmationDialogViewModel,
-            ConfirmationDialogOverlayView>();
         services.AddViewTemplate<DataRootSettingViewModel, DataRootSettingView>();
         services.AddViewTemplate<ApiBaseAddressSettingViewModel, ApiBaseAddressSettingView>();
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
@@ -177,6 +175,7 @@ public static class DependencyInjection
         services.AddSingleton<IApplicationStateFlushService, ApplicationStateFlushService>();
         services.AddSingleton<IDataRootAccessCoordinator, DataRootAccessCoordinator>();
         services.AddSingleton<AtomicArtDataRootBootstrapStore>();
+        services.AddSingleton<InitialDataRootSelectionCoordinator>();
         services.AddSingleton<DataRootMigrationJournalStore>();
         services.AddSingleton<DataRootMigrationPlanner>();
         services.AddSingleton<DataRootFileTransfer>();
@@ -276,7 +275,8 @@ public static class DependencyInjection
     private static IServiceCollection AddDialogServices(this IServiceCollection services)
     {
         services.AddSingleton<ErrorDialogViewModel>();
-        services.AddSingleton<ConfirmationDialogViewModel>();
+        services.AddSingleton<ISukiDialogManager, SukiDialogManager>();
+        services.AddSingleton<IConfirmationDialogPresenter, ConfirmationDialogPresenter>();
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<GlobalExceptionService>();
 

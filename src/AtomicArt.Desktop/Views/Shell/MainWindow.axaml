@@ -49,102 +49,109 @@
     <suki:SukiWindow.Hosts>
         <suki:SukiToastHost x:Name="UpdateToastHost"
                             MaxToasts="1"
-                            Position="BottomRight" />
+                            Position="BottomRight"
+                            RenderTransformOrigin="100%,100%">
+            <suki:SukiToastHost.RenderTransform>
+                <ScaleTransform ScaleX="{Binding UiScale}"
+                                ScaleY="{Binding UiScale}" />
+            </suki:SukiToastHost.RenderTransform>
+        </suki:SukiToastHost>
     </suki:SukiWindow.Hosts>
 
-    <LayoutTransformControl>
-        <LayoutTransformControl.LayoutTransform>
-            <ScaleTransform ScaleX="{Binding UiScale}"
-                            ScaleY="{Binding UiScale}" />
-        </LayoutTransformControl.LayoutTransform>
+    <Grid>
+        <LayoutTransformControl>
+            <LayoutTransformControl.LayoutTransform>
+                <ScaleTransform ScaleX="{Binding UiScale}"
+                                ScaleY="{Binding UiScale}" />
+            </LayoutTransformControl.LayoutTransform>
 
-        <Grid>
-            <Grid x:Name="ShellContentGrid"
-                  behaviors:ImageDropBehavior.DropArea="{Binding #GenerationPanelHost}"
-                  behaviors:ImageDropBehavior.IsEnabled="{Binding !Gallery.IsSelectionMode}"
-                  behaviors:ImageDropBehavior.Overlay="{Binding #PanelDropOverlay}"
-                  behaviors:ImageDropBehavior.TargetKind="GalleryImage">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"
-                                   MinHeight="0" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+            <Grid>
+                <Grid x:Name="ShellContentGrid"
+                      behaviors:ImageDropBehavior.DropArea="{Binding #GenerationPanelHost}"
+                      behaviors:ImageDropBehavior.IsEnabled="{Binding !Gallery.IsSelectionMode}"
+                      behaviors:ImageDropBehavior.Overlay="{Binding #PanelDropOverlay}"
+                      behaviors:ImageDropBehavior.TargetKind="GalleryImage">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"
+                                       MinHeight="0" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                <Border Grid.Row="0"
-                        Margin="{StaticResource GalleryViewportMargin}">
-                    <ContentControl Content="{Binding Gallery}" />
-                </Border>
+                    <Border Grid.Row="0"
+                            Margin="{StaticResource GalleryViewportMargin}">
+                        <ContentControl Content="{Binding Gallery}" />
+                    </Border>
 
-                <Border x:Name="GenerationPanelHost"
-                        Grid.Row="1"
-                        MaxWidth="{StaticResource GenerationPanelWidth}"
-                        Margin="{StaticResource GenerationPanelMargin}"
-                        Padding="0"
-                        HorizontalAlignment="Stretch"
-                        Classes="generation-panel"
-                        behaviors:PromptDropBehavior.IsEnabled="{Binding !Gallery.IsSelectionMode}"
-                        behaviors:PromptDropBehavior.Overlay="{Binding #PromptDropOverlay}"
-                        ClipToBounds="True"
-                        behaviors:PromptDropBehavior.ReplacePromptCommand="{Binding ReplaceGenerationPromptCommand}">
-                    <Grid>
-                        <Border x:Name="GenerationPanelContent"
-                                Padding="{StaticResource GenerationPanelPadding}"
-                                Classes="generation-panel-content"
-                                Classes.selection-mode="{Binding Gallery.IsSelectionMode}"
-                                IsHitTestVisible="{Binding !Gallery.IsSelectionMode}">
-                            <ContentControl Content="{Binding ActiveGenerationPanel}" />
-                        </Border>
+                    <Border x:Name="GenerationPanelHost"
+                            Grid.Row="1"
+                            MaxWidth="{StaticResource GenerationPanelWidth}"
+                            Margin="{StaticResource GenerationPanelMargin}"
+                            Padding="0"
+                            HorizontalAlignment="Stretch"
+                            Classes="generation-panel"
+                            behaviors:PromptDropBehavior.IsEnabled="{Binding !Gallery.IsSelectionMode}"
+                            behaviors:PromptDropBehavior.Overlay="{Binding #PromptDropOverlay}"
+                            ClipToBounds="True"
+                            behaviors:PromptDropBehavior.ReplacePromptCommand="{Binding ReplaceGenerationPromptCommand}">
+                        <Grid>
+                            <Border x:Name="GenerationPanelContent"
+                                    Padding="{StaticResource GenerationPanelPadding}"
+                                    Classes="generation-panel-content"
+                                    Classes.selection-mode="{Binding Gallery.IsSelectionMode}"
+                                    IsHitTestVisible="{Binding !Gallery.IsSelectionMode}">
+                                <ContentControl Content="{Binding ActiveGenerationPanel}" />
+                            </Border>
 
-                        <controls:ImageDropOverlayControl x:Name="PanelDropOverlay"
-                                                          ZIndex="20"
-                                                          BackdropCornerRadius="{StaticResource ShellCornerRadius}" />
+                            <controls:ImageDropOverlayControl x:Name="PanelDropOverlay"
+                                                              ZIndex="20"
+                                                              BackdropCornerRadius="{StaticResource ShellCornerRadius}" />
 
-                        <controls:ImageDropOverlayControl x:Name="PromptDropOverlay"
-                                                          ZIndex="20"
-                                                          BackdropCornerRadius="{StaticResource ShellCornerRadius}" />
+                            <controls:ImageDropOverlayControl x:Name="PromptDropOverlay"
+                                                              ZIndex="20"
+                                                              BackdropCornerRadius="{StaticResource ShellCornerRadius}" />
 
-                        <galleryViews:GallerySelectionOverlayView ZIndex="30"
-                                                                  IsActive="{Binding IsSelectionMode}"
-                                                                  DataContext="{Binding Gallery}" />
-                    </Grid>
-                </Border>
+                            <galleryViews:GallerySelectionOverlayView ZIndex="30"
+                                                                      IsActive="{Binding IsSelectionMode}"
+                                                                      DataContext="{Binding Gallery}" />
+                        </Grid>
+                    </Border>
 
-                <GridSplitter x:Name="GenerationPanelResizeGrip"
-                              Grid.Row="1"
-                              ZIndex="1"
-                              Height="{StaticResource GenerationPanelResizeGripHeight}"
-                              HorizontalAlignment="Stretch"
-                              VerticalAlignment="Top"
-                              Background="Transparent"
-                              Cursor="SizeNorthSouth"
-                              ResizeBehavior="PreviousAndCurrent"
-                              ResizeDirection="Rows"
-                              ShowsPreview="False" />
+                    <GridSplitter x:Name="GenerationPanelResizeGrip"
+                                  Grid.Row="1"
+                                  ZIndex="1"
+                                  Height="{StaticResource GenerationPanelResizeGripHeight}"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Top"
+                                  Background="Transparent"
+                                  Cursor="SizeNorthSouth"
+                                  ResizeBehavior="PreviousAndCurrent"
+                                  ResizeDirection="Rows"
+                                  ShowsPreview="False" />
+                </Grid>
+
+                <overlays:ModalOverlayLayerControl ZIndex="10">
+                    <overlays:ModalOverlayPresenterControl x:Name="SettingsOverlayPresenter"
+                                                           Order="{StaticResource SettingsModalOverlayOrder}"
+                                                           Body="{Binding Settings}"
+                                                           IsOpen="{Binding IsSettingsOpen}"
+                                                           CloseCommand="{Binding Settings.CloseCommand}" />
+                    <overlays:ModalOverlayPresenterControl Order="{StaticResource MetadataModalOverlayOrder}"
+                                                           Body="{Binding Gallery.SelectedMetadata}"
+                                                           IsOpen="{Binding Gallery.IsMetadataOpen}"
+                                                           CloseCommand="{Binding Gallery.CloseOverlayCommand}" />
+                    <overlays:ModalOverlayPresenterControl Order="{StaticResource ErrorDialogModalOverlayOrder}"
+                                                           Body="{Binding ErrorDialog}"
+                                                           IsOpen="{Binding ErrorDialog.IsOpen}"
+                                                           CloseCommand="{Binding ErrorDialog.CloseCommand}" />
+                </overlays:ModalOverlayLayerControl>
+
+                <controls:ImageDropOverlayControl x:Name="WindowDropOverlay"
+                                                  IconSize="200"
+                                                  ZIndex="30" />
             </Grid>
+        </LayoutTransformControl>
 
-            <overlays:ModalOverlayLayerControl ZIndex="10">
-                <overlays:ModalOverlayPresenterControl x:Name="SettingsOverlayPresenter"
-                                                       Order="{StaticResource SettingsModalOverlayOrder}"
-                                                       Body="{Binding Settings}"
-                                                       IsOpen="{Binding IsSettingsOpen}"
-                                                       CloseCommand="{Binding Settings.CloseCommand}" />
-                <overlays:ModalOverlayPresenterControl Order="{StaticResource MetadataModalOverlayOrder}"
-                                                       Body="{Binding Gallery.SelectedMetadata}"
-                                                       IsOpen="{Binding Gallery.IsMetadataOpen}"
-                                                       CloseCommand="{Binding Gallery.CloseOverlayCommand}" />
-                <overlays:ModalOverlayPresenterControl Order="{StaticResource ConfirmationDialogModalOverlayOrder}"
-                                                       Body="{Binding ConfirmationDialog}"
-                                                       IsOpen="{Binding ConfirmationDialog.IsOpen}"
-                                                       CloseCommand="{Binding ConfirmationDialog.CancelCommand}" />
-                <overlays:ModalOverlayPresenterControl Order="{StaticResource ErrorDialogModalOverlayOrder}"
-                                                       Body="{Binding ErrorDialog}"
-                                                       IsOpen="{Binding ErrorDialog.IsOpen}"
-                                                       CloseCommand="{Binding ErrorDialog.CloseCommand}" />
-            </overlays:ModalOverlayLayerControl>
-
-            <controls:ImageDropOverlayControl x:Name="WindowDropOverlay"
-                                              IconSize="200"
-                                              ZIndex="30" />
-        </Grid>
-    </LayoutTransformControl>
+        <suki:SukiDialogHost x:Name="ConfirmationDialogHost"
+                             Classes="confirmation-dialog-host" />
+    </Grid>
 </suki:SukiWindow>

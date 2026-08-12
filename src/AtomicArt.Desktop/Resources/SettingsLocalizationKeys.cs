@@ -49,6 +49,8 @@ public static class SettingsLocalizationKeys
     {
         public const string Label = "Settings.DataRoot.Label";
         public const string PickerTitle = "Settings.DataRoot.PickerTitle";
+        public const string InitialSelectionMessage =
+            "Settings.DataRoot.InitialSelectionMessage";
         public const string Preparing = "Settings.DataRoot.Preparing";
         public const string Copying = "Settings.DataRoot.Copying";
         public const string Verifying = "Settings.DataRoot.Verifying";

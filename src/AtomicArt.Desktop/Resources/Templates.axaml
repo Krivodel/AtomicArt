@@ -1,7 +1,45 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:galleryViews="using:AtomicArt.Desktop.Views.Gallery"
-        xmlns:resources="using:AtomicArt.Desktop.Resources">
+        xmlns:resources="using:AtomicArt.Desktop.Resources"
+        xmlns:suki="using:SukiUI.Controls"
+        xmlns:sukiAnimations="using:SukiUI.Animations"
+        xmlns:sukiGlass="using:SukiUI.Controls.GlassMorphism">
+    <Style Selector="suki|SukiDialogHost.confirmation-dialog-host /template/ ContentControl#PART_DialogContent">
+        <Setter Property="Transitions">
+            <Setter.Value>
+                <Transitions>
+                    <ThicknessTransition Duration="{StaticResource ConfirmationDialogTransitionDuration}"
+                                         Property="Margin">
+                        <ThicknessTransition.Easing>
+                            <sukiAnimations:SukiEaseOutBack />
+                        </ThicknessTransition.Easing>
+                    </ThicknessTransition>
+                    <DoubleTransition Duration="{StaticResource ConfirmationDialogOpacityTransitionDuration}"
+                                      Property="Opacity" />
+                    <TransformOperationsTransition Duration="{StaticResource ConfirmationDialogTransitionDuration}"
+                                                   Property="RenderTransform">
+                        <TransformOperationsTransition.Easing>
+                            <sukiAnimations:SukiEaseOutBack BounceIntensity="Strong" />
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                </Transitions>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="suki|SukiDialog.confirmation-dialog /template/ suki|GlassCard /template/ Border.GlassCardBorderPartCard">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPopupBackground}" />
+        <Setter Property="Opacity"
+                Value="1" />
+    </Style>
+
+    <Style Selector="suki|SukiDialog.confirmation-dialog /template/ sukiGlass|SukiBlurBackground">
+        <Setter Property="IsVisible"
+                Value="False" />
+    </Style>
+
     <Style Selector="Border.generation-panel">
         <Setter Property="Padding"
                 Value="{StaticResource GenerationPanelPadding}" />

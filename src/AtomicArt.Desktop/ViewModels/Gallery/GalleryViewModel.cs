@@ -258,6 +258,9 @@ public sealed partial class GalleryViewModel :
             GalleryLocalizationKeys.DeletionConfirmationTitle,
             GalleryLocalizationKeys.DeletionConfirmationMessage,
             GalleryLocalizationKeys.ConfirmDeletion,
+            CommonLocalizationKeys.Cancel,
+            ConfirmationDialogKind.Destructive,
+            ConfirmationDialogBackgroundClickBehavior.Dismiss,
             messageArguments);
     }
 

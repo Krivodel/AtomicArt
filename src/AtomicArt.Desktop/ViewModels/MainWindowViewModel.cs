@@ -26,7 +26,6 @@ public sealed partial class MainWindowViewModel :
 {
     public GalleryViewModel Gallery { get; }
     public ErrorDialogViewModel ErrorDialog { get; }
-    public ConfirmationDialogViewModel ConfirmationDialog { get; }
     public IModelPanelViewModel ActiveGenerationPanel { get; }
     public IRelayCommand<string?>? ReplaceGenerationPromptCommand =>
         (ActiveGenerationPanel as IGenerationPromptTarget)?.ReplacePromptCommand;
@@ -58,7 +57,6 @@ public sealed partial class MainWindowViewModel :
     public MainWindowViewModel(
         GalleryViewModel gallery,
         ErrorDialogViewModel errorDialog,
-        ConfirmationDialogViewModel confirmationDialog,
         SettingsViewModel settings,
         IEnumerable<IModelPanelViewModel> modelPanels,
         DesktopModelPanelRegistry desktopModelPanelRegistry,
@@ -73,7 +71,6 @@ public sealed partial class MainWindowViewModel :
     {
         ArgumentNullException.ThrowIfNull(gallery);
         ArgumentNullException.ThrowIfNull(errorDialog);
-        ArgumentNullException.ThrowIfNull(confirmationDialog);
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(modelPanels);
         ArgumentNullException.ThrowIfNull(desktopModelPanelRegistry);
@@ -89,7 +86,6 @@ public sealed partial class MainWindowViewModel :
         IReadOnlyList<IModelPanelViewModel> panels = modelPanels.ToList();
         Gallery = gallery;
         ErrorDialog = errorDialog;
-        ConfirmationDialog = confirmationDialog;
         ActiveGenerationPanel = desktopModelPanelRegistry.GetDefaultPanel(panels);
         Gallery.ConfigureImageViewerAttachments(ActiveGenerationPanel.AttachImagesCommand);
 

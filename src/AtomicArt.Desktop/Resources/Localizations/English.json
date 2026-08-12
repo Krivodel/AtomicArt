@@ -6,6 +6,8 @@
       "Error": "Error",
       "Copy": "Copy",
       "Cancel": "Cancel",
+      "Yes": "Yes",
+      "NotNow": "Not now",
       "UnknownError": "An unexpected error occurred.",
       "Auto": "Auto",
       "TimeUnits": {
@@ -107,7 +109,7 @@
       },
       "Deletion": {
         "ConfirmationTitle": "Delete generations?",
-        "ConfirmationMessage": "The selected generations ({0}) and their files will be permanently deleted.",
+        "ConfirmationMessage": "The selected generations ({0}) will be permanently deleted.",
         "ConfirmAction": "Delete"
       }
     },
@@ -142,6 +144,7 @@
       "DataRoot": {
         "Label": "Save folder",
         "PickerTitle": "Select an empty folder for saves",
+        "InitialSelectionMessage": "Select a different save location instead of \"{0}\"?",
         "Preparing": "Preparing…",
         "Copying": "Copying…",
         "Verifying": "Verifying…",
@@ -157,8 +160,7 @@
       "AvailableFormat": "Update {0} is ready to install.",
       "Actions": {
         "Install": "Update",
-        "WaitAndInstall": "Wait and update",
-        "Later": "Not now"
+        "WaitAndInstall": "Wait and update"
       },
       "States": {
         "WaitingForGeneration": "The update will start after generation finishes.",

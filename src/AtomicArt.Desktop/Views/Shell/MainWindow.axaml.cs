@@ -2,10 +2,12 @@ using System.Runtime.InteropServices;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform;
 using Avalonia.VisualTree;
 using SukiUI.Controls;
+using SukiUI.Dialogs;
 
 using Pica.Viewer.Services;
 
@@ -30,6 +32,7 @@ public partial class MainWindow : SukiWindow
     private static readonly nint EnabledWindowPropertyValue = 1;
 
     private ITrayService? _trayService;
+    private IConfirmationDialogPresenter? _confirmationDialogPresenter;
     private ApplicationUpdateToastPresenter? _updateToastPresenter;
     private bool _isGenerationPanelMinimumHeightInitialized;
 
@@ -39,6 +42,11 @@ public partial class MainWindow : SukiWindow
         AttachmentImageDragBehavior.SetDragBoundary(
             GenerationPanelHost,
             GenerationPanelHost);
+        AddHandler(
+            KeyDownEvent,
+            OnConfirmationDismissKeyDown,
+            RoutingStrategies.Tunnel,
+            true);
         PropertyChanged += OnWindowPropertyChanged;
         SettingsOverlayPresenter.PropertyChanged +=
             OnSettingsOverlayPresenterPropertyChanged;
@@ -52,6 +60,8 @@ public partial class MainWindow : SukiWindow
         IClipboardImageService clipboardImageService,
         IDragDropImageService dragDropImageService,
         IAttachmentImageDragService attachmentImageDragService,
+        IConfirmationDialogPresenter confirmationDialogPresenter,
+        ISukiDialogManager dialogManager,
         ApplicationUpdateToastPresenter updateToastPresenter) : this()
     {
         ArgumentNullException.ThrowIfNull(viewModel);
@@ -59,11 +69,15 @@ public partial class MainWindow : SukiWindow
         ArgumentNullException.ThrowIfNull(clipboardImageService);
         ArgumentNullException.ThrowIfNull(dragDropImageService);
         ArgumentNullException.ThrowIfNull(attachmentImageDragService);
+        ArgumentNullException.ThrowIfNull(confirmationDialogPresenter);
+        ArgumentNullException.ThrowIfNull(dialogManager);
         ArgumentNullException.ThrowIfNull(updateToastPresenter);
 
         _trayService = trayService;
+        _confirmationDialogPresenter = confirmationDialogPresenter;
         _updateToastPresenter = updateToastPresenter;
         DataContext = viewModel;
+        ConfirmationDialogHost.Manager = dialogManager;
         UpdateToastHost.Manager = updateToastPresenter.Manager;
         updateToastPresenter.Attach(viewModel.ApplicationUpdate);
         ClipboardPasteBehavior.SetClipboardImageService(this, clipboardImageService);
@@ -88,6 +102,9 @@ public partial class MainWindow : SukiWindow
     {
         SettingsOverlayPresenter.PropertyChanged -=
             OnSettingsOverlayPresenterPropertyChanged;
+        RemoveHandler(KeyDownEvent, OnConfirmationDismissKeyDown);
+        _confirmationDialogPresenter?.Dismiss();
+        _confirmationDialogPresenter = null;
         _updateToastPresenter?.Dispose();
         _updateToastPresenter = null;
         base.OnClosed(e);
@@ -171,6 +188,20 @@ public partial class MainWindow : SukiWindow
         if (_isGenerationPanelMinimumHeightInitialized)
         {
             Loaded -= OnLoaded;
+        }
+    }
+
+    private void OnConfirmationDismissKeyDown(
+        object? sender,
+        KeyEventArgs e)
+    {
+        _ = sender;
+
+        if (e.Key == Key.Escape
+            && _confirmationDialogPresenter is { IsOpen: true })
+        {
+            _confirmationDialogPresenter.Dismiss();
+            e.Handled = true;
         }
     }
 

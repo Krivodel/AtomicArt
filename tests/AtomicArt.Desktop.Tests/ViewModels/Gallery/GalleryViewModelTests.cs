@@ -184,7 +184,13 @@ public sealed class GalleryViewModelTests
 
         await viewModel.DeleteSelectedCommand.ExecuteAsync(null);
 
-        dialogService.ConfirmationRequests.Should().ContainSingle();
+        LocalizedConfirmationDialogRequest confirmationRequest = dialogService
+            .ConfirmationRequests
+            .Single();
+        confirmationRequest.Kind.Should().Be(ConfirmationDialogKind.Destructive);
+        confirmationRequest.CancelActionLocalizationKey.Should().Be(
+            CommonLocalizationKeys.Cancel);
+        confirmationRequest.MessageArguments.Should().Equal(2);
         viewModel.Items.Should().ContainSingle()
             .Which.Prompt.Should().Be("Remaining");
         viewModel.IsSelectionMode.Should().BeFalse();

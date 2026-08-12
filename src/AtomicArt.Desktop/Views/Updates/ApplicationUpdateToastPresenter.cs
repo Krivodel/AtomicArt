@@ -104,7 +104,7 @@ public sealed class ApplicationUpdateToastPresenter : IDisposable
         ShowToast(
             (viewModel, builder) => builder
                 .WithActionButton(
-                    _textProvider.Get(UpdateLocalizationKeys.Actions.Later),
+                    _textProvider.Get(CommonLocalizationKeys.NotNow),
                     OnUpdateLaterRequested,
                     true,
                     SukiButtonStyles.Basic)

@@ -4,5 +4,7 @@
     <system:TimeSpan x:Key="TransientOverlayFadeDuration">0:0:0.18</system:TimeSpan>
     <system:TimeSpan x:Key="GallerySelectionOverlaySlideDuration">0:0:0.24</system:TimeSpan>
     <system:TimeSpan x:Key="GenerationCardVisualStateTransitionDuration">0:0:0.15</system:TimeSpan>
+    <system:TimeSpan x:Key="ConfirmationDialogTransitionDuration">0:0:0.2</system:TimeSpan>
+    <system:TimeSpan x:Key="ConfirmationDialogOpacityTransitionDuration">0:0:0.1</system:TimeSpan>
     <CubicEaseOut x:Key="TransientOverlayEasing" />
 </ResourceDictionary>

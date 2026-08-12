@@ -11,21 +11,21 @@ public sealed class DialogService :
     IRecipient<LocalizationChangedMessage>
 {
     private readonly ErrorDialogViewModel _errorDialog;
-    private readonly ConfirmationDialogViewModel _confirmationDialog;
+    private readonly IConfirmationDialogPresenter _confirmationPresenter;
     private readonly ILocalizationTextProvider _textProvider;
     private string? _activeErrorLocalizationKey;
     private LocalizedConfirmationDialogRequest? _activeConfirmationRequest;
 
     public DialogService(
         ErrorDialogViewModel errorDialog,
-        ConfirmationDialogViewModel confirmationDialog,
+        IConfirmationDialogPresenter confirmationPresenter,
         ILocalizationTextProvider textProvider,
         IMessenger messenger)
     {
         _errorDialog = errorDialog
             ?? throw new ArgumentNullException(nameof(errorDialog));
-        _confirmationDialog = confirmationDialog
-            ?? throw new ArgumentNullException(nameof(confirmationDialog));
+        _confirmationPresenter = confirmationPresenter
+            ?? throw new ArgumentNullException(nameof(confirmationPresenter));
         _textProvider = textProvider
             ?? throw new ArgumentNullException(nameof(textProvider));
         ArgumentNullException.ThrowIfNull(messenger);
@@ -74,10 +74,8 @@ public sealed class DialogService :
 
         try
         {
-            return await _confirmationDialog.OpenAsync(
-                    GetConfirmationTitle(request),
-                    GetConfirmationMessage(request),
-                    GetConfirmationActionText(request),
+            return await _confirmationPresenter.ShowAsync(
+                    CreateConfirmationPresentation(request),
                     ct)
                 .ConfigureAwait(false);
         }
@@ -102,12 +100,10 @@ public sealed class DialogService :
         LocalizedConfirmationDialogRequest? request =
             _activeConfirmationRequest;
 
-        if ((request is not null) && _confirmationDialog.IsOpen)
+        if ((request is not null) && _confirmationPresenter.IsOpen)
         {
-            _confirmationDialog.UpdateText(
-                GetConfirmationTitle(request),
-                GetConfirmationMessage(request),
-                GetConfirmationActionText(request));
+            _confirmationPresenter.Update(
+                CreateConfirmationPresentation(request));
         }
     }
 
@@ -119,7 +115,21 @@ public sealed class DialogService :
         ArgumentException.ThrowIfNullOrWhiteSpace(request.MessageLocalizationKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(
             request.ConfirmActionLocalizationKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            request.CancelActionLocalizationKey);
         ArgumentNullException.ThrowIfNull(request.MessageArguments);
+    }
+
+    private ConfirmationDialogPresentation CreateConfirmationPresentation(
+        LocalizedConfirmationDialogRequest request)
+    {
+        return new ConfirmationDialogPresentation(
+            GetConfirmationTitle(request),
+            GetConfirmationMessage(request),
+            GetConfirmationActionText(request),
+            GetConfirmationCancelActionText(request),
+            request.Kind,
+            request.BackgroundClickBehavior);
     }
 
     private string GetConfirmationTitle(
@@ -140,5 +150,11 @@ public sealed class DialogService :
         LocalizedConfirmationDialogRequest request)
     {
         return _textProvider.Get(request.ConfirmActionLocalizationKey);
+    }
+
+    private string GetConfirmationCancelActionText(
+        LocalizedConfirmationDialogRequest request)
+    {
+        return _textProvider.Get(request.CancelActionLocalizationKey);
     }
 }

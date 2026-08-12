@@ -62,7 +62,6 @@
     <x:Double x:Key="DialogActionButtonMinWidth">120</x:Double>
     <x:Int32 x:Key="SettingsModalOverlayOrder">100</x:Int32>
     <x:Int32 x:Key="MetadataModalOverlayOrder">200</x:Int32>
-    <x:Int32 x:Key="ConfirmationDialogModalOverlayOrder">250</x:Int32>
     <x:Int32 x:Key="ErrorDialogModalOverlayOrder">300</x:Int32>
     <CornerRadius x:Key="ShellCornerRadius">8</CornerRadius>
     <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>

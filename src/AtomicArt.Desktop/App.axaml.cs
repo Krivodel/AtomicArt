@@ -147,52 +147,11 @@ public class App : Avalonia.Application
             return;
         }
 
-        AtomicArtDataRootBootstrapStore bootstrapStore =
-            GetRequiredService<AtomicArtDataRootBootstrapStore>();
-        IAtomicArtDataPathProvider pathProvider =
-            GetRequiredService<IAtomicArtDataPathProvider>();
-
-        await PersistInitialRootDirectorySelectionStateAsync(
-            () => bootstrapStore.MarkInitialRootDirectorySelectionPendingAsync(
-                pathProvider.RootDirectory,
-                CancellationToken.None),
-            "marking as pending");
-
-        await dataRootSetting.ChangeDirectoryCommand.ExecuteAsync(null);
-
-        if (dataRootSetting.HasErrorMessage)
-        {
-            return;
-        }
-
-        await PersistInitialRootDirectorySelectionStateAsync(
-            () => bootstrapStore.MarkInitialRootDirectorySelectionCompletedAsync(
-                pathProvider.RootDirectory,
-                CancellationToken.None),
-            "marking as completed");
-    }
-
-    private async Task PersistInitialRootDirectorySelectionStateAsync(
-        Func<Task> persistState,
-        string operationName)
-    {
-        ArgumentNullException.ThrowIfNull(persistState);
-        ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
-
-        try
-        {
-            await persistState();
-        }
-        catch (Exception ex) when (ex is IOException
-            or UnauthorizedAccessException
-            or NotSupportedException
-            or ArgumentException)
-        {
-            _logger?.LogWarning(
-                ex,
-                "Initial data root selection state could not be persisted during {OperationName}.",
-                operationName);
-        }
+        InitialDataRootSelectionCoordinator coordinator =
+            GetRequiredService<InitialDataRootSelectionCoordinator>();
+        await coordinator.OfferAsync(
+            () => dataRootSetting.ChangeDirectoryCommand.ExecuteAsync(null),
+            CancellationToken.None);
     }
 
     private void ConfigureGlobalExceptionHandling()

@@ -5,6 +5,8 @@ public static class CommonLocalizationKeys
     public const string Error = "Common.Error";
     public const string Copy = "Common.Copy";
     public const string Cancel = "Common.Cancel";
+    public const string Yes = "Common.Yes";
+    public const string NotNow = "Common.NotNow";
     public const string UnknownError = "Common.UnknownError";
     public const string Auto = "Common.Auto";
 

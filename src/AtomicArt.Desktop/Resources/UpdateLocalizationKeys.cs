@@ -9,7 +9,6 @@ public static class UpdateLocalizationKeys
     {
         public const string Install = "Updates.Actions.Install";
         public const string WaitAndInstall = "Updates.Actions.WaitAndInstall";
-        public const string Later = "Updates.Actions.Later";
     }
 
     public static class States
