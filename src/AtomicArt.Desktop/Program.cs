@@ -26,12 +26,15 @@ internal sealed class Program
             LoadStorageOptions(bootstrapConfiguration);
         AtomicArtDataRootBootstrapStore bootstrapStore = new();
         DataRootMigrationJournalStore journalStore = new(bootstrapStore);
+        bool shouldOfferInitialRootDirectorySelection = false;
         Exception? bootstrapLoadFailure = null;
         string rootDirectory;
 
         try
         {
             rootDirectory = bootstrapStore.LoadRootDirectory();
+            shouldOfferInitialRootDirectorySelection =
+                bootstrapStore.ShouldOfferInitialRootDirectorySelection();
         }
         catch (Exception ex) when (ex is IOException
             or UnauthorizedAccessException
@@ -87,6 +90,12 @@ internal sealed class Program
                 pathProvider,
                 loggerProvider,
                 singleInstanceCoordinator);
+
+            if (shouldOfferInitialRootDirectorySelection)
+            {
+                App.RequestInitialRootDirectorySelection();
+            }
+
             logger.LogInformation("Atomic Art desktop process is starting.");
 
             long maxGpuResourceSizeBytes =

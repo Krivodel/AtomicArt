@@ -91,6 +91,71 @@ public sealed class AtomicArtDataRootMigrationServiceTests
     }
 
     [Fact]
+    public async Task MigrateAsync_WithLockedInstanceCoordinationFile_MovesManagedData()
+    {
+        string testDirectory = TestDirectories.GetUniqueDirectoryPath(
+            typeof(AtomicArtDataRootMigrationServiceTests));
+        string sourceDirectory = Path.Combine(testDirectory, "Source");
+        string destinationDirectory = Path.Combine(testDirectory, "Destination");
+        string bootstrapDirectory = Path.Combine(testDirectory, "Bootstrap");
+        byte[] content = [1, 2, 3];
+
+        try
+        {
+            string sourceFile = CreateSourceFile(sourceDirectory, content);
+            string coordinationDirectory = Path.Combine(
+                sourceDirectory,
+                AtomicArtPathNames.SingleInstanceCoordinationDirectory);
+            Directory.CreateDirectory(coordinationDirectory);
+            string lockFilePath = Path.Combine(coordinationDirectory, "instance.lock");
+            using FileStream lockStream = new(
+                lockFilePath,
+                FileMode.OpenOrCreate,
+                FileAccess.ReadWrite,
+                FileShare.None);
+            Directory.CreateDirectory(destinationDirectory);
+            AtomicArtDataPathProvider pathProvider = new(sourceDirectory);
+            AtomicArtDataRootBootstrapStore bootstrapStore = new(bootstrapDirectory);
+            await bootstrapStore.SaveRootDirectoryAsync(
+                sourceDirectory,
+                CancellationToken.None);
+            Mock<IDataRootMigrationTarget> targetMock = CreateTargetMock();
+            Mock<IApplicationStateFlushService> flushServiceMock = new();
+            flushServiceMock
+                .Setup(service => service.FlushAsync(
+                    targetMock.Object,
+                    It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+            AtomicArtDataRootMigrationService service = CreateService(
+                pathProvider,
+                bootstrapStore,
+                targetMock,
+                flushServiceMock.Object,
+                Mock.Of<IDataRootLogRelocationService>());
+            Mock<IProgress<DataRootMigrationProgress>> progressMock = new();
+
+            await service.MigrateAsync(
+                destinationDirectory,
+                progressMock.Object,
+                CancellationToken.None);
+
+            string destinationFile = Path.Combine(
+                destinationDirectory,
+                Path.GetRelativePath(sourceDirectory, sourceFile));
+            File.ReadAllBytes(destinationFile).Should().Equal(content);
+            File.Exists(lockFilePath).Should().BeTrue();
+            Directory.Exists(Path.Combine(
+                destinationDirectory,
+                AtomicArtPathNames.SingleInstanceCoordinationDirectory)).Should().BeFalse();
+            pathProvider.RootDirectory.Should().Be(Path.GetFullPath(destinationDirectory));
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(testDirectory);
+        }
+    }
+
+    [Fact]
     public async Task MigrateAsync_WhenTargetSavesState_AccessesNewRootWithoutDeadlock()
     {
         string testDirectory = TestDirectories.GetUniqueDirectoryPath(

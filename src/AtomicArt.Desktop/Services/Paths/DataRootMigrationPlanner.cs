@@ -183,8 +183,14 @@ internal sealed class DataRootMigrationPlanner
         foreach (string directory in Directory.EnumerateDirectories(currentDirectory))
         {
             ct.ThrowIfCancellationRequested();
-            EnsureNotReparsePoint(directory);
             string relativePath = Path.GetRelativePath(sourceRoot, directory);
+
+            if (AtomicArtPathNames.IsDataRootMigrationExcludedDirectory(relativePath))
+            {
+                continue;
+            }
+
+            EnsureNotReparsePoint(directory);
             relativeDirectories.Add(relativePath);
             EnumerateSource(
                 sourceRoot,

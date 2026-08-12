@@ -11,6 +11,112 @@ namespace AtomicArt.Desktop.Tests.Services.Paths;
 public sealed class AtomicArtDataRootBootstrapStoreTests
 {
     [Fact]
+    public void ShouldOfferInitialRootDirectorySelection_WithFreshDirectories_ReturnsTrue()
+    {
+        string bootstrapDirectory = TestDirectories.GetUniqueDirectoryPath(
+            typeof(AtomicArtDataRootBootstrapStoreTests));
+        string rootDirectory = string.Concat(bootstrapDirectory, "-data");
+
+        try
+        {
+            AtomicArtDataRootBootstrapStore store = new(
+                bootstrapDirectory,
+                rootDirectory);
+
+            bool result = store.ShouldOfferInitialRootDirectorySelection();
+
+            result.Should().BeTrue();
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(bootstrapDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
+        }
+    }
+
+    [Fact]
+    public void ShouldOfferInitialRootDirectorySelection_WithExistingDataDirectory_ReturnsFalse()
+    {
+        string bootstrapDirectory = TestDirectories.GetUniqueDirectoryPath(
+            typeof(AtomicArtDataRootBootstrapStoreTests));
+        string rootDirectory = string.Concat(bootstrapDirectory, "-data");
+
+        try
+        {
+            Directory.CreateDirectory(rootDirectory);
+            AtomicArtDataRootBootstrapStore store = new(
+                bootstrapDirectory,
+                rootDirectory);
+
+            bool result = store.ShouldOfferInitialRootDirectorySelection();
+
+            result.Should().BeFalse();
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(bootstrapDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task ShouldOfferInitialRootDirectorySelection_WithPersistedRoot_ReturnsFalse()
+    {
+        string bootstrapDirectory = TestDirectories.GetUniqueDirectoryPath(
+            typeof(AtomicArtDataRootBootstrapStoreTests));
+        string rootDirectory = string.Concat(bootstrapDirectory, "-data");
+
+        try
+        {
+            AtomicArtDataRootBootstrapStore store = new(
+                bootstrapDirectory,
+                rootDirectory);
+            await store.SaveRootDirectoryAsync(rootDirectory, CancellationToken.None);
+
+            bool result = store.ShouldOfferInitialRootDirectorySelection();
+
+            result.Should().BeFalse();
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(bootstrapDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task ShouldOfferInitialRootDirectorySelection_WhenPendingThenCompleted_TracksSelectionState()
+    {
+        string bootstrapDirectory = TestDirectories.GetUniqueDirectoryPath(
+            typeof(AtomicArtDataRootBootstrapStoreTests));
+        string rootDirectory = string.Concat(bootstrapDirectory, "-data");
+
+        try
+        {
+            AtomicArtDataRootBootstrapStore store = new(
+                bootstrapDirectory,
+                rootDirectory);
+            await store.MarkInitialRootDirectorySelectionPendingAsync(
+                rootDirectory,
+                CancellationToken.None);
+
+            bool pendingResult = store.ShouldOfferInitialRootDirectorySelection();
+            await store.MarkInitialRootDirectorySelectionCompletedAsync(
+                rootDirectory,
+                CancellationToken.None);
+            bool completedResult = store.ShouldOfferInitialRootDirectorySelection();
+
+            pendingResult.Should().BeTrue();
+            completedResult.Should().BeFalse();
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(bootstrapDirectory);
+            TestDirectories.DeleteIfExists(rootDirectory);
+        }
+    }
+
+    [Fact]
     public async Task SaveRootDirectoryAsync_WithUnicodeRoot_PersistsReadableNormalizedRoot()
     {
         string bootstrapDirectory = TestDirectories.GetUniqueDirectoryPath(

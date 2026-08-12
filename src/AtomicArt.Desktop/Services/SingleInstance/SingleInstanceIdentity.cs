@@ -11,7 +11,6 @@ internal sealed class SingleInstanceIdentity
     public string LockFilePath { get; }
     public string PipeName { get; }
 
-    private const string CoordinationDirectoryName = "Instance";
     private const int IdentitySuffixLength = 24;
     private const string LockFileExtension = ".lock";
     private const string PipeNamePrefix = "AtomicArt-";
@@ -40,7 +39,7 @@ internal sealed class SingleInstanceIdentity
         string coordinationDirectory = Path.Combine(
             localApplicationData,
             AtomicArtPathNames.RootDirectory,
-            CoordinationDirectoryName);
+            AtomicArtPathNames.SingleInstanceCoordinationDirectory);
         string identitySuffix = CreateIdentitySuffix();
 
         return new SingleInstanceIdentity(

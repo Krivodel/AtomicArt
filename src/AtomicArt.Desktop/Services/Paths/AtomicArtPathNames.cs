@@ -4,6 +4,7 @@ internal static class AtomicArtPathNames
 {
     internal const string RootDirectory = "AtomicArt";
     internal const string ArtDirectory = "Art";
+    internal const string SingleInstanceCoordinationDirectory = "Instance";
     internal const string LogsDirectory = "Logs";
     internal const string LocalizationsDirectory = "Localizations";
     internal const string SecretsDirectory = "Secrets";
@@ -12,4 +13,13 @@ internal static class AtomicArtPathNames
     internal const string StateAttachmentsDirectory = "Attachments";
     internal const string StateAttachmentsRelativePath =
         StateDirectory + "/" + StateAttachmentsDirectory;
+
+    internal static bool IsDataRootMigrationExcludedDirectory(
+        string relativePath)
+    {
+        return string.Equals(
+            relativePath,
+            SingleInstanceCoordinationDirectory,
+            StringComparison.OrdinalIgnoreCase);
+    }
 }

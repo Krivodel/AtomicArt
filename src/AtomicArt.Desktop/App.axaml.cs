@@ -13,6 +13,7 @@ using AtomicArt.Desktop.Services.SingleInstance;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.ViewModels;
+using AtomicArt.Desktop.ViewModels.Settings;
 using AtomicArt.Desktop.Views;
 using AtomicArt.Desktop.Views.Shell;
 
@@ -24,6 +25,7 @@ public class App : Avalonia.Application
     private static AtomicArtDataPathProvider? s_bootstrapPathProvider;
     private static DesktopFileLoggerProvider? s_bootstrapLoggerProvider;
     private static SingleInstanceCoordinator? s_singleInstanceCoordinator;
+    private static bool ShouldOfferInitialRootDirectorySelection;
 
     private ServiceProvider? _serviceProvider;
     private ILogger<App>? _logger;
@@ -88,6 +90,12 @@ public class App : Avalonia.Application
         s_bootstrapPathProvider = null;
         s_bootstrapLoggerProvider = null;
         s_singleInstanceCoordinator = null;
+        ShouldOfferInitialRootDirectorySelection = false;
+    }
+
+    internal static void RequestInitialRootDirectorySelection()
+    {
+        ShouldOfferInitialRootDirectorySelection = true;
     }
 
     internal static IConfiguration CreateConfiguration()
@@ -98,7 +106,7 @@ public class App : Avalonia.Application
             .Build();
     }
 
-    private static void StartMainWindowInitialization(MainWindow mainWindow)
+    private void StartMainWindowInitialization(MainWindow mainWindow)
     {
         if (mainWindow.DataContext is not MainWindowViewModel viewModel)
         {
@@ -114,7 +122,76 @@ public class App : Avalonia.Application
                 () => { },
                 DispatcherPriority.Loaded);
             await viewModel.RestoreAppStateCommand.ExecuteAsync(null);
+
+            if (ShouldOfferInitialRootDirectorySelection)
+            {
+                ShouldOfferInitialRootDirectorySelection = false;
+                await OfferInitialRootDirectorySelectionAsync(viewModel);
+            }
+
             await viewModel.ApplicationUpdate.StartMonitoringCommand.ExecuteAsync(null);
+        }
+    }
+
+    private async Task OfferInitialRootDirectorySelectionAsync(
+        MainWindowViewModel viewModel)
+    {
+        DataRootSettingViewModel? dataRootSetting = viewModel.Settings.Settings
+            .OfType<DataRootSettingViewModel>()
+            .SingleOrDefault();
+
+        if (dataRootSetting is null)
+        {
+            _logger?.LogError(
+                "The data root setting is unavailable during initial application setup.");
+            return;
+        }
+
+        AtomicArtDataRootBootstrapStore bootstrapStore =
+            GetRequiredService<AtomicArtDataRootBootstrapStore>();
+        IAtomicArtDataPathProvider pathProvider =
+            GetRequiredService<IAtomicArtDataPathProvider>();
+
+        await PersistInitialRootDirectorySelectionStateAsync(
+            () => bootstrapStore.MarkInitialRootDirectorySelectionPendingAsync(
+                pathProvider.RootDirectory,
+                CancellationToken.None),
+            "marking as pending");
+
+        await dataRootSetting.ChangeDirectoryCommand.ExecuteAsync(null);
+
+        if (dataRootSetting.HasErrorMessage)
+        {
+            return;
+        }
+
+        await PersistInitialRootDirectorySelectionStateAsync(
+            () => bootstrapStore.MarkInitialRootDirectorySelectionCompletedAsync(
+                pathProvider.RootDirectory,
+                CancellationToken.None),
+            "marking as completed");
+    }
+
+    private async Task PersistInitialRootDirectorySelectionStateAsync(
+        Func<Task> persistState,
+        string operationName)
+    {
+        ArgumentNullException.ThrowIfNull(persistState);
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationName);
+
+        try
+        {
+            await persistState();
+        }
+        catch (Exception ex) when (ex is IOException
+            or UnauthorizedAccessException
+            or NotSupportedException
+            or ArgumentException)
+        {
+            _logger?.LogWarning(
+                ex,
+                "Initial data root selection state could not be persisted during {OperationName}.",
+                operationName);
         }
     }
 
