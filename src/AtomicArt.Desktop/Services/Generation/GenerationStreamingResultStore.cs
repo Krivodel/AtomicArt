@@ -40,7 +40,7 @@ public sealed class GenerationStreamingResultStore
             TrustedPathFailureMessage);
         string temporaryPath = Path.GetFullPath(Path.Combine(
             resultsDirectory,
-            $"generation-{Guid.NewGuid():N}.part"));
+            $"{Guid.NewGuid():N}.part"));
         TrustedPathGuard.EnsureTrustedWriteTarget(
             resultsDirectory,
             temporaryPath,

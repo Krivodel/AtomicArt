@@ -12,14 +12,14 @@ public sealed class GenerationImageFileNamePolicyTests
     private static readonly Guid OtherItemId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
     [Fact]
-    public void BuildFileName_WithValidIds_ReturnsGenerationFileName()
+    public void BuildFileName_WithValidIds_ReturnsFileNameWithoutPrefix()
     {
         GenerationImageFileNamePolicy policy = new();
 
         string fileName = policy.BuildFileName(BatchId, ItemId, ".png");
 
         fileName.Should().Be(
-            "generation-22222222222222222222222222222222-11111111111111111111111111111111.png");
+            "22222222222222222222222222222222-11111111111111111111111111111111.png");
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public sealed class GenerationImageFileNamePolicyTests
         string fileName = policy.BuildFileName(BatchId, ItemId, "png");
 
         fileName.Should().Be(
-            "generation-22222222222222222222222222222222-11111111111111111111111111111111.png");
+            "22222222222222222222222222222222-11111111111111111111111111111111.png");
     }
 
     [Fact]
@@ -63,5 +63,17 @@ public sealed class GenerationImageFileNamePolicyTests
         bool result = policy.IsFileNameForItem(fileName, ItemId);
 
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsFileNameForItem_WithLegacyMatchingFileName_ReturnsTrue()
+    {
+        GenerationImageFileNamePolicy policy = new();
+        const string LegacyFileName =
+            "generation-22222222222222222222222222222222-11111111111111111111111111111111.png";
+
+        bool result = policy.IsFileNameForItem(LegacyFileName, ItemId);
+
+        result.Should().BeTrue();
     }
 }

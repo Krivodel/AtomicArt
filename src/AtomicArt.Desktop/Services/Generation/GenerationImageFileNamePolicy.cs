@@ -2,7 +2,7 @@ namespace AtomicArt.Desktop.Services.Generation;
 
 public sealed class GenerationImageFileNamePolicy
 {
-    private const string FileNamePrefix = "generation";
+    private const string LegacyFileNamePrefix = "generation";
 
     public string BuildFileName(
         Guid batchId,
@@ -21,7 +21,7 @@ public sealed class GenerationImageFileNamePolicy
             throw new ArgumentException("Generation item id must not be empty.", nameof(itemId));
         }
 
-        return $"{FileNamePrefix}-{batchId:N}-{itemId:N}{normalizedExtension}";
+        return $"{batchId:N}-{itemId:N}{normalizedExtension}";
     }
 
     public bool IsFileNameForItem(string fileName, Guid itemId)
@@ -41,12 +41,23 @@ public sealed class GenerationImageFileNamePolicy
         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(normalizedFileName);
         string[] segments = fileNameWithoutExtension.Split('-');
 
-        return segments.Length == 3
-            && string.Equals(segments[0], FileNamePrefix, StringComparison.Ordinal)
-            && Guid.TryParseExact(segments[1], "N", out Guid _)
-            && Guid.TryParseExact(segments[2], "N", out Guid parsedItemId)
-            && parsedItemId == itemId
-            && !string.IsNullOrWhiteSpace(Path.GetExtension(normalizedFileName));
+        if (string.IsNullOrWhiteSpace(Path.GetExtension(normalizedFileName)))
+        {
+            return false;
+        }
+
+        return segments switch
+        {
+            [string batchIdSegment, string itemIdSegment] =>
+                IsMatchingItem(batchIdSegment, itemIdSegment, itemId),
+            [string prefix, string batchIdSegment, string itemIdSegment]
+                when string.Equals(
+                    prefix,
+                    LegacyFileNamePrefix,
+                    StringComparison.Ordinal) =>
+                IsMatchingItem(batchIdSegment, itemIdSegment, itemId),
+            _ => false
+        };
     }
 
     private static string NormalizeExtension(string extension)
@@ -69,5 +80,15 @@ public sealed class GenerationImageFileNamePolicy
         }
 
         return $".{trimmedExtension}";
+    }
+
+    private static bool IsMatchingItem(
+        string batchIdSegment,
+        string itemIdSegment,
+        Guid itemId)
+    {
+        return Guid.TryParseExact(batchIdSegment, "N", out Guid _)
+            && Guid.TryParseExact(itemIdSegment, "N", out Guid parsedItemId)
+            && parsedItemId == itemId;
     }
 }
