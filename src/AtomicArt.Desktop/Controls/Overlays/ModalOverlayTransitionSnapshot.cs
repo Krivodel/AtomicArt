@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 
@@ -8,8 +7,6 @@ namespace AtomicArt.Desktop.Controls.Overlays;
 
 internal sealed class ModalOverlayTransitionSnapshot : IDisposable
 {
-    private const double DefaultDpi = 96d;
-
     private readonly Border _targetHost;
     private readonly Image _targetImage;
     private readonly BlurBackdropControl _targetBlur;
@@ -58,26 +55,21 @@ internal sealed class ModalOverlayTransitionSnapshot : IDisposable
         ArgumentNullException.ThrowIfNull(targetImage);
         ArgumentNullException.ThrowIfNull(targetBlur);
 
-        double renderScaling = topLevel.RenderScaling;
         Point panelBottomRight = new(panel.Bounds.Width, panel.Bounds.Height);
         Point? panelTargetStart = panel.TranslatePoint(new Point(), targetCoordinateSpace);
         Point? panelTargetEnd = panel.TranslatePoint(panelBottomRight, targetCoordinateSpace);
         if (panelTargetStart is null
             || panelTargetEnd is null
             || (panel.Bounds.Width <= 0d)
-            || (panel.Bounds.Height <= 0d)
-            || !double.IsFinite(renderScaling)
-            || (renderScaling <= 0d))
+            || (panel.Bounds.Height <= 0d))
         {
             return null;
         }
 
         Rect panelTargetBounds = CreateRect(panelTargetStart.Value, panelTargetEnd.Value);
-        PixelSize pixelSize = PixelSize.FromSize(panel.Bounds.Size, renderScaling);
-        Vector dpi = new(DefaultDpi * renderScaling, DefaultDpi * renderScaling);
-        RenderTargetBitmap panelBitmap = new(pixelSize, dpi);
         BlurBackdropControl? panelBlur = panel.BlurBackdrop;
         bool wasBlurVisible = panelBlur?.IsVisible ?? false;
+        RenderTargetBitmap? panelBitmap = null;
         bool isCompleted = false;
 
         try
@@ -87,13 +79,10 @@ internal sealed class ModalOverlayTransitionSnapshot : IDisposable
                 panelBlur.IsVisible = false;
             }
 
-            using (DrawingContext context = panelBitmap.CreateDrawingContext())
+            panelBitmap = VisualSnapshotRenderer.Capture(topLevel, panel);
+            if (panelBitmap is null)
             {
-                VisualBrush panelBrush = new(panel);
-                context.DrawRectangle(
-                    panelBrush,
-                    null,
-                    new Rect(panel.Bounds.Size));
+                return null;
             }
 
             ModalOverlayTransitionSnapshot snapshot = new(
@@ -119,7 +108,7 @@ internal sealed class ModalOverlayTransitionSnapshot : IDisposable
 
             if (!isCompleted)
             {
-                panelBitmap.Dispose();
+                panelBitmap?.Dispose();
             }
         }
     }

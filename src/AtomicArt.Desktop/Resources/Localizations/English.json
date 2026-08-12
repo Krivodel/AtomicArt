@@ -101,7 +101,9 @@
       },
       "Actions": {
         "Attach": "Attach",
-        "ShowInGallery": "Show in gallery"
+        "ShowInGallery": "Show in gallery",
+        "ShowInFolder": "Show in folder",
+        "Imba": "IMBA"
       },
       "Selection": {
         "SelectedCount": "Selected: {0}",

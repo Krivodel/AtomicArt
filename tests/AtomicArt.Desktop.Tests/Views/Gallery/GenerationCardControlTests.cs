@@ -1,9 +1,14 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Input.Raw;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
+
+using Rectangle = Avalonia.Controls.Shapes.Rectangle;
 
 using CommunityToolkit.Mvvm.Input;
 
@@ -29,6 +34,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 8, 12, 0, 0, DateTimeKind.Utc);
     private static readonly Size PreviewSize = new(220d, 220d);
     private static readonly Rect DefaultViewportBounds = new(0d, 0d, 1000d, 600d);
+    private static readonly TimeSpan AnimationCompletionTimeout = TimeSpan.FromSeconds(1d);
 
     [Theory]
     [InlineData(KeyModifiers.None, false)]
@@ -236,6 +242,587 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         });
     }
 
+    [Fact]
+    public void ContextFlyout_WhenCardCreated_ContainsExpectedItemsAndIcons()
+    {
+        Dispatch(() =>
+        {
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            RelayCommand revealCommand = new(() => { });
+            GenerationCardControl control = new()
+            {
+                DataContext = item,
+                RevealInFolderCommand = revealCommand
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                Border cardContainer = control
+                    .FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException(
+                        "Generation card container was not found.");
+                AnimatedContextMenuFlyout menuFlyout = cardContainer.ContextFlyout
+                    .Should()
+                    .BeOfType<AnimatedContextMenuFlyout>()
+                    .Subject;
+                MenuItem showInFolderMenuItem = control
+                    .FindControl<MenuItem>("ShowInFolderMenuItem")
+                    ?? throw new InvalidOperationException(
+                        "Show-in-folder menu item was not found.");
+                MenuItem imbaMenuItem = control
+                    .FindControl<MenuItem>("ImbaMenuItem")
+                    ?? throw new InvalidOperationException(
+                        "IMBA menu item was not found.");
+
+                showInFolderMenuItem.Icon.Should().BeOfType<PathIcon>();
+                imbaMenuItem.Icon.Should().BeOfType<PathIcon>();
+                showInFolderMenuItem.Command.Should().BeSameAs(revealCommand);
+                showInFolderMenuItem.CommandParameter.Should().BeSameAs(item);
+                imbaMenuItem.IsEnabled.Should().BeTrue();
+                imbaMenuItem.Command.Should().BeNull();
+                menuFlyout.Popup.WindowManagerAddShadowHint.Should().BeFalse();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task ContextFlyout_WhenCardRightClicked_OpensWithSnapshotRevealAsync()
+    {
+        await DispatchAsync(async () =>
+        {
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            GenerationCardControl control = new()
+            {
+                DataContext = item
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                Border cardContainer = control
+                    .FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException(
+                        "Generation card container was not found.");
+                AnimatedContextMenuFlyout menuFlyout = cardContainer.ContextFlyout
+                    .Should()
+                    .BeOfType<AnimatedContextMenuFlyout>()
+                    .Subject;
+                Point cardCenter = new(
+                    GalleryLayoutService.CardWidth / 2d,
+                    GalleryLayoutService.CardHeight / 2d);
+
+                window.MouseDown(cardCenter, MouseButton.Right);
+                window.MouseUp(cardCenter, MouseButton.Right);
+                window.CaptureRenderedFrame();
+
+                MenuItem showInFolderMenuItem = control
+                    .FindControl<MenuItem>("ShowInFolderMenuItem")
+                    ?? throw new InvalidOperationException(
+                        "Show-in-folder menu item was not found.");
+                MenuFlyoutPresenter presenter = showInFolderMenuItem
+                    .GetVisualAncestors()
+                    .OfType<MenuFlyoutPresenter>()
+                    .Single();
+                MenuItem[] menuItems = presenter
+                    .GetVisualDescendants()
+                    .OfType<MenuItem>()
+                    .ToArray();
+                Panel presenterTemplateRoot = presenter
+                    .GetVisualChildren()
+                    .OfType<Panel>()
+                    .Single();
+                Border[] presenterChromeBorders = presenterTemplateRoot
+                    .GetVisualChildren()
+                    .OfType<Border>()
+                    .ToArray();
+                Rectangle[] iconSeparators = presenter
+                    .GetVisualDescendants()
+                    .OfType<Rectangle>()
+                    .Where(rectangle => string.Equals(
+                        rectangle.Name,
+                        "PART_HorizontalSeparator",
+                        StringComparison.Ordinal))
+                    .ToArray();
+                ContentPresenter[] iconPresenters = presenter
+                    .GetVisualDescendants()
+                    .OfType<ContentPresenter>()
+                    .Where(contentPresenter => string.Equals(
+                        contentPresenter.Name,
+                        "PART_IconPresenter",
+                        StringComparison.Ordinal))
+                    .ToArray();
+                TextBlock[] menuHeaderTextBlocks = menuItems
+                    .Select(menuItem => menuItem.Header)
+                    .OfType<TextBlock>()
+                    .ToArray();
+                ContextMenuRevealHost revealHost = presenter
+                    .GetVisualAncestors()
+                    .OfType<ContextMenuRevealHost>()
+                    .Single();
+                RenderTargetBitmap snapshot = revealHost.Snapshot
+                    ?? throw new InvalidOperationException(
+                        "Context menu snapshot was not created.");
+                menuFlyout.IsOpen.Should().BeTrue();
+                menuItems.Should().HaveCount(2);
+                showInFolderMenuItem.IsSelected.Should().BeFalse();
+                showInFolderMenuItem.IsPointerOver.Should().BeFalse();
+                showInFolderMenuItem.IsFocused.Should().BeFalse();
+                presenter.Focusable.Should().BeTrue();
+                presenter.IsFocused.Should().BeTrue();
+                presenterTemplateRoot.Margin.Should().Be(default(Thickness));
+                presenterChromeBorders.Should().HaveCount(2);
+                presenterChromeBorders.Should().OnlyContain(
+                    border => border.Margin == default);
+                presenterChromeBorders[0].IsVisible.Should().BeFalse();
+                presenterChromeBorders[1].IsVisible.Should().BeTrue();
+                iconSeparators.Should().HaveCount(2);
+                iconSeparators.Should().OnlyContain(separator => separator.Opacity == 0d);
+                iconPresenters.Should().HaveCount(2);
+                menuHeaderTextBlocks.Should().HaveCount(2);
+                menuHeaderTextBlocks.Should().OnlyContain(
+                    textBlock => textBlock.FontWeight == FontWeight.Normal);
+
+                foreach (ContentPresenter iconPresenter in iconPresenters)
+                {
+                    TranslateTransform translateTransform = iconPresenter
+                        .RenderTransform
+                        .Should()
+                        .BeOfType<TranslateTransform>()
+                        .Subject;
+                    translateTransform.X.Should().Be(4d);
+                }
+
+                presenter.RenderTransform.Should().BeNull();
+                presenter.Opacity.Should().Be(0d);
+                presenter.IsHitTestVisible.Should().BeTrue();
+                presenter.BorderThickness.Should().Be(default(Thickness));
+                presenter.CornerRadius.Should().Be(new CornerRadius(8d));
+                menuItems.Should().OnlyContain(
+                    menuItem => Math.Abs(
+                        menuItem.Bounds.Width - presenter.Bounds.Width) < 0.001d);
+                menuItems[0].Bounds.Top.Should().Be(0d);
+                menuItems[^1].Bounds.Bottom.Should().BeApproximately(
+                    presenter.Bounds.Height,
+                    0.001d);
+                revealHost.WidthRatio.Should().BeInRange(
+                    ContextMenuRevealHost.InitialWidthRatio,
+                    1d);
+                revealHost.HeightRatio.Should().BeInRange(
+                    ContextMenuRevealHost.InitialHeightRatio,
+                    1d);
+                revealHost.RevealBounds.Width.Should().BeApproximately(
+                    presenter.Bounds.Width * revealHost.WidthRatio,
+                    0.001d);
+                revealHost.RevealBounds.Height.Should().BeApproximately(
+                    presenter.Bounds.Height * revealHost.HeightRatio,
+                    0.001d);
+                snapshot.Size.Width.Should().BeApproximately(
+                    presenter.Bounds.Width,
+                    0.5d);
+                snapshot.Size.Height.Should().BeApproximately(
+                    presenter.Bounds.Height,
+                    0.5d);
+                revealHost.BoxShadows.Should().NotBe(default(BoxShadows));
+                revealHost.Padding.Left.Should().BeGreaterThan(0d);
+                revealHost.Padding.Top.Should().BeGreaterThan(0d);
+                revealHost.Padding.Right.Should().BeGreaterThan(0d);
+                revealHost.Padding.Bottom.Should().BeGreaterThan(0d);
+
+                await Task.Delay(
+                    ContextMenuRevealHost.OpeningDurationMilliseconds + 50);
+
+                iconSeparators.Should().OnlyContain(separator => separator.Opacity == 0d);
+                revealHost.Snapshot.Should().BeNull();
+
+                menuFlyout.Hide();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(0.6d)]
+    [InlineData(1.5d)]
+    public async Task ContextFlyout_WhenCardIsScaled_InheritsUiScaleAsync(
+        double uiScale)
+    {
+        await DispatchAsync(() =>
+        {
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            GenerationCardControl control = new()
+            {
+                DataContext = item
+            };
+            LayoutTransformControl scaleHost = new()
+            {
+                Child = control,
+                LayoutTransform = new ScaleTransform(uiScale, uiScale)
+            };
+            Window window = Show(
+                scaleHost,
+                GalleryLayoutService.CardWidth * uiScale,
+                GalleryLayoutService.CardHeight * uiScale);
+
+            try
+            {
+                Border cardContainer = control
+                    .FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException(
+                        "Generation card container was not found.");
+                AnimatedContextMenuFlyout menuFlyout = cardContainer.ContextFlyout
+                    .Should()
+                    .BeOfType<AnimatedContextMenuFlyout>()
+                    .Subject;
+                Point cardCenter = cardContainer.TranslatePoint(
+                        new Point(
+                            cardContainer.Bounds.Width / 2d,
+                            cardContainer.Bounds.Height / 2d),
+                        window)
+                    ?? throw new InvalidOperationException(
+                        "Generation card position was not found.");
+
+                window.MouseDown(cardCenter, MouseButton.Right);
+                window.MouseUp(cardCenter, MouseButton.Right);
+                StartContextMenuOpening(window);
+
+                ContextMenuRevealHost revealHost = menuFlyout.Popup.Child
+                    .Should()
+                    .BeOfType<ContextMenuRevealHost>()
+                    .Subject;
+                PopupAssertions.AssertInheritsScale(
+                    menuFlyout.Popup,
+                    revealHost,
+                    uiScale);
+
+                menuFlyout.Hide();
+            }
+            finally
+            {
+                window.Close();
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ContextFlyout_WhenDownPressed_SelectsFirstItem()
+    {
+        Dispatch(() =>
+        {
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            GenerationCardControl control = new()
+            {
+                DataContext = item
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                Border cardContainer = control
+                    .FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException(
+                        "Generation card container was not found.");
+                AnimatedContextMenuFlyout menuFlyout = cardContainer.ContextFlyout
+                    .Should()
+                    .BeOfType<AnimatedContextMenuFlyout>()
+                    .Subject;
+                Point cardCenter = new(
+                    GalleryLayoutService.CardWidth / 2d,
+                    GalleryLayoutService.CardHeight / 2d);
+                window.MouseDown(cardCenter, MouseButton.Right);
+                window.MouseUp(cardCenter, MouseButton.Right);
+                StartContextMenuOpening(window);
+                ContextMenuRevealHost revealHost = menuFlyout.Popup.Child
+                    .Should()
+                    .BeOfType<ContextMenuRevealHost>()
+                    .Subject;
+                MenuItem showInFolderMenuItem = control
+                    .FindControl<MenuItem>("ShowInFolderMenuItem")
+                    ?? throw new InvalidOperationException(
+                        "Show-in-folder menu item was not found.");
+                TopLevel popupRoot = TopLevel.GetTopLevel(revealHost)
+                    ?? throw new InvalidOperationException(
+                        "Context menu popup root was not found.");
+
+                popupRoot.KeyPress(
+                    Key.Down,
+                    RawInputModifiers.None,
+                    PhysicalKey.None,
+                    null);
+
+                showInFolderMenuItem.IsSelected.Should().BeTrue();
+                showInFolderMenuItem.IsFocused.Should().BeTrue();
+
+                menuFlyout.Hide();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void ContextFlyout_WhenItemClickedDuringOpening_ExecutesCommandImmediately()
+    {
+        Dispatch(() =>
+        {
+            bool commandExecuted = false;
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            RelayCommand revealCommand = new(() => commandExecuted = true);
+            GenerationCardControl control = new()
+            {
+                DataContext = item,
+                RevealInFolderCommand = revealCommand
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                Border cardContainer = control
+                    .FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException(
+                        "Generation card container was not found.");
+                AnimatedContextMenuFlyout menuFlyout = cardContainer.ContextFlyout
+                    .Should()
+                    .BeOfType<AnimatedContextMenuFlyout>()
+                    .Subject;
+                int closingCount = 0;
+                menuFlyout.Closing += (_, _) => closingCount++;
+                Point cardCenter = new(
+                    GalleryLayoutService.CardWidth / 2d,
+                    GalleryLayoutService.CardHeight / 2d);
+                window.MouseDown(cardCenter, MouseButton.Right);
+                window.MouseUp(cardCenter, MouseButton.Right);
+                StartContextMenuOpening(window);
+                ContextMenuRevealHost revealHost = menuFlyout.Popup.Child
+                    .Should()
+                    .BeOfType<ContextMenuRevealHost>()
+                    .Subject;
+                MenuItem showInFolderMenuItem = control
+                    .FindControl<MenuItem>("ShowInFolderMenuItem")
+                    ?? throw new InvalidOperationException(
+                        "Show-in-folder menu item was not found.");
+                _ = revealHost.Snapshot
+                    ?? throw new InvalidOperationException(
+                        "Context menu opening animation was not running.");
+
+                ClickMenuItem(showInFolderMenuItem, revealHost);
+
+                commandExecuted.Should().BeTrue();
+                closingCount.Should().Be(1);
+                menuFlyout.IsOpen.Should().BeTrue();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task ContextFlyout_WhenHidden_FadesBeforeClosingAsync()
+    {
+        await DispatchAsync(async () =>
+        {
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            GenerationCardControl control = new()
+            {
+                DataContext = item
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                Border cardContainer = control
+                    .FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException(
+                        "Generation card container was not found.");
+                AnimatedContextMenuFlyout menuFlyout = cardContainer.ContextFlyout
+                    .Should()
+                    .BeOfType<AnimatedContextMenuFlyout>()
+                    .Subject;
+                TaskCompletionSource<bool> closed = new(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                int closingCount = 0;
+                menuFlyout.Closing += (_, _) => closingCount++;
+                menuFlyout.Closed += (_, _) => closed.TrySetResult(true);
+                Point cardCenter = new(
+                    GalleryLayoutService.CardWidth / 2d,
+                    GalleryLayoutService.CardHeight / 2d);
+                window.MouseDown(cardCenter, MouseButton.Right);
+                window.MouseUp(cardCenter, MouseButton.Right);
+                ContextMenuRevealHost revealHost = menuFlyout.Popup.Child
+                    .Should()
+                    .BeOfType<ContextMenuRevealHost>()
+                    .Subject;
+                await Task.Delay(
+                    ContextMenuRevealHost.OpeningDurationMilliseconds + 50);
+
+                revealHost.Opacity.Should().Be(1d);
+                revealHost.Snapshot.Should().BeNull();
+                revealHost.BoxShadows.Should().NotBe(default(BoxShadows));
+
+                menuFlyout.Hide();
+
+                menuFlyout.IsOpen.Should().BeTrue();
+                Task completedTask = await Task.WhenAny(
+                    closed.Task,
+                    Task.Delay(AnimationCompletionTimeout));
+                completedTask.Should().BeSameAs(closed.Task);
+                menuFlyout.IsOpen.Should().BeFalse();
+                closingCount.Should().Be(1);
+                menuFlyout.Popup.Child.Should().BeOfType<MenuFlyoutPresenter>();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task ContextFlyout_WhenOpenedAfterEarlyItemClick_IsVisibleAgainAsync()
+    {
+        await DispatchAsync(async () =>
+        {
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            GenerationCardControl control = new()
+            {
+                DataContext = item,
+                RevealInFolderCommand = new RelayCommand(() => { })
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                Border cardContainer = control
+                    .FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException(
+                        "Generation card container was not found.");
+                AnimatedContextMenuFlyout menuFlyout = cardContainer.ContextFlyout
+                    .Should()
+                    .BeOfType<AnimatedContextMenuFlyout>()
+                    .Subject;
+                Point cardCenter = new(
+                    GalleryLayoutService.CardWidth / 2d,
+                    GalleryLayoutService.CardHeight / 2d);
+                window.MouseDown(cardCenter, MouseButton.Right);
+                window.MouseUp(cardCenter, MouseButton.Right);
+                StartContextMenuOpening(window);
+                ContextMenuRevealHost firstRevealHost = menuFlyout.Popup.Child
+                    .Should()
+                    .BeOfType<ContextMenuRevealHost>()
+                    .Subject;
+                MenuItem showInFolderMenuItem = control
+                    .FindControl<MenuItem>("ShowInFolderMenuItem")
+                    ?? throw new InvalidOperationException(
+                        "Show-in-folder menu item was not found.");
+                _ = firstRevealHost.Snapshot
+                    ?? throw new InvalidOperationException(
+                        "Context menu opening animation was not running.");
+                TaskCompletionSource<bool> firstClose = new(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                menuFlyout.Closed += OnFirstClosed;
+
+                ClickMenuItem(showInFolderMenuItem, firstRevealHost);
+
+                Task firstCompletedTask = await Task.WhenAny(
+                    firstClose.Task,
+                    Task.Delay(AnimationCompletionTimeout));
+                firstCompletedTask.Should().BeSameAs(firstClose.Task);
+                menuFlyout.Closed -= OnFirstClosed;
+                window.MouseDown(cardCenter, MouseButton.Right);
+                window.MouseUp(cardCenter, MouseButton.Right);
+                StartContextMenuOpening(window);
+                ContextMenuRevealHost secondRevealHost = menuFlyout.Popup.Child
+                    .Should()
+                    .BeOfType<ContextMenuRevealHost>()
+                    .Subject;
+
+                menuFlyout.IsOpen.Should().BeTrue();
+                secondRevealHost.Snapshot.Should().NotBeNull();
+                await Task.Delay(
+                    ContextMenuRevealHost.OpeningDurationMilliseconds + 50);
+
+                MenuFlyoutPresenter secondPresenter = secondRevealHost.Child
+                    .Should()
+                    .BeOfType<MenuFlyoutPresenter>()
+                    .Subject;
+                secondRevealHost.Opacity.Should().Be(1d);
+                secondRevealHost.Snapshot.Should().BeNull();
+                secondPresenter.Opacity.Should().Be(1d);
+                secondPresenter.IsHitTestVisible.Should().BeTrue();
+                TaskCompletionSource<bool> secondClose = new(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                menuFlyout.Closed += OnSecondClosed;
+
+                menuFlyout.Hide();
+
+                Task secondCompletedTask = await Task.WhenAny(
+                    secondClose.Task,
+                    Task.Delay(AnimationCompletionTimeout));
+                secondCompletedTask.Should().BeSameAs(secondClose.Task);
+                menuFlyout.Closed -= OnSecondClosed;
+
+                void OnFirstClosed(object? sender, EventArgs eventArgs)
+                {
+                    firstClose.TrySetResult(true);
+                }
+
+                void OnSecondClosed(object? sender, EventArgs eventArgs)
+                {
+                    secondClose.TrySetResult(true);
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     [Theory]
     [InlineData(
         "Сделай первую картинку (игра 3 в ряд, 2д) в стиле второй " +
@@ -363,6 +950,30 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
             textBlock.TextLayout.TextLines
                 .SelectMany(line => line.TextRuns)
                 .Select(run => run.Text.ToString()));
+    }
+
+    private static void ClickMenuItem(
+        MenuItem menuItem,
+        ContextMenuRevealHost revealHost)
+    {
+        TopLevel popupRoot = TopLevel.GetTopLevel(revealHost)
+            ?? throw new InvalidOperationException(
+                "Context menu popup root was not found.");
+        Point menuItemCenter = menuItem.TranslatePoint(
+                new Point(
+                    menuItem.Bounds.Width / 2d,
+                    menuItem.Bounds.Height / 2d),
+                popupRoot)
+            ?? throw new InvalidOperationException(
+                "Context menu item position was not found.");
+
+        popupRoot.MouseDown(menuItemCenter, MouseButton.Left);
+        popupRoot.MouseUp(menuItemCenter, MouseButton.Left);
+    }
+
+    private static void StartContextMenuOpening(Window window)
+    {
+        window.CaptureRenderedFrame();
     }
 
     private static GenerationItemViewModel CreateItem(

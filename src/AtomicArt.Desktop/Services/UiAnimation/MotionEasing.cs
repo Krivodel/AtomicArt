@@ -15,6 +15,13 @@ internal static class MotionEasing
         return 1d - Math.Pow(1d - value, 3d);
     }
 
+    public static double EaseOutCirc(double value)
+    {
+        double shifted = value - 1d;
+
+        return Math.Sqrt(1d - (shifted * shifted));
+    }
+
     public static double EaseRail(double value)
     {
         return CubicBezier(value, 0.22d, 0d, 0.18d, 1d);

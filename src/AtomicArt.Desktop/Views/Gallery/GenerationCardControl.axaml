@@ -1,12 +1,40 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
              xmlns:controls="using:AtomicArt.Desktop.Views.Gallery"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:uiControls="using:AtomicArt.Desktop.Controls"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationCardControl"
+             x:Name="GenerationCard"
              x:DataType="gallery:GenerationItemViewModel">
     <Border x:Name="GenerationCardContainer"
             Classes="generation-card-container">
+        <Border.ContextFlyout>
+            <uiControls:AnimatedContextMenuFlyout>
+                <MenuItem x:Name="ShowInFolderMenuItem"
+                          Command="{Binding #GenerationCard.RevealInFolderCommand}"
+                          CommandParameter="{Binding #GenerationCard.DataContext}">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.ShowInFolder}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <PathIcon Data="{StaticResource GalleryFolderIcon}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem x:Name="ImbaMenuItem">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.Imba}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <PathIcon Data="{StaticResource GalleryImbaIcon}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </uiControls:AnimatedContextMenuFlyout>
+        </Border.ContextFlyout>
+
         <Border x:Name="GenerationCardRoot"
                 Classes="generation-card">
             <Grid>

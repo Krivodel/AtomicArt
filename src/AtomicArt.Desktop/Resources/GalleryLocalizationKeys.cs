@@ -40,5 +40,7 @@ public static class GalleryLocalizationKeys
     {
         public const string Attach = "Gallery.Actions.Attach";
         public const string ShowInGallery = "Gallery.Actions.ShowInGallery";
+        public const string ShowInFolder = "Gallery.Actions.ShowInFolder";
+        public const string Imba = "Gallery.Actions.Imba";
     }
 }

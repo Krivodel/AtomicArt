@@ -27,6 +27,21 @@
                 </ControlTemplate>
             </Setter>
         </ControlTheme>
+
+        <ControlTheme x:Key="ContextMenuItemTheme"
+                      BasedOn="{StaticResource SukiMenuItemStyle}"
+                      TargetType="MenuItem">
+            <Style Selector="^:icon /template/ ContentPresenter#PART_IconPresenter">
+                <Setter Property="RenderTransform">
+                    <TranslateTransform X="4" />
+                </Setter>
+            </Style>
+
+            <Style Selector="^:icon /template/ Rectangle#PART_HorizontalSeparator">
+                <Setter Property="Opacity"
+                        Value="0" />
+            </Style>
+        </ControlTheme>
     </Styles.Resources>
 
     <Style Selector="Button">
@@ -41,6 +56,11 @@
                 Value="Hand" />
     </Style>
 
+    <Style Selector="TextBlock.context-menu-item-header">
+        <Setter Property="FontWeight"
+                Value="Normal" />
+    </Style>
+
     <Style Selector="MenuFlyoutPresenter">
         <Setter Property="Background"
                 Value="{DynamicResource SukiPopupBackground}" />
@@ -50,6 +70,35 @@
                 Value="{StaticResource ShellBorderThickness}" />
         <Setter Property="CornerRadius"
                 Value="{DynamicResource SmallCornerRadius}" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu">
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="CornerRadius"
+                Value="8" />
+        <Setter Property="Focusable"
+                Value="True" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu MenuItem">
+        <Setter Property="Theme"
+                Value="{StaticResource ContextMenuItemTheme}" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu /template/ Panel">
+        <Setter Property="Margin"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu /template/ Border">
+        <Setter Property="Margin"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu /template/ Panel > Border:nth-child(1)">
+        <Setter Property="IsVisible"
+                Value="False" />
     </Style>
 
     <Style Selector="MenuItem:selected">

@@ -101,7 +101,9 @@
       },
       "Actions": {
         "Attach": "Прикрепить",
-        "ShowInGallery": "Показать в галерее"
+        "ShowInGallery": "Показать в галерее",
+        "ShowInFolder": "Показать в папке",
+        "Imba": "ИМБА"
       },
       "Selection": {
         "SelectedCount": "Выбрано: {0}",
