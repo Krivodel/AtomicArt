@@ -156,7 +156,7 @@ public sealed class GenerationsControllerTests
             "16:9",
             "2K",
             1.0,
-            "low",
+            "minimal",
             new Dictionary<string, JsonElement>(StringComparer.Ordinal),
             Array.Empty<IGenerationAttachmentSource>());
 

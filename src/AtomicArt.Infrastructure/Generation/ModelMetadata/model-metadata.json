@@ -66,7 +66,7 @@
       "thinking": {
         "levels": [
           {
-            "value": "low",
+            "value": "minimal",
             "localizationKey": "Generation.Thinking.Low"
           },
           {
@@ -74,7 +74,7 @@
             "localizationKey": "Generation.Thinking.High"
           }
         ],
-        "default": "low"
+        "default": "minimal"
       }
     },
     "text-token-estimation": {

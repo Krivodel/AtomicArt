@@ -91,6 +91,10 @@ public sealed class GoogleInteractionsStreamingTests
         root.GetProperty("system_instruction").GetString()
             .Should().Be(
                 GoogleInteractionsImageOutputContract.SystemInstruction);
+        root.GetProperty("generation_config")
+            .GetProperty("thinking_level")
+            .GetString()
+            .Should().Be("minimal");
     }
 
     [Fact]
@@ -618,7 +622,7 @@ public sealed class GoogleInteractionsStreamingTests
             "16:9",
             "2K",
             1.0,
-            "low",
+            "minimal",
             parameters,
             new List<IGenerationAttachmentSource>
             {

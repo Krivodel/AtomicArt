@@ -93,23 +93,23 @@ public sealed class GenerationPanelStateServiceTests
         state.Resolution.Should().Be("1K");
         state.Temperature.Should().Be(
             ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().Temperature.Default);
-        state.ThinkingLevel.Should().Be("low");
+        state.ThinkingLevel.Should().Be("minimal");
         state.GenerationCount.Should().Be(1);
         state.Prompt.Should().Be(FirstPrompt);
     }
 
     [Fact]
-    public async Task LoadAsync_WithLegacyMinimalThinkingLevel_NormalizesToLow()
+    public async Task LoadAsync_WithLegacyLowThinkingLevel_NormalizesToMinimal()
     {
         GenerationPanelState state = await LoadFirstPanelAsync(
             new GenerationPanelState
             {
                 PanelId = FirstPanelId,
                 SelectedModelId = "first-model",
-                ThinkingLevel = "minimal"
+                ThinkingLevel = "low"
             });
 
-        state.ThinkingLevel.Should().Be("low");
+        state.ThinkingLevel.Should().Be("minimal");
     }
 
     [Fact]

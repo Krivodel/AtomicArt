@@ -95,7 +95,7 @@ public sealed class StreamingGenerationRequestValidatorTests
             [GenerationParameterNames.Temperature] =
                 JsonSerializer.SerializeToElement(1.0),
             [GenerationParameterNames.ThinkingLevel] =
-                JsonSerializer.SerializeToElement("low")
+                JsonSerializer.SerializeToElement("minimal")
         };
     }
 

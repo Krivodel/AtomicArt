@@ -51,10 +51,10 @@ public sealed class JsonModelMetadataStartupLoaderTests
         GenerationModelMetadataDto nanoBananaPro = catalog.Models.Single(model => model.Id == "nano-banana-pro");
         GenerationModelThinkingMetadataDto expectedThinking = new(
             [
-                new("low", GenerationLocalizationKeys.ThinkingLow),
+                new("minimal", GenerationLocalizationKeys.ThinkingLow),
                 new("high", GenerationLocalizationKeys.ThinkingHigh)
             ],
-            "low");
+            "minimal");
 
         nanoBanana2.Thinking.Should().BeEquivalentTo(expectedThinking);
         nanoBanana2Lite.Thinking.Should().BeEquivalentTo(expectedThinking);
