@@ -302,6 +302,7 @@ internal sealed class AnimatedGallerySceneController
             _owner.RevealInNewFolderWindowCommand,
             _owner.OpenMetadataCommand,
             _owner.DeleteOrCancelCommand,
+            _owner.ToggleFavoriteCommand,
             _owner.ToggleSelectionCommand,
             _owner.SelectRangeCommand);
     }

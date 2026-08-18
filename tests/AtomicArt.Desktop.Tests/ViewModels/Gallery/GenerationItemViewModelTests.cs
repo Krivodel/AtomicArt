@@ -6,6 +6,7 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
@@ -135,6 +136,35 @@ public sealed class GenerationItemViewModelTests
         GalleryItemState state = viewModel.CreateState();
 
         state.ThumbnailPath.Should().Be("thumbnail.png");
+    }
+
+    [Fact]
+    public void CreateState_WhenFavorite_IncludesFavoriteState()
+    {
+        GenerationItemViewModel viewModel = CreateViewModel(CreatedAtUtc);
+        viewModel.IsFavorite = true;
+
+        GalleryItemState state = viewModel.CreateState();
+
+        state.IsFavorite.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Restore_WithFavoriteState_RestoresFavoriteState()
+    {
+        GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(
+            id: ItemId,
+            createdAtUtc: CreatedAtUtc,
+            isFavorite: true);
+
+        GenerationItemViewModel viewModel = GenerationItemViewModel.Restore(
+            state,
+            state.ImagePath,
+            state.ThumbnailPath,
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
+
+        viewModel.IsFavorite.Should().BeTrue();
     }
 
     [Fact]

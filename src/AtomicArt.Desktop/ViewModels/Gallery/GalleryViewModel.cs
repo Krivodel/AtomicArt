@@ -402,6 +402,25 @@ public sealed partial class GalleryViewModel :
         _selectionController.Toggle(item);
     }
 
+    [RelayCommand(CanExecute = nameof(CanToggleFavorite))]
+    private async Task ToggleFavoriteAsync(
+        GenerationItemViewModel? item,
+        CancellationToken ct)
+    {
+        if (item is null || !CanToggleFavorite(item))
+        {
+            return;
+        }
+
+        item.IsFavorite = !item.IsFavorite;
+        IReadOnlyList<GalleryItemState> snapshot =
+            _itemsController.CreateStateSnapshot();
+        await ExecuteUserOperationAsync(
+            operationCt => _galleryStateService.SaveAsync(snapshot, operationCt),
+            nameof(ToggleFavoriteAsync),
+            ct);
+    }
+
     [RelayCommand(CanExecute = nameof(CanChangeSelection))]
     private void SelectRange(GenerationItemViewModel? item)
     {
@@ -500,6 +519,14 @@ public sealed partial class GalleryViewModel :
     private bool CanChangeSelection(GenerationItemViewModel? item)
     {
         return !IsLoading
+            && item is not null
+            && _itemsController.Contains(item);
+    }
+
+    private bool CanToggleFavorite(GenerationItemViewModel? item)
+    {
+        return !IsLoading
+            && !IsSelectionMode
             && item is not null
             && _itemsController.Contains(item);
     }
@@ -726,6 +753,7 @@ public sealed partial class GalleryViewModel :
         OpenViewerCommand.NotifyCanExecuteChanged();
         ShowFailureDetailsCommand.NotifyCanExecuteChanged();
         DeleteOrCancelCommand.NotifyCanExecuteChanged();
+        ToggleFavoriteCommand.NotifyCanExecuteChanged();
         ToggleSelectionCommand.NotifyCanExecuteChanged();
         SelectRangeCommand.NotifyCanExecuteChanged();
         SelectAllCommand.NotifyCanExecuteChanged();

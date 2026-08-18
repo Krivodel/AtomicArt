@@ -250,6 +250,11 @@
                 Value="{StaticResource GenerationCardInfoCornerRadius}" />
     </Style>
 
+    <Style Selector="Border.generation-card-info.favorite">
+        <Setter Property="Background"
+                Value="{StaticResource GalleryFavoriteInfoBackgroundBrush}" />
+    </Style>
+
     <Style Selector="Image.generation-card-image">
         <Setter Property="Stretch"
                 Value="UniformToFill" />

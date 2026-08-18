@@ -75,6 +75,8 @@ public sealed partial class GenerationItemViewModel :
     [ObservableProperty]
     private int _attachedImagesCount;
     [ObservableProperty]
+    private bool _isFavorite;
+    [ObservableProperty]
     private bool _isSelected;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Status))]
@@ -188,7 +190,8 @@ public sealed partial class GenerationItemViewModel :
             GenerationOrdinal = normalizedState.GenerationOrdinal,
             GalleryOrderTimestampUtc = normalizedState.GalleryOrderTimestampUtc,
             ThumbnailPath = normalizedState.ThumbnailPath,
-            FailureCode = normalizedState.FailureCode
+            FailureCode = normalizedState.FailureCode,
+            IsFavorite = normalizedState.IsFavorite
         };
 
         return viewModel;

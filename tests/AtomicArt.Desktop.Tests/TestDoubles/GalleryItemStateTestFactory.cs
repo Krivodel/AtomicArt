@@ -22,7 +22,8 @@ internal static class GalleryItemStateTestFactory
         TimeSpan? generationDuration = null,
         GenerationPriceDto? price = null,
         GenerationUsageDto? usage = null,
-        int attachedImagesCount = 0)
+        int attachedImagesCount = 0,
+        bool isFavorite = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
 
@@ -43,7 +44,8 @@ internal static class GalleryItemStateTestFactory
             GenerationDuration = generationDuration,
             Price = price,
             Usage = usage,
-            AttachedImagesCount = attachedImagesCount
+            AttachedImagesCount = attachedImagesCount,
+            IsFavorite = isFavorite
         };
     }
 }

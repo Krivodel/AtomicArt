@@ -52,6 +52,11 @@ public partial class GenerationCardControl :
         get => GetValue(DeleteOrCancelCommandProperty);
         set => SetValue(DeleteOrCancelCommandProperty, value);
     }
+    public IRelayCommand? ToggleFavoriteCommand
+    {
+        get => GetValue(ToggleFavoriteCommandProperty);
+        set => SetValue(ToggleFavoriteCommandProperty, value);
+    }
     public IRelayCommand? ToggleSelectionCommand
     {
         get => GetValue(ToggleSelectionCommandProperty);
@@ -91,6 +96,9 @@ public partial class GenerationCardControl :
     public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(DeleteOrCancelCommand));
+    public static readonly StyledProperty<IRelayCommand?> ToggleFavoriteCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(ToggleFavoriteCommand));
     public static readonly StyledProperty<IRelayCommand?> ToggleSelectionCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(ToggleSelectionCommand));

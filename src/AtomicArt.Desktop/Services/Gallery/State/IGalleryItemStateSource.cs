@@ -21,6 +21,7 @@ public interface IGalleryItemStateSource
     GenerationUsageDto? Usage { get; }
     string? FailureCode { get; }
     int AttachedImagesCount { get; }
+    bool IsFavorite { get; }
     Guid? CorrelationId { get; }
     int? GenerationOrdinal { get; }
 }

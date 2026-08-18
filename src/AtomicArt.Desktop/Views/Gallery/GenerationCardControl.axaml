@@ -36,7 +36,9 @@
                         <PathIcon Data="{StaticResource GalleryFolderIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem x:Name="ImbaMenuItem">
+                <MenuItem x:Name="ImbaMenuItem"
+                          Command="{Binding #GenerationCard.ToggleFavoriteCommand}"
+                          CommandParameter="{Binding #GenerationCard.DataContext}">
                     <MenuItem.Header>
                         <TextBlock Classes="context-menu-item-header"
                                    Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.Imba}}" />
@@ -75,8 +77,10 @@
                                                    OpenViewerCommand="{Binding $parent[controls:GenerationCardControl].OpenViewerCommand}"
                                                    ShowFailureDetailsCommand="{Binding $parent[controls:GenerationCardControl].ShowFailureDetailsCommand}" />
 
-                <Border Grid.Row="1"
-                        Classes="generation-card-info">
+                <Border x:Name="GenerationCardInfo"
+                        Grid.Row="1"
+                        Classes="generation-card-info"
+                        Classes.favorite="{Binding IsFavorite}">
                     <Grid RowDefinitions="*,Auto">
                         <uiControls:OverflowEllipsisTextBlock Grid.Row="0"
                                                               Classes="generation-card-prompt"
@@ -92,6 +96,19 @@
                         </Grid>
                     </Grid>
                 </Border>
+
+                <Path x:Name="FavoriteAccent"
+                      Grid.Row="1"
+                      ZIndex="12"
+                      Height="4"
+                      Margin="2,0"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Bottom"
+                      IsHitTestVisible="False"
+                      Data="M0,4 L0,3 C8,3 12,2.7 18,2.2 C26,1.4 31,0.1 38,0.1 L62,0.1 C69,0.1 74,1.4 82,2.2 C88,2.7 92,3 100,3 L100,4 Z"
+                      Fill="{StaticResource GalleryFavoriteAccentBrush}"
+                      Stretch="Fill"
+                      IsVisible="{Binding IsFavorite}" />
 
                 <Button x:Name="PromptDragSource"
                         Grid.Row="1"

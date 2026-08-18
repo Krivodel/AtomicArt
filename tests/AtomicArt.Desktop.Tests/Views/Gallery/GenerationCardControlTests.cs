@@ -253,11 +253,13 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
             RelayCommand selectCommand = new(() => item.IsSelected = true);
             RelayCommand revealCommand = new(() => { });
             RelayCommand deleteCommand = new(() => { });
+            RelayCommand favoriteCommand = new(() => { });
             GenerationCardControl control = new()
             {
                 DataContext = item,
                 DeleteOrCancelCommand = deleteCommand,
                 RevealInFolderCommand = revealCommand,
+                ToggleFavoriteCommand = favoriteCommand,
                 ToggleSelectionCommand = selectCommand
             };
             Window window = Show(
@@ -310,7 +312,8 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 showInFolderMenuItem.CommandParameter.Should().BeSameAs(item);
                 imbaMenuItem.Icon.Should().BeOfType<PathIcon>();
                 imbaMenuItem.IsEnabled.Should().BeTrue();
-                imbaMenuItem.Command.Should().BeNull();
+                imbaMenuItem.Command.Should().BeSameAs(favoriteCommand);
+                imbaMenuItem.CommandParameter.Should().BeSameAs(item);
                 PathIcon deleteIcon = deleteMenuItem.Icon
                     .Should()
                     .BeOfType<PathIcon>()

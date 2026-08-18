@@ -62,6 +62,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
             RelayCommand revealInNewWindowCommand = new(() => { });
             RelayCommand metadataCommand = new(() => { });
             RelayCommand deleteCommand = new(() => { });
+            RelayCommand favoriteCommand = new(() => { });
             RelayCommand toggleSelectionCommand = new(() => { });
             RelayCommand selectRangeCommand = new(() => { });
             AnimatedGalleryControl control = CreateControlWithCommands(
@@ -69,6 +70,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
                 revealInNewWindowCommand,
                 metadataCommand,
                 deleteCommand,
+                favoriteCommand,
                 toggleSelectionCommand,
                 selectRangeCommand);
 
@@ -81,6 +83,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
                     .BeSameAs(revealInNewWindowCommand);
                 card.OpenMetadataCommand.Should().BeSameAs(metadataCommand);
                 card.DeleteOrCancelCommand.Should().BeSameAs(deleteCommand);
+                card.ToggleFavoriteCommand.Should().BeSameAs(favoriteCommand);
                 card.ToggleSelectionCommand.Should().BeSameAs(toggleSelectionCommand);
                 card.SelectRangeCommand.Should().BeSameAs(selectRangeCommand);
             });
@@ -123,6 +126,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
         RelayCommand revealInNewWindowCommand,
         RelayCommand metadataCommand,
         RelayCommand deleteCommand,
+        RelayCommand favoriteCommand,
         RelayCommand toggleSelectionCommand,
         RelayCommand selectRangeCommand)
     {
@@ -131,6 +135,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
         control.RevealInNewFolderWindowCommand = revealInNewWindowCommand;
         control.OpenMetadataCommand = metadataCommand;
         control.DeleteOrCancelCommand = deleteCommand;
+        control.ToggleFavoriteCommand = favoriteCommand;
         control.ToggleSelectionCommand = toggleSelectionCommand;
         control.SelectRangeCommand = selectRangeCommand;
 

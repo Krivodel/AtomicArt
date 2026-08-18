@@ -166,6 +166,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     GetGalleryControl(scenario.View);
                 galleryControl.DeleteOrCancelCommand.Should().BeSameAs(
                     scenario.ViewModel.DeleteOrCancelCommand);
+                galleryControl.ToggleFavoriteCommand.Should().BeSameAs(
+                    scenario.ViewModel.ToggleFavoriteCommand);
             }
             finally
             {
@@ -373,6 +375,80 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     "removing the last selection closes selection mode");
                 selectionHighlight.Classes.Should().NotContain("selected");
                 selectionHighlight.Opacity.Should().Be(0d);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task GalleryViewFavorite_WithFavoriteItem_ShowsFavoriteCardDecoration()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ServiceProvider serviceProvider = CreateServiceProvider();
+            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+
+            await scenario.ViewModel.RestoreStateAsync(
+                new GalleryItemState[]
+                {
+                    GalleryItemStateTestFactory.CreateGenerated(isFavorite: true)
+                },
+                CancellationToken.None);
+            Window window = Show(scenario.View);
+
+            try
+            {
+                GenerationCardControl card = GetGalleryPanel(
+                        GetGalleryControl(scenario.View))
+                    .Children
+                    .OfType<GenerationCardControl>()
+                    .Single();
+                Border cardInfo = card
+                    .FindControl<Border>("GenerationCardInfo")
+                    ?? throw new InvalidOperationException(
+                        "Generation card info was not found.");
+                Avalonia.Controls.Shapes.Path favoriteAccent = card
+                    .FindControl<Avalonia.Controls.Shapes.Path>("FavoriteAccent")
+                    ?? throw new InvalidOperationException(
+                        "Favorite accent was not found.");
+                ISolidColorBrush backgroundBrush = cardInfo.Background
+                    .Should()
+                    .BeAssignableTo<ISolidColorBrush>()
+                    .Subject;
+                cardInfo.TryFindResource(
+                    "GalleryFavoriteInfoBackgroundColor",
+                    out object? favoriteColorResource).Should().BeTrue();
+                Color favoriteColor = favoriteColorResource
+                    .Should()
+                    .BeOfType<Color>()
+                    .Subject;
+                favoriteAccent.TryFindResource(
+                    "GalleryFavoriteAccentColor",
+                    out object? accentColorResource).Should().BeTrue();
+                Color accentColor = accentColorResource
+                    .Should()
+                    .BeOfType<Color>()
+                    .Subject;
+                ISolidColorBrush accentBrush = favoriteAccent.Fill
+                    .Should()
+                    .BeAssignableTo<ISolidColorBrush>()
+                    .Subject;
+
+                cardInfo.Classes.Should().Contain("favorite");
+                backgroundBrush.Color.Should().Be(favoriteColor);
+                cardInfo.BorderThickness.Should().Be(default(Thickness));
+                favoriteAccent.IsVisible.Should().BeTrue();
+                favoriteAccent.Height.Should().Be(4d);
+                favoriteAccent.Margin.Should().Be(new Thickness(2d, 0d));
+                favoriteAccent.VerticalAlignment.Should().Be(VerticalAlignment.Bottom);
+                favoriteAccent.Stretch.Should().Be(Stretch.Fill);
+                accentBrush.Color.Should().Be(accentColor);
+                favoriteAccent.Stroke.Should().BeNull();
+                favoriteAccent.Effect.Should().BeNull();
+                favoriteAccent.IsHitTestVisible.Should().BeFalse();
             }
             finally
             {

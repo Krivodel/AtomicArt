@@ -29,6 +29,7 @@
                                          RevealInNewFolderWindowCommand="{Binding RevealInNewFolderWindowCommand}"
                                          SelectRangeCommand="{Binding SelectRangeCommand}"
                                          ShowFailureDetailsCommand="{Binding ShowFailureDetailsCommand}"
+                                         ToggleFavoriteCommand="{Binding ToggleFavoriteCommand}"
                                          ToggleSelectionCommand="{Binding ToggleSelectionCommand}" />
 
         <TextBlock Margin="0,12,0,0"

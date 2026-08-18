@@ -16,13 +16,13 @@ public sealed class GalleryStateSectionTests
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 7, 9, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void SchemaVersion_WithFailureCode_ReturnsVersionFour()
+    public void SchemaVersion_WithFavoriteState_ReturnsVersionFive()
     {
         GalleryStateSection section = new();
 
         int schemaVersion = section.SchemaVersion;
 
-        schemaVersion.Should().Be(4);
+        schemaVersion.Should().Be(5);
     }
 
     [Fact]
@@ -57,6 +57,20 @@ public sealed class GalleryStateSectionTests
 
         json.Should().Contain(
             "\"galleryOrderTimestampUtc\":\"2026-07-07T09:00:00Z\"");
+    }
+
+    [Fact]
+    public void SerializePayload_WithFavoriteItem_WritesFavoriteState()
+    {
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+        GalleryState state = new()
+        {
+            Items = [GalleryItemStateTestFactory.CreateGenerated(isFavorite: true)]
+        };
+
+        string json = JsonSerializer.Serialize(state, options);
+
+        json.Should().Contain("\"isFavorite\":true");
     }
 
     [Fact]
@@ -109,6 +123,7 @@ public sealed class GalleryStateSectionTests
         state.Items.Should().ContainSingle();
         state.Items[0].ThumbnailPath.Should().BeNull();
         state.Items[0].GalleryOrderTimestampUtc.Should().BeNull();
+        state.Items[0].IsFavorite.Should().BeFalse();
     }
 
     [Fact]

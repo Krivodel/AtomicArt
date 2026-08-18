@@ -112,6 +112,43 @@ public sealed class GalleryViewModelTests
     }
 
     [Fact]
+    public async Task ToggleFavoriteCommand_WithExistingItem_MarksFavoriteAndSavesState()
+    {
+        RecordingGalleryStateService galleryStateService = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            galleryStateService: galleryStateService);
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem());
+
+        await viewModel.ToggleFavoriteCommand.ExecuteAsync(item);
+
+        item.IsFavorite.Should().BeTrue();
+        galleryStateService.SaveCallCount.Should().Be(1);
+        galleryStateService.SavedItems.Should().ContainSingle()
+            .Which.IsFavorite.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ToggleFavoriteCommand_WithFavoriteItem_RemovesFavoriteAndSavesState()
+    {
+        RecordingGalleryStateService galleryStateService = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            galleryStateService: galleryStateService);
+        GenerationItemViewModel item = AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem());
+        item.IsFavorite = true;
+
+        await viewModel.ToggleFavoriteCommand.ExecuteAsync(item);
+
+        item.IsFavorite.Should().BeFalse();
+        galleryStateService.SaveCallCount.Should().Be(1);
+        galleryStateService.SavedItems.Should().ContainSingle()
+            .Which.IsFavorite.Should().BeFalse();
+    }
+
+    [Fact]
     public void ToggleSelectionCommand_WhenInactive_EntersSelectionModeWithSelectedItem()
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();

@@ -80,6 +80,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
             commands.RevealInNewFolderWindow;
         generationCard.OpenMetadataCommand = commands.OpenMetadata;
         generationCard.DeleteOrCancelCommand = commands.DeleteOrCancel;
+        generationCard.ToggleFavoriteCommand = commands.ToggleFavorite;
         generationCard.ToggleSelectionCommand = commands.ToggleSelection;
         generationCard.SelectRangeCommand = commands.SelectRange;
     }

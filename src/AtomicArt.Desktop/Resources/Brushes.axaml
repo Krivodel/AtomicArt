@@ -17,6 +17,10 @@
                      Color="{x:Static resources:GalleryHighlightPalette.BackgroundColor}" />
     <SolidColorBrush x:Key="GalleryHighlightBorderBrush"
                      Color="{x:Static resources:GalleryHighlightPalette.BorderColor}" />
+    <SolidColorBrush x:Key="GalleryFavoriteInfoBackgroundBrush"
+                     Color="{StaticResource GalleryFavoriteInfoBackgroundColor}" />
+    <SolidColorBrush x:Key="GalleryFavoriteAccentBrush"
+                     Color="{StaticResource GalleryFavoriteAccentColor}" />
     <SolidColorBrush x:Key="GalleryUnselectedCardDimBrush"
                      Color="{StaticResource GallerySelectionTintColor}"
                      Opacity="{StaticResource GalleryUnselectedCardDimOpacity}" />

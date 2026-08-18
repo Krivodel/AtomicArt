@@ -9,5 +9,6 @@ internal sealed record GalleryCardCommands(
     IRelayCommand? RevealInNewFolderWindow,
     IRelayCommand? OpenMetadata,
     IRelayCommand? DeleteOrCancel,
+    IRelayCommand? ToggleFavorite,
     IRelayCommand? ToggleSelection,
     IRelayCommand? SelectRange);
