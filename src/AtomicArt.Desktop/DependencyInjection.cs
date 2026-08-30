@@ -141,6 +141,9 @@ public static class DependencyInjection
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
         services.AddViewTemplate<NumericSettingViewModel, NumericSettingView>();
         services.AddViewTemplate<BooleanSettingViewModel, BooleanSettingView>();
+        services.AddViewTemplate<
+            GenerationModelVisibilitySettingViewModel,
+            GenerationModelVisibilitySettingView>();
         services.AddViewTemplate<LanguageSettingViewModel, LanguageSettingView>();
         services.AddViewTemplate<
             GpuResourceCacheSettingViewModel,
@@ -296,6 +299,7 @@ public static class DependencyInjection
                 "Generation configuration must include valid concurrency and retry limits.")
             .ValidateOnStart();
         services.AddSingleton<DesktopModelPanelRegistry>();
+        services.AddSingleton<GenerationModelVisibilityService>();
         services.AddSingleton<IImageModelOptionCatalog, ImageModelOptionCatalog>();
         services.AddGenerationImageFormatsByConvention();
         services.AddGenerationItemStatusDescriptorsByConvention();

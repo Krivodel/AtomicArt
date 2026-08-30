@@ -273,6 +273,7 @@ public sealed class DependencyInjectionTests
             typeof(SecretSettingViewModel),
             typeof(NumericSettingViewModel),
             typeof(BooleanSettingViewModel),
+            typeof(GenerationModelVisibilitySettingViewModel),
             typeof(LanguageSettingViewModel),
             typeof(GpuResourceCacheSettingViewModel),
             typeof(GenerationMetadataViewModel)

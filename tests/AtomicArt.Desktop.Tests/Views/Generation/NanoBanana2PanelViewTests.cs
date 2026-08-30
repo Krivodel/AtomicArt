@@ -161,7 +161,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             NanoBanana2PanelView view = CreateView(
                 out UniversalNanoBananaPanelViewModel viewModel);
             string unsupportedResolution = GetSelectedModel(viewModel).Resolutions.Last();
-            ImageModelOption modelWithoutResolution = viewModel.AvailableModels.Single(model =>
+            ImageModelOption modelWithoutResolution = viewModel.AvailableModels.First(model =>
                 !model.Resolutions.Contains(unsupportedResolution, StringComparer.Ordinal));
             Window window = Show(view);
 
@@ -760,6 +760,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             using ShownPanelContext context = new();
+            context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId);
             Popup settingsPopup = OpenTemperaturePopup(context.View);
 
             Border settingsPanel = GetTemperaturePopupContent(settingsPopup);

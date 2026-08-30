@@ -7,6 +7,8 @@ public static class GenerationProviderCredentialRequirements
 {
     private static readonly GenerationProviderCredentialRequirement GoogleRequirement =
         new(true, true);
+    private static readonly GenerationProviderCredentialRequirement OpenRouterRequirement =
+        new(true, true);
     private static readonly GenerationProviderCredentialRequirement TestRequirement =
         new(false, false);
     private static readonly GenerationProviderCredentialRequirement OtherRequirement =
@@ -22,6 +24,11 @@ public static class GenerationProviderCredentialRequirements
         if (string.Equals(provider, GenerationProviderIds.Test, StringComparison.Ordinal))
         {
             return TestRequirement;
+        }
+
+        if (string.Equals(provider, GenerationProviderIds.OpenRouter, StringComparison.Ordinal))
+        {
+            return OpenRouterRequirement;
         }
 
         return OtherRequirement;

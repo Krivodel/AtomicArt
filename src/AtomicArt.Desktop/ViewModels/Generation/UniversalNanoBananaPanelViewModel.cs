@@ -106,6 +106,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly IFilePickerService _filePickerService;
     private readonly ISecretStore _secretStore;
+    private readonly ProviderCredentialResolver? _providerCredentialResolver;
     private readonly UniversalNanoBananaPanelModelScope _modelScope;
     private readonly NanoBanana2AttachmentsViewModel _attachmentsViewModel;
     private readonly INanoBanana2GenerationRunner _generationRunner;
@@ -172,7 +173,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         IViewModelErrorHandler errorHandler,
         ILocalizationTextProvider textProvider,
         NanoBanana2PanelTextFormatter textFormatter,
-        StateWritePolicy stateWritePolicy)
+        StateWritePolicy stateWritePolicy,
+        ProviderCredentialResolver? providerCredentialResolver = null)
     {
         ArgumentNullException.ThrowIfNull(filePickerService);
         ArgumentNullException.ThrowIfNull(secretStore);
@@ -204,6 +206,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         Quote = quote;
         _filePickerService = filePickerService;
         _secretStore = secretStore;
+        _providerCredentialResolver = providerCredentialResolver;
         _modelScope = modelScope;
         _attachmentsViewModel = attachmentsViewModel;
         _generationRunner = generationRunner;
@@ -215,6 +218,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _textFormatter = textFormatter;
         _promptStateSaveDelay = stateWritePolicy.DeferredWriteDelay;
         _attachmentsViewModel.AttachmentStateChanged += OnAttachmentStateChanged;
+        _modelScope.VisibleModelsChanged += OnVisibleModelsChanged;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
         _promptTextSizeController.TextSizeChanged += OnPromptTextSizeChanged;
         messenger.Register<LocalizationChangedMessage>(this);
@@ -324,6 +328,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
         _isDisposed = true;
         _attachmentsViewModel.AttachmentStateChanged -= OnAttachmentStateChanged;
+        _modelScope.VisibleModelsChanged -= OnVisibleModelsChanged;
+        _modelScope.Dispose();
         _apiEndpointService.BaseAddressChanged -= OnApiBaseAddressChanged;
         _promptTextSizeController.TextSizeChanged -= OnPromptTextSizeChanged;
         _disposeCancellationSource.Cancel();
@@ -587,15 +593,27 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 ?? throw new InvalidOperationException(SelectedModelNotInitializedMessage);
             string providerCredential = string.Empty;
 
-            if (RequiresProviderCredential(selectedModel))
+            if (_providerCredentialResolver is not null)
+            {
+                ProviderCredentialResolution credentialResolution = await _providerCredentialResolver
+                    .ResolveAsync(selectedModel, ct);
+
+                if (credentialResolution.MissingCredentialMessageKey is not null)
+                {
+                    SetLocalizedErrorMessage(credentialResolution.MissingCredentialMessageKey);
+                    return;
+                }
+
+                providerCredential = credentialResolution.Credential ?? string.Empty;
+            }
+            else if (string.Equals(selectedModel.Provider, GenerationProviderIds.Google, StringComparison.Ordinal))
             {
                 string? storedCredential = await _secretStore
                     .GetSecretAsync(GoogleApiKeySettingDefinition.SecretNameValue, ct);
 
                 if (string.IsNullOrWhiteSpace(storedCredential))
                 {
-                    SetLocalizedErrorMessage(
-                        GenerationUiLocalizationKeys.Errors.GoogleApiKeyMissing);
+                    SetLocalizedErrorMessage(GenerationUiLocalizationKeys.Errors.GoogleApiKeyMissing);
                     return;
                 }
 
@@ -939,11 +957,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private void CancelCatalogReload()
     {
         _catalogReloadCancellation?.Cancel();
-    }
-
-    private static bool RequiresProviderCredential(ImageModelOption selectedModel)
-    {
-        return string.Equals(selectedModel.Provider, GenerationProviderIds.Google, StringComparison.Ordinal);
     }
 
     private void HandleGenerationException(Exception exception)
@@ -1421,6 +1434,14 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
 
         _ = DispatchCatalogReloadAsync();
+    }
+
+    private void OnVisibleModelsChanged(object? sender, EventArgs e)
+    {
+        if (!_isDisposed)
+        {
+            ApplyCatalogSnapshot(_imageModelOptionCatalog.GetModels());
+        }
     }
 
     private void OnPromptTextSizeChanged(object? sender, EventArgs e)

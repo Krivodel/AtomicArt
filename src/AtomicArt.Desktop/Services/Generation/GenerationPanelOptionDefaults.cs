@@ -1,10 +1,16 @@
+using AtomicArt.Desktop.Services;
+
 namespace AtomicArt.Desktop.Services.Generation;
 
 internal static class GenerationPanelOptionDefaults
 {
     public static ImageModelOption GetDefaultModel(IReadOnlyList<ImageModelOption> availableModels)
     {
-        return availableModels.FirstOrDefault()
+        return availableModels.FirstOrDefault(model => string.Equals(
+                model.Id,
+                GenerationModelVisibilitySettingDefinition.DefaultModelId,
+                StringComparison.Ordinal))
+            ?? availableModels.FirstOrDefault()
             ?? throw new InvalidOperationException("No image generation models are registered.");
     }
 

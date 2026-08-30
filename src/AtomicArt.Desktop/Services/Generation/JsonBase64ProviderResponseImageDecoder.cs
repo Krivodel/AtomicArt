@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Buffers.Text;
+using System.Text;
 
 using Microsoft.Extensions.Options;
 
@@ -10,7 +11,11 @@ namespace AtomicArt.Desktop.Services.Generation;
 public sealed class JsonBase64ProviderResponseImageDecoder
     : IProviderResponseImageDecoder
 {
+    private static readonly byte[] B64JsonPropertyName = "\"b64_json\""u8.ToArray();
+    private static readonly byte[] ContentPropertyName = "\"content\""u8.ToArray();
     private static readonly byte[] DataPropertyName = "\"data\""u8.ToArray();
+    private static readonly byte[] ImageUrlPropertyName = "\"image_url\""u8.ToArray();
+    private static readonly byte[] UrlPropertyName = "\"url\""u8.ToArray();
 
     private readonly int _inputBufferSize;
     private readonly long _maximumImageBytes;
@@ -36,6 +41,10 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                 || string.Equals(
                     providerId,
                     GenerationProviderIds.Test,
+                    StringComparison.Ordinal)
+                || string.Equals(
+                    providerId,
+                    GenerationProviderIds.OpenRouter,
                     StringComparison.Ordinal))
             && contentType.StartsWith(
                 "application/json",
@@ -101,6 +110,7 @@ public sealed class JsonBase64ProviderResponseImageDecoder
     {
         private readonly byte[] _outputBuffer;
         private readonly byte[] _base64Quartet = new byte[4];
+        private readonly byte[] _dataUrlPrefix = new byte[128];
         private readonly long _maximumImageBytes;
         private readonly int _outputBufferSize;
         private AnalyzerState _state;
@@ -110,6 +120,10 @@ public sealed class JsonBase64ProviderResponseImageDecoder
         private int _imageCount;
         private long _totalOutputBytes;
         private bool _colonSeen;
+        private bool _expectsDataUrl;
+        private bool _hasDataUrlPrefix;
+        private int _dataUrlPrefixLength;
+        private ImageDataProperty _candidateProperty;
 
         public bool ShouldFlush =>
             _outputCount >= _outputBufferSize - 3;
@@ -194,18 +208,34 @@ public sealed class JsonBase64ProviderResponseImageDecoder
             if (value == (byte)'"')
             {
                 _candidateIndex = 1;
+                _candidateProperty = ImageDataProperty.None;
                 _state = AnalyzerState.CandidateDataKey;
             }
         }
 
         private void ProcessCandidate(byte value)
         {
-            if (_candidateIndex < DataPropertyName.Length
-                && value == DataPropertyName[_candidateIndex])
+            if (_candidateIndex == 1)
+            {
+                _candidateProperty = value switch
+                {
+                    (byte)'d' => ImageDataProperty.Data,
+                    (byte)'b' => ImageDataProperty.B64Json,
+                    (byte)'c' => ImageDataProperty.Content,
+                    (byte)'i' => ImageDataProperty.ImageUrl,
+                    (byte)'u' => ImageDataProperty.Url,
+                    _ => ImageDataProperty.None
+                };
+            }
+
+            ReadOnlySpan<byte> candidatePropertyName = GetCandidatePropertyName();
+
+            if (_candidateIndex < candidatePropertyName.Length
+                && value == candidatePropertyName[_candidateIndex])
             {
                 _candidateIndex++;
 
-                if (_candidateIndex == DataPropertyName.Length)
+                if (_candidateIndex == candidatePropertyName.Length)
                 {
                     _colonSeen = false;
                     _state = AnalyzerState.AfterDataKey;
@@ -237,12 +267,18 @@ public sealed class JsonBase64ProviderResponseImageDecoder
 
             if (_colonSeen && value == (byte)'"')
             {
-                if (_imageCount != 0)
+                _expectsDataUrl = _candidateProperty is ImageDataProperty.Content
+                    or ImageDataProperty.ImageUrl
+                    or ImageDataProperty.Url;
+
+                if (!_expectsDataUrl && _imageCount != 0)
                 {
                     throw new InvalidDataException(
                         "Provider response contains more than one image.");
                 }
 
+                _hasDataUrlPrefix = false;
+                _dataUrlPrefixLength = 0;
                 _state = AnalyzerState.DecodeDataString;
                 return;
             }
@@ -252,6 +288,12 @@ public sealed class JsonBase64ProviderResponseImageDecoder
 
         private void ProcessBase64(byte value)
         {
+            if (_expectsDataUrl && !_hasDataUrlPrefix)
+            {
+                ProcessDataUrlPrefix(value);
+                return;
+            }
+
             if (value == (byte)'"')
             {
                 if (_base64Count != 0)
@@ -309,6 +351,58 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                 or (byte)'\r'
                 or (byte)'\n';
         }
+
+        private ReadOnlySpan<byte> GetCandidatePropertyName()
+        {
+            return _candidateProperty switch
+            {
+                ImageDataProperty.Data => DataPropertyName,
+                ImageDataProperty.B64Json => B64JsonPropertyName,
+                ImageDataProperty.Content => ContentPropertyName,
+                ImageDataProperty.ImageUrl => ImageUrlPropertyName,
+                ImageDataProperty.Url => UrlPropertyName,
+                _ => []
+            };
+        }
+
+        private void ProcessDataUrlPrefix(byte value)
+        {
+            if (value == (byte)'"')
+            {
+                _state = AnalyzerState.NormalOutsideString;
+                return;
+            }
+
+            if (_dataUrlPrefixLength == _dataUrlPrefix.Length)
+            {
+                throw new InvalidDataException("Provider image data URL prefix is too long.");
+            }
+
+            _dataUrlPrefix[_dataUrlPrefixLength] = value;
+            _dataUrlPrefixLength++;
+
+            if (value != (byte)',')
+            {
+                return;
+            }
+
+            string prefix = Encoding.ASCII.GetString(_dataUrlPrefix, 0, _dataUrlPrefixLength);
+
+            if (!prefix.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)
+                || !prefix.EndsWith(";base64,", StringComparison.OrdinalIgnoreCase))
+            {
+                _state = AnalyzerState.NormalInsideString;
+                return;
+            }
+
+            if (_imageCount != 0)
+            {
+                _state = AnalyzerState.NormalInsideString;
+                return;
+            }
+
+            _hasDataUrlPrefix = true;
+        }
     }
 
     private enum AnalyzerState
@@ -319,5 +413,15 @@ public sealed class JsonBase64ProviderResponseImageDecoder
         CandidateDataKey,
         AfterDataKey,
         DecodeDataString
+    }
+
+    private enum ImageDataProperty
+    {
+        None,
+        Data,
+        B64Json,
+        Content,
+        ImageUrl,
+        Url
     }
 }

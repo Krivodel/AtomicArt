@@ -63,6 +63,7 @@
         "UnsupportedAspectRatio": "The selected model does not support this aspect ratio.",
         "ModelRequestValidation": "The generation request did not pass validation.",
         "GoogleApiKeyMissing": "Enter a Google API key in settings.",
+        "OpenRouterApiKeyMissing": "Enter an OpenRouter API key in settings.",
         "ModelCatalogLoadFailed": "Could not load the model list. Check the server address in settings."
       },
       "ImageDropLabel": "DROP",
@@ -135,6 +136,12 @@
       },
       "GoogleApiKey": {
         "Label": "Google API key"
+      },
+      "OpenRouterApiKey": {
+        "Label": "OpenRouter API key"
+      },
+      "GenerationModels": {
+        "Label": "Displayed models"
       },
       "Appearance": {
         "ScaleLabel": "Scale",

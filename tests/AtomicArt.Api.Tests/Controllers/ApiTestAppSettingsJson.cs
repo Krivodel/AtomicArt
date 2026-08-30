@@ -40,6 +40,15 @@ internal static class ApiTestAppSettingsJson
             "ServiceTier": "flex",
             "StoreInteractions": true
           },
+          "OpenRouterImage": {
+            "BaseUrl": "https://openrouter.ai",
+            "ChatCompletionsPath": "/api/v1/chat/completions",
+            "ImagesPath": "/api/v1/images",
+            "MaxRequestBytes": 1048576,
+            "MaxResponseBytes": 1048576,
+            "ProviderResponseTimeoutSeconds": 900,
+            "ResponseBufferSize": 4096
+          },
           "TestGeneration": {
             "Base64InputBufferSize": 48,
             "Base64OutputBufferSize": 64,

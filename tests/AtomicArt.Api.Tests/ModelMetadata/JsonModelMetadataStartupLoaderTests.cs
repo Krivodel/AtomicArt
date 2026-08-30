@@ -289,7 +289,7 @@ public sealed class JsonModelMetadataStartupLoaderTests
     {
         GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
 
-        catalog.Models.Should().HaveCount(3);
+        catalog.Models.Should().HaveCount(7);
 
         return catalog;
     }

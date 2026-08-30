@@ -32,7 +32,7 @@ public sealed class GenerationModelCatalogApiClientTests
         Uri requestUri = handler.RequestUri
             ?? throw new InvalidOperationException("Request URI must be captured.");
         requestUri.AbsolutePath.Should().Be($"/{GenerationApiRoutes.Models}");
-        catalog.Models.Should().HaveCount(3);
+        catalog.Models.Should().HaveCount(7);
         catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId);
         catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBananaProModelId);
     }

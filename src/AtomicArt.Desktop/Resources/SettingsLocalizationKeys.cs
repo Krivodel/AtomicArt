@@ -31,6 +31,16 @@ public static class SettingsLocalizationKeys
         public const string Label = "Settings.GoogleApiKey.Label";
     }
 
+    public static class OpenRouterApiKey
+    {
+        public const string Label = "Settings.OpenRouterApiKey.Label";
+    }
+
+    public static class GenerationModels
+    {
+        public const string Label = "Settings.GenerationModels.Label";
+    }
+
     public static class Appearance
     {
         public const string ScaleLabel = "Settings.Appearance.ScaleLabel";

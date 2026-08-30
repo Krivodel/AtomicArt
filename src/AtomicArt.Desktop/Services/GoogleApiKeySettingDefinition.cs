@@ -1,8 +1,9 @@
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
 
 namespace AtomicArt.Desktop.Services;
 
-public sealed class GoogleApiKeySettingDefinition : ISecretSettingDefinition
+public sealed class GoogleApiKeySettingDefinition : IProviderCredentialSettingDefinition
 {
     public const string KeyValue = "generation.google.apiKey";
     public const string SecretNameValue = "GoogleApiKey";
@@ -13,4 +14,6 @@ public sealed class GoogleApiKeySettingDefinition : ISecretSettingDefinition
     public string DisplayNameKey => SettingsLocalizationKeys.GoogleApiKey.Label;
     public SettingsSection Section => SettingsSections.Connection;
     public string PlaceholderKey => SettingsLocalizationKeys.GoogleApiKey.Label;
+    public string ProviderId => GenerationProviderIds.Google;
+    public string MissingCredentialMessageKey => GenerationUiLocalizationKeys.Errors.GoogleApiKeyMissing;
 }

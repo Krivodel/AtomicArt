@@ -62,6 +62,8 @@ public static class GenerationUiLocalizationKeys
             "Generation.Errors.ModelRequestValidation";
         public const string GoogleApiKeyMissing =
             "Generation.Errors.GoogleApiKeyMissing";
+        public const string OpenRouterApiKeyMissing =
+            "Generation.Errors.OpenRouterApiKeyMissing";
         public const string ModelCatalogLoadFailed =
             "Generation.Errors.ModelCatalogLoadFailed";
     }

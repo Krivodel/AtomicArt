@@ -82,12 +82,13 @@ public sealed class StreamingGenerationAttempt : IAsyncDisposable
             ValidateSummary(summary);
             DateTime completedAtUtc = _dateTimeProvider.UtcNow;
             TimeSpan duration = NormalizeDuration(completedAtUtc - _startedAtUtc);
-            GenerationPriceDto? price = _priceCalculator.Calculate(
-                _request.ModelId,
-                _model.Pricing,
-                summary.Usage,
-                _request.Resolution,
-                summary.ResultCount);
+            GenerationPriceDto? price = summary.Price
+                ?? _priceCalculator.Calculate(
+                    _request.ModelId,
+                    _model.Pricing,
+                    summary.Usage,
+                    _request.Resolution,
+                    summary.ResultCount);
 
             return new GenerationAttemptMetadataDto(
                 _request.LogicalGenerationId,

@@ -4,6 +4,7 @@ using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
@@ -73,6 +74,116 @@ public sealed class JsonBase64ProviderResponseImageDecoderTests
 
         result.HasImage.Should().BeFalse();
         output.Length.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task DecodeAsync_WithOpenRouterBase64Json_WritesImageDirectlyToDestination()
+    {
+        byte[] imageBytes = [1, 2, 3, 4];
+        string responseJson = $$"""{ "data": [{ "b64_json": "{{Convert.ToBase64String(imageBytes)}}" }] }""";
+        await using Stream input = new MemoryStream(Encoding.UTF8.GetBytes(responseJson), writable: false);
+        using MemoryStream output = new();
+        JsonBase64ProviderResponseImageDecoder decoder = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
+
+        decoder.CanDecode(GenerationProviderIds.OpenRouter, "application/json").Should().BeTrue();
+
+        ProviderResponseImageDecodeResult result = new();
+        await decoder.DecodeAsync(input, output, result, CancellationToken.None);
+
+        result.HasImage.Should().BeTrue();
+        output.ToArray().Should().Equal(imageBytes);
+    }
+
+    [Fact]
+    public async Task DecodeAsync_WithOpenRouterImageAndNonImageUrl_DecodesOnlyImage()
+    {
+        byte[] imageBytes = [1, 2, 3, 4];
+        string responseJson = $$"""
+        {
+          "choices": [
+            {
+              "message": {
+                "images": [
+                  {
+                    "image_url": {
+                      "url": "data:image/png;base64,{{Convert.ToBase64String(imageBytes)}}"
+                    }
+                  }
+                ],
+                "annotations": [
+                  {
+                    "url": "https://openrouter.ai/docs"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+        """;
+        await using Stream input = new MemoryStream(Encoding.UTF8.GetBytes(responseJson), writable: false);
+        using MemoryStream output = new();
+        JsonBase64ProviderResponseImageDecoder decoder = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
+        ProviderResponseImageDecodeResult result = new();
+
+        await decoder.DecodeAsync(input, output, result, CancellationToken.None);
+
+        result.HasImage.Should().BeTrue();
+        output.ToArray().Should().Equal(imageBytes);
+    }
+
+    [Fact]
+    public async Task DecodeAsync_WithDuplicateOpenRouterImage_DecodesFirstImageOnly()
+    {
+        byte[] firstImageBytes = [1, 2, 3, 4];
+        byte[] duplicateImageBytes = [5, 6, 7, 8];
+        string responseJson = $$"""
+        {
+          "content": {
+            "image_url": {
+              "url": "data:image/png;base64,{{Convert.ToBase64String(firstImageBytes)}}"
+            }
+          },
+          "images": [
+            {
+              "image_url": {
+                "url": "data:image/png;base64,{{Convert.ToBase64String(duplicateImageBytes)}}"
+              }
+            }
+          ]
+        }
+        """;
+        await using Stream input = new MemoryStream(Encoding.UTF8.GetBytes(responseJson), writable: false);
+        using MemoryStream output = new();
+        JsonBase64ProviderResponseImageDecoder decoder = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
+        ProviderResponseImageDecodeResult result = new();
+
+        await decoder.DecodeAsync(input, output, result, CancellationToken.None);
+
+        result.HasImage.Should().BeTrue();
+        output.ToArray().Should().Equal(firstImageBytes);
+    }
+
+    [Theory]
+    [InlineData("content")]
+    [InlineData("image_url")]
+    public async Task DecodeAsync_WithOpenRouterDirectDataUrlProperty_DecodesImage(
+        string propertyName)
+    {
+        byte[] imageBytes = [1, 2, 3, 4];
+        string responseJson = $$"""{ "{{propertyName}}": "data:image/png;base64,{{Convert.ToBase64String(imageBytes)}}" }""";
+        await using Stream input = new MemoryStream(Encoding.UTF8.GetBytes(responseJson), writable: false);
+        using MemoryStream output = new();
+        JsonBase64ProviderResponseImageDecoder decoder = new(
+            TestApiConfiguration.CreateGenerationOptionsWrapper());
+        ProviderResponseImageDecodeResult result = new();
+
+        await decoder.DecodeAsync(input, output, result, CancellationToken.None);
+
+        result.HasImage.Should().BeTrue();
+        output.ToArray().Should().Equal(imageBytes);
     }
 
     private sealed class ChunkedMemoryStream : MemoryStream

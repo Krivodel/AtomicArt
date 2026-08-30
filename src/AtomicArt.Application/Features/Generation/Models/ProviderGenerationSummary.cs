@@ -6,4 +6,5 @@ public sealed record ProviderGenerationSummary(
     string? State,
     int ResultCount,
     IReadOnlyList<string> ContentTypes,
-    GenerationUsageDto? Usage);
+    GenerationUsageDto? Usage,
+    GenerationPriceDto? Price = null);

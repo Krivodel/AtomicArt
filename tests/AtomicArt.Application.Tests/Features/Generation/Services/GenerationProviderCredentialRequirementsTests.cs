@@ -20,6 +20,16 @@ public sealed class GenerationProviderCredentialRequirementsTests
     }
 
     [Fact]
+    public void Resolve_WithOpenRouterProvider_RequiresCredentialAtBothBoundaries()
+    {
+        GenerationProviderCredentialRequirement requirement =
+            GenerationProviderCredentialRequirements.Resolve(GenerationProviderIds.OpenRouter);
+
+        requirement.RequiredAtApiBoundary.Should().BeTrue();
+        requirement.RequiredForApplicationValidation.Should().BeTrue();
+    }
+
+    [Fact]
     public void Resolve_WithTestProvider_DoesNotRequireCredential()
     {
         GenerationProviderCredentialRequirement requirement =

@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
+             xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
+             x:Class="AtomicArt.Desktop.Views.Settings.GenerationModelVisibilitySettingView"
+             x:DataType="settings:GenerationModelVisibilitySettingViewModel">
+    <controls:SettingItemControl>
+        <controls:SettingItemControl.Editor>
+            <ItemsControl IsEnabled="{Binding !IsLoading}"
+                          ItemsSource="{Binding Models}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="settings:GenerationModelVisibilityOptionViewModel">
+                        <CheckBox Content="{Binding DisplayName}"
+                                  IsChecked="{Binding IsVisible, Mode=TwoWay}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </controls:SettingItemControl.Editor>
+    </controls:SettingItemControl>
+</UserControl>

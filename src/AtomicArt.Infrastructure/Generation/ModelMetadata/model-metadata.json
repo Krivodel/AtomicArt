@@ -81,6 +81,55 @@
       "pricing": {
         "estimatedCharactersPerTextToken": 4
       }
+    },
+    "openrouter-image-family": {
+      "provider": "openrouter",
+      "panelId": "nano-banana",
+      "generationCounts": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "temperature": {
+        "minimum": 0.1,
+        "maximum": 2.0,
+        "default": 1.0,
+        "step": 0.1
+      },
+      "attachments": {
+        "maxCount": 14,
+        "maxSingleFileBytes": 7340032,
+        "maxTotalBytes": 524288000,
+        "supportedContentTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/heic",
+          "image/heif"
+        ]
+      },
+      "transportLimits": {
+        "maxRequestBytes": 536870912,
+        "maxResponseBytes": 536870912,
+        "maxResultCount": 1,
+        "maxStatisticsBytes": 4194304,
+        "maxStructureDepth": 64,
+        "maxDiagnosticTextCharacters": 512,
+        "allowedResponseContentTypes": [
+          "image/jpeg",
+          "image/png",
+          "image/webp"
+        ]
+      },
+      "pricing": {
+        "cachedInputTokenPriceMultiplier": 0.1
+      }
+    },
+    "openrouter-gpt-image": {
+      "attachments": {
+        "maxCount": 16
+      }
     }
   },
   "testModel": {
@@ -208,6 +257,107 @@
           "2K": 1120,
           "4K": 2000
         }
+      }
+    },
+    {
+      "profiles": [
+        "openrouter-image-family",
+        "text-token-estimation"
+      ],
+      "id": "openrouter-nano-banana-2",
+      "displayName": "Nano Banana 2 (OpenRouter)",
+      "providerModelId": "google/gemini-3.1-flash-image",
+      "contextWindowTokens": 131072,
+      "maxOutputTokens": 32768,
+      "maxPromptLength": 131072,
+      "aspectRatios": [
+        { "value": "auto", "localizationKey": "Generation.Options.Auto" },
+        { "value": "1:1" }, { "value": "1:4" }, { "value": "1:8" },
+        { "value": "2:3" }, { "value": "3:2" }, { "value": "3:4" },
+        { "value": "4:1" }, { "value": "4:3" }, { "value": "4:5" },
+        { "value": "5:4" }, { "value": "8:1" }, { "value": "9:16" },
+        { "value": "16:9" }, { "value": "21:9" }
+      ],
+      "resolutions": ["512", "1K", "2K", "4K"],
+      "pricing": {
+        "currencyCode": "USD",
+        "inputTokenUsdPerMillion": 0.50,
+        "textOutputTokenUsdPerMillion": 3.00,
+        "imageOutputTokenUsdPerMillion": 60.00,
+        "inputImageTokens": 1120,
+        "outputImageTokensByResolution": { "512": 747, "1K": 1120, "2K": 1680, "4K": 2520 }
+      }
+    },
+    {
+      "profiles": [
+        "openrouter-image-family",
+        "standard-aspect-ratios",
+        "text-token-estimation"
+      ],
+      "id": "openrouter-nano-banana-2-lite",
+      "displayName": "Nano Banana 2 Lite (OpenRouter)",
+      "providerModelId": "google/gemini-3.1-flash-lite-image",
+      "contextWindowTokens": 65536,
+      "maxOutputTokens": 4096,
+      "maxPromptLength": 65536,
+      "resolutions": ["1K"],
+      "pricing": {
+        "currencyCode": "USD",
+        "inputTokenUsdPerMillion": 0.25,
+        "textOutputTokenUsdPerMillion": 1.50,
+        "imageOutputTokenUsdPerMillion": 30.00,
+        "inputImageTokens": 1120,
+        "outputImageTokensByResolution": { "1K": 1120 }
+      }
+    },
+    {
+      "profiles": [
+        "openrouter-image-family",
+        "standard-aspect-ratios",
+        "text-token-estimation"
+      ],
+      "id": "openrouter-nano-banana-pro",
+      "displayName": "Nano Banana Pro (OpenRouter)",
+      "providerModelId": "google/gemini-3-pro-image-preview",
+      "contextWindowTokens": 65536,
+      "maxOutputTokens": 32768,
+      "maxPromptLength": 65536,
+      "resolutions": ["1K", "2K", "4K"],
+      "pricing": {
+        "currencyCode": "USD",
+        "inputTokenUsdPerMillion": 1.00,
+        "textOutputTokenUsdPerMillion": 6.00,
+        "imageOutputTokenUsdPerMillion": 60.00,
+        "inputImageTokens": 560,
+        "outputImageTokensByResolution": { "1K": 1120, "2K": 1120, "4K": 2000 }
+      }
+    },
+    {
+      "profiles": [
+        "openrouter-image-family",
+        "openrouter-gpt-image",
+        "text-token-estimation"
+      ],
+      "id": "openrouter-gpt-image-2",
+      "displayName": "GPT Image 2 (OpenRouter)",
+      "providerModelId": "openai/gpt-image-2",
+      "contextWindowTokens": 131072,
+      "maxOutputTokens": 32768,
+      "maxPromptLength": 131072,
+      "aspectRatios": [
+        { "value": "auto", "localizationKey": "Generation.Options.Auto" },
+        { "value": "1:1" }, { "value": "2:3" }, { "value": "3:2" },
+        { "value": "3:4" }, { "value": "4:3" }, { "value": "9:16" },
+        { "value": "16:9" }, { "value": "21:9" }
+      ],
+      "resolutions": ["1K", "2K", "4K"],
+      "pricing": {
+        "currencyCode": "USD",
+        "inputTokenUsdPerMillion": 5.00,
+        "textOutputTokenUsdPerMillion": 30.00,
+        "imageOutputTokenUsdPerMillion": 30.00,
+        "inputImageTokens": 1120,
+        "outputImageTokensByResolution": { "1K": 1120, "2K": 1680, "4K": 2520 }
       }
     }
   ]

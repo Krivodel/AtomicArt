@@ -10,6 +10,7 @@ using AtomicArt.Application.Features.Generation.Services;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation;
 using AtomicArt.Infrastructure.Generation.GoogleInteractions;
+using AtomicArt.Infrastructure.Generation.OpenRouter;
 using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Infrastructure.Tests;
@@ -133,7 +134,23 @@ public sealed class DependencyInjectionTests
         Dictionary<string, string?> testGenerationValues =
             TestGenerationTestOptions.CreateConfiguration();
 
+        Dictionary<string, string?> openRouterValues = new()
+        {
+            [$"{OpenRouterImageOptions.SectionName}:{nameof(OpenRouterImageOptions.BaseUrl)}"] = "https://openrouter.ai",
+            [$"{OpenRouterImageOptions.SectionName}:{nameof(OpenRouterImageOptions.ChatCompletionsPath)}"] = "/api/v1/chat/completions",
+            [$"{OpenRouterImageOptions.SectionName}:{nameof(OpenRouterImageOptions.ImagesPath)}"] = "/api/v1/images",
+            [$"{OpenRouterImageOptions.SectionName}:{nameof(OpenRouterImageOptions.MaxRequestBytes)}"] = "1048576",
+            [$"{OpenRouterImageOptions.SectionName}:{nameof(OpenRouterImageOptions.MaxResponseBytes)}"] = "1048576",
+            [$"{OpenRouterImageOptions.SectionName}:{nameof(OpenRouterImageOptions.ProviderResponseTimeoutSeconds)}"] = "900",
+            [$"{OpenRouterImageOptions.SectionName}:{nameof(OpenRouterImageOptions.ResponseBufferSize)}"] = "4096"
+        };
+
         foreach (KeyValuePair<string, string?> value in testGenerationValues)
+        {
+            values[value.Key] = value.Value;
+        }
+
+        foreach (KeyValuePair<string, string?> value in openRouterValues)
         {
             values[value.Key] = value.Value;
         }

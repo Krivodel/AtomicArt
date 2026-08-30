@@ -20,7 +20,7 @@ public sealed class ImageModelRegistryTests
 
         IReadOnlyList<GenerationModelMetadataDto> models = registry.GetModels();
 
-        models.Should().HaveCount(3);
+        models.Should().HaveCount(7);
         GenerationModelMetadataDto nanoBanana2Metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
         models.Should().Contain(model =>
             model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId

@@ -304,7 +304,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             model.Thinking is not null
             && !string.Equals(model.Id, firstSupportedModel.Id, StringComparison.Ordinal));
         ImageModelOption unsupportedModel = viewModel.AvailableModels.Single(model =>
-            model.Thinking is null);
+            model.Id == ApiModelMetadataTestCatalog.NanoBananaProModelId);
         viewModel.SelectedThinkingLevel = viewModel.ThinkingLevels.Single(level =>
             string.Equals(level.Value, "high", StringComparison.Ordinal));
 
