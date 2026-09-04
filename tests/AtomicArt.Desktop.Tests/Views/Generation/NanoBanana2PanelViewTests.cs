@@ -803,6 +803,51 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
+    public void QualityDropDown_WhenSelectionChanges_UpdatesViewModel()
+    {
+        Dispatch(() =>
+        {
+            using ShownPanelContext context = new();
+            context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == "openrouter-gpt-image-2");
+            Popup settingsPopup = OpenTemperaturePopup(context.View);
+            Border settingsPanel = GetTemperaturePopupContent(settingsPopup);
+            ComboBox qualityComboBox = settingsPanel
+                .GetLogicalDescendants()
+                .OfType<ComboBox>()
+                .Single(comboBox => ReferenceEquals(
+                    comboBox.ItemsSource,
+                    context.ViewModel.QualityLevels));
+            qualityComboBox.SelectedItem = context.ViewModel.QualityLevels
+                .Single(level => level.Value == "Medium");
+
+            context.ViewModel.SelectedQuality.Should().Be("Medium");
+        });
+    }
+
+    [Fact]
+    public void QualityDropDown_WhenGptImage2IsSelected_ShowsAutoByDefault()
+    {
+        Dispatch(() =>
+        {
+            using ShownPanelContext context = new();
+            context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == "openrouter-gpt-image-2");
+            Popup settingsPopup = OpenTemperaturePopup(context.View);
+            Border settingsPanel = GetTemperaturePopupContent(settingsPopup);
+            ComboBox qualityComboBox = settingsPanel
+                .GetLogicalDescendants()
+                .OfType<ComboBox>()
+                .Single(comboBox => ReferenceEquals(
+                    comboBox.ItemsSource,
+                    context.ViewModel.QualityLevels));
+
+            context.ViewModel.SelectedQuality.Should().Be("Auto");
+            qualityComboBox.SelectedItem.Should().BeSameAs(context.ViewModel.QualityLevels[0]);
+        });
+    }
+
+    [Fact]
     public async Task SettingsPopup_WhenOutsideIsClicked_ClosesAfterAnimation()
     {
         await DispatchAsync(async () =>

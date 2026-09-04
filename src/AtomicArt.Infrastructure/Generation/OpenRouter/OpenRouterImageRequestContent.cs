@@ -12,9 +12,11 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
 {
     private const string OpenAiGptImage2ModelId = "openai/gpt-image-2";
     private const int GptImageSizeAlignment = 16;
-    private const int OneKImageShortEdge = 1024;
-    private const int TwoKImageShortEdge = 2048;
-    private const int FourKImageShortEdge = 4096;
+    private const int GptImageMinimumEdge = 256;
+    private const int GptImageMaximumEdge = 3840;
+    private const int OneKImagePixelBudget = 1024 * 1024;
+    private const int TwoKImagePixelBudget = 2560 * 1440;
+    private const int FourKImagePixelBudget = 3840 * 2160;
 
     private readonly StreamingGenerationProviderContext _context;
     private readonly byte[] _prefix;
@@ -91,23 +93,29 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
         if (isGptImage2)
         {
             builder.Append(",\"size\":");
-            string size = GenerationAspectRatios.IsAuto(context.Request.AspectRatio)
-                ? context.Request.Resolution
-                : CreateGptImageSize(
-                    context.Request.Resolution,
-                    context.Request.AspectRatio);
+            string size = CreateGptImageSize(
+                context.Request.Resolution,
+                context.Request.AspectRatio);
             builder.Append(JsonSerializer.Serialize(size));
         }
-        else
+        else if (!isGptImage2)
         {
             builder.Append(",\"resolution\":");
             builder.Append(JsonSerializer.Serialize(context.Request.Resolution));
         }
 
-        if (isGptImage2 || !GenerationAspectRatios.IsAuto(context.Request.AspectRatio))
+        if (!isGptImage2 && !GenerationAspectRatios.IsAuto(context.Request.AspectRatio))
         {
             builder.Append(",\"aspect_ratio\":");
             builder.Append(JsonSerializer.Serialize(context.Request.AspectRatio));
+        }
+
+        if (context.Request.Parameters.TryGetValue(
+                GenerationParameterNames.Quality,
+                out JsonElement quality))
+        {
+            builder.Append(",\"quality\":");
+            builder.Append(quality.GetRawText());
         }
 
         if (!string.IsNullOrWhiteSpace(flexProviderTag))
@@ -124,20 +132,28 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
 
     private static string CreateGptImageSize(string resolution, string aspectRatio)
     {
-        int shortEdge = resolution switch
+        int pixelBudget = resolution switch
         {
-            "1K" => OneKImageShortEdge,
-            "2K" => TwoKImageShortEdge,
-            "4K" => FourKImageShortEdge,
+            "1K" => OneKImagePixelBudget,
+            "2K" => TwoKImagePixelBudget,
+            "4K" => FourKImagePixelBudget,
             _ => throw new InvalidOperationException(
                 $"Unsupported GPT Image resolution '{resolution}'.")
         };
 
-        if (string.Equals(aspectRatio, "auto", StringComparison.Ordinal))
-        {
-            return $"{shortEdge}x{shortEdge}";
-        }
+        (int widthRatio, int heightRatio) = GenerationAspectRatios.IsAuto(aspectRatio)
+            ? (1, 1)
+            : ParseAspectRatio(aspectRatio);
 
+        double width = Math.Sqrt(pixelBudget * widthRatio / (double)heightRatio);
+        double height = Math.Sqrt(pixelBudget * heightRatio / (double)widthRatio);
+        double scale = Math.Min(1d, GptImageMaximumEdge / Math.Max(width, height));
+
+        return $"{RoundImageEdge(width * scale)}x{RoundImageEdge(height * scale)}";
+    }
+
+    private static (int Width, int Height) ParseAspectRatio(string aspectRatio)
+    {
         string[] ratioComponents = aspectRatio.Split(':', StringSplitOptions.TrimEntries);
 
         if (ratioComponents.Length != 2
@@ -150,19 +166,15 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
                 $"Invalid GPT Image aspect ratio '{aspectRatio}'.");
         }
 
-        if (widthRatio >= heightRatio)
-        {
-            int width = RoundUpToAlignment(shortEdge * widthRatio / (double)heightRatio);
-            return $"{width}x{shortEdge}";
-        }
-
-        int height = RoundUpToAlignment(shortEdge * heightRatio / (double)widthRatio);
-        return $"{shortEdge}x{height}";
+        return (widthRatio, heightRatio);
     }
 
-    private static int RoundUpToAlignment(double value)
+    private static int RoundImageEdge(double value)
     {
-        return checked((int)Math.Ceiling(value / GptImageSizeAlignment) * GptImageSizeAlignment);
+        int rounded = checked((int)Math.Round(
+            value / GptImageSizeAlignment,
+            MidpointRounding.AwayFromZero) * GptImageSizeAlignment);
+        return Math.Clamp(rounded, GptImageMinimumEdge, GptImageMaximumEdge);
     }
 
     private static byte[] CreateAttachmentPrefix(

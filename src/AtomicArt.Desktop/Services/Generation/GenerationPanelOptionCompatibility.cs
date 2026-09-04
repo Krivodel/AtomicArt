@@ -14,10 +14,12 @@ internal static class GenerationPanelOptionCompatibility
         ArgumentNullException.ThrowIfNull(supportedValues);
         ArgumentNullException.ThrowIfNull(defaultValue);
 
-        if (!string.IsNullOrWhiteSpace(value)
-            && supportedValues.Contains(value, StringComparer.Ordinal))
+        string? supportedValue = supportedValues.FirstOrDefault(supportedValue =>
+            string.Equals(supportedValue, value, StringComparison.OrdinalIgnoreCase));
+
+        if (supportedValue is not null)
         {
-            return (value, false);
+            return (supportedValue, false);
         }
 
         return (defaultValue, !string.IsNullOrWhiteSpace(value));

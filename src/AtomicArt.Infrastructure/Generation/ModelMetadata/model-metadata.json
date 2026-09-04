@@ -157,7 +157,7 @@
         "text-token-estimation"
       ],
       "id": "nano-banana-2",
-      "displayName": "Nano Banana 2",
+      "displayName": "Nano Banana 2 (Напрямую)",
       "providerModelId": "gemini-3.1-flash-image",
       "contextWindowTokens": 131072,
       "maxOutputTokens": 32768,
@@ -210,7 +210,7 @@
         "text-token-estimation"
       ],
       "id": "nano-banana-2-lite",
-      "displayName": "Nano Banana 2 Lite",
+      "displayName": "Nano Banana 2 Lite (Напрямую)",
       "providerModelId": "gemini-3.1-flash-lite-image",
       "contextWindowTokens": 65536,
       "maxOutputTokens": 4096,
@@ -236,7 +236,7 @@
         "text-token-estimation"
       ],
       "id": "nano-banana-pro",
-      "displayName": "Nano Banana Pro",
+      "displayName": "Nano Banana Pro (Напрямую)",
       "providerModelId": "gemini-3-pro-image",
       "contextWindowTokens": 65536,
       "maxOutputTokens": 32768,
@@ -262,10 +262,11 @@
     {
       "profiles": [
         "openrouter-image-family",
+        "standard-thinking",
         "text-token-estimation"
       ],
       "id": "openrouter-nano-banana-2",
-      "displayName": "Nano Banana 2 (OpenRouter)",
+      "displayName": "Nano Banana 2",
       "providerModelId": "google/gemini-3.1-flash-image",
       "contextWindowTokens": 131072,
       "maxOutputTokens": 32768,
@@ -292,10 +293,11 @@
       "profiles": [
         "openrouter-image-family",
         "standard-aspect-ratios",
+        "standard-thinking",
         "text-token-estimation"
       ],
       "id": "openrouter-nano-banana-2-lite",
-      "displayName": "Nano Banana 2 Lite (OpenRouter)",
+      "displayName": "Nano Banana 2 Lite",
       "providerModelId": "google/gemini-3.1-flash-lite-image",
       "contextWindowTokens": 65536,
       "maxOutputTokens": 4096,
@@ -317,7 +319,7 @@
         "text-token-estimation"
       ],
       "id": "openrouter-nano-banana-pro",
-      "displayName": "Nano Banana Pro (OpenRouter)",
+      "displayName": "Nano Banana Pro",
       "providerModelId": "google/gemini-3-pro-image-preview",
       "contextWindowTokens": 65536,
       "maxOutputTokens": 32768,
@@ -339,7 +341,7 @@
         "text-token-estimation"
       ],
       "id": "openrouter-gpt-image-2",
-      "displayName": "GPT Image 2 (OpenRouter)",
+      "displayName": "GPT Image 2",
       "providerModelId": "openai/gpt-image-2",
       "contextWindowTokens": 131072,
       "maxOutputTokens": 32768,
@@ -351,6 +353,11 @@
         { "value": "16:9" }, { "value": "21:9" }
       ],
       "resolutions": ["1K", "2K", "4K"],
+      "parameters": [
+        { "name": "aspectRatio", "type": "string", "required": true, "allowedValues": ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"] },
+        { "name": "resolution", "type": "string", "required": true, "allowedValues": ["1K", "2K", "4K"] },
+        { "name": "quality", "type": "string", "required": false, "defaultValue": "auto", "allowedValues": ["auto", "low", "medium", "high"] }
+      ],
       "pricing": {
         "currencyCode": "USD",
         "inputTokenUsdPerMillion": 5.00,

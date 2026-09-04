@@ -28,6 +28,7 @@ public sealed class GenerationPanelStateServiceTests
             PanelId = FirstPanelId,
             SelectedModelId = "first-model",
             Temperature = 1.7d,
+            Quality = "medium",
             ThinkingLevel = "high",
             Prompt = FirstPrompt
         };
@@ -66,6 +67,7 @@ public sealed class GenerationPanelStateServiceTests
         savedState.Panels.Should().ContainKey(FirstPanelId)
             .WhoseValue.Prompt.Should().Be(FirstPrompt);
         savedState.Panels[FirstPanelId].Temperature.Should().Be(1.7d);
+        savedState.Panels[FirstPanelId].Quality.Should().Be("medium");
         savedState.Panels[FirstPanelId].ThinkingLevel.Should().Be("high");
         savedState.Panels.Should().ContainKey(SecondPanelId)
             .WhoseValue.Prompt.Should().Be(SecondPrompt);

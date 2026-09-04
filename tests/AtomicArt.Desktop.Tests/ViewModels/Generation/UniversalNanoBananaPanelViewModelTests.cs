@@ -300,7 +300,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             generationPanelStateService: stateService);
         ImageModelOption firstSupportedModel = GetSelectedModel(viewModel);
-        ImageModelOption secondSupportedModel = viewModel.AvailableModels.Single(model =>
+        ImageModelOption secondSupportedModel = viewModel.AvailableModels.First(model =>
             model.Thinking is not null
             && !string.Equals(model.Id, firstSupportedModel.Id, StringComparison.Ordinal));
         ImageModelOption unsupportedModel = viewModel.AvailableModels.Single(model =>
@@ -883,6 +883,35 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
+    public async Task PrepareStateRestoreAsync_WhenEndpointChangesDuringInitialCatalogLoad_ReloadsCatalog()
+    {
+        SequencedGenerationModelCatalogApiClient catalogApiClient = new();
+        IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            catalogApiClient: catalogApiClient,
+            apiEndpointService: endpointService,
+            initializeCatalog: false);
+
+        Task prepareTask = viewModel.PrepareStateRestoreAsync(CancellationToken.None);
+        await AsyncTestWaiter.WaitForConditionAsync(
+            () => catalogApiClient.RequestCount == 1,
+            CancellationToken.None);
+        SetApiBaseAddress(endpointService, "https://new.atomicart.test/");
+        catalogApiClient.Complete(0, ApiModelMetadataTestCatalog.LoadCatalog());
+        await AsyncTestWaiter.WaitForConditionAsync(
+            () => catalogApiClient.RequestCount == 2,
+            CancellationToken.None);
+        catalogApiClient.Complete(1, ApiModelMetadataTestCatalog.LoadCatalog());
+        await prepareTask;
+        await AsyncTestWaiter.WaitForConditionAsync(
+            () => viewModel.HasLoadedCatalog,
+            CancellationToken.None);
+
+        viewModel.AvailableModels.Should().NotBeEmpty();
+        viewModel.ErrorMessage.Should().BeNull();
+    }
+
+    [Fact]
     public async Task ApiBaseAddressChanged_WithLoadedCatalog_ClearsAndReloadsCatalog()
     {
         DelayedGenerationModelCatalogApiClient catalogApiClient = new();
@@ -1137,6 +1166,51 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         viewModel.SelectedAspectRatio.Should().Be("1:1");
         viewModel.SelectedResolution.Should().Be("1K");
         viewModel.GenerationCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void SelectedModel_WhenSwitchedAwayFromGptImage2AndBack_RestoresQuality()
+    {
+        RecordingGenerationPanelStateService stateService = new();
+        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            generationPanelStateService: stateService);
+        ImageModelOption gptImage2 = GetModel(viewModel, "openrouter-gpt-image-2");
+        ImageModelOption nanoBananaPro = GetModel(
+            viewModel,
+            ApiModelMetadataTestCatalog.NanoBananaProModelId);
+
+        viewModel.SelectedModel = gptImage2;
+        viewModel.SelectedQuality = "Medium";
+        viewModel.SelectedModel = nanoBananaPro;
+
+        stateService.SavedStates.Last().Quality.Should().Be("medium");
+
+        viewModel.SelectedModel = gptImage2;
+
+        viewModel.SelectedQuality.Should().Be("Medium");
+    }
+
+    [Fact]
+    public async Task CommitPendingStateAsync_AfterGptImage2QualityChanged_PersistsQualityForNextStart()
+    {
+        RecordingGenerationPanelStateService stateService = new()
+        {
+            PersistsSavedState = true
+        };
+        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            generationPanelStateService: stateService);
+        ImageModelOption gptImage2 = GetModel(viewModel, "openrouter-gpt-image-2");
+
+        viewModel.SelectedModel = gptImage2;
+        viewModel.SelectedQuality = "Medium";
+        await viewModel.CommitPendingStateAsync(CancellationToken.None);
+
+        using UniversalNanoBananaPanelViewModel restartedViewModel = CreateViewModel(
+            generationPanelStateService: stateService);
+        await restartedViewModel.RestoreStateAsync(CancellationToken.None);
+
+        restartedViewModel.SelectedModel?.Id.Should().Be(gptImage2.Id);
+        restartedViewModel.SelectedQuality.Should().Be("Medium");
     }
 
     [Fact]
@@ -1956,6 +2030,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     {
         public List<GenerationPanelState> SavedStates { get; } = [];
         public int LoadCallCount { get; private set; }
+        public bool PersistsSavedState { get; init; }
         public GenerationPanelState StateToLoad { get; set; } = new()
         {
             PanelId = GenerationPanelIds.NanoBanana
@@ -1971,6 +2046,11 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         public Task SaveAsync(string panelId, GenerationPanelState state, CancellationToken ct)
         {
             SavedStates.Add(state);
+
+            if (PersistsSavedState)
+            {
+                StateToLoad = state;
+            }
 
             return Task.CompletedTask;
         }

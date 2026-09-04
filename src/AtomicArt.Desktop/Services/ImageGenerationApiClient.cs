@@ -288,18 +288,28 @@ public sealed class ImageGenerationApiClient
         Dictionary<string, JsonElement> parameters =
             new Dictionary<string, JsonElement>(StringComparer.Ordinal)
             {
-                [GenerationParameterNames.Temperature] =
-                    JsonSerializer.SerializeToElement(request.Temperature),
                 [GenerationParameterNames.AspectRatio] =
                     JsonSerializer.SerializeToElement(request.AspectRatio),
                 [GenerationParameterNames.Resolution] =
                     JsonSerializer.SerializeToElement(request.Resolution)
             };
 
+        if (request.IncludeTemperature)
+        {
+            parameters[GenerationParameterNames.Temperature] =
+                JsonSerializer.SerializeToElement(request.Temperature);
+        }
+
         if (!string.IsNullOrWhiteSpace(request.ThinkingLevel))
         {
             parameters[GenerationParameterNames.ThinkingLevel] =
                 JsonSerializer.SerializeToElement(request.ThinkingLevel);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Quality))
+        {
+            parameters[GenerationParameterNames.Quality] =
+                JsonSerializer.SerializeToElement(request.Quality);
         }
 
         List<GenerationAttachmentMetadataDto> attachmentMetadata =

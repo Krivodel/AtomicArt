@@ -7,6 +7,7 @@ using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Infrastructure.Generation.OpenRouter;
+using AtomicArt.Infrastructure.Generation.GoogleInteractions;
 using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Infrastructure.Tests.Generation.OpenRouter;
@@ -24,6 +25,10 @@ public sealed class OpenRouterChatCompletionRequestContentTests
         using JsonDocument document = JsonDocument.Parse(await content.ReadAsStringAsync());
         JsonElement root = document.RootElement;
 
+        root.GetProperty("messages")[0].GetProperty("role").GetString().Should().Be("system");
+        root.GetProperty("messages")[0].GetProperty("content").GetString()
+            .Should().Be(GoogleInteractionsImageOutputContract.SystemInstruction);
+
         root.GetProperty("image_config").GetProperty("image_size").GetString().Should().Be("4K");
         root.GetProperty("image_config").GetProperty("aspect_ratio").GetString().Should().Be("16:9");
         root.GetProperty("temperature").GetDouble().Should().Be(1d);
@@ -40,7 +45,7 @@ public sealed class OpenRouterChatCompletionRequestContentTests
         StreamingGenerationProviderContext context = CreateContext("2K", "auto", null);
         using OpenRouterChatCompletionRequestContent content = new(
             context,
-            OpenRouterFlexModelPolicy.GoogleAiStudioFlexProviderTag);
+            null);
 
         using JsonDocument document = JsonDocument.Parse(await content.ReadAsStringAsync());
         JsonElement imageConfiguration = document.RootElement.GetProperty("image_config");
@@ -48,6 +53,8 @@ public sealed class OpenRouterChatCompletionRequestContentTests
         imageConfiguration.GetProperty("image_size").GetString().Should().Be("2K");
         imageConfiguration.TryGetProperty("aspect_ratio", out _).Should().BeFalse();
         document.RootElement.TryGetProperty("reasoning_effort", out _).Should().BeFalse();
+        document.RootElement.GetProperty("service_tier").GetString().Should().Be("flex");
+        document.RootElement.TryGetProperty("provider", out _).Should().BeFalse();
     }
 
     [Fact]
@@ -66,7 +73,7 @@ public sealed class OpenRouterChatCompletionRequestContentTests
 
         using JsonDocument document = JsonDocument.Parse(await content.ReadAsStringAsync());
         JsonElement reference = document.RootElement
-            .GetProperty("messages")[0]
+            .GetProperty("messages")[1]
             .GetProperty("content")[1];
 
         reference.GetProperty("type").GetString().Should().Be("image_url");

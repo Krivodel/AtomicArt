@@ -8,4 +8,6 @@ public sealed record ImageGenerationRequestDto(
     double Temperature,
     int GenerationCount,
     IReadOnlyList<AttachedImageDto> AttachedImages,
-    string? ThinkingLevel = null);
+    string? ThinkingLevel = null,
+    string? Quality = null,
+    bool IncludeTemperature = true);

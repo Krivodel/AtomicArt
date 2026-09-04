@@ -12,7 +12,9 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
         double temperature,
         int generationCount,
         IReadOnlyList<AttachedImageDto> attachedImages,
-        string? thinkingLevel = null)
+        string? thinkingLevel = null,
+        string? quality = null,
+        bool includeTemperature = true)
     {
         ValidateRequestParameters(
             selectedModel,
@@ -33,7 +35,9 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
             temperature,
             generationCount,
             attachedImages,
-            validatedThinkingLevel);
+            validatedThinkingLevel,
+            quality,
+            includeTemperature);
     }
 
     internal ImageGenerationRequestDto CreateValidatedRequest(NanoBanana2GenerationParameters parameters)
@@ -48,7 +52,9 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
             parameters.Temperature,
             parameters.GenerationCount,
             parameters.AttachedImages,
-            parameters.ThinkingLevel);
+            parameters.ThinkingLevel,
+            parameters.Quality,
+            parameters.IncludeTemperature);
     }
 
     public GenerationStartSnapshot CreateStartSnapshot(
@@ -76,7 +82,9 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
         double temperature,
         int generationCount,
         IReadOnlyList<AttachedImageDto> attachedImages,
-        string? thinkingLevel)
+        string? thinkingLevel,
+        string? quality,
+        bool includeTemperature)
     {
         ArgumentNullException.ThrowIfNull(selectedModel);
         ArgumentNullException.ThrowIfNull(prompt);
@@ -92,7 +100,9 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
             temperature,
             generationCount,
             attachedImages,
-            thinkingLevel);
+            thinkingLevel,
+            quality,
+            includeTemperature);
     }
 
     private static void ValidateRequestParameters(

@@ -28,6 +28,14 @@ public static class GenerationUiLocalizationKeys
         public const string ValueFormat = "Generation.Temperature.ValueFormat";
     }
 
+    public static class Quality
+    {
+        public const string Label = "Generation.Quality.Label";
+        public const string Low = "Generation.Quality.Low";
+        public const string Medium = "Generation.Quality.Medium";
+        public const string High = "Generation.Quality.High";
+    }
+
     public static class Errors
     {
         public const string ApiUnavailable = "Generation.Errors.ApiUnavailable";

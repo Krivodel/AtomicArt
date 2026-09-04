@@ -13,6 +13,7 @@ internal static class GenerationPanelStateSanitizer
             AspectRatio = state.AspectRatio ?? string.Empty,
             Resolution = state.Resolution ?? string.Empty,
             Temperature = state.Temperature,
+            Quality = state.Quality,
             ThinkingLevel = state.ThinkingLevel,
             GenerationCount = state.GenerationCount,
             Prompt = state.Prompt ?? string.Empty,

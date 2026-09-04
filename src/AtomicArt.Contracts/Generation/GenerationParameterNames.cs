@@ -6,4 +6,5 @@ public static class GenerationParameterNames
     public const string AspectRatio = "aspectRatio";
     public const string Resolution = "resolution";
     public const string ThinkingLevel = "thinkingLevel";
+    public const string Quality = "quality";
 }

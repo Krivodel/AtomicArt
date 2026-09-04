@@ -7,6 +7,7 @@ public sealed class GenerationPanelState
     public string AspectRatio { get; init; } = string.Empty;
     public string Resolution { get; init; } = string.Empty;
     public double? Temperature { get; init; }
+    public string? Quality { get; init; }
     public string? ThinkingLevel { get; init; }
     public int GenerationCount { get; init; }
     public string Prompt { get; init; } = string.Empty;

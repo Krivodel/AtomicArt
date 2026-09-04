@@ -40,6 +40,12 @@
       "Temperature": {
         "ValueFormat": "{0:0.0}"
       },
+      "Quality": {
+        "Label": "Quality",
+        "Low": "Low",
+        "Medium": "Medium",
+        "High": "High"
+      },
       "Errors": {
         "ApiUnavailable": "The server is unavailable.",
         "Failed": "Could not generate the image.",

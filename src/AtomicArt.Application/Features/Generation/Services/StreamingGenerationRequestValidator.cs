@@ -83,14 +83,21 @@ public sealed class StreamingGenerationRequestValidator
                 parameters,
                 GenerationParameterNames.Resolution,
                 out string? resolution)
-            || !TryReadDouble(
-                parameters,
-                GenerationParameterNames.Temperature,
-                out double temperature))
+            )
         {
             return Result<StreamingImageGenerationRequest>.ValidationError(
                 GenerationProtocolErrorCodes.InvalidParameters,
                 "Required generation parameters were not provided.");
+        }
+
+        double temperature = modelDefinition.Constraints.Temperature.Default;
+
+        if (TryReadDouble(
+                parameters,
+                GenerationParameterNames.Temperature,
+                out double requestedTemperature))
+        {
+            temperature = requestedTemperature;
         }
 
         TryReadString(

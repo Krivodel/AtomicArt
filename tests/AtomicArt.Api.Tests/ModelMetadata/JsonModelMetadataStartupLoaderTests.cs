@@ -18,14 +18,16 @@ public sealed class JsonModelMetadataStartupLoaderTests
     {
         GenerationModelCatalogDto catalog = LoadRealCatalogWithExpectedModelCount();
 
-        catalog.Models.Should().OnlyContain(model =>
+        IReadOnlyList<GenerationModelMetadataDto> modelsWithAutomaticAspectRatio = catalog.Models;
+
+        modelsWithAutomaticAspectRatio.Should().OnlyContain(model =>
             model.AspectRatios.First().Value == GenerationAspectRatios.Auto);
-        catalog.Models.Should().OnlyContain(model =>
+        modelsWithAutomaticAspectRatio.Should().OnlyContain(model =>
             model.AspectRatios.Any(option => string.Equals(
                 option.Value,
                 GenerationAspectRatios.Auto,
                 StringComparison.Ordinal)));
-        catalog.Models.Should().OnlyContain(model =>
+        modelsWithAutomaticAspectRatio.Should().OnlyContain(model =>
             model.AspectRatios.First().LocalizationKey
                 == GenerationLocalizationKeys.OptionsAuto);
     }
@@ -42,13 +44,19 @@ public sealed class JsonModelMetadataStartupLoaderTests
     }
 
     [Fact]
-    public void Load_WithRealMetadata_HasThinkingOnlyForSupportedNanoBananaModels()
+    public void Load_WithRealMetadata_HasThinkingForEverySupportedNanoBananaVariant()
     {
         GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
 
         GenerationModelMetadataDto nanoBanana2 = catalog.Models.Single(model => model.Id == "nano-banana-2");
         GenerationModelMetadataDto nanoBanana2Lite = catalog.Models.Single(model => model.Id == "nano-banana-2-lite");
         GenerationModelMetadataDto nanoBananaPro = catalog.Models.Single(model => model.Id == "nano-banana-pro");
+        GenerationModelMetadataDto openRouterNanoBanana2 = catalog.Models.Single(model =>
+            model.Id == "openrouter-nano-banana-2");
+        GenerationModelMetadataDto openRouterNanoBanana2Lite = catalog.Models.Single(model =>
+            model.Id == "openrouter-nano-banana-2-lite");
+        GenerationModelMetadataDto openRouterNanoBananaPro = catalog.Models.Single(model =>
+            model.Id == "openrouter-nano-banana-pro");
         GenerationModelThinkingMetadataDto expectedThinking = new(
             [
                 new("minimal", GenerationLocalizationKeys.ThinkingLow),
@@ -59,6 +67,9 @@ public sealed class JsonModelMetadataStartupLoaderTests
         nanoBanana2.Thinking.Should().BeEquivalentTo(expectedThinking);
         nanoBanana2Lite.Thinking.Should().BeEquivalentTo(expectedThinking);
         nanoBananaPro.Thinking.Should().BeNull();
+        openRouterNanoBanana2.Thinking.Should().BeEquivalentTo(expectedThinking);
+        openRouterNanoBanana2Lite.Thinking.Should().BeEquivalentTo(expectedThinking);
+        openRouterNanoBananaPro.Thinking.Should().BeNull();
     }
 
     [Fact]

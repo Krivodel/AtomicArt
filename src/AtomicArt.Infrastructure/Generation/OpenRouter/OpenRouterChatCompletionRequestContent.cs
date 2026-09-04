@@ -5,6 +5,7 @@ using System.Text.Json;
 using AtomicArt.Application.Features.Generation.Interfaces;
 using AtomicArt.Application.Features.Generation.Models;
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Infrastructure.Generation.GoogleInteractions;
 
 namespace AtomicArt.Infrastructure.Generation.OpenRouter;
 
@@ -18,10 +19,9 @@ internal sealed class OpenRouterChatCompletionRequestContent : HttpContent
 
     public OpenRouterChatCompletionRequestContent(
         StreamingGenerationProviderContext context,
-        string providerTag)
+        string? providerTag)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        ArgumentException.ThrowIfNullOrWhiteSpace(providerTag);
         _prefix = CreatePrefix(context);
         _attachmentPrefixes = context.Request.Attachments
             .Select((attachment, index) => CreateAttachmentPrefix(attachment, index))
@@ -73,7 +73,9 @@ internal sealed class OpenRouterChatCompletionRequestContent : HttpContent
     {
         StringBuilder builder = new("{\"model\":");
         builder.Append(JsonSerializer.Serialize(context.ProviderModelId));
-        builder.Append(",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":");
+        builder.Append(",\"messages\":[{\"role\":\"system\",\"content\":");
+        builder.Append(JsonSerializer.Serialize(GoogleInteractionsImageOutputContract.SystemInstruction));
+        builder.Append("},{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":");
         builder.Append(JsonSerializer.Serialize(context.Request.Prompt));
         builder.Append("}");
         return Encoding.UTF8.GetBytes(builder.ToString());
@@ -91,7 +93,7 @@ internal sealed class OpenRouterChatCompletionRequestContent : HttpContent
 
     private static byte[] CreateSuffix(
         StreamingGenerationProviderContext context,
-        string providerTag)
+        string? providerTag)
     {
         StringBuilder builder = new("]}],\"modalities\":[\"image\",\"text\"],\"stream\":false,\"image_config\":{\"image_size\":");
         builder.Append(JsonSerializer.Serialize(context.Request.Resolution));
@@ -111,9 +113,16 @@ internal sealed class OpenRouterChatCompletionRequestContent : HttpContent
             builder.Append(JsonSerializer.Serialize(context.Request.ThinkingLevel));
         }
 
-        builder.Append(",\"service_tier\":\"flex\",\"provider\":{\"only\":[");
-        builder.Append(JsonSerializer.Serialize(providerTag));
-        builder.Append("],\"allow_fallbacks\":false}}");
+        builder.Append(",\"service_tier\":\"flex\"");
+
+        if (!string.IsNullOrWhiteSpace(providerTag))
+        {
+            builder.Append(",\"provider\":{\"only\":[");
+            builder.Append(JsonSerializer.Serialize(providerTag));
+            builder.Append("],\"allow_fallbacks\":false}");
+        }
+
+        builder.Append('}');
         return Encoding.UTF8.GetBytes(builder.ToString());
     }
 

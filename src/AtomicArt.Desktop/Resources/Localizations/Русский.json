@@ -40,6 +40,12 @@
       "Temperature": {
         "ValueFormat": "{0:0.0}"
       },
+      "Quality": {
+        "Label": "Качество",
+        "Low": "Низкое",
+        "Medium": "Среднее",
+        "High": "Высокое"
+      },
       "Errors": {
         "ApiUnavailable": "Сервер недоступен.",
         "Failed": "Не удалось сгенерировать.",

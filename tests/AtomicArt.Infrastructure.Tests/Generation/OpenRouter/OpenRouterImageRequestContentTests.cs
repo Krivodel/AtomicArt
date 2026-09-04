@@ -14,7 +14,7 @@ namespace AtomicArt.Infrastructure.Tests.Generation.OpenRouter;
 public sealed class OpenRouterImageRequestContentTests
 {
     [Fact]
-    public async Task ReadAsStringAsync_WithGptImage2_UsesSizeInsteadOfResolution()
+    public async Task ReadAsStringAsync_WithGptImage2_UsesSizeWithSelectedPixelBudget()
     {
         using OpenRouterImageRequestContent content = new(CreateContext(
             "openrouter-gpt-image-2",
@@ -25,13 +25,28 @@ public sealed class OpenRouterImageRequestContentTests
         using JsonDocument document = JsonDocument.Parse(await content.ReadAsStringAsync());
         JsonElement root = document.RootElement;
 
-        root.GetProperty("size").GetString().Should().Be("3648x2048");
+        root.GetProperty("size").GetString().Should().Be("2560x1440");
         root.TryGetProperty("resolution", out _).Should().BeFalse();
-        root.GetProperty("aspect_ratio").GetString().Should().Be("16:9");
+        root.TryGetProperty("aspect_ratio", out _).Should().BeFalse();
     }
 
     [Fact]
-    public async Task ReadAsStringAsync_WithGptImage2AndAutomaticAspectRatio_PreservesAutomaticAspectRatio()
+    public async Task ReadAsStringAsync_WithGptImage2Quality_SendsQuality()
+    {
+        using OpenRouterImageRequestContent content = new(CreateContext(
+            "openrouter-gpt-image-2",
+            "openai/gpt-image-2",
+            "1K",
+            "1:1",
+            "high"));
+
+        using JsonDocument document = JsonDocument.Parse(await content.ReadAsStringAsync());
+
+        document.RootElement.GetProperty("quality").GetString().Should().Be("high");
+    }
+
+    [Fact]
+    public async Task ReadAsStringAsync_WithGptImage2AndAutomaticAspectRatio_SendsSelectedSizeWithoutAspectRatio()
     {
         using OpenRouterImageRequestContent content = new(CreateContext(
             "openrouter-gpt-image-2",
@@ -42,8 +57,9 @@ public sealed class OpenRouterImageRequestContentTests
         using JsonDocument document = JsonDocument.Parse(await content.ReadAsStringAsync());
         JsonElement root = document.RootElement;
 
-        root.GetProperty("size").GetString().Should().Be("4K");
-        root.GetProperty("aspect_ratio").GetString().Should().Be("auto");
+        root.GetProperty("size").GetString().Should().Be("2880x2880");
+        root.TryGetProperty("aspect_ratio", out _).Should().BeFalse();
+        root.TryGetProperty("resolution", out _).Should().BeFalse();
     }
 
     [Fact]
@@ -103,7 +119,8 @@ public sealed class OpenRouterImageRequestContentTests
         string modelId,
         string providerModelId,
         string resolution,
-        string aspectRatio)
+        string aspectRatio,
+        string? quality = null)
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadCatalog()
             .Models.Single(model => model.Id == modelId);
@@ -116,7 +133,7 @@ public sealed class OpenRouterImageRequestContentTests
             resolution,
             1d,
             null,
-            new Dictionary<string, JsonElement>(),
+            CreateParameters(quality),
             []);
 
         return new StreamingGenerationProviderContext(
@@ -126,6 +143,19 @@ public sealed class OpenRouterImageRequestContentTests
             metadata.Pricing,
             TestGenerationCredentials.ProviderCredential,
             metadata.TransportLimits);
+    }
+
+    private static IReadOnlyDictionary<string, JsonElement> CreateParameters(string? quality)
+    {
+        Dictionary<string, JsonElement> parameters = new(StringComparer.Ordinal);
+
+        if (!string.IsNullOrWhiteSpace(quality))
+        {
+            parameters[GenerationParameterNames.Quality] =
+                JsonSerializer.SerializeToElement(quality);
+        }
+
+        return parameters;
     }
 
     private static StreamingGenerationProviderContext CreateContext(

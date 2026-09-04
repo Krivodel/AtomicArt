@@ -38,9 +38,13 @@ internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStre
 
         string? flexProviderTag = OpenRouterFlexModelPolicy
             .GetChatCompletionProviderTag(context.ProviderModelId);
-        HttpContent content = flexProviderTag is null
-            ? new OpenRouterImageRequestContent(context)
-            : new OpenRouterChatCompletionRequestContent(context, flexProviderTag);
+        bool usesChatCompletions = !string.Equals(
+            context.ProviderModelId,
+            "openai/gpt-image-2",
+            StringComparison.Ordinal);
+        HttpContent content = usesChatCompletions
+            ? new OpenRouterChatCompletionRequestContent(context, flexProviderTag)
+            : new OpenRouterImageRequestContent(context);
         long maximumRequestBytes = context.TransportLimits is null
             ? _options.MaxRequestBytes
             : Math.Min(_options.MaxRequestBytes, context.TransportLimits.MaxRequestBytes);
@@ -57,7 +61,7 @@ internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStre
         {
             OpenRouterImageResponse response = await CreateResponseAsync(
                     content,
-                    flexProviderTag is not null,
+                    usesChatCompletions,
                     context.ProviderCredential,
                     ct)
                 .ConfigureAwait(false);
@@ -69,7 +73,7 @@ internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStre
                 response,
                 maximumResponseBytes,
                 _options.ResponseBufferSize,
-                flexProviderTag is not null);
+                usesChatCompletions);
         }
         catch
         {

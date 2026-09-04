@@ -37,6 +37,16 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     public double DefaultTemperature => SelectedModel?.Temperature.Default ?? 0d;
     public double TemperatureStep => SelectedModel?.Temperature.Step ?? 1d;
     public string TemperatureText => _textFormatter.FormatTemperatureText(Temperature);
+    public bool SupportsTemperature => !string.Equals(
+        SelectedModel?.ProviderModelId,
+        GptImage2ProviderModelId,
+        StringComparison.Ordinal);
+    public IReadOnlyList<GenerationOptionViewModel> QualityLevels { get; private set; } = [];
+    public bool SupportsQuality => string.Equals(
+        SelectedModel?.ProviderModelId,
+        GptImage2ProviderModelId,
+        StringComparison.Ordinal);
+    public bool SupportsGenerationOptions => SupportsTemperature || SupportsQuality;
     public IReadOnlyList<GenerationModelThinkingLevelMetadataDto> ThinkingLevels =>
         SelectedModel?.Thinking?.Levels ?? [];
     public bool SupportsThinkingLevel => SelectedModel?.Thinking is not null;
@@ -91,6 +101,14 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private const string SelectedModelNotInitializedMessage =
         "Selected model is not initialized.";
+    private const string GptImage2ProviderModelId = "openai/gpt-image-2";
+    private static readonly IReadOnlyList<string> GptImage2QualityValues =
+    [
+        "Auto",
+        "Low",
+        "Medium",
+        "High"
+    ];
 
     private bool CanRunCommand => HasLoadedCatalog
                                   && !IsAttaching
@@ -143,6 +161,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private int _generationCount;
     [ObservableProperty]
     private double _temperature;
+    [ObservableProperty]
+    private string _selectedQuality = GptImage2QualityValues[0];
+    [ObservableProperty]
+    private GenerationOptionViewModel? _selectedQualityOption;
     [ObservableProperty]
     private GenerationModelThinkingLevelMetadataDto? _selectedThinkingLevel;
     [ObservableProperty]
@@ -216,6 +238,25 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _errorHandler = errorHandler;
         _textProvider = textProvider;
         _textFormatter = textFormatter;
+        QualityLevels =
+        [
+            new GenerationOptionViewModel(
+                GptImage2QualityValues[0],
+                GenerationLocalizationKeys.OptionsAuto,
+                _textProvider),
+            new GenerationOptionViewModel(
+                GptImage2QualityValues[1],
+                GenerationUiLocalizationKeys.Quality.Low,
+                _textProvider),
+            new GenerationOptionViewModel(
+                GptImage2QualityValues[2],
+                GenerationUiLocalizationKeys.Quality.Medium,
+                _textProvider),
+            new GenerationOptionViewModel(
+                GptImage2QualityValues[3],
+                GenerationUiLocalizationKeys.Quality.High,
+                _textProvider)
+        ];
         _promptStateSaveDelay = stateWritePolicy.DeferredWriteDelay;
         _attachmentsViewModel.AttachmentStateChanged += OnAttachmentStateChanged;
         _modelScope.VisibleModelsChanged += OnVisibleModelsChanged;
@@ -267,6 +308,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     public async Task PrepareStateRestoreAsync(CancellationToken ct)
     {
+        long endpointRevision = _apiEndpointService.Revision;
+
         try
         {
             if (LoadModelCatalogCommand.CanExecute(null))
@@ -277,6 +320,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         finally
         {
             _acceptApiEndpointChanges = true;
+
+            if (!_isDisposed && endpointRevision != _apiEndpointService.Revision)
+            {
+                _ = DispatchCatalogReloadAsync();
+            }
         }
     }
 
@@ -290,11 +338,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     public async Task CommitPendingStateAsync(CancellationToken ct)
     {
-        if (_promptStateSaveCancellation is null)
-        {
-            return;
-        }
-
         CancelPendingPromptStateSave();
         await SavePanelStateAsync(nameof(CommitPendingStateAsync), ct);
     }
@@ -309,6 +352,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         OnPropertyChanged(nameof(GenerateButtonText));
 
         foreach (GenerationOptionViewModel option in AspectRatioOptions)
+        {
+            option.RefreshLocalization();
+        }
+
+        foreach (GenerationOptionViewModel option in QualityLevels)
         {
             option.RefreshLocalization();
         }
@@ -745,6 +793,23 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             ct);
     }
 
+    private static string ResolveQuality(string? quality)
+    {
+        return GenerationPanelOptionCompatibility.ResolveString(
+            quality,
+            GptImage2QualityValues,
+            GptImage2QualityValues[0])
+            .Value;
+    }
+
+    private void SynchronizeSelectedQualityOption()
+    {
+        SelectedQualityOption = QualityLevels.FirstOrDefault(level => string.Equals(
+            level.Value,
+            SelectedQuality,
+            StringComparison.Ordinal));
+    }
+
     private NanoBanana2GenerationParameters CreateGenerationParameters()
     {
         ImageModelOption selectedModel = SelectedModel
@@ -759,7 +824,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             Temperature,
             GenerationCount,
             _attachmentsViewModel.GetAttachedImageDtos(),
-            SelectedThinkingLevel?.Value);
+            SelectedThinkingLevel?.Value,
+            SupportsQuality ? SelectedQuality.ToLowerInvariant() : null,
+            SupportsTemperature);
     }
 
     private void RefreshAttachmentState()
@@ -815,6 +882,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         {
             _suppressPricePreviewRefresh = true;
             _suppressPanelStateSave = true;
+            if (SupportsQuality)
+            {
+                SelectedQuality = ResolveQuality(SelectedQuality);
+                SynchronizeSelectedQualityOption();
+            }
             ApplyCompatibleSelectionValues(
                 value,
                 previousAspectRatio,
@@ -860,6 +932,20 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         OnPropertyChanged(nameof(TemperatureText));
         SchedulePanelStateSave(nameof(OnTemperatureChanged));
+    }
+
+    partial void OnSelectedQualityChanged(string value)
+    {
+        SynchronizeSelectedQualityOption();
+        SchedulePanelStateSave(nameof(OnSelectedQualityChanged));
+    }
+
+    partial void OnSelectedQualityOptionChanged(GenerationOptionViewModel? value)
+    {
+        if (value is not null)
+        {
+            SelectedQuality = value.Value;
+        }
     }
 
     partial void OnSelectedThinkingLevelChanged(GenerationModelThinkingLevelMetadataDto? value)
@@ -1055,6 +1141,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         try
         {
             _rememberedThinkingLevelValue = state.ThinkingLevel;
+            SelectedQuality = ResolveQuality(state.Quality);
             SelectedModel = selectedModel;
             SelectedAspectRatio = GenerationPanelOptionCompatibility.ResolveString(
                 state.AspectRatio,
@@ -1188,7 +1275,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             SelectedModelId = SelectedModel?.Id ?? string.Empty,
             AspectRatio = SelectedAspectRatio,
             Resolution = SelectedResolution,
-            Temperature = Temperature,
+            Temperature = SupportsTemperature ? Temperature : null,
+            Quality = SelectedQuality.ToLowerInvariant(),
             ThinkingLevel = SelectedThinkingLevel?.Value
                 ?? _rememberedThinkingLevelValue,
             GenerationCount = GenerationCount,
@@ -1280,6 +1368,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             SelectedResolution = string.Empty;
             _hasTemperatureValue = false;
             Temperature = 0d;
+            SelectedQuality = GptImage2QualityValues[0];
             _rememberedThinkingLevelValue = null;
             SelectedThinkingLevel = null;
             GenerationCount = 0;
@@ -1334,8 +1423,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         OnPropertyChanged(nameof(MaximumTemperature));
         OnPropertyChanged(nameof(DefaultTemperature));
         OnPropertyChanged(nameof(TemperatureStep));
+        OnPropertyChanged(nameof(SupportsTemperature));
         OnPropertyChanged(nameof(ThinkingLevels));
         OnPropertyChanged(nameof(SupportsThinkingLevel));
+        OnPropertyChanged(nameof(SupportsQuality));
+        OnPropertyChanged(nameof(SupportsGenerationOptions));
         OnPropertyChanged(nameof(AttachmentCounterText));
         OnPropertyChanged(nameof(MaxAttachedImageBytes));
         OnPropertyChanged(nameof(AttachmentInputByteLimit));
