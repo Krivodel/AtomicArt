@@ -88,26 +88,41 @@
                 Value="{StaticResource ContextMenuItemTheme}" />
     </Style>
 
-    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.context-menu-outline-icon">
+    <Style Selector="Path.gallery-outline-icon">
         <Setter Property="Height"
                 Value="{StaticResource ContextMenuIconSize}" />
         <Setter Property="Fill"
                 Value="{x:Null}" />
         <Setter Property="Stretch"
                 Value="Uniform" />
-        <Setter Property="Stroke"
-                Value="{Binding $parent[MenuItem].Foreground}" />
         <Setter Property="StrokeLineCap"
                 Value="Round" />
         <Setter Property="StrokeJoin"
                 Value="Round" />
         <Setter Property="StrokeThickness"
-                Value="{StaticResource ContextMenuIconStrokeThickness}" />
+                Value="{StaticResource GalleryOutlineIconStrokeThickness}" />
         <Setter Property="Width"
                 Value="{StaticResource ContextMenuIconSize}" />
     </Style>
 
-    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.context-menu-outline-icon.Danger">
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.gallery-outline-icon">
+        <Setter Property="Stroke"
+                Value="{Binding $parent[MenuItem].Foreground}" />
+    </Style>
+
+    <Style Selector="Button.card-action Path.gallery-outline-icon">
+        <Setter Property="Stroke"
+                Value="{Binding $parent[Button].Foreground}" />
+        <Setter Property="Effect">
+            <DropShadowEffect BlurRadius="{StaticResource GalleryCardActionIconShadowBlurRadius}"
+                              Color="{StaticResource GallerySelectionTintColor}"
+                              OffsetX="0"
+                              OffsetY="{StaticResource GalleryCardActionIconShadowOffsetY}"
+                              Opacity="{StaticResource GalleryCardActionIconShadowOpacity}" />
+        </Setter>
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.gallery-outline-icon.Danger">
         <Setter Property="Stroke"
                 Value="{DynamicResource SukiDangerColor}" />
     </Style>
@@ -354,15 +369,6 @@
     <Style Selector="Button.card-zone-hit-target:pointerover">
         <Setter Property="Background"
                 Value="Transparent" />
-    </Style>
-
-    <Style Selector="PathIcon.card-action-icon">
-        <Setter Property="Width"
-                Value="{StaticResource GenerationCardActionIconSize}" />
-        <Setter Property="Height"
-                Value="{StaticResource GenerationCardActionIconSize}" />
-        <Setter Property="Foreground"
-                Value="{DynamicResource SukiText}" />
     </Style>
 
     <Style Selector="Button.metadata-copy">

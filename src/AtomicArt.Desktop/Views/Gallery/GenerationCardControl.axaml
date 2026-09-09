@@ -21,7 +21,7 @@
                                    Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.Select}}" />
                     </MenuItem.Header>
                     <MenuItem.Icon>
-                        <Path Classes="context-menu-outline-icon"
+                        <Path Classes="gallery-outline-icon"
                               Data="{StaticResource GalleryContextMenuSelectionIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
@@ -33,7 +33,7 @@
                                    Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.ShowInFolder}}" />
                     </MenuItem.Header>
                     <MenuItem.Icon>
-                        <Path Classes="context-menu-outline-icon"
+                        <Path Classes="gallery-outline-icon"
                               Data="{StaticResource GalleryContextMenuFolderIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
@@ -45,7 +45,7 @@
                                    Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.Imba}}" />
                     </MenuItem.Header>
                     <MenuItem.Icon>
-                        <Path Classes="context-menu-outline-icon"
+                        <Path Classes="gallery-outline-icon"
                               Data="{StaticResource GalleryImbaIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
@@ -57,7 +57,7 @@
                                    Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys.ConfirmDeletion}}" />
                     </MenuItem.Header>
                     <MenuItem.Icon>
-                        <Path Classes="Danger context-menu-outline-icon"
+                        <Path Classes="Danger gallery-outline-icon"
                               Data="{StaticResource GalleryContextMenuDeleteIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
@@ -139,8 +139,8 @@
                         Classes="Icon card-action card-action-left"
                         IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
                         Click="OnRevealInFolderClick">
-                    <PathIcon Classes="card-action-icon"
-                              Data="{StaticResource GalleryFolderIcon}" />
+                    <Path Classes="gallery-outline-icon"
+                          Data="{StaticResource GalleryContextMenuFolderIcon}" />
                 </Button>
 
                 <Button x:Name="ToggleSelectionButton"

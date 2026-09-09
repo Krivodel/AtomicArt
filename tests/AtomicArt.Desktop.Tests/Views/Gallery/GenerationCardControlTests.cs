@@ -268,6 +268,46 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
 
             try
             {
+                Button revealInFolderButton = control
+                    .FindControl<Button>("RevealInFolderButton")
+                    ?? throw new InvalidOperationException(
+                        "Reveal-in-folder button was not found.");
+                revealInFolderButton.Width.Should().Be(36d);
+                revealInFolderButton.Height.Should().Be(36d);
+                revealInFolderButton.Margin.Should().Be(new Thickness(6d));
+                Avalonia.Controls.Shapes.Path cardFolderIcon = revealInFolderButton
+                    .GetVisualDescendants()
+                    .OfType<Avalonia.Controls.Shapes.Path>()
+                    .Single(path => path.Classes.Contains("gallery-outline-icon"));
+                control.TryFindResource(
+                    "GalleryContextMenuFolderIcon",
+                    out object? cardFolderResource).Should().BeTrue();
+                cardFolderIcon.Data.Should().BeSameAs(cardFolderResource);
+                cardFolderIcon.Fill.Should().BeNull();
+                cardFolderIcon.Stretch.Should().Be(Stretch.Uniform);
+                cardFolderIcon.Stroke.Should().NotBeNull();
+                cardFolderIcon.StrokeThickness.Should().Be(1.5d);
+                DropShadowEffect cardFolderShadow = cardFolderIcon.Effect
+                    .Should()
+                    .BeOfType<DropShadowEffect>()
+                    .Subject;
+                cardFolderShadow.BlurRadius.Should().Be(3d);
+                cardFolderShadow.OffsetY.Should().Be(1d);
+                cardFolderShadow.Opacity.Should().Be(0.8d);
+
+                Button toggleSelectionButton = control
+                    .FindControl<Button>("ToggleSelectionButton")
+                    ?? throw new InvalidOperationException(
+                        "Selection toggle button was not found.");
+                toggleSelectionButton.Width.Should().Be(36d);
+                toggleSelectionButton.Height.Should().Be(36d);
+                toggleSelectionButton.Margin.Should().Be(new Thickness(6d));
+                Avalonia.Controls.Shapes.Path selectionCheck = toggleSelectionButton
+                    .GetVisualDescendants()
+                    .OfType<Avalonia.Controls.Shapes.Path>()
+                    .Single(path => path.Classes.Contains("gallery-selection-check"));
+                selectionCheck.StrokeThickness.Should().Be(3d);
+
                 Border cardContainer = control
                     .FindControl<Border>("GenerationCardContainer")
                     ?? throw new InvalidOperationException(
@@ -473,7 +513,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .SelectMany(iconPresenter => iconPresenter
                         .GetVisualDescendants()
                         .OfType<Avalonia.Controls.Shapes.Path>())
-                    .Where(path => path.Classes.Contains("context-menu-outline-icon"))
+                    .Where(path => path.Classes.Contains("gallery-outline-icon"))
                     .ToArray();
                 pathIcons.Should().HaveCount(4);
 

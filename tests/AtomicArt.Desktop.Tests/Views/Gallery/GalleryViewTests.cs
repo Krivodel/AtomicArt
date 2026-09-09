@@ -282,7 +282,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     "the selection check must be available before selection mode starts");
                 toggleSelectionButton.Classes.Should().Contain("card-selection-toggle");
                 toggleSelectionButton.Classes.Should().NotContain("selected");
-                toggleSelectionButton.Width.Should().Be(28d);
+                toggleSelectionButton.Width.Should().Be(36d);
                 toggleSelectionButton.BorderThickness.Left.Should().Be(0d);
                 toggleBackground.Color.Should().Be(Colors.Transparent);
                 toggleSelectionButton.Opacity.Should().Be(0d,
