@@ -187,7 +187,7 @@ public partial class GenerationCardControl :
         ArgumentNullException.ThrowIfNull(visual);
 
         return IsVisualOrDescendantOf(visual, RevealInFolderButton)
-            || IsVisualOrDescendantOf(visual, DeleteOrCancelButton);
+            || IsVisualOrDescendantOf(visual, DeleteButton);
     }
 
     internal void SetPreviewBitmapServices(

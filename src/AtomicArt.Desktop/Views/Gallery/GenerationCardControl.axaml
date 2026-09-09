@@ -12,19 +12,6 @@
             Classes="generation-card-container">
         <Border.ContextFlyout>
             <uiControls:AnimatedContextMenuFlyout>
-                <MenuItem x:Name="SelectMenuItem"
-                          IsEnabled="{Binding !IsSelected}"
-                          Command="{Binding #GenerationCard.ToggleSelectionCommand}"
-                          CommandParameter="{Binding #GenerationCard.DataContext}">
-                    <MenuItem.Header>
-                        <TextBlock Classes="context-menu-item-header"
-                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.Select}}" />
-                    </MenuItem.Header>
-                    <MenuItem.Icon>
-                        <Path Classes="gallery-outline-icon"
-                              Data="{StaticResource GalleryContextMenuSelectionIcon}" />
-                    </MenuItem.Icon>
-                </MenuItem>
                 <MenuItem x:Name="ShowInFolderMenuItem"
                           Command="{Binding #GenerationCard.RevealInFolderCommand}"
                           CommandParameter="{Binding #GenerationCard.DataContext}">
@@ -59,6 +46,19 @@
                     <MenuItem.Icon>
                         <Path Classes="Danger gallery-outline-icon"
                               Data="{StaticResource GalleryContextMenuDeleteIcon}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem x:Name="SelectMenuItem"
+                          IsEnabled="{Binding !IsSelected}"
+                          Command="{Binding #GenerationCard.ToggleSelectionCommand}"
+                          CommandParameter="{Binding #GenerationCard.DataContext}">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.Select}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <Path Classes="gallery-outline-icon"
+                              Data="{StaticResource GalleryContextMenuSelectionIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
             </uiControls:AnimatedContextMenuFlyout>
@@ -143,7 +143,7 @@
                           Data="{StaticResource GalleryContextMenuFolderIcon}" />
                 </Button>
 
-                <Button x:Name="DeleteOrCancelButton"
+                <Button x:Name="DeleteButton"
                         Grid.Row="0"
                         ZIndex="20"
                         Margin="{StaticResource GalleryCardActionMargin}"
@@ -154,14 +154,8 @@
                         Classes="Icon card-action card-action-right"
                         Command="{Binding #GenerationCard.DeleteOrCancelCommand}"
                         CommandParameter="{Binding}">
-                    <Grid>
-                        <PathIcon Classes="card-action-icon"
-                                  IsVisible="{Binding IsGenerating}"
-                                  Data="{StaticResource GalleryCancelIcon}" />
-                        <Path Classes="Danger gallery-outline-icon"
-                              IsVisible="{Binding !IsGenerating}"
-                              Data="{StaticResource GalleryContextMenuDeleteIcon}" />
-                    </Grid>
+                    <Path Classes="Danger gallery-outline-icon"
+                          Data="{StaticResource GalleryContextMenuDeleteIcon}" />
                 </Button>
 
                 <Button Grid.RowSpan="2"

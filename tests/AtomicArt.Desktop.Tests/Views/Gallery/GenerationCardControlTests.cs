@@ -295,14 +295,14 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 cardFolderShadow.OffsetY.Should().Be(1d);
                 cardFolderShadow.Opacity.Should().Be(0.8d);
 
-                Button deleteOrCancelButton = control
-                    .FindControl<Button>("DeleteOrCancelButton")
+                Button deleteButton = control
+                    .FindControl<Button>("DeleteButton")
                     ?? throw new InvalidOperationException(
-                        "Delete or cancel button was not found.");
-                deleteOrCancelButton.Width.Should().Be(36d);
-                deleteOrCancelButton.Height.Should().Be(36d);
-                deleteOrCancelButton.Margin.Should().Be(new Thickness(6d));
-                Avalonia.Controls.Shapes.Path cardDeleteIcon = deleteOrCancelButton
+                        "Delete button was not found.");
+                deleteButton.Width.Should().Be(36d);
+                deleteButton.Height.Should().Be(36d);
+                deleteButton.Margin.Should().Be(new Thickness(6d));
+                Avalonia.Controls.Shapes.Path cardDeleteIcon = deleteButton
                     .GetVisualDescendants()
                     .OfType<Avalonia.Controls.Shapes.Path>()
                     .Single(path => path.IsVisible);
@@ -347,8 +347,9 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                         "Delete menu item was not found.");
 
                 menuFlyout.Items.Should().HaveCount(4);
-                menuFlyout.Items[0].Should().BeSameAs(selectMenuItem);
-                menuFlyout.Items[3].Should().BeSameAs(deleteMenuItem);
+                menuFlyout.Items[0].Should().BeSameAs(showInFolderMenuItem);
+                menuFlyout.Items[2].Should().BeSameAs(deleteMenuItem);
+                menuFlyout.Items[3].Should().BeSameAs(selectMenuItem);
                 Avalonia.Controls.Shapes.Path selectIcon = selectMenuItem.Icon
                     .Should()
                     .BeOfType<Avalonia.Controls.Shapes.Path>()
@@ -502,7 +503,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .Subject;
                 menuFlyout.IsOpen.Should().BeTrue();
                 menuItems.Should().HaveCount(4);
-                menuItems[0].Should().BeSameAs(selectMenuItem);
+                menuItems[3].Should().BeSameAs(selectMenuItem);
                 selectMenuItem.IsSelected.Should().BeFalse();
                 selectMenuItem.IsPointerOver.Should().BeFalse();
                 selectMenuItem.IsFocused.Should().BeFalse();

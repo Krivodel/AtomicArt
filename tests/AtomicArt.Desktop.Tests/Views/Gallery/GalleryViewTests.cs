@@ -254,8 +254,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     .Children
                     .OfType<GenerationCardControl>()
                     .Single();
-                Button deleteOrCancelButton = card.FindControl<Button>("DeleteOrCancelButton")
-                    ?? throw new InvalidOperationException("Delete or cancel button was not found.");
+                Button deleteButton = card.FindControl<Button>("DeleteButton")
+                    ?? throw new InvalidOperationException("Delete button was not found.");
                 Border selectionHighlight = card
                     .FindControl<Border>("SelectionHighlight")
                     ?? throw new InvalidOperationException("Selection highlight was not found.");
@@ -271,10 +271,10 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     .Should()
                     .BeAssignableTo<ISolidColorBrush>()
                     .Subject;
-                deleteOrCancelButton.IsVisible.Should().BeTrue();
-                deleteOrCancelButton.Width.Should().Be(36d);
-                deleteOrCancelButton.Height.Should().Be(36d);
-                deleteOrCancelButton.Classes.Should().Contain("card-action");
+                deleteButton.IsVisible.Should().BeTrue();
+                deleteButton.Width.Should().Be(36d);
+                deleteButton.Height.Should().Be(36d);
+                deleteButton.Classes.Should().Contain("card-action");
                 selectionHighlight.Opacity.Should().Be(0d);
                 highlightBackground.Color.Should().Be(GalleryHighlightPalette.BackgroundColor);
                 highlightBorder.Color.Should().Be(GalleryHighlightPalette.BorderColor);
