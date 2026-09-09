@@ -321,6 +321,10 @@
     </Style>
 
     <Style Selector=".preview-expanded Button.card-action">
+        <Setter Property="IsEnabled"
+                Value="False" />
+        <Setter Property="IsHitTestVisible"
+                Value="False" />
         <Setter Property="Opacity"
                 Value="0" />
     </Style>

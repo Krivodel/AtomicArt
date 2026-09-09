@@ -150,7 +150,6 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
                         IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
-                        IsHitTestVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
                         Classes="Icon card-action card-action-right"
                         Command="{Binding #GenerationCard.DeleteOrCancelCommand}"
                         CommandParameter="{Binding}">

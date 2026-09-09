@@ -18,6 +18,11 @@ namespace AtomicArt.Desktop.Tests.Controls.Gallery;
 
 public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTestBase
 {
+    private static readonly TimeSpan PreviewCollapseCompletionWait =
+        TimeSpan.FromMilliseconds(200d);
+    private static readonly TimeSpan CardActionTransitionCompletionWait =
+        TimeSpan.FromMilliseconds(400d);
+
     [Fact]
     public void ModifierHoverAndScroll_WithGeneratedImage_KeepsPreviewAttachedToCard()
     {
@@ -133,6 +138,89 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
 
             context.PreviewHost.Width.Should().Be(748d);
             AssertPreviewIsOpaque(context);
+        });
+    }
+
+    [Fact]
+    public async Task PreviewExitAsync_OutsideCard_KeepsCardActionsHiddenDuringCollapse()
+    {
+        await DispatchAsync(async () =>
+        {
+            using PreviewTestContext context = CreateScenarioWithImage(
+                "atomic-art-preview-exit-card-actions");
+            Button revealInFolderButton = context.Card
+                .FindControl<Button>("RevealInFolderButton")
+                ?? throw new InvalidOperationException(
+                    "Reveal-in-folder button was not found.");
+            Button deleteButton = context.Card
+                .FindControl<Button>("DeleteButton")
+                ?? throw new InvalidOperationException(
+                    "Delete button was not found.");
+            Point pointerOverPreview = GetPointerPosition(context, 110d);
+
+            context.Window.MouseMove(pointerOverPreview, RawInputModifiers.Shift);
+            context.Window.CaptureRenderedFrame();
+            context.Card.Classes.Should().Contain(
+                GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+
+            context.Window.MouseMove(new Point(620d, 250d), RawInputModifiers.None);
+            context.Card.Classes.Should().Contain(
+                GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+            revealInFolderButton.IsEnabled.Should().BeFalse();
+            revealInFolderButton.IsHitTestVisible.Should().BeFalse();
+            deleteButton.IsEnabled.Should().BeFalse();
+            deleteButton.IsHitTestVisible.Should().BeFalse();
+            context.Window.CaptureRenderedFrame();
+
+            await Task.Delay(PreviewCollapseCompletionWait);
+            context.Window.CaptureRenderedFrame();
+
+            context.Card.Classes.Should().NotContain(
+                GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+            revealInFolderButton.Opacity.Should().Be(0d);
+            deleteButton.Opacity.Should().Be(0d);
+        });
+    }
+
+    [Fact]
+    public async Task PreviewExitAsync_ToCardInfo_ShowsCardActionsAfterCollapse()
+    {
+        await DispatchAsync(async () =>
+        {
+            using PreviewTestContext context = CreateScenarioWithImage(
+                "atomic-art-preview-exit-card-info");
+            Button revealInFolderButton = context.Card
+                .FindControl<Button>("RevealInFolderButton")
+                ?? throw new InvalidOperationException(
+                    "Reveal-in-folder button was not found.");
+            Button deleteButton = context.Card
+                .FindControl<Button>("DeleteButton")
+                ?? throw new InvalidOperationException(
+                    "Delete button was not found.");
+            Point pointerOverPreview = GetPointerPosition(context, 110d);
+            Point pointerOverCardInfo = GetPointerPosition(context, 240d);
+
+            context.Window.MouseMove(pointerOverPreview, RawInputModifiers.Shift);
+            context.Window.CaptureRenderedFrame();
+            context.Window.MouseMove(pointerOverCardInfo, RawInputModifiers.None);
+            context.Card.Classes.Should().Contain(
+                GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+            revealInFolderButton.IsEnabled.Should().BeFalse();
+            deleteButton.IsEnabled.Should().BeFalse();
+            context.Window.CaptureRenderedFrame();
+
+            await Task.Delay(CardActionTransitionCompletionWait);
+            context.Window.MouseMove(pointerOverCardInfo, RawInputModifiers.None);
+            context.Window.CaptureRenderedFrame();
+
+            context.Card.Classes.Should().NotContain(
+                GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+            revealInFolderButton.IsEnabled.Should().BeTrue();
+            revealInFolderButton.IsHitTestVisible.Should().BeTrue();
+            deleteButton.IsEnabled.Should().BeTrue();
+            deleteButton.IsHitTestVisible.Should().BeTrue();
+            revealInFolderButton.Opacity.Should().Be(1d);
+            deleteButton.Opacity.Should().Be(1d);
         });
     }
 

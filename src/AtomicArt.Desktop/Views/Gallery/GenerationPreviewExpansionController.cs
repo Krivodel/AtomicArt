@@ -211,7 +211,6 @@ internal sealed class GenerationPreviewExpansionController
         if (_expansionHost is not null && _overflowOwner is not null)
         {
             _expansionHost.BeginOverflowCollapse(_overflowOwner);
-            _overflowOwner.Classes.Remove(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
         }
 
         _previewExpansionHost.Width = _collapsedPreviewSize.Width;
@@ -239,6 +238,8 @@ internal sealed class GenerationPreviewExpansionController
             if (!_isPreviewExpanded)
             {
                 RestoreOverflow();
+                _overflowOwner?.Classes.Remove(
+                    GenerationPreviewExpansionVisualMetrics.ExpandedClass);
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)

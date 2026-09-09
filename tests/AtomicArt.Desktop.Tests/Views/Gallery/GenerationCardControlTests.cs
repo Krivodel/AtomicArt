@@ -408,6 +408,64 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     }
 
     [Fact]
+    public void CardActions_WhenPreviewIsExpanded_AreDisabledAndNotHitTestVisible()
+    {
+        Dispatch(() =>
+        {
+            GenerationItemViewModel item = CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            GenerationCardControl control = new()
+            {
+                DataContext = item
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                Button revealInFolderButton = control
+                    .FindControl<Button>("RevealInFolderButton")
+                    ?? throw new InvalidOperationException(
+                        "Reveal-in-folder button was not found.");
+                Button deleteButton = control
+                    .FindControl<Button>("DeleteButton")
+                    ?? throw new InvalidOperationException(
+                        "Delete button was not found.");
+
+                revealInFolderButton.IsEnabled.Should().BeTrue();
+                revealInFolderButton.IsHitTestVisible.Should().BeTrue();
+                deleteButton.IsEnabled.Should().BeTrue();
+                deleteButton.IsHitTestVisible.Should().BeTrue();
+
+                control.Classes.Add(
+                    GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+                window.CaptureRenderedFrame();
+
+                revealInFolderButton.IsEnabled.Should().BeFalse();
+                revealInFolderButton.IsHitTestVisible.Should().BeFalse();
+                deleteButton.IsEnabled.Should().BeFalse();
+                deleteButton.IsHitTestVisible.Should().BeFalse();
+
+                control.Classes.Remove(
+                    GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+                window.CaptureRenderedFrame();
+
+                revealInFolderButton.IsEnabled.Should().BeTrue();
+                revealInFolderButton.IsHitTestVisible.Should().BeTrue();
+                deleteButton.IsEnabled.Should().BeTrue();
+                deleteButton.IsHitTestVisible.Should().BeTrue();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public async Task ContextFlyout_WhenCardRightClicked_OpensWithLivePresenterRevealAsync()
     {
         await DispatchAsync(async () =>
