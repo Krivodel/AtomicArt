@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,11 +15,14 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewModel, IDisposable
 {
     public string Placeholder => TextProvider.Get(_definition.PlaceholderKey);
+    public bool IsCatalogLoading => _modelCatalog.IsLoading;
+    public bool IsBusy => IsLoading || IsCatalogLoading;
 
     protected override IRelayCommand OperationCommand => SaveCommand;
 
     private readonly ApiBaseAddressSettingDefinition _definition;
     private readonly IApiEndpointService _apiEndpointService;
+    private readonly IImageModelOptionCatalog _modelCatalog;
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly ISettingsStateService _settingsStateService;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
@@ -37,6 +41,7 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
     public ApiBaseAddressSettingViewModel(
         ApiBaseAddressSettingDefinition definition,
         IApiEndpointService apiEndpointService,
+        IImageModelOptionCatalog modelCatalog,
         IUiThreadDispatcher uiThreadDispatcher,
         ISettingsStateService settingsStateService,
         IViewModelErrorHandler errorHandler,
@@ -44,16 +49,30 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         : base(definition, errorHandler, textProvider)
     {
         ArgumentNullException.ThrowIfNull(apiEndpointService);
+        ArgumentNullException.ThrowIfNull(modelCatalog);
         ArgumentNullException.ThrowIfNull(uiThreadDispatcher);
         ArgumentNullException.ThrowIfNull(settingsStateService);
 
         _definition = definition;
         _apiEndpointService = apiEndpointService;
+        _modelCatalog = modelCatalog;
         _uiThreadDispatcher = uiThreadDispatcher;
         _settingsStateService = settingsStateService;
         _value = apiEndpointService.BaseAddress.ToString();
         _committedValue = _value;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
+        _modelCatalog.LoadingChanged += OnCatalogLoadingChanged;
+    }
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        if (e.PropertyName == nameof(IsLoading)
+            || e.PropertyName == nameof(IsCatalogLoading))
+        {
+            OnPropertyChanged(nameof(IsBusy));
+        }
     }
 
     public static ValidationResult? ValidateBaseAddress(string? value, ValidationContext context)
@@ -97,6 +116,7 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
 
         _isDisposed = true;
         _apiEndpointService.BaseAddressChanged -= OnApiBaseAddressChanged;
+        _modelCatalog.LoadingChanged -= OnCatalogLoadingChanged;
         _disposeCancellationSource.Cancel();
         _disposeCancellationSource.Dispose();
     }
@@ -131,7 +151,7 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
 
     private bool CanSave()
     {
-        return !IsLoading
+        return !IsBusy
             && !string.Equals(Value, _committedValue, StringComparison.Ordinal);
     }
 
@@ -167,5 +187,16 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         }
 
         _ = SynchronizeValueAsync();
+    }
+
+    private void OnCatalogLoadingChanged(object? sender, EventArgs e)
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        OnPropertyChanged(nameof(IsCatalogLoading));
+        NotifyOperationCanExecuteChanged();
     }
 }

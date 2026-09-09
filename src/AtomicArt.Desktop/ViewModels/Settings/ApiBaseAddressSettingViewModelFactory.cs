@@ -8,6 +8,7 @@ public sealed class ApiBaseAddressSettingViewModelFactory :
     SettingItemViewModelFactory<ApiBaseAddressSettingDefinition>
 {
     private readonly IApiEndpointService _apiEndpointService;
+    private readonly IImageModelOptionCatalog _modelCatalog;
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly ISettingsStateService _settingsStateService;
     private readonly IViewModelErrorHandler _errorHandler;
@@ -15,6 +16,7 @@ public sealed class ApiBaseAddressSettingViewModelFactory :
 
     public ApiBaseAddressSettingViewModelFactory(
         IApiEndpointService apiEndpointService,
+        IImageModelOptionCatalog modelCatalog,
         IUiThreadDispatcher uiThreadDispatcher,
         ISettingsStateService settingsStateService,
         IViewModelErrorHandler errorHandler,
@@ -23,6 +25,8 @@ public sealed class ApiBaseAddressSettingViewModelFactory :
     {
         _apiEndpointService = apiEndpointService
             ?? throw new ArgumentNullException(nameof(apiEndpointService));
+        _modelCatalog = modelCatalog
+            ?? throw new ArgumentNullException(nameof(modelCatalog));
         _uiThreadDispatcher = uiThreadDispatcher
             ?? throw new ArgumentNullException(nameof(uiThreadDispatcher));
         _settingsStateService = settingsStateService
@@ -37,6 +41,7 @@ public sealed class ApiBaseAddressSettingViewModelFactory :
         return new ApiBaseAddressSettingViewModel(
             definition,
             _apiEndpointService,
+            _modelCatalog,
             _uiThreadDispatcher,
             _settingsStateService,
             _errorHandler,

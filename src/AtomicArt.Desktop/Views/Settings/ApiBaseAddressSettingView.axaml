@@ -1,17 +1,29 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+             xmlns:controlsRoot="using:AtomicArt.Desktop.Controls"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.ApiBaseAddressSettingView"
              x:DataType="settings:ApiBaseAddressSettingViewModel">
     <controls:SettingItemControl>
         <controls:SettingItemControl.Editor>
-            <TextBox PlaceholderText="{Binding Placeholder}"
-                     Text="{Binding Value,
-                                    Mode=TwoWay,
-                                    UpdateSourceTrigger=PropertyChanged}"
-                     behaviors:SettingCommitBehavior.Command="{Binding SaveCommand}" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox IsEnabled="{Binding !IsBusy}"
+                             PlaceholderText="{Binding Placeholder}"
+                             Text="{Binding Value,
+                                            Mode=TwoWay,
+                                            UpdateSourceTrigger=PropertyChanged}"
+                             behaviors:SettingCommitBehavior.Command="{Binding SaveCommand}" />
+                    <controlsRoot:LoadingSpinnerControl Grid.Column="1"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Margin="{StaticResource SettingsActionButtonMargin}"
+                                                         VerticalAlignment="Center"
+                                                         Brush="{DynamicResource SukiAccentColor}"
+                                                         IsActive="{Binding IsBusy}"
+                                                         IsVisible="{Binding IsBusy}" />
+                </Grid>
         </controls:SettingItemControl.Editor>
     </controls:SettingItemControl>
 </UserControl>

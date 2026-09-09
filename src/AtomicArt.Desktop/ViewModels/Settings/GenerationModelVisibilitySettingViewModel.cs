@@ -49,6 +49,7 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
         Models = new ReadOnlyObservableCollection<GenerationModelVisibilityOptionViewModel>(_models);
 
         _visibilityService.VisibleModelsChanged += OnVisibleModelsChanged;
+        _modelCatalog.CatalogChanged += OnCatalogChanged;
     }
 
     public void Dispose()
@@ -66,6 +67,7 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
         }
 
         _visibilityService.VisibleModelsChanged -= OnVisibleModelsChanged;
+        _modelCatalog.CatalogChanged -= OnCatalogChanged;
     }
 
     protected override void NotifyOperationCanExecuteChanged()
@@ -145,6 +147,27 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
         {
             _isSynchronizing = false;
         }
+    }
+
+    private void OnCatalogChanged(object? sender, EventArgs e)
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        if (!_modelCatalog.IsLoaded)
+        {
+            _isLoaded = false;
+        }
+        else
+        {
+            PopulateModels();
+            _isLoaded = true;
+            ErrorMessage = null;
+        }
+
+        NotifyOperationCanExecuteChanged();
     }
 
     private void PopulateModels()

@@ -65,19 +65,39 @@ public sealed class ApiBaseAddressSettingViewModelTests
         canExecute.Should().BeFalse();
     }
 
+    [Fact]
+    public void CatalogLoadingChanged_UpdatesBusyState()
+    {
+        using ApiBaseAddressSettingTestContext context = new();
+
+        context.ModelCatalog.SetLoading(true);
+
+        context.ViewModel.IsCatalogLoading.Should().BeTrue();
+        context.ViewModel.IsBusy.Should().BeTrue();
+        context.ViewModel.SaveCommand.CanExecute(null).Should().BeFalse();
+
+        context.ModelCatalog.SetLoading(false);
+
+        context.ViewModel.IsCatalogLoading.Should().BeFalse();
+        context.ViewModel.IsBusy.Should().BeFalse();
+    }
+
     private sealed class ApiBaseAddressSettingTestContext : IDisposable
     {
         public IApiEndpointService EndpointService { get; }
+        public ImageModelOptionCatalog ModelCatalog { get; }
         public RecordingSettingsStateService SettingsStateService { get; }
         public ApiBaseAddressSettingViewModel ViewModel { get; }
 
         public ApiBaseAddressSettingTestContext()
         {
             EndpointService = TestApiEndpointServiceFactory.Create();
+            ModelCatalog = new ImageModelOptionCatalog();
             SettingsStateService = new RecordingSettingsStateService(EndpointService);
             ViewModel = new ApiBaseAddressSettingViewModel(
                 new ApiBaseAddressSettingDefinition(),
                 EndpointService,
+                ModelCatalog,
                 new ImmediateUiThreadDispatcher(),
                 SettingsStateService,
                 new TestViewModelErrorHandler(),
