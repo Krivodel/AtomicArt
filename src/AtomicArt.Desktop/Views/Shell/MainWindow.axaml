@@ -1,11 +1,13 @@
 <suki:SukiWindow xmlns="https://github.com/avaloniaui"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:i18n="https://codewf.com"
                  xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
                  xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
                  xmlns:galleryViews="using:AtomicArt.Desktop.Views.Gallery"
                  xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
                  xmlns:resources="using:AtomicArt.Desktop.Resources"
                  xmlns:suki="using:SukiUI.Controls"
+                 xmlns:uiControls="using:AtomicArt.Desktop.Controls"
                  xmlns:viewModels="using:AtomicArt.Desktop.ViewModels"
                  x:Class="AtomicArt.Desktop.Views.Shell.MainWindow"
                  x:DataType="viewModels:MainWindowViewModel"
@@ -95,10 +97,25 @@
                             behaviors:PromptDropBehavior.ReplacePromptCommand="{Binding ReplaceGenerationPromptCommand}">
                         <Grid>
                             <Border x:Name="GenerationPanelContent"
+                                    Background="Transparent"
                                     Padding="{StaticResource GenerationPanelPadding}"
                                     Classes="generation-panel-content"
                                     Classes.selection-mode="{Binding Gallery.IsSelectionMode}"
                                     IsHitTestVisible="{Binding !Gallery.IsSelectionMode}">
+                                <Border.Resources>
+                                    <uiControls:AnimatedContextMenuFlyout x:Key="GenerationPanelContextFlyout">
+                                        <MenuItem x:Name="ResetGenerationPanelMenuItem"
+                                                  Command="{Binding ActiveGenerationPanel.ResetPanelCommand}">
+                                            <MenuItem.Header>
+                                                <TextBlock Classes="context-menu-item-header"
+                                                           Text="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Actions.Reset}}" />
+                                            </MenuItem.Header>
+                                            <MenuItem.Icon>
+                                                <PathIcon Data="{StaticResource AppResetIcon}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </uiControls:AnimatedContextMenuFlyout>
+                                </Border.Resources>
                                 <ContentControl Content="{Binding ActiveGenerationPanel}" />
                             </Border>
 

@@ -14,6 +14,7 @@ public static class GenerationUiLocalizationKeys
         public const string Generate = "Generation.Actions.Generate";
         public const string GenerateWithPrice = "Generation.Actions.GenerateWithPrice";
         public const string PickImagesTitle = "Generation.Actions.PickImagesTitle";
+        public const string Reset = "Generation.Actions.Reset";
     }
 
     public static class Attachments

@@ -170,6 +170,18 @@ public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerat
         NotifyStateChanged(AttachmentStateChangeKind.Removed);
     }
 
+    public async Task ClearAsync(string panelId, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(panelId);
+
+        AttachedImageViewModel[] attachedImages = _attachedImages.ToArray();
+
+        foreach (AttachedImageViewModel attachedImage in attachedImages)
+        {
+            await RemoveAttachmentAsync(panelId, attachedImage, ct);
+        }
+    }
+
     public void MoveAttachment(AttachedImageViewModel attachedImage, int targetIndex)
     {
         ArgumentNullException.ThrowIfNull(attachedImage);

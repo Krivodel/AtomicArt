@@ -530,6 +530,35 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     }
 
     [RelayCommand]
+    private async Task ResetPanelAsync(CancellationToken ct)
+    {
+        await ExecuteAttachmentOperationAsync(
+            ResetPanelCoreAsync,
+            nameof(ResetPanelAsync),
+            ct);
+    }
+
+    private async Task ResetPanelCoreAsync(CancellationToken ct)
+    {
+        bool wasPanelStateSaveSuppressed = _suppressPanelStateSave;
+
+        _suppressPanelStateSave = true;
+
+        try
+        {
+            CancelPendingPromptStateSave();
+            Prompt = string.Empty;
+            await _attachmentsViewModel.ClearAsync(PanelId, ct);
+        }
+        finally
+        {
+            _suppressPanelStateSave = wasPanelStateSaveSuppressed;
+        }
+
+        await SavePanelStateAsync(nameof(ResetPanelAsync), ct);
+    }
+
+    [RelayCommand]
     private async Task ReorderAttachmentAsync(
         AttachedImageReorderRequest? request,
         CancellationToken ct)

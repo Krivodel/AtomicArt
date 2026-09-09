@@ -12,6 +12,7 @@ using SukiUI.Dialogs;
 using Pica.Viewer.Services;
 
 using AtomicArt.Desktop.Behaviors;
+using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
@@ -26,6 +27,7 @@ public partial class MainWindow : SukiWindow
     private const string NativeWindowHandleDescriptor = "HWND";
     private const string NonRudeWindowPropertyName = "NonRudeHWND";
     private const string PromptTextBoxName = "PromptTextBox";
+    private const string GenerationPanelContextFlyoutKey = "GenerationPanelContextFlyout";
 
     private RowDefinition GenerationPanelRowDefinition => ShellContentGrid.RowDefinitions[GenerationPanelRowIndex];
 
@@ -39,6 +41,11 @@ public partial class MainWindow : SukiWindow
     public MainWindow()
     {
         InitializeComponent();
+        GenerationPanelContent.AddHandler(
+            PointerPressedEvent,
+            OnGenerationPanelPointerPressed,
+            RoutingStrategies.Tunnel,
+            true);
         AttachmentImageDragBehavior.SetDragBoundary(
             GenerationPanelHost,
             GenerationPanelHost);
@@ -154,6 +161,50 @@ public partial class MainWindow : SukiWindow
         {
             TextBoxFocusBehavior.RequestFocus(promptInput);
         }
+    }
+
+    private void OnGenerationPanelPointerPressed(
+        object? sender,
+        PointerPressedEventArgs e)
+    {
+        _ = sender;
+
+        if (e.GetCurrentPoint(GenerationPanelContent).Properties.PointerUpdateKind
+            != PointerUpdateKind.RightButtonPressed
+            || IsPromptTextBoxSource(e.Source))
+        {
+            return;
+        }
+
+        if (GenerationPanelContent.Resources[GenerationPanelContextFlyoutKey]
+            is not AnimatedContextMenuFlyout contextFlyout)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        foreach (MenuItem menuItem in contextFlyout.Items.OfType<MenuItem>())
+        {
+            menuItem.DataContext = DataContext;
+        }
+
+        contextFlyout.ShowAt(GenerationPanelContent, true);
+    }
+
+    private static bool IsPromptTextBoxSource(object? source)
+    {
+        if (source is not Visual visual)
+        {
+            return false;
+        }
+
+        return (visual as TextBox)?.Name == PromptTextBoxName
+            || visual.GetVisualAncestors()
+                .OfType<TextBox>()
+                .Any(textBox => string.Equals(
+                    textBox.Name,
+                    PromptTextBoxName,
+                    StringComparison.Ordinal));
     }
 
     private void UpdateWindowsFullscreenDetectionHint()

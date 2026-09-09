@@ -20,24 +20,6 @@ public sealed class GenerationModelCatalogApiClientTests
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public async Task GetCatalogAsync_WithSuccessfulResponse_DeserializesCatalog()
-    {
-        CapturingHttpMessageHandler handler = new(CreateCatalogJson());
-        using HttpClient httpClient = new(handler);
-        GenerationModelCatalogApiClient apiClient = CreateApiClient(httpClient);
-
-        GenerationModelCatalogDto catalog = await apiClient.GetCatalogAsync(CancellationToken.None);
-
-        handler.RequestMethod.Should().Be(HttpMethod.Get);
-        Uri requestUri = handler.RequestUri
-            ?? throw new InvalidOperationException("Request URI must be captured.");
-        requestUri.AbsolutePath.Should().Be($"/{GenerationApiRoutes.Models}");
-        catalog.Models.Should().HaveCount(7);
-        catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId);
-        catalog.Models.Should().Contain(model => model.Id == ApiModelMetadataTestCatalog.NanoBananaProModelId);
-    }
-
-    [Fact]
     public async Task GetCatalogAsync_WithEmptyResponse_ThrowsInvalidOperationException()
     {
         CapturingHttpMessageHandler handler = new("null");

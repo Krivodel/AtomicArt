@@ -30,7 +30,8 @@
       "Actions": {
         "Generate": "Сгенерировать",
         "GenerateWithPrice": "Сгенерировать ({0})",
-        "PickImagesTitle": "Выбор изображений"
+        "PickImagesTitle": "Выбор изображений",
+        "Reset": "Сбросить"
       },
       "Attachments": {
         "CounterFormat": "{0}/{1}",

@@ -16,6 +16,7 @@ using SukiUI.Controls.GlassMorphism;
 using Xunit;
 
 using AtomicArt.Desktop.Behaviors;
+using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Resources;
@@ -132,6 +133,97 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeApproximately(
                 rowDefinitions[GenerationPanelRowIndex].ActualHeight,
                 HeightTolerance);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_WhenGenerationPanelPaddingIsRightClicked_OpensResetMenu()
+    {
+        Dispatch(() =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            Border panelContent = window
+                .FindControl<Border>("GenerationPanelContent")
+                ?? throw new InvalidOperationException("Generation panel content was not found.");
+            AnimatedContextMenuFlyout menuFlyout = panelContent.Resources["GenerationPanelContextFlyout"]
+                .Should()
+                .BeOfType<AnimatedContextMenuFlyout>()
+                .Subject;
+            Point paddingPoint = panelContent.TranslatePoint(
+                    new Point(2d, 2d),
+                    window)
+                ?? throw new InvalidOperationException("Generation panel padding position was not found.");
+
+            window.MouseDown(paddingPoint, MouseButton.Right);
+
+            menuFlyout.IsOpen.Should().BeTrue();
+            MenuItem resetMenuItem = window
+                .FindControl<MenuItem>("ResetGenerationPanelMenuItem")
+                ?? throw new InvalidOperationException("Reset menu item was not found.");
+            MainWindowViewModel viewModel = window.DataContext
+                .Should()
+                .BeOfType<MainWindowViewModel>()
+                .Subject;
+            resetMenuItem.Command.Should().BeSameAs(
+                viewModel.ActiveGenerationPanel.ResetPanelCommand);
+            menuFlyout.Hide();
+        });
+    }
+
+    [Fact]
+    public void MainWindow_WhenGenerationControlIsRightClicked_OpensResetMenuOnce()
+    {
+        Dispatch(() =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            Border panelContent = window
+                .FindControl<Border>("GenerationPanelContent")
+                ?? throw new InvalidOperationException("Generation panel content was not found.");
+            AnimatedContextMenuFlyout menuFlyout = panelContent.Resources["GenerationPanelContextFlyout"]
+                .Should()
+                .BeOfType<AnimatedContextMenuFlyout>()
+                .Subject;
+            ComboBox resolutionComboBox = window
+                .GetVisualDescendants()
+                .OfType<ComboBox>()
+                .Single(comboBox => string.Equals(
+                    comboBox.Name,
+                    "ResolutionComboBox",
+                    StringComparison.Ordinal));
+            Point comboBoxPoint = resolutionComboBox.TranslatePoint(
+                    new Point(resolutionComboBox.Bounds.Width / 2d, resolutionComboBox.Bounds.Height / 2d),
+                    window)
+                ?? throw new InvalidOperationException("Resolution combo box position was not found.");
+            int openedCount = 0;
+            menuFlyout.Opened += OnMenuFlyoutOpened;
+
+            try
+            {
+                window.MouseDown(comboBoxPoint, MouseButton.Right);
+
+                openedCount.Should().Be(1);
+                menuFlyout.IsOpen.Should().BeTrue();
+            }
+            finally
+            {
+                menuFlyout.Opened -= OnMenuFlyoutOpened;
+                menuFlyout.Hide();
+            }
+
+            void OnMenuFlyoutOpened(object? sender, EventArgs e)
+            {
+                _ = sender;
+                _ = e;
+                openedCount++;
+            }
         });
     }
 

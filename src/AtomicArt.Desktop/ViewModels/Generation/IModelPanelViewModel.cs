@@ -14,6 +14,7 @@ public interface IModelPanelViewModel
     int AttachmentInputByteLimit { get; }
     bool IsAttachmentLimitReached { get; }
     IAsyncRelayCommand GenerateCommand { get; }
+    IAsyncRelayCommand ResetPanelCommand { get; }
     IAsyncRelayCommand PickImageCommand { get; }
     IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> AttachImagesCommand { get; }
     IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?> AttachImageInputsCommand { get; }

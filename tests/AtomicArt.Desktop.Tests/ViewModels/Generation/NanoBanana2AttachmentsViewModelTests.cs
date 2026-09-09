@@ -118,6 +118,24 @@ public sealed class NanoBanana2AttachmentsViewModelTests
     }
 
     [Fact]
+    public async Task ClearAsync_WhilePreparationRuns_CancelsAndRemovesAllImages()
+    {
+        AttachedImageDto[] images =
+        [
+            GenerationImageTestData.CreateAttachedImage("first.png"),
+            GenerationImageTestData.CreateAttachedImage("second.png")
+        ];
+        PendingAttachmentScenario scenario = new(images);
+        await scenario.WaitUntilStartedAsync();
+
+        await scenario.ViewModel.ClearAsync(PanelId, CancellationToken.None);
+
+        scenario.ViewModel.AttachedImages.Should().BeEmpty();
+        scenario.ViewModel.HasPendingAttachments.Should().BeFalse();
+        await scenario.Attaching;
+    }
+
+    [Fact]
     public async Task AttachInputsAsync_WhileSourceIsReading_ShowsCancelablePlaceholder()
     {
         TaskCompletionSource sourceReadStarted = new(

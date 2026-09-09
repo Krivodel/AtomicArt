@@ -421,6 +421,19 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
+    public async Task ResetPanelCommand_WithPromptAndAttachments_ClearsPromptAndAttachments()
+    {
+        UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        viewModel.Prompt = "Prompt";
+        await AttachValidImagesAsync(viewModel, 2);
+
+        await viewModel.ResetPanelCommand.ExecuteAsync(null);
+
+        viewModel.Prompt.Should().BeEmpty();
+        viewModel.AttachedImages.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task AttachImages_WithExcessiveImageCount_AttachesAvailableSlotsAndSetsSafeErrorMessage()
     {
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
