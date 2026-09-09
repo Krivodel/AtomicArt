@@ -301,33 +301,43 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .BeOfType<Avalonia.Controls.Shapes.Path>()
                     .Subject;
                 selectIcon.Fill.Should().BeNull();
-                selectIcon.Stroke.Should().NotBeNull();
+                control.TryFindResource(
+                    "GalleryContextMenuSelectionIcon",
+                    out object? selectionResource).Should().BeTrue();
+                selectIcon.Data.Should().BeSameAs(selectionResource);
                 selectIcon.Effect.Should().BeNull();
                 selectMenuItem.Command.Should().BeSameAs(selectCommand);
                 selectMenuItem.CommandParameter.Should().BeSameAs(item);
                 selectMenuItem.IsEnabled.Should().BeTrue();
-                showInFolderMenuItem.Icon.Should().BeOfType<PathIcon>();
+                Avalonia.Controls.Shapes.Path folderIcon = showInFolderMenuItem.Icon
+                    .Should()
+                    .BeOfType<Avalonia.Controls.Shapes.Path>()
+                    .Subject;
+                control.TryFindResource(
+                    "GalleryContextMenuFolderIcon",
+                    out object? folderResource).Should().BeTrue();
+                folderIcon.Data.Should().BeSameAs(folderResource);
                 showInFolderMenuItem.Command.Should().BeSameAs(revealCommand);
                 showInFolderMenuItem.CommandParameter.Should().BeSameAs(item);
-                imbaMenuItem.Icon.Should().BeOfType<PathIcon>();
+                Avalonia.Controls.Shapes.Path imbaIcon = imbaMenuItem.Icon
+                    .Should()
+                    .BeOfType<Avalonia.Controls.Shapes.Path>()
+                    .Subject;
+                control.TryFindResource(
+                    "GalleryImbaIcon",
+                    out object? imbaResource).Should().BeTrue();
+                imbaIcon.Data.Should().BeSameAs(imbaResource);
                 imbaMenuItem.IsEnabled.Should().BeTrue();
                 imbaMenuItem.Command.Should().BeSameAs(favoriteCommand);
                 imbaMenuItem.CommandParameter.Should().BeSameAs(item);
-                PathIcon deleteIcon = deleteMenuItem.Icon
+                Avalonia.Controls.Shapes.Path deleteIcon = deleteMenuItem.Icon
                     .Should()
-                    .BeOfType<PathIcon>()
+                    .BeOfType<Avalonia.Controls.Shapes.Path>()
                     .Subject;
-                deleteIcon.TryFindResource(
-                    "SukiDangerColor",
-                    out object? dangerResource).Should().BeTrue();
-                Color dangerColor = dangerResource
-                    .Should()
-                    .BeOfType<Color>()
-                    .Subject;
-                deleteIcon.Foreground
-                    .Should()
-                    .BeAssignableTo<ISolidColorBrush>()
-                    .Which.Color.Should().Be(dangerColor);
+                control.TryFindResource(
+                    "GalleryContextMenuDeleteIcon",
+                    out object? deleteResource).Should().BeTrue();
+                deleteIcon.Data.Should().BeSameAs(deleteResource);
                 deleteMenuItem.Command.Should().BeSameAs(deleteCommand);
                 deleteMenuItem.CommandParameter.Should().BeSameAs(item);
                 menuFlyout.Popup.WindowManagerAddShadowHint.Should().BeFalse();
@@ -459,6 +469,25 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 menuHeaderTextBlocks.Should().OnlyContain(
                     textBlock => textBlock.FontWeight == FontWeight.Normal);
 
+                Avalonia.Controls.Shapes.Path[] pathIcons = iconPresenters
+                    .SelectMany(iconPresenter => iconPresenter
+                        .GetVisualDescendants()
+                        .OfType<Avalonia.Controls.Shapes.Path>())
+                    .Where(path => path.Classes.Contains("context-menu-outline-icon"))
+                    .ToArray();
+                pathIcons.Should().HaveCount(4);
+
+                pathIcons.Should().OnlyContain(path =>
+                    path.Fill == null
+                    && path.Stroke != null
+                    && path.StrokeThickness == 1.5d
+                    && path.StrokeLineCap == PenLineCap.Round
+                    && path.StrokeJoin == PenLineJoin.Round);
+
+                Avalonia.Controls.Shapes.Path dangerPath = pathIcons
+                    .Single(path => path.Classes.Contains("Danger"));
+                dangerPath.Stroke.Should().NotBeNull();
+
                 for (int index = 0; index < iconPresenters.Length; index++)
                 {
                     TranslateTransform translateTransform = iconPresenters[index]
@@ -466,18 +495,11 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                         .Should()
                         .BeOfType<TranslateTransform>()
                         .Subject;
-                    double expectedOffset = index == 0 ? 8d : 4d;
+                    double expectedOffset = 4d;
                     translateTransform.X.Should().Be(expectedOffset);
                 }
 
-                TranslateTransform selectHeaderTransform = headerPresenters[0]
-                    .RenderTransform
-                    .Should()
-                    .BeOfType<TranslateTransform>()
-                    .Subject;
-                selectHeaderTransform.X.Should().Be(4d);
-
-                foreach (ContentPresenter headerPresenter in headerPresenters.Skip(1))
+                foreach (ContentPresenter headerPresenter in headerPresenters)
                 {
                     headerPresenter.RenderTransform.Should().BeNull();
                 }

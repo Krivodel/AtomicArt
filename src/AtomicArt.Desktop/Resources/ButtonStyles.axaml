@@ -31,21 +31,9 @@
         <ControlTheme x:Key="ContextMenuItemTheme"
                       BasedOn="{StaticResource SukiMenuItemStyle}"
                       TargetType="MenuItem">
-            <Style Selector="^.selection-context-menu-item /template/ ContentPresenter#PART_HeaderPresenter">
-                <Setter Property="RenderTransform">
-                    <TranslateTransform X="4" />
-                </Setter>
-            </Style>
-
             <Style Selector="^:icon /template/ ContentPresenter#PART_IconPresenter">
                 <Setter Property="RenderTransform">
                     <TranslateTransform X="4" />
-                </Setter>
-            </Style>
-
-            <Style Selector="^.selection-context-menu-item:icon /template/ ContentPresenter#PART_IconPresenter">
-                <Setter Property="RenderTransform">
-                    <TranslateTransform X="8" />
                 </Setter>
             </Style>
 
@@ -100,9 +88,28 @@
                 Value="{StaticResource ContextMenuItemTheme}" />
     </Style>
 
-    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.gallery-selection-check">
-        <Setter Property="Effect"
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.context-menu-outline-icon">
+        <Setter Property="Height"
+                Value="{StaticResource ContextMenuIconSize}" />
+        <Setter Property="Fill"
                 Value="{x:Null}" />
+        <Setter Property="Stretch"
+                Value="Uniform" />
+        <Setter Property="Stroke"
+                Value="{Binding $parent[MenuItem].Foreground}" />
+        <Setter Property="StrokeLineCap"
+                Value="Round" />
+        <Setter Property="StrokeJoin"
+                Value="Round" />
+        <Setter Property="StrokeThickness"
+                Value="{StaticResource ContextMenuIconStrokeThickness}" />
+        <Setter Property="Width"
+                Value="{StaticResource ContextMenuIconSize}" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.context-menu-outline-icon.Danger">
+        <Setter Property="Stroke"
+                Value="{DynamicResource SukiDangerColor}" />
     </Style>
 
     <Style Selector="MenuFlyoutPresenter.animated-context-menu /template/ Panel">

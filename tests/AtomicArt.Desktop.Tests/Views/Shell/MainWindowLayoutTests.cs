@@ -164,6 +164,16 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             MenuItem resetMenuItem = window
                 .FindControl<MenuItem>("ResetGenerationPanelMenuItem")
                 ?? throw new InvalidOperationException("Reset menu item was not found.");
+            PathIcon resetIcon = resetMenuItem.Icon
+                .Should()
+                .BeOfType<PathIcon>()
+                .Subject;
+            Avalonia.Controls.Shapes.Path resetIconShape = resetIcon
+                .GetVisualDescendants()
+                .OfType<Avalonia.Controls.Shapes.Path>()
+                .Single();
+            resetIconShape.Fill.Should().NotBeNull();
+            resetIconShape.Stroke.Should().BeNull();
             MainWindowViewModel viewModel = window.DataContext
                 .Should()
                 .BeOfType<MainWindowViewModel>()
