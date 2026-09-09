@@ -37,15 +37,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     public double DefaultTemperature => SelectedModel?.Temperature.Default ?? 0d;
     public double TemperatureStep => SelectedModel?.Temperature.Step ?? 1d;
     public string TemperatureText => _textFormatter.FormatTemperatureText(Temperature);
-    public bool SupportsTemperature => !string.Equals(
-        SelectedModel?.ProviderModelId,
-        GptImage2ProviderModelId,
-        StringComparison.Ordinal);
+    public bool SupportsTemperature => !IsGptImageModel(SelectedModel?.ProviderModelId);
     public IReadOnlyList<GenerationOptionViewModel> QualityLevels { get; private set; } = [];
-    public bool SupportsQuality => string.Equals(
-        SelectedModel?.ProviderModelId,
-        GptImage2ProviderModelId,
-        StringComparison.Ordinal);
+    public bool SupportsQuality => IsGptImageModel(SelectedModel?.ProviderModelId);
     public bool SupportsGenerationOptions => SupportsTemperature || SupportsQuality;
     public IReadOnlyList<GenerationModelThinkingLevelMetadataDto> ThinkingLevels =>
         SelectedModel?.Thinking?.Levels ?? [];
@@ -102,6 +96,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private const string SelectedModelNotInitializedMessage =
         "Selected model is not initialized.";
     private const string GptImage2ProviderModelId = "openai/gpt-image-2";
+    private const string GptImage25SunburstProviderModelId = "openai/gpt-image-2.5-sunburst";
+    private const string GptImage25FlareProviderModelId = "openai/gpt-image-2.5-flare";
     private static readonly IReadOnlyList<string> GptImage2QualityValues =
     [
         "Auto",
@@ -109,6 +105,13 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         "Medium",
         "High"
     ];
+
+    private static bool IsGptImageModel(string? providerModelId)
+    {
+        return string.Equals(providerModelId, GptImage2ProviderModelId, StringComparison.Ordinal)
+            || string.Equals(providerModelId, GptImage25SunburstProviderModelId, StringComparison.Ordinal)
+            || string.Equals(providerModelId, GptImage25FlareProviderModelId, StringComparison.Ordinal);
+    }
 
     private bool CanRunCommand => HasLoadedCatalog
                                   && !IsAttaching
@@ -420,6 +423,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         try
         {
             IsCatalogLoading = true;
+            _imageModelOptionCatalog.SetLoading(true);
             ClearErrorMessage();
 
             if (clearExistingCatalog)
@@ -460,6 +464,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             if (IsCurrentCatalogLoad(operationId, endpointRevision))
             {
                 IsCatalogLoading = false;
+                _imageModelOptionCatalog.SetLoading(false);
 
                 if (HasLoadedCatalog)
                 {

@@ -5,6 +5,9 @@ namespace AtomicArt.Desktop.Services;
 
 public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
 {
+    public event EventHandler? CatalogChanged;
+    public event EventHandler? LoadingChanged;
+
     public bool IsLoaded
     {
         get
@@ -19,13 +22,33 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
     private readonly object _syncRoot = new();
     private IReadOnlyList<ImageModelOption> _models = [];
     private bool _isLoaded;
+    private bool _isLoading;
+
+    public bool IsLoading
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _isLoading;
+            }
+        }
+    }
 
     public void Clear()
     {
+        bool changed;
+
         lock (_syncRoot)
         {
+            changed = _isLoaded || _models.Count > 0;
             _models = [];
             _isLoaded = false;
+        }
+
+        if (changed)
+        {
+            CatalogChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -39,6 +62,24 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
         {
             _models = models;
             _isLoaded = true;
+        }
+
+        CatalogChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void SetLoading(bool isLoading)
+    {
+        bool changed;
+
+        lock (_syncRoot)
+        {
+            changed = _isLoading != isLoading;
+            _isLoading = isLoading;
+        }
+
+        if (changed)
+        {
+            LoadingChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 

@@ -11,6 +11,8 @@ namespace AtomicArt.Infrastructure.Generation.OpenRouter;
 internal sealed class OpenRouterImageRequestContent : HttpContent
 {
     private const string OpenAiGptImage2ModelId = "openai/gpt-image-2";
+    private const string OpenAiGptImage25SunburstModelId = "openai/gpt-image-2.5-sunburst";
+    private const string OpenAiGptImage25FlareModelId = "openai/gpt-image-2.5-flare";
     private const int GptImageSizeAlignment = 16;
     private const int GptImageMinimumEdge = 256;
     private const int GptImageMaximumEdge = 3840;
@@ -85,10 +87,7 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
         builder.Append(JsonSerializer.Serialize(context.Request.Prompt));
         builder.Append(",\"n\":1,\"output_format\":\"png\"");
 
-        bool isGptImage2 = string.Equals(
-            context.ProviderModelId,
-            OpenAiGptImage2ModelId,
-            StringComparison.Ordinal);
+        bool isGptImage2 = IsGptImageModel(context.ProviderModelId);
 
         if (isGptImage2)
         {
@@ -128,6 +127,13 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
 
         builder.Append(",\"input_references\":[");
         return Encoding.UTF8.GetBytes(builder.ToString());
+    }
+
+    private static bool IsGptImageModel(string providerModelId)
+    {
+        return string.Equals(providerModelId, OpenAiGptImage2ModelId, StringComparison.Ordinal)
+            || string.Equals(providerModelId, OpenAiGptImage25SunburstModelId, StringComparison.Ordinal)
+            || string.Equals(providerModelId, OpenAiGptImage25FlareModelId, StringComparison.Ordinal);
     }
 
     private static string CreateGptImageSize(string resolution, string aspectRatio)

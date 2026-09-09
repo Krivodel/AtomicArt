@@ -15,7 +15,9 @@ public sealed class GenerationModelVisibilitySettingDefinition : IDisplaySetting
         "openrouter-nano-banana-2",
         "openrouter-nano-banana-2-lite",
         "openrouter-nano-banana-pro",
-        "openrouter-gpt-image-2"
+        "openrouter-gpt-image-2",
+        "openrouter-gpt-image-2-5-sunburst",
+        "openrouter-gpt-image-2-5-flare"
     ];
 
     public string Key => KeyValue;

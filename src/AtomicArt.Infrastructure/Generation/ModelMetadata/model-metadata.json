@@ -366,6 +366,72 @@
         "inputImageTokens": 1120,
         "outputImageTokensByResolution": { "1K": 1120, "2K": 1680, "4K": 2520 }
       }
+    },
+    {
+      "profiles": [
+        "openrouter-image-family",
+        "openrouter-gpt-image",
+        "text-token-estimation"
+      ],
+      "id": "openrouter-gpt-image-2-5-sunburst",
+      "displayName": "GPT Image 2.5 Sunburst",
+      "providerModelId": "openai/gpt-image-2.5-sunburst",
+      "contextWindowTokens": 131072,
+      "maxOutputTokens": 32768,
+      "maxPromptLength": 131072,
+      "aspectRatios": [
+        { "value": "auto", "localizationKey": "Generation.Options.Auto" },
+        { "value": "1:1" }, { "value": "2:3" }, { "value": "3:2" },
+        { "value": "3:4" }, { "value": "4:3" }, { "value": "9:16" },
+        { "value": "16:9" }, { "value": "21:9" }
+      ],
+      "resolutions": ["1K", "2K", "4K"],
+      "parameters": [
+        { "name": "aspectRatio", "type": "string", "required": true, "allowedValues": ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"] },
+        { "name": "resolution", "type": "string", "required": true, "allowedValues": ["1K", "2K", "4K"] },
+        { "name": "quality", "type": "string", "required": false, "defaultValue": "auto", "allowedValues": ["auto", "low", "medium", "high"] }
+      ],
+      "pricing": {
+        "currencyCode": "USD",
+        "inputTokenUsdPerMillion": 5.00,
+        "textOutputTokenUsdPerMillion": 30.00,
+        "imageOutputTokenUsdPerMillion": 30.00,
+        "inputImageTokens": 1120,
+        "outputImageTokensByResolution": { "1K": 1120, "2K": 1680, "4K": 2520 }
+      }
+    },
+    {
+      "profiles": [
+        "openrouter-image-family",
+        "openrouter-gpt-image",
+        "text-token-estimation"
+      ],
+      "id": "openrouter-gpt-image-2-5-flare",
+      "displayName": "GPT Image 2.5 Flare",
+      "providerModelId": "openai/gpt-image-2.5-flare",
+      "contextWindowTokens": 131072,
+      "maxOutputTokens": 32768,
+      "maxPromptLength": 131072,
+      "aspectRatios": [
+        { "value": "auto", "localizationKey": "Generation.Options.Auto" },
+        { "value": "1:1" }, { "value": "2:3" }, { "value": "3:2" },
+        { "value": "3:4" }, { "value": "4:3" }, { "value": "9:16" },
+        { "value": "16:9" }, { "value": "21:9" }
+      ],
+      "resolutions": ["1K", "2K", "4K"],
+      "parameters": [
+        { "name": "aspectRatio", "type": "string", "required": true, "allowedValues": ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"] },
+        { "name": "resolution", "type": "string", "required": true, "allowedValues": ["1K", "2K", "4K"] },
+        { "name": "quality", "type": "string", "required": false, "defaultValue": "auto", "allowedValues": ["auto", "low", "medium", "high"] }
+      ],
+      "pricing": {
+        "currencyCode": "USD",
+        "inputTokenUsdPerMillion": 5.00,
+        "textOutputTokenUsdPerMillion": 30.00,
+        "imageOutputTokenUsdPerMillion": 30.00,
+        "inputImageTokens": 1120,
+        "outputImageTokensByResolution": { "1K": 1120, "2K": 1680, "4K": 2520 }
+      }
     }
   ]
 }

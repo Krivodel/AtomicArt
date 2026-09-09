@@ -58,6 +58,21 @@ public sealed class ImageModelOptionCatalogTests
         option.Pricing.OutputImageTokensByResolution["1k"].Should().Be(1120);
     }
 
+    [Fact]
+    public void CatalogChanged_IsRaisedWhenCatalogIsClearedAndInitialized()
+    {
+        ImageModelOptionCatalog catalog = new();
+        int changeCount = 0;
+        catalog.CatalogChanged += (_, _) => changeCount++;
+
+        catalog.Initialize(CreateCatalog());
+        catalog.Clear();
+
+        changeCount.Should().Be(2);
+        catalog.IsLoaded.Should().BeFalse();
+        catalog.GetModels().Should().BeEmpty();
+    }
+
     private static GenerationModelCatalogDto CreateCatalog(
         string? modelId = "test-model",
         string? displayName = "Test Model")

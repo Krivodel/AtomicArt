@@ -13,12 +13,17 @@ namespace AtomicArt.Infrastructure.Tests.Generation.OpenRouter;
 
 public sealed class OpenRouterImageRequestContentTests
 {
-    [Fact]
-    public async Task ReadAsStringAsync_WithGptImage2_UsesSizeWithSelectedPixelBudget()
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", "openai/gpt-image-2")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare")]
+    public async Task ReadAsStringAsync_WithGptImage2_UsesSizeWithSelectedPixelBudget(
+        string modelId,
+        string providerModelId)
     {
         using OpenRouterImageRequestContent content = new(CreateContext(
-            "openrouter-gpt-image-2",
-            "openai/gpt-image-2",
+            modelId,
+            providerModelId,
             "2K",
             "16:9"));
 

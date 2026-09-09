@@ -8,6 +8,10 @@ namespace AtomicArt.Infrastructure.Generation.OpenRouter;
 
 internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStreamingImageGenerationProvider
 {
+    private const string OpenAiGptImage2ModelId = "openai/gpt-image-2";
+    private const string OpenAiGptImage25SunburstModelId = "openai/gpt-image-2.5-sunburst";
+    private const string OpenAiGptImage25FlareModelId = "openai/gpt-image-2.5-flare";
+
     public string Provider => GenerationProviderIds.OpenRouter;
 
     private readonly IOpenRouterImageClient _client;
@@ -38,10 +42,7 @@ internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStre
 
         string? flexProviderTag = OpenRouterFlexModelPolicy
             .GetChatCompletionProviderTag(context.ProviderModelId);
-        bool usesChatCompletions = !string.Equals(
-            context.ProviderModelId,
-            "openai/gpt-image-2",
-            StringComparison.Ordinal);
+        bool usesChatCompletions = !IsDedicatedImageModel(context.ProviderModelId);
         HttpContent content = usesChatCompletions
             ? new OpenRouterChatCompletionRequestContent(context, flexProviderTag)
             : new OpenRouterImageRequestContent(context);
@@ -80,6 +81,13 @@ internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStre
             content.Dispose();
             throw;
         }
+    }
+
+    private static bool IsDedicatedImageModel(string providerModelId)
+    {
+        return string.Equals(providerModelId, OpenAiGptImage2ModelId, StringComparison.Ordinal)
+            || string.Equals(providerModelId, OpenAiGptImage25SunburstModelId, StringComparison.Ordinal)
+            || string.Equals(providerModelId, OpenAiGptImage25FlareModelId, StringComparison.Ordinal);
     }
 
     private Task<OpenRouterImageResponse> CreateResponseAsync(
