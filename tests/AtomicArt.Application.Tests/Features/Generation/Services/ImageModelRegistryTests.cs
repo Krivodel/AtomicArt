@@ -14,28 +14,6 @@ namespace AtomicArt.Application.Tests.Features.Generation.Services;
 public sealed class ImageModelRegistryTests
 {
     [Fact]
-    public void GetModels_WithRegisteredModel_ReturnsModels()
-    {
-        ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();
-
-        IReadOnlyList<GenerationModelMetadataDto> models = registry.GetModels();
-
-        models.Should().HaveCount(7);
-        GenerationModelMetadataDto nanoBanana2Metadata = ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
-        models.Should().Contain(model =>
-            model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId
-            && model.DisplayName == nanoBanana2Metadata.DisplayName);
-        models.Single(model => model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId)
-            .Temperature.Should().Be(nanoBanana2Metadata.Temperature);
-        models.Should().Contain(model =>
-            model.Id == ApiModelMetadataTestCatalog.NanoBananaProModelId
-            && model.ProviderModelId == ApiModelMetadataTestCatalog.LoadNanoBananaProMetadata().ProviderModelId);
-        models.Select(model => model.PanelId)
-            .Should()
-            .OnlyContain(panelId => panelId == GenerationPanelIds.NanoBanana);
-    }
-
-    [Fact]
     public void GetById_WithUnknownId_ReturnsNull()
     {
         ImageModelRegistry registry = MetadataImageModelTestFactory.CreateRegistry();

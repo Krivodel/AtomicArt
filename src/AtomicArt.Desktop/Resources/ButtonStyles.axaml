@@ -122,9 +122,9 @@
         </Setter>
     </Style>
 
-    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.gallery-outline-icon.Danger">
+    <Style Selector="Path.gallery-outline-icon.Danger">
         <Setter Property="Stroke"
-                Value="{DynamicResource SukiDangerColor}" />
+                Value="{DynamicResource GalleryDeleteIconColor}" />
     </Style>
 
     <Style Selector="MenuFlyoutPresenter.animated-context-menu /template/ Panel">
@@ -313,34 +313,6 @@
                 </Transitions>
             </Setter.Value>
         </Setter>
-    </Style>
-
-    <Style Selector="Button.card-selection-toggle">
-        <Setter Property="Width"
-                Value="{StaticResource GallerySelectionIndicatorSize}" />
-        <Setter Property="Height"
-                Value="{StaticResource GallerySelectionIndicatorSize}" />
-        <Setter Property="Background"
-                Value="Transparent" />
-        <Setter Property="BorderThickness"
-                Value="{StaticResource ZeroThickness}" />
-    </Style>
-
-    <Style Selector="Button.card-selection-toggle:pointerover">
-        <Setter Property="Background"
-                Value="Transparent" />
-    </Style>
-
-    <Style Selector="Button.card-selection-toggle:pressed">
-        <Setter Property="Background"
-                Value="Transparent" />
-    </Style>
-
-    <Style Selector="Button.card-selection-toggle.selected">
-        <Setter Property="Background"
-                Value="{DynamicResource SukiSuccessColor}" />
-        <Setter Property="Opacity"
-                Value="1" />
     </Style>
 
     <Style Selector="Border.generation-card:pointerover Button.card-action">

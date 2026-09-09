@@ -9,4 +9,5 @@
     <Color x:Key="GallerySelectionTintColor">#000000</Color>
     <Color x:Key="GalleryFavoriteInfoBackgroundColor">#3B315D</Color>
     <Color x:Key="GalleryFavoriteAccentColor">#F59E0B</Color>
+    <Color x:Key="GalleryDeleteIconColor">#FF3333</Color>
 </ResourceDictionary>

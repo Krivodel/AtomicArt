@@ -295,18 +295,31 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 cardFolderShadow.OffsetY.Should().Be(1d);
                 cardFolderShadow.Opacity.Should().Be(0.8d);
 
-                Button toggleSelectionButton = control
-                    .FindControl<Button>("ToggleSelectionButton")
+                Button deleteOrCancelButton = control
+                    .FindControl<Button>("DeleteOrCancelButton")
                     ?? throw new InvalidOperationException(
-                        "Selection toggle button was not found.");
-                toggleSelectionButton.Width.Should().Be(36d);
-                toggleSelectionButton.Height.Should().Be(36d);
-                toggleSelectionButton.Margin.Should().Be(new Thickness(6d));
-                Avalonia.Controls.Shapes.Path selectionCheck = toggleSelectionButton
+                        "Delete or cancel button was not found.");
+                deleteOrCancelButton.Width.Should().Be(36d);
+                deleteOrCancelButton.Height.Should().Be(36d);
+                deleteOrCancelButton.Margin.Should().Be(new Thickness(6d));
+                Avalonia.Controls.Shapes.Path cardDeleteIcon = deleteOrCancelButton
                     .GetVisualDescendants()
                     .OfType<Avalonia.Controls.Shapes.Path>()
-                    .Single(path => path.Classes.Contains("gallery-selection-check"));
-                selectionCheck.StrokeThickness.Should().Be(3d);
+                    .Single(path => path.IsVisible);
+                cardDeleteIcon.Data.Should().BeSameAs(
+                    control.FindResource("GalleryContextMenuDeleteIcon"));
+                cardDeleteIcon.Classes.Should().Contain("Danger");
+                cardDeleteIcon.Fill.Should().BeNull();
+                cardDeleteIcon.Stretch.Should().Be(Stretch.Uniform);
+                cardDeleteIcon.Stroke.Should().NotBeNull();
+                cardDeleteIcon.StrokeThickness.Should().Be(1.5d);
+                DropShadowEffect cardDeleteShadow = cardDeleteIcon.Effect
+                    .Should()
+                    .BeOfType<DropShadowEffect>()
+                    .Subject;
+                cardDeleteShadow.BlurRadius.Should().Be(cardFolderShadow.BlurRadius);
+                cardDeleteShadow.OffsetY.Should().Be(cardFolderShadow.OffsetY);
+                cardDeleteShadow.Opacity.Should().Be(cardFolderShadow.Opacity);
 
                 Border cardContainer = control
                     .FindControl<Border>("GenerationCardContainer")

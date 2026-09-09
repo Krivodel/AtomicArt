@@ -182,12 +182,12 @@ public partial class GenerationCardControl :
             : toggleCommand;
     }
 
-    internal bool IsSelectionToggleHit(Visual visual)
+    internal bool IsSelectionGestureBlockedHit(Visual visual)
     {
         ArgumentNullException.ThrowIfNull(visual);
 
-        return ReferenceEquals(visual, ToggleSelectionButton)
-            || visual.GetVisualAncestors().Contains(ToggleSelectionButton);
+        return IsVisualOrDescendantOf(visual, RevealInFolderButton)
+            || IsVisualOrDescendantOf(visual, DeleteOrCancelButton);
     }
 
     internal void SetPreviewBitmapServices(
@@ -197,6 +197,12 @@ public partial class GenerationCardControl :
         GenerationPreview.SetPreviewBitmapServices(
             previewBitmapProvider,
             previewSourceScheduler);
+    }
+
+    private static bool IsVisualOrDescendantOf(Visual visual, Visual ancestor)
+    {
+        return ReferenceEquals(visual, ancestor)
+            || visual.GetVisualAncestors().Contains(ancestor);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)

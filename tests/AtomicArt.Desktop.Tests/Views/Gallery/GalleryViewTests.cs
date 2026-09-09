@@ -33,6 +33,9 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 
 public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 {
+    private static readonly TimeSpan SelectionLongPressTestDelay =
+        TimeSpan.FromMilliseconds(450);
+
     [Fact]
     public void GalleryViewKeyBindings_WhenRendered_MapSelectAllCommand()
     {
@@ -251,8 +254,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     .Children
                     .OfType<GenerationCardControl>()
                     .Single();
-                Button toggleSelectionButton = card.FindControl<Button>("ToggleSelectionButton")
-                    ?? throw new InvalidOperationException("Selection button was not found.");
+                Button deleteOrCancelButton = card.FindControl<Button>("DeleteOrCancelButton")
+                    ?? throw new InvalidOperationException("Delete or cancel button was not found.");
                 Border selectionHighlight = card
                     .FindControl<Border>("SelectionHighlight")
                     ?? throw new InvalidOperationException("Selection highlight was not found.");
@@ -260,16 +263,6 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     ?? throw new InvalidOperationException("Generation card root was not found.");
                 Border cardContainer = card.FindControl<Border>("GenerationCardContainer")
                     ?? throw new InvalidOperationException("Generation card container was not found.");
-                Avalonia.Controls.Shapes.Path selectionCheck = toggleSelectionButton
-                    .GetVisualDescendants()
-                    .OfType<Avalonia.Controls.Shapes.Path>()
-                    .Single();
-                Avalonia.Media.Geometry selectionGeometry = selectionCheck.Data
-                    ?? throw new InvalidOperationException("Selection geometry was not found.");
-                ISolidColorBrush toggleBackground = toggleSelectionButton.Background
-                    .Should()
-                    .BeAssignableTo<ISolidColorBrush>()
-                    .Subject;
                 ISolidColorBrush highlightBackground = selectionHighlight.Background
                     .Should()
                     .BeAssignableTo<ISolidColorBrush>()
@@ -278,22 +271,10 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     .Should()
                     .BeAssignableTo<ISolidColorBrush>()
                     .Subject;
-                toggleSelectionButton.IsVisible.Should().BeTrue(
-                    "the selection check must be available before selection mode starts");
-                toggleSelectionButton.Classes.Should().Contain("card-selection-toggle");
-                toggleSelectionButton.Classes.Should().NotContain("selected");
-                toggleSelectionButton.Width.Should().Be(36d);
-                toggleSelectionButton.BorderThickness.Left.Should().Be(0d);
-                toggleBackground.Color.Should().Be(Colors.Transparent);
-                toggleSelectionButton.Opacity.Should().Be(0d,
-                    "an unselected card shows its check only while hovered");
-                selectionGeometry.Bounds.Center.X.Should().Be(8d);
-                selectionGeometry.Bounds.Center.Y.Should().Be(8d);
-                selectionCheck.HorizontalAlignment.Should().Be(HorizontalAlignment.Center);
-                selectionCheck.VerticalAlignment.Should().Be(VerticalAlignment.Center);
-                selectionCheck.Stretch.Should().Be(Stretch.None);
-                selectionCheck.Stroke.Should().NotBeNull();
-                selectionCheck.Effect.Should().BeOfType<DropShadowEffect>();
+                deleteOrCancelButton.IsVisible.Should().BeTrue();
+                deleteOrCancelButton.Width.Should().Be(36d);
+                deleteOrCancelButton.Height.Should().Be(36d);
+                deleteOrCancelButton.Classes.Should().Contain("card-action");
                 selectionHighlight.Opacity.Should().Be(0d);
                 highlightBackground.Color.Should().Be(GalleryHighlightPalette.BackgroundColor);
                 highlightBorder.Color.Should().Be(GalleryHighlightPalette.BorderColor);
@@ -337,29 +318,20 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     .Single();
                 highlightTransition.Property.Should().Be(Visual.OpacityProperty);
                 highlightTransition.Duration.Should().Be(TimeSpan.FromMilliseconds(150));
-                toggleSelectionButton.Transitions = null;
                 selectionHighlight.Transitions = null;
 
                 Point cardCenter = GetControlCenter(card, window);
-                window.MouseMove(cardCenter, RawInputModifiers.None);
-                window.CaptureRenderedFrame();
-
-                toggleSelectionButton.Opacity.Should().Be(1d,
-                    "hovering an unselected card reveals its check");
-
-                toggleSelectionButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                window.MouseDown(cardCenter, MouseButton.Left);
+                await Task.Delay(SelectionLongPressTestDelay);
+                window.MouseUp(cardCenter, MouseButton.Left);
                 window.CaptureRenderedFrame();
 
                 gallery.IsSelectionMode.Should().BeTrue(
-                    "clicking the check starts selection mode");
+                    "holding the left mouse button starts selection mode");
                 card.IsSelectionMode.Should().BeTrue(
                     "the rendered card follows gallery selection mode");
                 card.IsSelectionDimmed.Should().BeFalse(
                     "selected previews remain unchanged");
-                toggleSelectionButton.IsVisible.Should().BeTrue();
-                toggleSelectionButton.Classes.Should().Contain("selected");
-                toggleSelectionButton.Opacity.Should().Be(1d);
-                toggleSelectionButton.Background.Should().NotBe(Brushes.Transparent);
                 selectionHighlight.Classes.Should().Contain("selected");
                 selectionHighlight.Opacity.Should().Be(1d);
 
@@ -458,7 +430,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public async Task GalleryViewSelection_AfterCheckStartsMode_KeepsCardHighlightsIndependent()
+    public async Task GalleryViewSelection_AfterLongPressStartsMode_KeepsCardHighlightsIndependent()
     {
         await DispatchAsync(async () =>
         {
@@ -485,10 +457,6 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 cards.Should().HaveCount(2);
                 GenerationCardControl firstCard = cards[0];
                 GenerationCardControl secondCard = cards[1];
-                Button firstCardCheck = firstCard.FindControl<Button>("ToggleSelectionButton")
-                    ?? throw new InvalidOperationException("Selection button was not found.");
-                Button secondCardCheck = secondCard.FindControl<Button>("ToggleSelectionButton")
-                    ?? throw new InvalidOperationException("Selection button was not found.");
                 Border firstDimmingOverlay = firstCard.FindControl<Border>("SelectionDimmingOverlay")
                     ?? throw new InvalidOperationException("Selection dimming overlay was not found.");
                 Border secondDimmingOverlay = secondCard.FindControl<Border>("SelectionDimmingOverlay")
@@ -503,18 +471,16 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 secondDimmingOverlay.Transitions = null;
                 firstSelectionHighlight.Transitions = null;
                 secondSelectionHighlight.Transitions = null;
-                firstCardCheck.Transitions = null;
-                secondCardCheck.Transitions = null;
-
-                firstCardCheck.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Point firstCardCenter = GetControlCenter(firstCard, window);
+                window.MouseDown(firstCardCenter, MouseButton.Left);
+                await Task.Delay(SelectionLongPressTestDelay);
+                window.MouseUp(firstCardCenter, MouseButton.Left);
                 window.CaptureRenderedFrame();
 
                 firstCard.IsSelectionDimmed.Should().BeFalse();
                 secondCard.IsSelectionDimmed.Should().BeTrue();
                 firstDimmingOverlay.Opacity.Should().Be(0d);
                 secondDimmingOverlay.Opacity.Should().Be(1d);
-                firstCardCheck.Classes.Should().Contain("selected");
-                secondCardCheck.Classes.Should().NotContain("selected");
                 firstSelectionHighlight.Opacity.Should().Be(1d);
                 secondSelectionHighlight.Opacity.Should().Be(0d);
 
@@ -534,7 +500,6 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 firstCard.IsSelectionDimmed.Should().BeFalse();
                 secondCard.IsSelectionDimmed.Should().BeFalse();
                 secondDimmingOverlay.Opacity.Should().Be(0d);
-                secondCardCheck.Classes.Should().Contain("selected");
                 firstSelectionHighlight.Opacity.Should().Be(1d);
                 secondSelectionHighlight.Opacity.Should().Be(1d);
             }
@@ -546,7 +511,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public async Task GallerySelectionBrush_FromInactiveCheck_SelectsFirstAndVisitedCards()
+    public async Task GallerySelectionBrush_FromInactiveCardLongPress_SelectsFirstAndVisitedCards()
     {
         await DispatchAsync(async () =>
         {
@@ -579,16 +544,11 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     ReferenceEquals(
                         card.DataContext,
                         scenario.ViewModel.Items[1]));
-                Button firstCardCheck = firstCard
-                    .FindControl<Button>("ToggleSelectionButton")
-                    ?? throw new InvalidOperationException(
-                        "Selection button was not found.");
-                Point firstCardCheckCenter = GetControlCenter(
-                    firstCardCheck,
-                    window);
+                Point firstCardCenter = GetControlCenter(firstCard, window);
                 Point secondCardCenter = GetControlCenter(secondCard, window);
 
-                window.MouseDown(firstCardCheckCenter, MouseButton.Left);
+                window.MouseDown(firstCardCenter, MouseButton.Left);
+                await Task.Delay(SelectionLongPressTestDelay);
                 window.MouseMove(
                     secondCardCenter,
                     RawInputModifiers.LeftMouseButton);

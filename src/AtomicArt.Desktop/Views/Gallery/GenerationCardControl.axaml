@@ -143,18 +143,25 @@
                           Data="{StaticResource GalleryContextMenuFolderIcon}" />
                 </Button>
 
-                <Button x:Name="ToggleSelectionButton"
+                <Button x:Name="DeleteOrCancelButton"
                         Grid.Row="0"
                         ZIndex="20"
                         Margin="{StaticResource GalleryCardActionMargin}"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
-                        Classes="Icon card-action card-action-right card-selection-toggle"
-                        Classes.selected="{Binding IsSelected}"
-                        Focusable="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
+                        IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
                         IsHitTestVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
-                        Click="OnSelectionClick">
-                    <Path Classes="gallery-selection-check" />
+                        Classes="Icon card-action card-action-right"
+                        Command="{Binding #GenerationCard.DeleteOrCancelCommand}"
+                        CommandParameter="{Binding}">
+                    <Grid>
+                        <PathIcon Classes="card-action-icon"
+                                  IsVisible="{Binding IsGenerating}"
+                                  Data="{StaticResource GalleryCancelIcon}" />
+                        <Path Classes="Danger gallery-outline-icon"
+                              IsVisible="{Binding !IsGenerating}"
+                              Data="{StaticResource GalleryContextMenuDeleteIcon}" />
+                    </Grid>
                 </Button>
 
                 <Button Grid.RowSpan="2"

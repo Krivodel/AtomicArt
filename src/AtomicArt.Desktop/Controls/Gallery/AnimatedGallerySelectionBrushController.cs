@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 using CommunityToolkit.Mvvm.Input;
@@ -13,7 +14,10 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed class AnimatedGallerySelectionBrushController
 {
+    private const int SelectionLongPressMilliseconds = 400;
+
     private readonly AnimatedGalleryControl _owner;
+    private readonly DispatcherTimer _selectionLongPressTimer;
     private SelectionBrushCandidate? _candidate;
     private SelectionBrushSession? _session;
     private bool _isSessionSelectionEnabled;
@@ -22,6 +26,11 @@ internal sealed class AnimatedGallerySelectionBrushController
         AnimatedGalleryControl owner)
     {
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+        _selectionLongPressTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(SelectionLongPressMilliseconds)
+        };
+        _selectionLongPressTimer.Tick += OnSelectionLongPressTimerTick;
         _owner.AddHandler(
             InputElement.PointerPressedEvent,
             OnPointerPressed,
@@ -42,6 +51,7 @@ internal sealed class AnimatedGallerySelectionBrushController
 
     public void Cancel()
     {
+        StopSelectionLongPressTimer();
         _candidate = null;
         IPointer? pointer = _session?.Pointer;
         _session = null;
@@ -51,6 +61,7 @@ internal sealed class AnimatedGallerySelectionBrushController
 
     public void HandleSelectionModeEnded()
     {
+        StopSelectionLongPressTimer();
         _candidate = null;
         _isSessionSelectionEnabled = false;
     }
@@ -67,9 +78,13 @@ internal sealed class AnimatedGallerySelectionBrushController
                 && card.DataContext is GenerationItemViewModel item
                 && hitVisual is not null)
             {
+                if (card.IsSelectionGestureBlockedHit(hitVisual))
+                {
+                    return null;
+                }
+
                 return new SelectionBrushHit(
-                    item,
-                    card.IsSelectionToggleHit(hitVisual));
+                    item);
             }
 
             if (ReferenceEquals(visual, _owner))
@@ -101,6 +116,11 @@ internal sealed class AnimatedGallerySelectionBrushController
         }
     }
 
+    private void StopSelectionLongPressTimer()
+    {
+        _selectionLongPressTimer.Stop();
+    }
+
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         _ = sender;
@@ -117,17 +137,22 @@ internal sealed class AnimatedGallerySelectionBrushController
         }
 
         SelectionBrushHit? hit = GetHitAt(pointerPoint.Position);
-        if (hit is null
-            || (!_owner.IsSelectionMode && !hit.IsSelectionToggle))
+        if (hit is null)
         {
             return;
         }
 
+        StopSelectionLongPressTimer();
         _candidate = new SelectionBrushCandidate(
             e.Pointer,
             pointerPoint.Position,
             hit.Item,
             _owner.IsSelectionMode ? !hit.Item.IsSelected : true);
+
+        if (!_owner.IsSelectionMode)
+        {
+            _selectionLongPressTimer.Start();
+        }
     }
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)
@@ -162,6 +187,15 @@ internal sealed class AnimatedGallerySelectionBrushController
             || !pointerPoint.Properties.IsLeftButtonPressed)
         {
             _candidate = null;
+            return;
+        }
+
+        if (!_owner.IsSelectionMode
+            && PointerDragThreshold.IsReached(
+                candidate.Origin,
+                pointerPoint.Position))
+        {
+            Cancel();
             return;
         }
 
@@ -203,6 +237,7 @@ internal sealed class AnimatedGallerySelectionBrushController
 
         if (_session is null)
         {
+            StopSelectionLongPressTimer();
             _candidate = null;
             return;
         }
@@ -218,9 +253,32 @@ internal sealed class AnimatedGallerySelectionBrushController
         _ = sender;
         _ = e;
 
+        StopSelectionLongPressTimer();
         _candidate = null;
         _session = null;
         _isSessionSelectionEnabled = false;
+    }
+
+    private void OnSelectionLongPressTimerTick(object? sender, EventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        _selectionLongPressTimer.Stop();
+
+        SelectionBrushCandidate? candidate = _candidate;
+        if (candidate is null || _owner.IsSelectionMode)
+        {
+            return;
+        }
+
+        _candidate = null;
+        _session = new SelectionBrushSession(
+            candidate.Pointer,
+            candidate.TargetIsSelected);
+        _isSessionSelectionEnabled = true;
+        candidate.Pointer.Capture(_owner);
+        ApplySelection(candidate.StartItem, candidate.TargetIsSelected);
     }
 
     private sealed record SelectionBrushCandidate(
@@ -233,7 +291,5 @@ internal sealed class AnimatedGallerySelectionBrushController
         IPointer Pointer,
         bool TargetIsSelected);
 
-    private sealed record SelectionBrushHit(
-        GenerationItemViewModel Item,
-        bool IsSelectionToggle);
+    private sealed record SelectionBrushHit(GenerationItemViewModel Item);
 }

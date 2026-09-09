@@ -40,6 +40,7 @@ internal static class GalleryViewModelTestFactory
         IGenerationItemStatusDescriptorRegistry? statusDescriptorRegistry = null,
         IUiThreadDispatcher? uiThreadDispatcher = null,
         IGenerationLifecycleEventHub? lifecycleEventHub = null,
+        IGenerationCancellationService? generationCancellationService = null,
         IAnimatedGalleryOperations? animatedGalleryOperations = null,
         IViewModelErrorHandler? errorHandler = null,
         IGalleryStateService? galleryStateService = null,
@@ -137,7 +138,8 @@ internal static class GalleryViewModelTestFactory
             new GenerationDurationFormatter(
                 TestLocalizationTextProvider.Default),
             localizationMessenger,
-            TestLocalizationTextProvider.Default);
+            TestLocalizationTextProvider.Default,
+            generationCancellationService);
     }
 
     public static GenerationLifecycleEvent CreateStartedEvent(Guid correlationId, int generationCount)

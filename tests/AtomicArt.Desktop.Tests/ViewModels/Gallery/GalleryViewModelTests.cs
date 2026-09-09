@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -442,6 +443,22 @@ public sealed class GalleryViewModelTests
         deletionService.Requests.Should().ContainSingle();
         deletionService.Requests[0].ImagePath.Should().BeNull();
         deletionService.Requests[0].ThumbnailPath.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DeleteOrCancelAsync_WithGeneratingItem_CancelsGenerationBeforeRemoval()
+    {
+        Mock<IGenerationCancellationService> cancellationService = new();
+        using GalleryLifecycleTestContext context = new(
+            generationCancellationService: cancellationService.Object);
+        Guid correlationId = context.Start(1);
+        GenerationItemViewModel item = context.ViewModel.Items.Single();
+
+        await context.ViewModel.DeleteOrCancelCommand.ExecuteAsync(item);
+
+        cancellationService.Verify(
+            service => service.Cancel(correlationId),
+            Times.Once);
     }
 
     [Fact]
@@ -1021,7 +1038,8 @@ public sealed class GalleryViewModelTests
             IAnimatedGalleryOperations? animatedGalleryOperations = null,
             IUiThreadDispatcher? uiThreadDispatcher = null,
             IDialogService? dialogService = null,
-            IGalleryStateService? galleryStateService = null)
+            IGalleryStateService? galleryStateService = null,
+            IGenerationCancellationService? generationCancellationService = null)
         {
             _lifecycleEventHub = new TestGenerationLifecycleEventHub();
             ViewModel = GalleryViewModelTestFactory.CreateViewModel(
@@ -1030,7 +1048,8 @@ public sealed class GalleryViewModelTests
                 animatedGalleryOperations: animatedGalleryOperations,
                 uiThreadDispatcher: uiThreadDispatcher,
                 dialogService: dialogService,
-                galleryStateService: galleryStateService);
+                galleryStateService: galleryStateService,
+                generationCancellationService: generationCancellationService);
         }
 
         public Guid Start(int generationCount)

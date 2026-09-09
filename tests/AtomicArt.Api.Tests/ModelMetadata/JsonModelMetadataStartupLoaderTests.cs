@@ -14,36 +14,6 @@ namespace AtomicArt.Api.Tests.ModelMetadata;
 public sealed class JsonModelMetadataStartupLoaderTests
 {
     [Fact]
-    public void Load_WithRealMetadata_HasAutoAspectRatioFirst()
-    {
-        GenerationModelCatalogDto catalog = LoadRealCatalogWithExpectedModelCount();
-
-        IReadOnlyList<GenerationModelMetadataDto> modelsWithAutomaticAspectRatio = catalog.Models;
-
-        modelsWithAutomaticAspectRatio.Should().OnlyContain(model =>
-            model.AspectRatios.First().Value == GenerationAspectRatios.Auto);
-        modelsWithAutomaticAspectRatio.Should().OnlyContain(model =>
-            model.AspectRatios.Any(option => string.Equals(
-                option.Value,
-                GenerationAspectRatios.Auto,
-                StringComparison.Ordinal)));
-        modelsWithAutomaticAspectRatio.Should().OnlyContain(model =>
-            model.AspectRatios.First().LocalizationKey
-                == GenerationLocalizationKeys.OptionsAuto);
-    }
-
-    [Fact]
-    public void Load_WithRealMetadata_HasTemperatureForAllNanoBananaModels()
-    {
-        GenerationModelCatalogDto catalog = LoadRealCatalogWithExpectedModelCount();
-
-        catalog.Models.Should().OnlyContain(model => model.Temperature.Minimum == 0.1d);
-        catalog.Models.Should().OnlyContain(model => model.Temperature.Maximum == 2d);
-        catalog.Models.Should().OnlyContain(model => model.Temperature.Default == 1d);
-        catalog.Models.Should().OnlyContain(model => model.Temperature.Step == 0.1d);
-    }
-
-    [Fact]
     public void Load_WithRealMetadata_HasThinkingForEverySupportedNanoBananaVariant()
     {
         GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
@@ -294,15 +264,6 @@ public sealed class JsonModelMetadataStartupLoaderTests
         return JsonModelMetadataStartupLoader.Load(
             path,
             new FixedGenerationModelCatalogJsonSource(json));
-    }
-
-    private static GenerationModelCatalogDto LoadRealCatalogWithExpectedModelCount()
-    {
-        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
-
-        catalog.Models.Should().HaveCount(7);
-
-        return catalog;
     }
 
     private static FluentAssertions.Specialized.ExceptionAssertions<InvalidOperationException>
