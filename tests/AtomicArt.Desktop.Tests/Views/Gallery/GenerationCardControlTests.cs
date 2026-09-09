@@ -5,7 +5,6 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 
 using Rectangle = Avalonia.Controls.Shapes.Rectangle;
@@ -345,7 +344,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     }
 
     [Fact]
-    public async Task ContextFlyout_WhenCardRightClicked_OpensWithSnapshotRevealAsync()
+    public async Task ContextFlyout_WhenCardRightClicked_OpensWithLivePresenterRevealAsync()
     {
         await DispatchAsync(async () =>
         {
@@ -431,9 +430,6 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .GetVisualAncestors()
                     .OfType<ContextMenuRevealHost>()
                     .Single();
-                RenderTargetBitmap snapshot = revealHost.Snapshot
-                    ?? throw new InvalidOperationException(
-                        "Context menu snapshot was not created.");
                 bool backgroundFound = presenter.TryFindResource(
                     "ContextMenuBackgroundBrush",
                     out object? backgroundResource);
@@ -487,8 +483,9 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 }
 
                 presenter.RenderTransform.Should().BeNull();
-                presenter.Opacity.Should().Be(0d);
-                presenter.IsHitTestVisible.Should().BeTrue();
+                presenter.Opacity.Should().Be(1d);
+                presenter.IsHitTestVisible.Should().BeFalse();
+                presenter.Clip.Should().BeOfType<RectangleGeometry>();
                 backgroundFound.Should().BeTrue();
                 presenter.Background.Should().BeSameAs(backgroundResource);
                 backgroundBrush.GradientStops.Should().HaveCount(2);
@@ -515,12 +512,6 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 revealHost.RevealBounds.Height.Should().BeApproximately(
                     presenter.Bounds.Height * revealHost.HeightRatio,
                     0.001d);
-                snapshot.Size.Width.Should().BeApproximately(
-                    presenter.Bounds.Width,
-                    0.5d);
-                snapshot.Size.Height.Should().BeApproximately(
-                    presenter.Bounds.Height,
-                    0.5d);
                 revealHost.BoxShadows.Should().NotBe(default(BoxShadows));
                 revealHost.Padding.Left.Should().BeGreaterThan(0d);
                 revealHost.Padding.Top.Should().BeGreaterThan(0d);
@@ -531,7 +522,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     ContextMenuRevealHost.OpeningDurationMilliseconds + 50);
 
                 iconSeparators.Should().OnlyContain(separator => separator.Opacity == 0d);
-                revealHost.Snapshot.Should().BeNull();
+                presenter.Clip.Should().BeNull();
 
                 menuFlyout.Hide();
             }
@@ -718,9 +709,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .FindControl<MenuItem>("ShowInFolderMenuItem")
                     ?? throw new InvalidOperationException(
                         "Show-in-folder menu item was not found.");
-                _ = revealHost.Snapshot
-                    ?? throw new InvalidOperationException(
-                        "Context menu opening animation was not running.");
+                revealHost.WidthRatio.Should().BeLessThan(1d);
 
                 ClickMenuItem(showInFolderMenuItem, revealHost);
 
@@ -780,7 +769,6 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     ContextMenuRevealHost.OpeningDurationMilliseconds + 50);
 
                 revealHost.Opacity.Should().Be(1d);
-                revealHost.Snapshot.Should().BeNull();
                 revealHost.BoxShadows.Should().NotBe(default(BoxShadows));
 
                 menuFlyout.Hide();
@@ -843,9 +831,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .FindControl<MenuItem>("ShowInFolderMenuItem")
                     ?? throw new InvalidOperationException(
                         "Show-in-folder menu item was not found.");
-                _ = firstRevealHost.Snapshot
-                    ?? throw new InvalidOperationException(
-                        "Context menu opening animation was not running.");
+                firstRevealHost.WidthRatio.Should().BeLessThan(1d);
                 TaskCompletionSource<bool> firstClose = new(
                     TaskCreationOptions.RunContinuationsAsynchronously);
                 menuFlyout.Closed += OnFirstClosed;
@@ -866,7 +852,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .Subject;
 
                 menuFlyout.IsOpen.Should().BeTrue();
-                secondRevealHost.Snapshot.Should().NotBeNull();
+                secondRevealHost.WidthRatio.Should().BeLessThan(1d);
                 await Task.Delay(
                     ContextMenuRevealHost.OpeningDurationMilliseconds + 50);
 
@@ -875,7 +861,6 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .BeOfType<MenuFlyoutPresenter>()
                     .Subject;
                 secondRevealHost.Opacity.Should().Be(1d);
-                secondRevealHost.Snapshot.Should().BeNull();
                 secondPresenter.Opacity.Should().Be(1d);
                 secondPresenter.IsHitTestVisible.Should().BeTrue();
                 TaskCompletionSource<bool> secondClose = new(

@@ -3,7 +3,6 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 
 using AtomicArt.Desktop.Services.UiAnimation;
 
@@ -75,7 +74,7 @@ public sealed class AnimatedContextMenuFlyout : MenuFlyout
         _animationScheduler = new UiAnimationScheduler(_frameScheduler);
         int animationVersion = ++_animationVersion;
         _animationScheduler.RequestAnimationFrame(
-            _ => StartOpeningAnimation(animationVersion, topLevel));
+            _ => StartOpeningAnimation(animationVersion));
     }
 
     protected override void OnClosing(CancelEventArgs args)
@@ -150,9 +149,7 @@ public sealed class AnimatedContextMenuFlyout : MenuFlyout
             : default;
     }
 
-    private void StartOpeningAnimation(
-        int animationVersion,
-        TopLevel topLevel)
+    private void StartOpeningAnimation(int animationVersion)
     {
         if ((animationVersion != _animationVersion)
             || !IsOpen
@@ -164,18 +161,9 @@ public sealed class AnimatedContextMenuFlyout : MenuFlyout
             return;
         }
 
-        RenderTargetBitmap? snapshot = VisualSnapshotRenderer.Capture(
-            topLevel,
-            _presenter);
-        if (snapshot is null)
-        {
-            _revealHost.CompleteReveal();
-            return;
-        }
-
         ContextMenuRevealOrigin origin = ContextMenuRevealOriginResolver.Resolve(
             _presenter);
-        _revealHost.BeginReveal(snapshot, origin);
+        _revealHost.BeginReveal(origin);
         _ = _animationScheduler.AnimateValueAsync(
             _revealHost,
             0d,
