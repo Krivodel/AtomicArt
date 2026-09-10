@@ -95,9 +95,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private const string SelectedModelNotInitializedMessage =
         "Selected model is not initialized.";
-    private const string GptImage2ProviderModelId = "openai/gpt-image-2";
-    private const string GptImage25SunburstProviderModelId = "openai/gpt-image-2.5-sunburst";
-    private const string GptImage25FlareProviderModelId = "openai/gpt-image-2.5-flare";
     private static readonly IReadOnlyList<string> GptImage2QualityValues =
     [
         "Auto",
@@ -108,9 +105,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private static bool IsGptImageModel(string? providerModelId)
     {
-        return string.Equals(providerModelId, GptImage2ProviderModelId, StringComparison.Ordinal)
-            || string.Equals(providerModelId, GptImage25SunburstProviderModelId, StringComparison.Ordinal)
-            || string.Equals(providerModelId, GptImage25FlareProviderModelId, StringComparison.Ordinal);
+        return GenerationProviderModelIds.IsGptImageModel(providerModelId);
     }
 
     private bool CanRunCommand => HasLoadedCatalog

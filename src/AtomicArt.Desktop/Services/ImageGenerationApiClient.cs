@@ -32,6 +32,7 @@ public sealed class ImageGenerationApiClient
 
     private readonly IGenerationStreamingResultStore _resultStore;
     private readonly ProviderResponseImageDecoderRegistry _decoderRegistry;
+    private readonly IAttachedImageCodec _attachedImageCodec;
     private readonly int _maxResponseMetadataBytes;
     private readonly int _responseMetadataBufferSize;
 
@@ -42,7 +43,8 @@ public sealed class ImageGenerationApiClient
         ProviderResponseImageDecoderRegistry decoderRegistry,
         ILogger<ImageGenerationApiClient> logger,
         IOptions<ApiClientOptions> apiOptions,
-        IOptions<GenerationClientOptions> options)
+        IOptions<GenerationClientOptions> options,
+        IAttachedImageCodec attachedImageCodec)
         : base(httpClient, apiEndpointService, logger, apiOptions)
     {
         ArgumentNullException.ThrowIfNull(apiOptions);
@@ -51,6 +53,8 @@ public sealed class ImageGenerationApiClient
             ?? throw new ArgumentNullException(nameof(resultStore));
         _decoderRegistry = decoderRegistry
             ?? throw new ArgumentNullException(nameof(decoderRegistry));
+        _attachedImageCodec = attachedImageCodec
+            ?? throw new ArgumentNullException(nameof(attachedImageCodec));
         _maxResponseMetadataBytes =
             options.Value.MaxResponseMetadataBytes;
         _responseMetadataBufferSize =
@@ -280,7 +284,7 @@ public sealed class ImageGenerationApiClient
             });
     }
 
-    private static MultipartFormDataContent CreateMultipartContent(
+    private MultipartFormDataContent CreateMultipartContent(
         ImageGenerationRequestDto request,
         Guid logicalGenerationId,
         int attemptNumber)
@@ -314,12 +318,7 @@ public sealed class ImageGenerationApiClient
 
         List<GenerationAttachmentMetadataDto> attachmentMetadata =
             request.AttachedImages
-                .Select((attachment, index) =>
-                    new GenerationAttachmentMetadataDto(
-                        index,
-                        attachment.FileName,
-                        attachment.ContentType,
-                        attachment.Content.LongLength))
+                .Select(CreateAttachmentMetadata)
                 .ToList();
         GenerationRequestMetadataDto metadata = new(
             logicalGenerationId,
@@ -353,6 +352,21 @@ public sealed class ImageGenerationApiClient
         }
 
         return multipart;
+    }
+
+    private GenerationAttachmentMetadataDto CreateAttachmentMetadata(
+        AttachedImageDto attachment,
+        int index)
+    {
+        AttachedImageCodecInfo? imageInfo = _attachedImageCodec.ReadInfo(attachment.Content);
+
+        return new GenerationAttachmentMetadataDto(
+            index,
+            attachment.FileName,
+            attachment.ContentType,
+            attachment.Content.LongLength,
+            imageInfo?.Width ?? 0,
+            imageInfo?.Height ?? 0);
     }
 
     private async Task<GenerationAttemptMetadataDto> ReadMetadataAsync(

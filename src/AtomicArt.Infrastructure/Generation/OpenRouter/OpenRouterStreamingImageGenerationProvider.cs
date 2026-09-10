@@ -8,10 +8,6 @@ namespace AtomicArt.Infrastructure.Generation.OpenRouter;
 
 internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStreamingImageGenerationProvider
 {
-    private const string OpenAiGptImage2ModelId = "openai/gpt-image-2";
-    private const string OpenAiGptImage25SunburstModelId = "openai/gpt-image-2.5-sunburst";
-    private const string OpenAiGptImage25FlareModelId = "openai/gpt-image-2.5-flare";
-
     public string Provider => GenerationProviderIds.OpenRouter;
 
     private readonly IOpenRouterImageClient _client;
@@ -85,9 +81,7 @@ internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStre
 
     private static bool IsDedicatedImageModel(string providerModelId)
     {
-        return string.Equals(providerModelId, OpenAiGptImage2ModelId, StringComparison.Ordinal)
-            || string.Equals(providerModelId, OpenAiGptImage25SunburstModelId, StringComparison.Ordinal)
-            || string.Equals(providerModelId, OpenAiGptImage25FlareModelId, StringComparison.Ordinal);
+        return GenerationProviderModelIds.IsGptImageModel(providerModelId);
     }
 
     private Task<OpenRouterImageResponse> CreateResponseAsync(

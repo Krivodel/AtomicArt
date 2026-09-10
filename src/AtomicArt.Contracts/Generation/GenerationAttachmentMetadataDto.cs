@@ -4,4 +4,6 @@ public sealed record GenerationAttachmentMetadataDto(
     int Index,
     string FileName,
     string ContentType,
-    long ByteLength);
+    long ByteLength,
+    int PixelWidth = 0,
+    int PixelHeight = 0);

@@ -2,6 +2,7 @@ using System.Net;
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using SkiaSharp;
 
 using FluentAssertions;
 using Xunit;
@@ -149,6 +150,34 @@ public sealed class ImageGenerationApiClientTests
         handler.RequestBody.Should().NotContain("\\u6771");
     }
 
+    [Fact]
+    public async Task CreateGenerationAsync_WithValidAttachment_SendsPixelDimensionsInMetadata()
+    {
+        string problemDetails = """
+        {
+          "status": 400,
+          "code": "GENERATION_INVALID_MULTIPART_REQUEST",
+          "retryable": false
+        }
+        """;
+        CapturingHttpMessageHandler handler = new(
+            problemDetails,
+            HttpStatusCode.BadRequest);
+        using HttpClient httpClient = new(handler);
+        ImageGenerationApiClient apiClient = CreateApiClient(httpClient);
+
+        Func<Task> act = () => apiClient.CreateGenerationAsync(
+            CreateRequest(attachedImageContent: CreateEncodedImage(1600, 800)),
+            LogicalGenerationId,
+            1,
+            TestGenerationCredentials.ProviderCredential,
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<GenerationAttemptException>();
+        handler.RequestBody.Should().Contain("\"pixelWidth\":1600");
+        handler.RequestBody.Should().Contain("\"pixelHeight\":800");
+    }
+
     private static ImageGenerationApiClient CreateApiClient(
         HttpClient httpClient)
     {
@@ -163,17 +192,21 @@ public sealed class ImageGenerationApiClientTests
             decoderRegistry,
             NullLogger<ImageGenerationApiClient>.Instance,
             TestApiConfiguration.CreateApiClientOptionsWrapper(),
-            TestApiConfiguration.CreateGenerationOptionsWrapper());
+            TestApiConfiguration.CreateGenerationOptionsWrapper(),
+            new SkiaAttachedImageCodec(
+                TestApiConfiguration.CreateGenerationOptionsWrapper()));
     }
 
     private static ImageGenerationRequestDto CreateRequest(
-        string prompt = "Create a studio product shot")
+        string prompt = "Create a studio product shot",
+        byte[]? attachedImageContent = null)
     {
         List<AttachedImageDto> attachedImages =
         [
             new AttachedImageDto(
                 "reference.png",
                 GenerationImageContentTypes.Png,
+                attachedImageContent ??
                 new byte[]
                 {
                     0x89,
@@ -187,5 +220,15 @@ public sealed class ImageGenerationApiClientTests
             prompt: prompt,
             aspectRatio: "16:9",
             attachedImages: attachedImages);
+    }
+
+    private static byte[] CreateEncodedImage(int width, int height)
+    {
+        using SKBitmap bitmap = new(width, height);
+        using SKCanvas canvas = new(bitmap);
+        canvas.Clear(SKColors.White);
+        using SKImage image = SKImage.FromBitmap(bitmap);
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
     }
 }

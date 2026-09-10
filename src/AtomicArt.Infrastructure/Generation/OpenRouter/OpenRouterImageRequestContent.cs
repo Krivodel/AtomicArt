@@ -10,9 +10,6 @@ namespace AtomicArt.Infrastructure.Generation.OpenRouter;
 
 internal sealed class OpenRouterImageRequestContent : HttpContent
 {
-    private const string OpenAiGptImage2ModelId = "openai/gpt-image-2";
-    private const string OpenAiGptImage25SunburstModelId = "openai/gpt-image-2.5-sunburst";
-    private const string OpenAiGptImage25FlareModelId = "openai/gpt-image-2.5-flare";
     private const int GptImageSizeAlignment = 16;
     private const int GptImageMinimumEdge = 256;
     private const int GptImageMaximumEdge = 3840;
@@ -87,23 +84,24 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
         builder.Append(JsonSerializer.Serialize(context.Request.Prompt));
         builder.Append(",\"n\":1,\"output_format\":\"png\"");
 
-        bool isGptImage2 = IsGptImageModel(context.ProviderModelId);
+        bool isGptImageModel = GenerationProviderModelIds.IsGptImageModel(
+            context.ProviderModelId);
 
-        if (isGptImage2)
+        if (isGptImageModel)
         {
             builder.Append(",\"size\":");
             string size = CreateGptImageSize(
                 context.Request.Resolution,
-                context.Request.AspectRatio);
+                ResolveGptAspectRatio(context));
             builder.Append(JsonSerializer.Serialize(size));
         }
-        else if (!isGptImage2)
+        else
         {
             builder.Append(",\"resolution\":");
             builder.Append(JsonSerializer.Serialize(context.Request.Resolution));
         }
 
-        if (!isGptImage2 && !GenerationAspectRatios.IsAuto(context.Request.AspectRatio))
+        if (!isGptImageModel && !GenerationAspectRatios.IsAuto(context.Request.AspectRatio))
         {
             builder.Append(",\"aspect_ratio\":");
             builder.Append(JsonSerializer.Serialize(context.Request.AspectRatio));
@@ -129,13 +127,6 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
         return Encoding.UTF8.GetBytes(builder.ToString());
     }
 
-    private static bool IsGptImageModel(string providerModelId)
-    {
-        return string.Equals(providerModelId, OpenAiGptImage2ModelId, StringComparison.Ordinal)
-            || string.Equals(providerModelId, OpenAiGptImage25SunburstModelId, StringComparison.Ordinal)
-            || string.Equals(providerModelId, OpenAiGptImage25FlareModelId, StringComparison.Ordinal);
-    }
-
     private static string CreateGptImageSize(string resolution, string aspectRatio)
     {
         int pixelBudget = resolution switch
@@ -151,11 +142,51 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
             ? (1, 1)
             : ParseAspectRatio(aspectRatio);
 
-        double width = Math.Sqrt(pixelBudget * widthRatio / (double)heightRatio);
+        double width = Math.Sqrt(pixelBudget * (double)widthRatio / heightRatio);
         double height = Math.Sqrt(pixelBudget * heightRatio / (double)widthRatio);
         double scale = Math.Min(1d, GptImageMaximumEdge / Math.Max(width, height));
 
         return $"{RoundImageEdge(width * scale)}x{RoundImageEdge(height * scale)}";
+    }
+
+    private static string ResolveGptAspectRatio(StreamingGenerationProviderContext context)
+    {
+        if (!GenerationAspectRatios.IsAuto(context.Request.AspectRatio))
+        {
+            return context.Request.AspectRatio;
+        }
+
+        if (context.Request.Attachments.Count > 0)
+        {
+            GenerationAttachmentMetadataDto firstAttachment =
+                context.Request.Attachments[0].Metadata;
+
+            if (firstAttachment.PixelWidth <= 0 || firstAttachment.PixelHeight <= 0)
+            {
+                return GenerationAspectRatios.GptAutoFallback;
+            }
+
+            int divisor = GreatestCommonDivisor(
+                firstAttachment.PixelWidth,
+                firstAttachment.PixelHeight);
+
+            return $"{firstAttachment.PixelWidth / divisor}:"
+                   + $"{firstAttachment.PixelHeight / divisor}";
+        }
+
+        return GenerationAspectRatios.GptAutoFallback;
+    }
+
+    private static int GreatestCommonDivisor(int first, int second)
+    {
+        while (second != 0)
+        {
+            int remainder = first % second;
+            first = second;
+            second = remainder;
+        }
+
+        return first;
     }
 
     private static (int Width, int Height) ParseAspectRatio(string aspectRatio)

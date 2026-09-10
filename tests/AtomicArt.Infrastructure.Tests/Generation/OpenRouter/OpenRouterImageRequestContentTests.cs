@@ -17,7 +17,7 @@ public sealed class OpenRouterImageRequestContentTests
     [InlineData("openrouter-gpt-image-2", "openai/gpt-image-2")]
     [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst")]
     [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare")]
-    public async Task ReadAsStringAsync_WithGptImage2_UsesSizeWithSelectedPixelBudget(
+    public async Task ReadAsStringAsync_WithGptImageModel_UsesSizeWithSelectedPixelBudget(
         string modelId,
         string providerModelId)
     {
@@ -36,7 +36,7 @@ public sealed class OpenRouterImageRequestContentTests
     }
 
     [Fact]
-    public async Task ReadAsStringAsync_WithGptImage2Quality_SendsQuality()
+    public async Task ReadAsStringAsync_WithGptImageModelQuality_SendsQuality()
     {
         using OpenRouterImageRequestContent content = new(CreateContext(
             "openrouter-gpt-image-2",
@@ -51,7 +51,7 @@ public sealed class OpenRouterImageRequestContentTests
     }
 
     [Fact]
-    public async Task ReadAsStringAsync_WithGptImage2AndAutomaticAspectRatio_SendsSelectedSizeWithoutAspectRatio()
+    public async Task ReadAsStringAsync_WithGptImageModelAndAutomaticAspectRatio_Uses16By9FallbackWithoutAspectRatio()
     {
         using OpenRouterImageRequestContent content = new(CreateContext(
             "openrouter-gpt-image-2",
@@ -62,9 +62,30 @@ public sealed class OpenRouterImageRequestContentTests
         using JsonDocument document = JsonDocument.Parse(await content.ReadAsStringAsync());
         JsonElement root = document.RootElement;
 
-        root.GetProperty("size").GetString().Should().Be("2880x2880");
+        root.GetProperty("size").GetString().Should().Be("3840x2160");
         root.TryGetProperty("aspect_ratio", out _).Should().BeFalse();
         root.TryGetProperty("resolution", out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ReadAsStringAsync_WithAutomaticAspectRatio_UsesFirstAttachmentRatio()
+    {
+        TestAttachmentSource firstAttachment = new(
+            [1, 2, 3, 4],
+            pixelWidth: 1600,
+            pixelHeight: 800);
+        TestAttachmentSource secondAttachment = new(
+            [5, 6, 7, 8],
+            pixelWidth: 900,
+            pixelHeight: 1600);
+        StreamingGenerationProviderContext requestContext = CreateContext(
+            firstAttachment,
+            secondAttachment);
+        using OpenRouterImageRequestContent content = new(requestContext);
+
+        using JsonDocument document = JsonDocument.Parse(await content.ReadAsStringAsync());
+
+        document.RootElement.GetProperty("size").GetString().Should().Be("1456x720");
     }
 
     [Fact]
@@ -164,7 +185,7 @@ public sealed class OpenRouterImageRequestContentTests
     }
 
     private static StreamingGenerationProviderContext CreateContext(
-        IGenerationAttachmentSource attachment)
+        params IGenerationAttachmentSource[] attachments)
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadCatalog()
             .Models.Single(model => model.Id == "openrouter-gpt-image-2");
@@ -178,7 +199,7 @@ public sealed class OpenRouterImageRequestContentTests
             1d,
             null,
             new Dictionary<string, JsonElement>(),
-            [attachment]);
+            attachments);
 
         return new StreamingGenerationProviderContext(
             request,
@@ -195,14 +216,19 @@ public sealed class OpenRouterImageRequestContentTests
 
         public GenerationAttachmentMetadataDto Metadata { get; }
 
-        public TestAttachmentSource(byte[] content)
+        public TestAttachmentSource(
+            byte[] content,
+            int pixelWidth = 0,
+            int pixelHeight = 0)
         {
             _content = content ?? throw new ArgumentNullException(nameof(content));
             Metadata = new GenerationAttachmentMetadataDto(
                 0,
                 "reference.png",
                 GenerationImageContentTypes.Png,
-                content.LongLength);
+                content.LongLength,
+                pixelWidth,
+                pixelHeight);
         }
 
         public ValueTask<Stream> OpenReadAsync(CancellationToken ct)
