@@ -10,23 +10,25 @@ internal sealed class AtomicArtDataPathSnapshot
     internal string ThumbnailsDirectory { get; }
     internal string StateDirectory { get; }
     internal string StateAttachmentsDirectory { get; }
+    internal string ModulesDirectory { get; }
 
     private AtomicArtDataPathSnapshot(string rootDirectory)
     {
         RootDirectory = rootDirectory;
-        ArtDirectory = CreateChildPath(rootDirectory, AtomicArtPathNames.ArtDirectory);
-        LogsDirectory = CreateChildPath(rootDirectory, AtomicArtPathNames.LogsDirectory);
-        LocalizationsDirectory = CreateChildPath(
+        ArtDirectory = AtomicArtDataPathSnapshot.CreateChildPath(rootDirectory, AtomicArtPathNames.ArtDirectory);
+        LogsDirectory = AtomicArtDataPathSnapshot.CreateChildPath(rootDirectory, AtomicArtPathNames.LogsDirectory);
+        LocalizationsDirectory = AtomicArtDataPathSnapshot.CreateChildPath(
             rootDirectory,
             AtomicArtPathNames.LocalizationsDirectory);
-        SecretsDirectory = CreateChildPath(rootDirectory, AtomicArtPathNames.SecretsDirectory);
-        ThumbnailsDirectory = CreateChildPath(
+        SecretsDirectory = AtomicArtDataPathSnapshot.CreateChildPath(rootDirectory, AtomicArtPathNames.SecretsDirectory);
+        ThumbnailsDirectory = AtomicArtDataPathSnapshot.CreateChildPath(
             rootDirectory,
             AtomicArtPathNames.ThumbnailsDirectory);
-        StateDirectory = CreateChildPath(rootDirectory, AtomicArtPathNames.StateDirectory);
-        StateAttachmentsDirectory = CreateChildPath(
+        StateDirectory = AtomicArtDataPathSnapshot.CreateChildPath(rootDirectory, AtomicArtPathNames.StateDirectory);
+        StateAttachmentsDirectory = AtomicArtDataPathSnapshot.CreateChildPath(
             StateDirectory,
             AtomicArtPathNames.StateAttachmentsDirectory);
+        ModulesDirectory = AtomicArtDataPathSnapshot.CreateChildPath(rootDirectory, AtomicArtPathNames.ModulesDirectory);
     }
 
     internal static AtomicArtDataPathSnapshot Create(string rootDirectory)
@@ -41,20 +43,21 @@ internal sealed class AtomicArtDataPathSnapshot
 
     internal bool IsKnownDirectory(string fullPath)
     {
-        return string.Equals(fullPath, RootDirectory, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(fullPath, ArtDirectory, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(fullPath, LogsDirectory, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(
+        return (string.Equals(fullPath, RootDirectory, StringComparison.OrdinalIgnoreCase))
+            || (string.Equals(fullPath, ArtDirectory, StringComparison.OrdinalIgnoreCase))
+            || (string.Equals(fullPath, LogsDirectory, StringComparison.OrdinalIgnoreCase))
+            || (string.Equals(
                 fullPath,
                 LocalizationsDirectory,
-                StringComparison.OrdinalIgnoreCase)
-            || string.Equals(fullPath, SecretsDirectory, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(fullPath, ThumbnailsDirectory, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(fullPath, StateDirectory, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(
+                StringComparison.OrdinalIgnoreCase))
+            || (string.Equals(fullPath, SecretsDirectory, StringComparison.OrdinalIgnoreCase))
+            || (string.Equals(fullPath, ThumbnailsDirectory, StringComparison.OrdinalIgnoreCase))
+            || (string.Equals(fullPath, StateDirectory, StringComparison.OrdinalIgnoreCase))
+            || (string.Equals(fullPath, ModulesDirectory, StringComparison.OrdinalIgnoreCase))
+            || (string.Equals(
                 fullPath,
                 StateAttachmentsDirectory,
-                StringComparison.OrdinalIgnoreCase);
+                StringComparison.OrdinalIgnoreCase));
     }
 
     private static string CreateChildPath(string parentDirectory, string childDirectoryName)

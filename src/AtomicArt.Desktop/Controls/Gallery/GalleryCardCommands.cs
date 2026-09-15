@@ -11,4 +11,5 @@ internal sealed record GalleryCardCommands(
     IRelayCommand? DeleteOrCancel,
     IRelayCommand? ToggleFavorite,
     IRelayCommand? ToggleSelection,
-    IRelayCommand? SelectRange);
+    IRelayCommand? SelectRange,
+    IRelayCommand? OpenDlss5 = null);

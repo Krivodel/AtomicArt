@@ -43,5 +43,6 @@ public static class GalleryLocalizationKeys
         public const string ShowInGallery = "Gallery.Actions.ShowInGallery";
         public const string ShowInFolder = "Gallery.Actions.ShowInFolder";
         public const string Imba = "Gallery.Actions.Imba";
+        public const string OpenDlss5 = "Gallery.Actions.OpenDlss5";
     }
 }

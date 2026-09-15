@@ -3,6 +3,7 @@
                  xmlns:i18n="https://codewf.com"
                  xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
                  xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+                 xmlns:dlss5="using:AtomicArt.Desktop.Services.Dlss5"
                  xmlns:galleryViews="using:AtomicArt.Desktop.Views.Gallery"
                  xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
                  xmlns:resources="using:AtomicArt.Desktop.Resources"
@@ -18,18 +19,20 @@
                  CanFullScreen="True"
                  CanPin="True"
                  IsMenuVisible="False"
+                 behaviors:Dlss5ClipboardPasteBehavior.IsEnabled="{Binding Dlss5.IsOpen}"
+                 behaviors:Dlss5ClipboardPasteBehavior.PasteCommand="{Binding Dlss5.PasteSourceCommand}"
                  behaviors:ImageDropBehavior.IsEnabled="True"
                  behaviors:ImageDropBehavior.Overlay="{Binding #WindowDropOverlay}"
                  behaviors:ImageDropBehavior.TargetKind="ExternalFiles"
                  Icon="/Assets/AppIcon.ico"
                  Title="{x:Static resources:ProductInformation.Name}"
                  TitleBarAutoHideDelay="0"
-                 behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding ActiveGenerationPanel.AttachImageInputsCommand}"
+                 behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding AttachWindowImagesCommand}"
                  behaviors:ImageAttachmentBehavior.ErrorCommand="{Binding HandleExternalInputErrorCommand}"
-                 behaviors:ImageAttachmentBehavior.MaxInputBytes="{Binding ActiveGenerationPanel.AttachmentInputByteLimit}">
+                 behaviors:ImageAttachmentBehavior.MaxInputBytes="{Binding WindowImageInputByteLimit}">
     <suki:SukiWindow.KeyBindings>
         <KeyBinding Gesture="Escape"
-                    Command="{Binding Gallery.ExitSelectionModeCommand}" />
+                    Command="{Binding HandleEscapeCommand}" />
         <KeyBinding Gesture="Delete"
                     Command="{Binding Gallery.DeleteSelectedCommand}" />
     </suki:SukiWindow.KeyBindings>
@@ -38,13 +41,18 @@
         <Image Width="{StaticResource TitleLogoSize}"
                Height="{StaticResource TitleLogoSize}"
                Source="avares://AtomicArt/Assets/AppIcon.ico"
-               RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+               RenderOptions.BitmapInterpolationMode="MediumQuality" />
     </suki:SukiWindow.LogoContent>
 
     <suki:SukiWindow.RightWindowTitleBarControls>
         <Button Classes="Icon title-action"
                 Command="{Binding OpenSettingsCommand}">
             <PathIcon Data="{StaticResource AppSettingsIcon}" />
+        </Button>
+        <Button Classes="Icon title-action"
+                Command="{Binding OpenDlss5Command}">
+            <PathIcon Data="{x:Static dlss5:Dlss5FeatureDefinition.NvidiaIconGeometry}"
+                      Foreground="{StaticResource NvidiaBrandBrush}" />
         </Button>
     </suki:SukiWindow.RightWindowTitleBarControls>
 
@@ -69,6 +77,8 @@
 
             <Grid>
                 <Grid x:Name="ShellContentGrid"
+                      behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding ActiveGenerationPanel.AttachImageInputsCommand}"
+                      IsVisible="{Binding !Dlss5.IsOpen}"
                       behaviors:ImageDropBehavior.DropArea="{Binding #GenerationPanelHost}"
                       behaviors:ImageDropBehavior.IsEnabled="{Binding !Gallery.IsSelectionMode}"
                       behaviors:ImageDropBehavior.Overlay="{Binding #PanelDropOverlay}"
@@ -147,6 +157,9 @@
                                   ShowsPreview="False" />
                 </Grid>
 
+                <ContentControl Content="{Binding Dlss5}"
+                                IsVisible="{Binding Dlss5.IsOpen}" />
+
                 <overlays:ModalOverlayLayerControl ZIndex="10">
                     <overlays:ModalOverlayPresenterControl x:Name="SettingsOverlayPresenter"
                                                            Order="{StaticResource SettingsModalOverlayOrder}"
@@ -165,7 +178,7 @@
 
                 <controls:ImageDropOverlayControl x:Name="WindowDropOverlay"
                                                   ZIndex="30"
-                                                  IsAttachmentLimitReached="{Binding ActiveGenerationPanel.IsAttachmentLimitReached}"
+                                                  IsAttachmentLimitReached="{Binding IsWindowAttachmentLimitReached}"
                                                   IconSize="200" />
             </Grid>
         </LayoutTransformControl>

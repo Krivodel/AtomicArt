@@ -112,7 +112,8 @@
         "Select": "Выделить",
         "ShowInGallery": "Показать в галерее",
         "ShowInFolder": "Показать в папке",
-        "Imba": "ИМБА"
+        "Imba": "ИМБА",
+        "OpenDlss5": "Открыть в DLSS 5"
       },
       "Selection": {
         "SelectedCount": "Выбрано: {0}",
@@ -189,6 +190,41 @@
       "Errors": {
         "CheckFailed": "Не удалось проверить наличие обновлений.",
         "InstallFailed": "Не удалось установить обновление."
+      }
+    },
+    "Dlss5": {
+      "Title": "DLSS 5",
+      "SelectImage": "Выбрать изображение",
+      "PasteImage": "Вставить из буфера обмена",
+      "Off": "DLSS 5 Off",
+      "On": "DLSS 5 On",
+      "Downloading": "Скачивание модуля…",
+      "Starting": "Запуск…",
+      "Errors": {
+        "SourceFailed": "Не удалось загрузить изображение.",
+        "InstallFailed": "Не удалось установить модуль DLSS 5.",
+        "RenderFailed": "Не удалось обработать изображение."
+      },
+      "Install": {
+        "Title": "DLSS 5",
+        "Message": "Скачать модуль ({0})?",
+        "Confirm": "Скачать"
+      },
+      "InstallCompleted": {
+        "Title": "DLSS 5 скачан",
+        "Message": "Скачивание модуля DLSS 5 завершено.",
+        "Okay": "Ок",
+        "Launch": "Запустить"
+      },
+      "Controls": {
+        "Style": "Стиль",
+        "Default": "Стандартный",
+        "Natural": "Натуральный",
+        "Cinematic": "Кинематографичный",
+        "GeneralIntensity": "Интенсивность",
+        "LocalStructureIntensity": "Детали",
+        "SkinStructureStrength": "Кожа",
+        "LocalToneStrength": "Тон"
       }
     }
   }

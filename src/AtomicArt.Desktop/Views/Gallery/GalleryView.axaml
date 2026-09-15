@@ -24,6 +24,7 @@
                                          Operations="{Binding GalleryOperations, ElementName=GalleryRoot}"
                                          DeleteOrCancelCommand="{Binding DeleteOrCancelCommand}"
                                          OpenMetadataCommand="{Binding OpenMetadataCommand}"
+                                         OpenDlss5Command="{Binding OpenDlss5Command}"
                                          OpenViewerCommand="{Binding OpenViewerCommand}"
                                          RevealInFolderCommand="{Binding RevealInFolderCommand}"
                                          RevealInNewFolderWindowCommand="{Binding RevealInNewFolderWindowCommand}"

@@ -57,6 +57,20 @@
                 Value="{DynamicResource SukiDangerColor}" />
     </Style>
 
+    <Style Selector="TextBlock.dlss5-off">
+        <Setter Property="Foreground"
+                Value="{StaticResource Dlss5OffLabelBrush}" />
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+    </Style>
+
+    <Style Selector="TextBlock.dlss5-on">
+        <Setter Property="Foreground"
+                Value="{StaticResource NvidiaBrandBrush}" />
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+    </Style>
+
     <Style Selector="TextBlock.generation-card-title">
         <Setter Property="FontWeight"
                 Value="SemiBold" />

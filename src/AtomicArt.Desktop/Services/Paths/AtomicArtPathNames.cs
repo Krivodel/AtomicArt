@@ -13,6 +13,7 @@ internal static class AtomicArtPathNames
     internal const string StateAttachmentsDirectory = "Attachments";
     internal const string StateAttachmentsRelativePath =
         StateDirectory + "/" + StateAttachmentsDirectory;
+    internal const string ModulesDirectory = "Modules";
 
     internal static bool IsDataRootMigrationExcludedDirectory(
         string relativePath)

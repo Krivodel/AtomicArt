@@ -41,8 +41,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            using ServiceProvider serviceProvider = CreateServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
             Window window = Show(scenario.View);
 
             try
@@ -68,8 +68,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         Dispatch(() =>
         {
-            using ServiceProvider serviceProvider = CreateServiceProvider();
-            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
+            using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            MainWindowScenario scenario = GalleryViewTests.CreateMainWindowScenario(serviceProvider);
             scenario.Window.Show();
 
             try
@@ -81,9 +81,36 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                         binding => binding);
 
                 bindings["Escape"].Command.Should().BeSameAs(
-                    scenario.ViewModel.Gallery.ExitSelectionModeCommand);
+                    scenario.ViewModel.HandleEscapeCommand);
                 bindings["Delete"].Command.Should().BeSameAs(
                     scenario.ViewModel.Gallery.DeleteSelectedCommand);
+            }
+            finally
+            {
+                scenario.Window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void MainWindowEscape_WhenDlss5IsOpen_HidesDlss5Panel()
+    {
+        Dispatch(() =>
+        {
+            using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            MainWindowScenario scenario = GalleryViewTests.CreateMainWindowScenario(serviceProvider);
+            scenario.ViewModel.Dlss5.IsOpen = true;
+            scenario.Window.Show();
+
+            try
+            {
+                scenario.Window.KeyPress(
+                    Key.Escape,
+                    RawInputModifiers.None,
+                    PhysicalKey.Escape,
+                    null);
+
+                scenario.ViewModel.Dlss5.IsOpen.Should().BeFalse();
             }
             finally
             {
@@ -97,8 +124,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            MainWindowScenario scenario = GalleryViewTests.CreateMainWindowScenario(serviceProvider);
             GalleryItemState[] items = Enumerable
                 .Range(1, 10)
                 .Select(index => GalleryItemStateTestFactory.CreateGenerated(
@@ -159,14 +186,14 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             ServiceCollection services = new();
             services.AddDesktopServices();
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
             Window window = Show(scenario.View);
 
             try
             {
-                AssertGalleryViewOperations(scenario.View);
+                GalleryViewTests.AssertGalleryViewOperations(scenario.View);
                 AnimatedGalleryControl galleryControl =
-                    GetGalleryControl(scenario.View);
+                    GalleryViewTests.GetGalleryControl(scenario.View);
                 galleryControl.DeleteOrCancelCommand.Should().BeSameAs(
                     scenario.ViewModel.DeleteOrCancelCommand);
                 galleryControl.ToggleFavoriteCommand.Should().BeSameAs(
@@ -184,8 +211,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
             Window window = Show(scenario.View);
 
             try
@@ -195,7 +222,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     CancellationToken.None);
                 window.CaptureRenderedFrame();
 
-                AssertSingleVisibleCard(GetGalleryControl(scenario.View));
+                GalleryViewTests.AssertSingleVisibleCard(GalleryViewTests.GetGalleryControl(scenario.View));
             }
             finally
             {
@@ -209,8 +236,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
 
             await scenario.ViewModel.RestoreStateAsync(
                 new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
@@ -220,7 +247,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 
             try
             {
-                AssertSingleVisibleCard(GetGalleryControl(scenario.View));
+                GalleryViewTests.AssertSingleVisibleCard(GalleryViewTests.GetGalleryControl(scenario.View));
             }
             finally
             {
@@ -234,8 +261,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
             Window window = Show(scenario.View);
 
             try
@@ -249,7 +276,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 scenario.ViewModel.Items.Should().ContainSingle();
                 window.CaptureRenderedFrame();
 
-                AnimatedGalleryControl gallery = GetGalleryControl(scenario.View);
+                AnimatedGalleryControl gallery = GalleryViewTests.GetGalleryControl(scenario.View);
                 GenerationCardControl card = GetGalleryPanel(gallery)
                     .Children
                     .OfType<GenerationCardControl>()
@@ -320,9 +347,9 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 highlightTransition.Duration.Should().Be(TimeSpan.FromMilliseconds(150));
                 selectionHighlight.Transitions = null;
 
-                Point cardCenter = GetControlCenter(card, window);
+                Point cardCenter = GalleryViewTests.GetControlCenter(card, window);
                 window.MouseDown(cardCenter, MouseButton.Left);
-                await Task.Delay(SelectionLongPressTestDelay);
+                await Task.Delay(GalleryViewTests.SelectionLongPressTestDelay);
                 window.MouseUp(cardCenter, MouseButton.Left);
                 window.CaptureRenderedFrame();
 
@@ -360,8 +387,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
 
             await scenario.ViewModel.RestoreStateAsync(
                 new GalleryItemState[]
@@ -374,7 +401,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             try
             {
                 GenerationCardControl card = GetGalleryPanel(
-                        GetGalleryControl(scenario.View))
+                        GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .Single();
@@ -434,8 +461,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
             Window window = Show(scenario.View);
 
             try
@@ -450,7 +477,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 window.CaptureRenderedFrame();
 
                 IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
-                        GetGalleryControl(scenario.View))
+                        GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .ToList();
@@ -471,9 +498,9 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 secondDimmingOverlay.Transitions = null;
                 firstSelectionHighlight.Transitions = null;
                 secondSelectionHighlight.Transitions = null;
-                Point firstCardCenter = GetControlCenter(firstCard, window);
+                Point firstCardCenter = GalleryViewTests.GetControlCenter(firstCard, window);
                 window.MouseDown(firstCardCenter, MouseButton.Left);
-                await Task.Delay(SelectionLongPressTestDelay);
+                await Task.Delay(GalleryViewTests.SelectionLongPressTestDelay);
                 window.MouseUp(firstCardCenter, MouseButton.Left);
                 window.CaptureRenderedFrame();
 
@@ -490,7 +517,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     .Single(button => Grid.GetRowSpan(button) == 2);
                 secondCardSelectionTarget.IsVisible.Should().BeTrue();
 
-                Point secondCardCenter = GetControlCenter(secondCard, window);
+                Point secondCardCenter = GalleryViewTests.GetControlCenter(secondCard, window);
                 window.MouseDown(secondCardCenter, MouseButton.Left);
                 window.MouseUp(secondCardCenter, MouseButton.Left);
                 window.CaptureRenderedFrame();
@@ -515,8 +542,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
             Window window = Show(scenario.View);
 
             try
@@ -532,7 +559,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 window.CaptureRenderedFrame();
 
                 IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
-                        GetGalleryControl(scenario.View))
+                        GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .ToList();
@@ -544,11 +571,11 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     ReferenceEquals(
                         card.DataContext,
                         scenario.ViewModel.Items[1]));
-                Point firstCardCenter = GetControlCenter(firstCard, window);
-                Point secondCardCenter = GetControlCenter(secondCard, window);
+                Point firstCardCenter = GalleryViewTests.GetControlCenter(firstCard, window);
+                Point secondCardCenter = GalleryViewTests.GetControlCenter(secondCard, window);
 
                 window.MouseDown(firstCardCenter, MouseButton.Left);
-                await Task.Delay(SelectionLongPressTestDelay);
+                await Task.Delay(GalleryViewTests.SelectionLongPressTestDelay);
                 window.MouseMove(
                     secondCardCenter,
                     RawInputModifiers.LeftMouseButton);
@@ -572,8 +599,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
             Window window = Show(scenario.View);
 
             try
@@ -591,7 +618,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 window.CaptureRenderedFrame();
 
                 IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
-                        GetGalleryControl(scenario.View))
+                        GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .ToList();
@@ -603,8 +630,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     ReferenceEquals(
                         card.DataContext,
                         scenario.ViewModel.Items[2]));
-                Point secondCardCenter = GetControlCenter(secondCard, window);
-                Point thirdCardCenter = GetControlCenter(thirdCard, window);
+                Point secondCardCenter = GalleryViewTests.GetControlCenter(secondCard, window);
+                Point thirdCardCenter = GalleryViewTests.GetControlCenter(thirdCard, window);
 
                 window.MouseDown(secondCardCenter, MouseButton.Left);
                 window.MouseMove(
@@ -627,8 +654,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            GalleryViewScenario scenario = CreateGalleryViewScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
             Window window = Show(scenario.View);
 
             try
@@ -645,7 +672,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 window.CaptureRenderedFrame();
 
                 IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
-                        GetGalleryControl(scenario.View))
+                        GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .ToList();
@@ -657,8 +684,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                     ReferenceEquals(
                         card.DataContext,
                         scenario.ViewModel.Items[1]));
-                Point firstCardCenter = GetControlCenter(firstCard, window);
-                Point secondCardCenter = GetControlCenter(secondCard, window);
+                Point firstCardCenter = GalleryViewTests.GetControlCenter(firstCard, window);
+                Point secondCardCenter = GalleryViewTests.GetControlCenter(secondCard, window);
 
                 window.MouseDown(firstCardCenter, MouseButton.Left);
                 window.MouseMove(
@@ -684,14 +711,14 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            MainWindowScenario scenario = GalleryViewTests.CreateMainWindowScenario(serviceProvider);
 
             await scenario.ViewModel.RestoreGalleryAsync(
                 new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
                 CancellationToken.None);
 
-            ShowAndAssertSingleVisibleCard(scenario.Window);
+            GalleryViewTests.ShowAndAssertSingleVisibleCard(scenario.Window);
         });
     }
 
@@ -700,8 +727,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            MainWindowScenario scenario = GalleryViewTests.CreateMainWindowScenario(serviceProvider);
             await scenario.ViewModel.RestoreGalleryAsync(
                 new GalleryItemState[] { GalleryItemStateTestFactory.CreateGenerated() },
                 CancellationToken.None);
@@ -763,13 +790,13 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             GalleryItemState savedItem = GalleryItemStateTestFactory.CreateGenerated();
-            await using ServiceProvider serviceProvider = CreateServiceProvider(
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider(
                 new FixedGalleryAppStateBootstrapper(savedItem));
-            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
+            MainWindowScenario scenario = GalleryViewTests.CreateMainWindowScenario(serviceProvider);
 
             await scenario.ViewModel.RestoreAppStateCommand.ExecuteAsync(null);
 
-            ShowAndAssertSingleVisibleCard(scenario.Window);
+            GalleryViewTests.ShowAndAssertSingleVisibleCard(scenario.Window);
         });
     }
 
@@ -779,9 +806,9 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             GalleryItemState savedItem = GalleryItemStateTestFactory.CreateGenerated();
-            await using ServiceProvider serviceProvider = CreateServiceProvider(
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider(
                 new FixedGalleryAppStateBootstrapper(savedItem));
-            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
+            MainWindowScenario scenario = GalleryViewTests.CreateMainWindowScenario(serviceProvider);
 
             Task restoreTask = scenario.ViewModel.RestoreAppStateCommand.ExecuteAsync(null);
             scenario.Window.Show();
@@ -792,7 +819,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 await restoreTask;
                 scenario.Window.CaptureRenderedFrame();
 
-                AssertSingleVisibleCard(GetGalleryControl(scenario.Window));
+                GalleryViewTests.AssertSingleVisibleCard(GalleryViewTests.GetGalleryControl(scenario.Window));
             }
             finally
             {
@@ -810,9 +837,9 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            await using ServiceProvider serviceProvider = CreateServiceProvider();
-            MainWindowScenario scenario = CreateMainWindowScenario(serviceProvider);
-            IReadOnlyList<GalleryItemState> items = CreateSavedGalleryItems(itemCount);
+            await using ServiceProvider serviceProvider = GalleryViewTests.CreateServiceProvider();
+            MainWindowScenario scenario = GalleryViewTests.CreateMainWindowScenario(serviceProvider);
+            IReadOnlyList<GalleryItemState> items = GalleryViewTests.CreateSavedGalleryItems(itemCount);
 
             await scenario.ViewModel.RestoreGalleryAsync(items, CancellationToken.None);
 
@@ -830,10 +857,10 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 
                 galleryPanel.Children.OfType<Control>().Should().NotBeEmpty();
                 galleryPanel.Children.OfType<Control>().Should().OnlyContain(card =>
-                    card.IsVisible
-                    && card.Opacity > 0d
-                    && card.Width > 0d
-                    && card.Height > 0d);
+                    (card.IsVisible)
+                    && (card.Opacity > 0d)
+                    && (card.Width > 0d)
+                    && (card.Height > 0d));
             }
             finally
             {
@@ -855,7 +882,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     private static MainWindowScenario CreateMainWindowScenario(
         IServiceProvider serviceProvider)
     {
-        RegisterGalleryViewTemplate(serviceProvider);
+        GalleryViewTests.RegisterGalleryViewTemplate(serviceProvider);
         MainWindow window = serviceProvider.GetRequiredService<MainWindow>();
         MainWindowViewModel viewModel = window.DataContext
             .Should()
@@ -895,7 +922,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 
     private static void AssertGalleryViewOperations(GalleryView view)
     {
-        AnimatedGalleryControl control = GetGalleryControl(view);
+        AnimatedGalleryControl control = GalleryViewTests.GetGalleryControl(view);
 
         AnimatedGalleryOperations operations = control
             .Operations
@@ -923,7 +950,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
 
         try
         {
-            AssertSingleVisibleCard(GetGalleryControl(window));
+            GalleryViewTests.AssertSingleVisibleCard(GalleryViewTests.GetGalleryControl(window));
         }
         finally
         {

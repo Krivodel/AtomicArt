@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using FluentAssertions;
 using Moq;
+using Pica.Viewer.Services;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -12,18 +13,14 @@ using AtomicArt.Desktop.Services.Gallery.Deletion;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
+using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Tests.Common;
-
-using Pica.Viewer.Services;
-
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
-
-using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
@@ -36,7 +33,7 @@ public sealed class GalleryViewModelTests
         GenerationItemStatus status)
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(status: status));
 
@@ -52,7 +49,7 @@ public sealed class GalleryViewModelTests
         RecordingGalleryItemDeletionService deletionService = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             galleryItemDeletionService: deletionService);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(
                 status: GenerationItemStatus.Generated,
@@ -80,7 +77,7 @@ public sealed class GalleryViewModelTests
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             dialogService: dialogService,
             galleryItemDeletionService: deletionService);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem());
 
@@ -102,7 +99,7 @@ public sealed class GalleryViewModelTests
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             dialogService: dialogService,
             deletionConfirmationService: deletionConfirmationService);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem());
 
@@ -118,7 +115,7 @@ public sealed class GalleryViewModelTests
         RecordingGalleryStateService galleryStateService = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             galleryStateService: galleryStateService);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem());
 
@@ -136,7 +133,7 @@ public sealed class GalleryViewModelTests
         RecordingGalleryStateService galleryStateService = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             galleryStateService: galleryStateService);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem());
         item.IsFavorite = true;
@@ -153,7 +150,7 @@ public sealed class GalleryViewModelTests
     public void ToggleSelectionCommand_WhenInactive_EntersSelectionModeWithSelectedItem()
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(prompt: "First"));
 
@@ -168,7 +165,7 @@ public sealed class GalleryViewModelTests
     public void ToggleSelectionCommand_WithLastSelectedItem_ExitsSelectionMode()
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(prompt: "First"));
         viewModel.ToggleSelectionCommand.Execute(item);
@@ -227,7 +224,7 @@ public sealed class GalleryViewModelTests
     public void ExitSelectionModeCommand_WithSelectedItems_ClearsSelection()
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(prompt: "First"));
         viewModel.ToggleSelectionCommand.Execute(item);
@@ -258,8 +255,14 @@ public sealed class GalleryViewModelTests
             GalleryViewModelTestFactory.CreateItem(prompt: "Remaining", imagePath: "remaining.png")
         ];
         viewModel.AddGeneratedItems(items, 0);
-        GenerationItemViewModel first = viewModel.Items.Single(item => item.Prompt == "First");
-        GenerationItemViewModel second = viewModel.Items.Single(item => item.Prompt == "Second");
+        GenerationItemViewModel first = viewModel.Items.Single(item => string.Equals(
+            item.Prompt,
+            "First",
+            StringComparison.Ordinal));
+        GenerationItemViewModel second = viewModel.Items.Single(item => string.Equals(
+            item.Prompt,
+            "Second",
+            StringComparison.Ordinal));
         viewModel.ToggleSelectionCommand.Execute(first);
         viewModel.ToggleSelectionCommand.Execute(second);
 
@@ -301,7 +304,7 @@ public sealed class GalleryViewModelTests
             animatedGalleryOperations: operations,
             galleryStateService: galleryStateService,
             galleryItemDeletionService: deletionService);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(prompt: "First"));
         viewModel.ToggleSelectionCommand.Execute(item);
@@ -326,7 +329,7 @@ public sealed class GalleryViewModelTests
             dialogService: dialogService,
             deletionConfirmationService: deletionConfirmationService,
             galleryItemDeletionService: deletionService);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(prompt: "First"));
         viewModel.ToggleSelectionCommand.Execute(item);
@@ -350,7 +353,10 @@ public sealed class GalleryViewModelTests
             GalleryViewModelTestFactory.CreateItem(prompt: "Remaining", imagePath: "remaining.png")
         ];
         viewModel.AddGeneratedItems(items, 0);
-        GenerationItemViewModel deletedItem = viewModel.Items.Single(item => item.Prompt == "Deleted");
+        GenerationItemViewModel deletedItem = viewModel.Items.Single(item => string.Equals(
+            item.Prompt,
+            "Deleted",
+            StringComparison.Ordinal));
 
         await viewModel.DeleteOrCancelCommand.ExecuteAsync(deletedItem);
 
@@ -391,7 +397,7 @@ public sealed class GalleryViewModelTests
             errorHandler: errorHandler);
         List<GenerationItemDto> items =
         [
-            new(
+            new GenerationItemDto(
                 itemId,
                 ApiModelMetadataTestCatalog.NanoBanana2ModelId,
                 ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
@@ -432,7 +438,7 @@ public sealed class GalleryViewModelTests
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             galleryStateService: galleryStateService,
             galleryItemDeletionService: deletionService);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generating));
 
@@ -483,7 +489,7 @@ public sealed class GalleryViewModelTests
         RecordingAnimatedGalleryOperations operations = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             animatedGalleryOperations: operations);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generated));
 
@@ -514,7 +520,7 @@ public sealed class GalleryViewModelTests
         RecordingAnimatedGalleryOperations operations = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             animatedGalleryOperations: operations);
-        GenerationItemViewModel item = AddGeneratedItem(
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(status: GenerationItemStatus.Generated));
 
@@ -685,7 +691,10 @@ public sealed class GalleryViewModelTests
                 imagePath: null)
         ];
         viewModel.AddGeneratedItems(items, 0);
-        GenerationItemViewModel selectedItem = viewModel.Items.Single(item => item.Prompt == "Second");
+        GenerationItemViewModel selectedItem = viewModel.Items.Single(item => string.Equals(
+            item.Prompt,
+            "Second",
+            StringComparison.Ordinal));
 
         await viewModel.OpenViewerCommand.ExecuteAsync(selectedItem);
 
@@ -693,7 +702,36 @@ public sealed class GalleryViewModelTests
         imageViewerService.LastRequest.Should().NotBeNull();
         GalleryImageViewerRequest? request = imageViewerService.LastRequest;
         request?.SelectedItemId.Should().Be(selectedItem.Id);
-        request?.ItemsSource.GetItems().Select(GetFileSourcePath).Should().BeEquivalentTo("first.png", "second.png");
+        request?.ItemsSource.GetItems().Select(GalleryViewModelTests.GetFileSourcePath).Should().BeEquivalentTo("first.png", "second.png");
+    }
+
+    [Fact]
+    public async Task OpenViewerCommand_WithGeneratedImage_ProvidesExistingFavoriteBehavior()
+    {
+        RecordingImageViewerService imageViewerService = new();
+        RecordingGalleryStateService galleryStateService = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            imageViewerService: imageViewerService,
+            galleryStateService: galleryStateService);
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(imagePath: "image.png"));
+
+        await viewModel.OpenViewerCommand.ExecuteAsync(item);
+        GalleryImageViewerRequest request = imageViewerService.LastRequest
+            ?? throw new InvalidOperationException("The viewer request was not captured.");
+        GalleryImageViewerItem viewerItem = request.ItemsSource.GetItems().Should()
+            .ContainSingle()
+            .Subject;
+        Func<CancellationToken, Task> toggleFavoriteAsync = viewerItem.ToggleFavoriteAsync
+            ?? throw new InvalidOperationException("The favorite action was not provided.");
+
+        await toggleFavoriteAsync(CancellationToken.None);
+
+        item.IsFavorite.Should().BeTrue();
+        galleryStateService.SaveCallCount.Should().Be(1);
+        galleryStateService.SavedItems.Should().ContainSingle()
+            .Which.IsFavorite.Should().BeTrue();
     }
 
     [Fact]
@@ -709,8 +747,14 @@ public sealed class GalleryViewModelTests
             GalleryViewModelTestFactory.CreateItem(prompt: "Second", imagePath: "second.png")
         ];
         viewModel.AddGeneratedItems(items, 0);
-        GenerationItemViewModel firstItem = viewModel.Items.Single(item => item.Prompt == "First");
-        GenerationItemViewModel secondItem = viewModel.Items.Single(item => item.Prompt == "Second");
+        GenerationItemViewModel firstItem = viewModel.Items.Single(item => string.Equals(
+            item.Prompt,
+            "First",
+            StringComparison.Ordinal));
+        GenerationItemViewModel secondItem = viewModel.Items.Single(item => string.Equals(
+            item.Prompt,
+            "Second",
+            StringComparison.Ordinal));
 
         Task firstOpen = viewModel.OpenViewerCommand.ExecuteAsync(firstItem);
         await imageViewerService.WaitForOpenCallAsync(cancellation.Token);
@@ -768,6 +812,32 @@ public sealed class GalleryViewModelTests
             viewModel.ShowFailureDetailsCommand.CanExecute(generatedItem);
 
         canExecute.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Completed_WhenGeneratedItemHasNoImagePath_UsesEmptyImageState()
+    {
+        using GalleryLifecycleTestContext context = new();
+        Guid correlationId = context.Start(1);
+        GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
+            imagePath: null);
+
+        GalleryViewModelTests.AssertCompletedItemHasEmptyImageState(context, correlationId, resultItem);
+    }
+
+    [Fact]
+    public void Completed_WhenGenerationFailed_KeepsFailedImageState()
+    {
+        using GalleryLifecycleTestContext context = new();
+        Guid correlationId = context.Start(1);
+        GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
+            status: GenerationItemStatus.Failed,
+            imagePath: null);
+
+        context.Complete(correlationId, resultItem);
+
+        context.ViewModel.Items[0].IsFailed.Should().BeTrue();
+        context.ViewModel.Items[0].ImagePath.Should().BeNull();
     }
 
     [Fact]
@@ -853,33 +923,7 @@ public sealed class GalleryViewModelTests
         GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
             imagePath: "unsafe.png");
 
-        AssertCompletedItemHasEmptyImageState(context, correlationId, resultItem);
-    }
-
-    [Fact]
-    public void Completed_WhenGeneratedItemHasNoImagePath_UsesEmptyImageState()
-    {
-        using GalleryLifecycleTestContext context = new();
-        Guid correlationId = context.Start(1);
-        GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
-            imagePath: null);
-
-        AssertCompletedItemHasEmptyImageState(context, correlationId, resultItem);
-    }
-
-    [Fact]
-    public void Completed_WhenGenerationFailed_KeepsFailedImageState()
-    {
-        using GalleryLifecycleTestContext context = new();
-        Guid correlationId = context.Start(1);
-        GenerationItemDto resultItem = GalleryViewModelTestFactory.CreateItem(
-            status: GenerationItemStatus.Failed,
-            imagePath: null);
-
-        context.Complete(correlationId, resultItem);
-
-        context.ViewModel.Items[0].IsFailed.Should().BeTrue();
-        context.ViewModel.Items[0].ImagePath.Should().BeNull();
+        GalleryViewModelTests.AssertCompletedItemHasEmptyImageState(context, correlationId, resultItem);
     }
 
     [Fact]
@@ -967,7 +1011,7 @@ public sealed class GalleryViewModelTests
             new ThrowingImageGenerationApiClient(),
             lifecycleEventHub);
 
-        await dispatcher.EnqueueAsync(CreateRunRequest(), CancellationToken.None);
+        await dispatcher.EnqueueAsync(GalleryViewModelTests.CreateRunRequest(), CancellationToken.None);
 
         await AsyncTestWaiter.WaitForConditionAsync(
             () => viewModel.Items is [{ IsFailed: true }],
@@ -1002,7 +1046,7 @@ public sealed class GalleryViewModelTests
         GalleryViewModel viewModel,
         GenerationItemDto item)
     {
-        IReadOnlyList<GenerationItemDto> items = [item];
+        GenerationItemDto[] items = [item];
 
         viewModel.AddGeneratedItems(items, 0);
 

@@ -20,5 +20,6 @@
         <StyleInclude Source="avares://AtomicArt/Resources/ScrollViewerStyles.axaml" />
         <StyleInclude Source="avares://AtomicArt/Resources/TextBoxStyles.axaml" />
         <StyleInclude Source="avares://AtomicArt/Resources/Templates.axaml" />
+        <StyleInclude Source="/Resources/Dlss5Styles.axaml" />
     </Application.Styles>
 </Application>

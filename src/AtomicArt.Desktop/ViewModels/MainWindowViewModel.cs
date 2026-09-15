@@ -1,14 +1,18 @@
+using System.ComponentModel;
+
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.ViewModels.Dialogs;
+using AtomicArt.Desktop.ViewModels.Dlss5;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Settings;
@@ -31,6 +35,12 @@ public sealed partial class MainWindowViewModel :
         (ActiveGenerationPanel as IGenerationPromptTarget)?.ReplacePromptCommand;
     public SettingsViewModel Settings => _settings;
     public ApplicationUpdateViewModel ApplicationUpdate { get; }
+    public Dlss5SessionViewModel Dlss5 { get; }
+    public int WindowImageInputByteLimit => Dlss5.IsOpen
+        ? Dlss5FeatureDefinition.MaxSourceImageBytes
+        : ActiveGenerationPanel.AttachmentInputByteLimit;
+    public bool IsWindowAttachmentLimitReached =>
+        (!Dlss5.IsOpen) && ActiveGenerationPanel.IsAttachmentLimitReached;
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
 
     private readonly IAppStateBootstrapper _appStateBootstrapper;
@@ -65,6 +75,7 @@ public sealed partial class MainWindowViewModel :
         IWindowStateService windowStateService,
         IAppStateBootstrapper appStateBootstrapper,
         ApplicationUpdateViewModel applicationUpdate,
+        Dlss5SessionViewModel dlss5,
         IMessenger messenger,
         IViewModelErrorHandler errorHandler,
         ILocalizationTextProvider textProvider)
@@ -79,6 +90,7 @@ public sealed partial class MainWindowViewModel :
         ArgumentNullException.ThrowIfNull(windowStateService);
         ArgumentNullException.ThrowIfNull(appStateBootstrapper);
         ArgumentNullException.ThrowIfNull(applicationUpdate);
+        ArgumentNullException.ThrowIfNull(dlss5);
         ArgumentNullException.ThrowIfNull(messenger);
         ArgumentNullException.ThrowIfNull(errorHandler);
         ArgumentNullException.ThrowIfNull(textProvider);
@@ -109,6 +121,12 @@ public sealed partial class MainWindowViewModel :
         _errorHandler = errorHandler;
         _textProvider = textProvider;
         ApplicationUpdate = applicationUpdate;
+        Dlss5 = dlss5;
+        Dlss5.PropertyChanged += OnAttachmentTargetChanged;
+        if (ActiveGenerationPanel is INotifyPropertyChanged observablePanel)
+        {
+            observablePanel.PropertyChanged += OnAttachmentTargetChanged;
+        }
         SubscribeToEvents();
         messenger.Register<LocalizationChangedMessage>(this);
     }
@@ -135,6 +153,11 @@ public sealed partial class MainWindowViewModel :
         }
     }
 
+    public void PrepareForDataRootMigration()
+    {
+        Dlss5.PrepareForDataRootMigration();
+    }
+
     public Task RebaseDataRootAsync(
         string sourceRootDirectory,
         string destinationRootDirectory,
@@ -158,6 +181,11 @@ public sealed partial class MainWindowViewModel :
 
     public void Dispose()
     {
+        Dlss5.PropertyChanged -= OnAttachmentTargetChanged;
+        if (ActiveGenerationPanel is INotifyPropertyChanged observablePanel)
+        {
+            observablePanel.PropertyChanged -= OnAttachmentTargetChanged;
+        }
         _settings.CloseRequested -= OnSettingsCloseRequested;
         _settings.Dispose();
         _uiScaleService.ScaleChanged -= OnUiScaleChanged;
@@ -168,6 +196,24 @@ public sealed partial class MainWindowViewModel :
     private void OpenSettings()
     {
         IsSettingsOpen = true;
+    }
+
+    [RelayCommand]
+    private async Task OpenDlss5Async(CancellationToken ct)
+    {
+        await Dlss5.OpenAsync(ct);
+    }
+
+    [RelayCommand]
+    private void HandleEscape()
+    {
+        if (Dlss5.IsOpen)
+        {
+            Dlss5.BackCommand.Execute(null);
+            return;
+        }
+
+        Gallery.ExitSelectionModeCommand.Execute(null);
     }
 
     [RelayCommand]
@@ -203,13 +249,49 @@ public sealed partial class MainWindowViewModel :
     private async Task RestoreAppStateAsync(CancellationToken ct)
     {
         await ViewModelAsyncOperation.RunAsync(
-            () => _appStateBootstrapper.RestoreAsync(this, ct),
+            async () =>
+            {
+                await _appStateBootstrapper.RestoreAsync(this, ct);
+                await Dlss5.RestoreAsync(ct);
+            },
             ct,
             _errorHandler,
             nameof(RestoreAppStateAsync),
             value => IsLoading = value,
             value => ErrorMessage = value,
             value => _errorLocalizationKey = value);
+    }
+
+    [RelayCommand]
+    private async Task AttachWindowImagesAsync(IReadOnlyList<ImageAttachmentInput>? inputs)
+    {
+        IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?> command = Dlss5.IsOpen
+            ? Dlss5.AttachSourceImagesCommand
+            : ActiveGenerationPanel.AttachImageInputsCommand;
+        if (command.CanExecute(inputs))
+        {
+            await command.ExecuteAsync(inputs);
+            return;
+        }
+
+        if (inputs is not null)
+        {
+            foreach (ImageAttachmentInput input in inputs)
+            {
+                input.Dispose();
+            }
+        }
+    }
+
+    private void OnAttachmentTargetChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if ((args.PropertyName == nameof(Dlss5SessionViewModel.IsOpen))
+            || (args.PropertyName == nameof(IModelPanelViewModel.AttachmentInputByteLimit))
+            || (args.PropertyName == nameof(IModelPanelViewModel.IsAttachmentLimitReached)))
+        {
+            OnPropertyChanged(nameof(WindowImageInputByteLimit));
+            OnPropertyChanged(nameof(IsWindowAttachmentLimitReached));
+        }
     }
 
     private void SubscribeToEvents()
@@ -223,12 +305,12 @@ public sealed partial class MainWindowViewModel :
         return !IsLoading;
     }
 
-    private void OnSettingsCloseRequested(object? sender, EventArgs e)
+    private void OnSettingsCloseRequested(object? sender, EventArgs eventArgs)
     {
         IsSettingsOpen = false;
     }
 
-    private void OnUiScaleChanged(object? sender, EventArgs e)
+    private void OnUiScaleChanged(object? sender, EventArgs eventArgs)
     {
         UiScale = _uiScaleService.CurrentScale;
     }

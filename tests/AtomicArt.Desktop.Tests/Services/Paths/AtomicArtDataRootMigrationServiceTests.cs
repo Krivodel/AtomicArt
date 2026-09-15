@@ -5,6 +5,7 @@ using Moq;
 using Xunit;
 
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Logging;
@@ -148,6 +149,86 @@ public sealed class AtomicArtDataRootMigrationServiceTests
                 destinationDirectory,
                 AtomicArtPathNames.SingleInstanceCoordinationDirectory)).Should().BeFalse();
             pathProvider.RootDirectory.Should().Be(Path.GetFullPath(destinationDirectory));
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(testDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task MigrateAsync_WithDlss5Session_PreparesTargetAndMovesSessionState()
+    {
+        string testDirectory = TestDirectories.GetUniqueDirectoryPath(
+            typeof(AtomicArtDataRootMigrationServiceTests));
+        string sourceDirectory = Path.Combine(testDirectory, "Source");
+        string destinationDirectory = Path.Combine(testDirectory, "Destination");
+        string bootstrapDirectory = Path.Combine(testDirectory, "Bootstrap");
+        byte[] sourceContent = [4, 3, 2, 1];
+        byte[] stateContent = [1, 2, 3, 4];
+
+        try
+        {
+            string sessionDirectory = Path.Combine(
+                sourceDirectory,
+                "Modules",
+                "DLSS 5",
+                "session");
+            Directory.CreateDirectory(sessionDirectory);
+            string sessionSourcePath = Path.Combine(sessionDirectory, "source.png");
+            File.WriteAllBytes(sessionSourcePath, sourceContent);
+            string stateDirectory = Path.Combine(sourceDirectory, "State");
+            Directory.CreateDirectory(stateDirectory);
+            string sessionStatePath = Path.Combine(stateDirectory, "dlss5-session.json");
+            File.WriteAllBytes(sessionStatePath, stateContent);
+            Directory.CreateDirectory(destinationDirectory);
+            AtomicArtDataPathProvider pathProvider = new(sourceDirectory);
+            Dlss5ModulePaths modulePaths = new(pathProvider);
+            AtomicArtDataRootBootstrapStore bootstrapStore = new(bootstrapDirectory);
+            await bootstrapStore.SaveRootDirectoryAsync(
+                sourceDirectory,
+                CancellationToken.None);
+            bool targetPrepared = false;
+            Mock<IDataRootMigrationTarget> targetMock = CreateTargetMock();
+            targetMock
+                .Setup(target => target.PrepareForDataRootMigration())
+                .Callback(() => targetPrepared = true);
+            Mock<IApplicationStateFlushService> flushServiceMock = new();
+            flushServiceMock
+                .Setup(service => service.FlushAsync(
+                    targetMock.Object,
+                    It.IsAny<CancellationToken>()))
+                .Callback(() => targetPrepared.Should().BeTrue())
+                .Returns(Task.CompletedTask);
+            AtomicArtDataRootMigrationService service = CreateService(
+                pathProvider,
+                bootstrapStore,
+                targetMock,
+                flushServiceMock.Object,
+                Mock.Of<IDataRootLogRelocationService>());
+            Mock<IProgress<DataRootMigrationProgress>> progressMock = new();
+
+            await service.MigrateAsync(
+                destinationDirectory,
+                progressMock.Object,
+                CancellationToken.None);
+
+            string destinationSourcePath = Path.Combine(
+                destinationDirectory,
+                Path.GetRelativePath(sourceDirectory, sessionSourcePath));
+            string destinationStatePath = Path.Combine(
+                destinationDirectory,
+                Path.GetRelativePath(sourceDirectory, sessionStatePath));
+            File.ReadAllBytes(destinationSourcePath).Should().Equal(sourceContent);
+            File.ReadAllBytes(destinationStatePath).Should().Equal(stateContent);
+            targetMock.Verify(
+                target => target.PrepareForDataRootMigration(),
+                Times.Once);
+            pathProvider.RootDirectory.Should().Be(Path.GetFullPath(destinationDirectory));
+            modulePaths.ModuleDirectory.Should().Be(Path.Combine(
+                Path.GetFullPath(destinationDirectory),
+                "Modules",
+                "DLSS 5"));
         }
         finally
         {

@@ -6,10 +6,9 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform;
 using Avalonia.VisualTree;
+using Pica.Viewer.Services;
 using SukiUI.Controls;
 using SukiUI.Dialogs;
-
-using Pica.Viewer.Services;
 
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls;
@@ -17,6 +16,7 @@ using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.ViewModels;
+using AtomicArt.Desktop.Views.Dlss5;
 using AtomicArt.Desktop.Views.Updates;
 
 namespace AtomicArt.Desktop.Views.Shell;
@@ -36,6 +36,7 @@ public partial class MainWindow : SukiWindow
     private ITrayService? _trayService;
     private IConfirmationDialogPresenter? _confirmationDialogPresenter;
     private ApplicationUpdateToastPresenter? _updateToastPresenter;
+    private Dlss5OperationToastPresenter? _dlss5ToastPresenter;
     private bool _isGenerationPanelMinimumHeightInitialized;
 
     public MainWindow()
@@ -69,7 +70,8 @@ public partial class MainWindow : SukiWindow
         IAttachmentImageDragService attachmentImageDragService,
         IConfirmationDialogPresenter confirmationDialogPresenter,
         ISukiDialogManager dialogManager,
-        ApplicationUpdateToastPresenter updateToastPresenter) : this()
+        ApplicationUpdateToastPresenter updateToastPresenter,
+        Dlss5OperationToastPresenter dlss5ToastPresenter) : this()
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         ArgumentNullException.ThrowIfNull(trayService);
@@ -79,14 +81,17 @@ public partial class MainWindow : SukiWindow
         ArgumentNullException.ThrowIfNull(confirmationDialogPresenter);
         ArgumentNullException.ThrowIfNull(dialogManager);
         ArgumentNullException.ThrowIfNull(updateToastPresenter);
+        ArgumentNullException.ThrowIfNull(dlss5ToastPresenter);
 
         _trayService = trayService;
         _confirmationDialogPresenter = confirmationDialogPresenter;
         _updateToastPresenter = updateToastPresenter;
+        _dlss5ToastPresenter = dlss5ToastPresenter;
         DataContext = viewModel;
         ConfirmationDialogHost.Manager = dialogManager;
         UpdateToastHost.Manager = updateToastPresenter.Manager;
         updateToastPresenter.Attach(viewModel.ApplicationUpdate);
+        dlss5ToastPresenter.Attach(viewModel.Dlss5);
         ClipboardPasteBehavior.SetClipboardImageService(this, clipboardImageService);
         ImageDropBehavior.SetDragDropImageService(this, dragDropImageService);
         AttachmentImageDragBehavior.SetDragService(
@@ -94,18 +99,18 @@ public partial class MainWindow : SukiWindow
             attachmentImageDragService);
     }
 
-    protected override void OnClosing(WindowClosingEventArgs e)
+    protected override void OnClosing(WindowClosingEventArgs eventArgs)
     {
-        if (_trayService is not null && !_trayService.IsExitRequested)
+        if ((_trayService is not null) && (!_trayService.IsExitRequested))
         {
-            e.Cancel = true;
+            eventArgs.Cancel = true;
             _trayService.HideToTray();
         }
 
-        base.OnClosing(e);
+        base.OnClosing(eventArgs);
     }
 
-    protected override void OnClosed(EventArgs e)
+    protected override void OnClosed(EventArgs eventArgs)
     {
         SettingsOverlayPresenter.PropertyChanged -=
             OnSettingsOverlayPresenterPropertyChanged;
@@ -114,7 +119,9 @@ public partial class MainWindow : SukiWindow
         _confirmationDialogPresenter = null;
         _updateToastPresenter?.Dispose();
         _updateToastPresenter = null;
-        base.OnClosed(e);
+        _dlss5ToastPresenter?.Dispose();
+        _dlss5ToastPresenter = null;
+        base.OnClosed(eventArgs);
     }
 
     [DllImport(WindowsNativeLibraryNames.User32, CharSet = CharSet.Unicode, EntryPoint = "RemovePropW", SetLastError = true)]
@@ -122,6 +129,25 @@ public partial class MainWindow : SukiWindow
 
     [DllImport(WindowsNativeLibraryNames.User32, CharSet = CharSet.Unicode, EntryPoint = "SetPropW", SetLastError = true)]
     private static extern bool SetWindowProperty(nint windowHandle, string propertyName, nint value);
+
+    private static bool IsPromptTextBoxSource(object? source)
+    {
+        if (source is not Visual visual)
+        {
+            return false;
+        }
+
+        return (string.Equals(
+                (visual as TextBox)?.Name,
+                PromptTextBoxName,
+                StringComparison.Ordinal))
+            || (visual.GetVisualAncestors()
+                .OfType<TextBox>()
+                .Any(textBox => string.Equals(
+                    textBox.Name,
+                    PromptTextBoxName,
+                    StringComparison.Ordinal)));
+    }
 
     private void InitializeGenerationPanelMinimumHeight()
     {
@@ -163,15 +189,38 @@ public partial class MainWindow : SukiWindow
         }
     }
 
+    private void UpdateWindowsFullscreenDetectionHint()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        IPlatformHandle? handle = TryGetPlatformHandle();
+        if ((handle is null)
+            || (!string.Equals(handle.HandleDescriptor, NativeWindowHandleDescriptor, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        if (WindowState == WindowState.FullScreen)
+        {
+            _ = MainWindow.RemoveWindowProperty(handle.Handle, NonRudeWindowPropertyName);
+            return;
+        }
+
+        _ = MainWindow.SetWindowProperty(handle.Handle, NonRudeWindowPropertyName, MainWindow.EnabledWindowPropertyValue);
+    }
+
     private void OnGenerationPanelPointerPressed(
         object? sender,
-        PointerPressedEventArgs e)
+        PointerPressedEventArgs eventArgs)
     {
         _ = sender;
 
-        if (e.GetCurrentPoint(GenerationPanelContent).Properties.PointerUpdateKind
-            != PointerUpdateKind.RightButtonPressed
-            || IsPromptTextBoxSource(e.Source))
+        if ((eventArgs.GetCurrentPoint(GenerationPanelContent).Properties.PointerUpdateKind
+            != PointerUpdateKind.RightButtonPressed)
+            || (MainWindow.IsPromptTextBoxSource(eventArgs.Source)))
         {
             return;
         }
@@ -182,7 +231,7 @@ public partial class MainWindow : SukiWindow
             return;
         }
 
-        e.Handled = true;
+        eventArgs.Handled = true;
         foreach (MenuItem menuItem in contextFlyout.Items.OfType<MenuItem>())
         {
             menuItem.DataContext = DataContext;
@@ -191,49 +240,10 @@ public partial class MainWindow : SukiWindow
         contextFlyout.ShowAt(GenerationPanelContent, true);
     }
 
-    private static bool IsPromptTextBoxSource(object? source)
-    {
-        if (source is not Visual visual)
-        {
-            return false;
-        }
-
-        return (visual as TextBox)?.Name == PromptTextBoxName
-            || visual.GetVisualAncestors()
-                .OfType<TextBox>()
-                .Any(textBox => string.Equals(
-                    textBox.Name,
-                    PromptTextBoxName,
-                    StringComparison.Ordinal));
-    }
-
-    private void UpdateWindowsFullscreenDetectionHint()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        IPlatformHandle? handle = TryGetPlatformHandle();
-        if (handle is null
-            || !string.Equals(handle.HandleDescriptor, NativeWindowHandleDescriptor, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        if (WindowState == WindowState.FullScreen)
-        {
-            _ = RemoveWindowProperty(handle.Handle, NonRudeWindowPropertyName);
-            return;
-        }
-
-        _ = SetWindowProperty(handle.Handle, NonRudeWindowPropertyName, EnabledWindowPropertyValue);
-    }
-
-    private void OnLoaded(object? sender, RoutedEventArgs e)
+    private void OnLoaded(object? sender, RoutedEventArgs eventArgs)
     {
         _ = sender;
-        _ = e;
+        _ = eventArgs;
 
         InitializeGenerationPanelMinimumHeight();
         if (_isGenerationPanelMinimumHeightInitialized)
@@ -244,37 +254,37 @@ public partial class MainWindow : SukiWindow
 
     private void OnConfirmationDismissKeyDown(
         object? sender,
-        KeyEventArgs e)
+        KeyEventArgs eventArgs)
     {
         _ = sender;
 
-        if (e.Key == Key.Escape
-            && _confirmationDialogPresenter is { IsOpen: true })
+        if ((eventArgs.Key == Key.Escape)
+            && (_confirmationDialogPresenter is { IsOpen: true }))
         {
             _confirmationDialogPresenter.Dismiss();
-            e.Handled = true;
+            eventArgs.Handled = true;
         }
     }
 
     private void OnSettingsOverlayPresenterPropertyChanged(
         object? sender,
-        AvaloniaPropertyChangedEventArgs e)
+        AvaloniaPropertyChangedEventArgs eventArgs)
     {
         _ = sender;
 
-        if (e.Property == ModalOverlayPresenterControl.IsOpenProperty
-            && e.NewValue is false
-            && IsLoaded)
+        if ((eventArgs.Property == ModalOverlayPresenterControl.IsOpenProperty)
+            && (eventArgs.NewValue is false)
+            && (IsLoaded))
         {
             FocusPromptInput();
         }
     }
 
-    private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs eventArgs)
     {
         _ = sender;
 
-        if (e.Property == WindowStateProperty)
+        if (eventArgs.Property == WindowStateProperty)
         {
             UpdateWindowsFullscreenDetectionHint();
         }

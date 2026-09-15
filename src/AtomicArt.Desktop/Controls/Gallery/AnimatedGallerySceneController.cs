@@ -132,8 +132,8 @@ internal sealed class AnimatedGallerySceneController
             return;
         }
 
-        if (ReferenceEquals(_registeredOperationsRegistration, registration)
-            && ReferenceEquals(_registeredSceneOperations, _scene.OperationCoordinator))
+        if ((ReferenceEquals(_registeredOperationsRegistration, registration))
+            && (ReferenceEquals(_registeredSceneOperations, _scene.OperationCoordinator)))
         {
             return;
         }
@@ -218,7 +218,7 @@ internal sealed class AnimatedGallerySceneController
 
             _scene.CardControlFactory.ApplySelectionDimming(
                 control,
-                _owner.IsSelectionMode && !isSelected);
+                (_owner.IsSelectionMode) && (!isSelected));
         }
     }
 
@@ -304,7 +304,8 @@ internal sealed class AnimatedGallerySceneController
             _owner.DeleteOrCancelCommand,
             _owner.ToggleFavoriteCommand,
             _owner.ToggleSelectionCommand,
-            _owner.SelectRangeCommand);
+            _owner.SelectRangeCommand,
+            _owner.OpenDlss5Command);
     }
 
     private void ApplyCurrentSelectionMode(Control control)

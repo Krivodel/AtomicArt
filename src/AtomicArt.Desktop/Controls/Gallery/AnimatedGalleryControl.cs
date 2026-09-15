@@ -8,7 +8,6 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Controls;
@@ -20,67 +19,70 @@ namespace AtomicArt.Desktop.Controls.Gallery;
 
 public partial class AnimatedGalleryControl : UserControl
 {
-    internal const double BottomOpacityFadeHeight = 30d;
-
     public IEnumerable<IGalleryItemViewModel>? Items
     {
-        get => GetValue(ItemsProperty);
-        set => SetValue(ItemsProperty, value);
+        get => GetValue(AnimatedGalleryControl.ItemsProperty);
+        set => SetValue(AnimatedGalleryControl.ItemsProperty, value);
     }
     public IRelayCommand? RevealInFolderCommand
     {
-        get => GetValue(RevealInFolderCommandProperty);
-        set => SetValue(RevealInFolderCommandProperty, value);
+        get => GetValue(AnimatedGalleryControl.RevealInFolderCommandProperty);
+        set => SetValue(AnimatedGalleryControl.RevealInFolderCommandProperty, value);
     }
     public IRelayCommand? RevealInNewFolderWindowCommand
     {
-        get => GetValue(RevealInNewFolderWindowCommandProperty);
-        set => SetValue(RevealInNewFolderWindowCommandProperty, value);
+        get => GetValue(AnimatedGalleryControl.RevealInNewFolderWindowCommandProperty);
+        set => SetValue(AnimatedGalleryControl.RevealInNewFolderWindowCommandProperty, value);
     }
     public IRelayCommand? OpenViewerCommand
     {
-        get => GetValue(OpenViewerCommandProperty);
-        set => SetValue(OpenViewerCommandProperty, value);
+        get => GetValue(AnimatedGalleryControl.OpenViewerCommandProperty);
+        set => SetValue(AnimatedGalleryControl.OpenViewerCommandProperty, value);
     }
     public IRelayCommand? ShowFailureDetailsCommand
     {
-        get => GetValue(ShowFailureDetailsCommandProperty);
-        set => SetValue(ShowFailureDetailsCommandProperty, value);
+        get => GetValue(AnimatedGalleryControl.ShowFailureDetailsCommandProperty);
+        set => SetValue(AnimatedGalleryControl.ShowFailureDetailsCommandProperty, value);
     }
     public IRelayCommand? OpenMetadataCommand
     {
-        get => GetValue(OpenMetadataCommandProperty);
-        set => SetValue(OpenMetadataCommandProperty, value);
+        get => GetValue(AnimatedGalleryControl.OpenMetadataCommandProperty);
+        set => SetValue(AnimatedGalleryControl.OpenMetadataCommandProperty, value);
     }
     public IRelayCommand? DeleteOrCancelCommand
     {
-        get => GetValue(DeleteOrCancelCommandProperty);
-        set => SetValue(DeleteOrCancelCommandProperty, value);
+        get => GetValue(AnimatedGalleryControl.DeleteOrCancelCommandProperty);
+        set => SetValue(AnimatedGalleryControl.DeleteOrCancelCommandProperty, value);
     }
     public IRelayCommand? ToggleFavoriteCommand
     {
-        get => GetValue(ToggleFavoriteCommandProperty);
-        set => SetValue(ToggleFavoriteCommandProperty, value);
+        get => GetValue(AnimatedGalleryControl.ToggleFavoriteCommandProperty);
+        set => SetValue(AnimatedGalleryControl.ToggleFavoriteCommandProperty, value);
+    }
+    public IRelayCommand? OpenDlss5Command
+    {
+        get => GetValue(AnimatedGalleryControl.OpenDlss5CommandProperty);
+        set => SetValue(AnimatedGalleryControl.OpenDlss5CommandProperty, value);
     }
     public IRelayCommand? ToggleSelectionCommand
     {
-        get => GetValue(ToggleSelectionCommandProperty);
-        set => SetValue(ToggleSelectionCommandProperty, value);
+        get => GetValue(AnimatedGalleryControl.ToggleSelectionCommandProperty);
+        set => SetValue(AnimatedGalleryControl.ToggleSelectionCommandProperty, value);
     }
     public IRelayCommand? SelectRangeCommand
     {
-        get => GetValue(SelectRangeCommandProperty);
-        set => SetValue(SelectRangeCommandProperty, value);
+        get => GetValue(AnimatedGalleryControl.SelectRangeCommandProperty);
+        set => SetValue(AnimatedGalleryControl.SelectRangeCommandProperty, value);
     }
     public bool IsSelectionMode
     {
-        get => GetValue(IsSelectionModeProperty);
-        set => SetValue(IsSelectionModeProperty, value);
+        get => GetValue(AnimatedGalleryControl.IsSelectionModeProperty);
+        set => SetValue(AnimatedGalleryControl.IsSelectionModeProperty, value);
     }
     public IAnimatedGalleryOperations? Operations
     {
-        get => GetValue(OperationsProperty);
-        set => SetValue(OperationsProperty, value);
+        get => GetValue(AnimatedGalleryControl.OperationsProperty);
+        set => SetValue(AnimatedGalleryControl.OperationsProperty, value);
     }
 
     public static readonly StyledProperty<IEnumerable<IGalleryItemViewModel>?> ItemsProperty =
@@ -107,6 +109,9 @@ public partial class AnimatedGalleryControl : UserControl
     public static readonly StyledProperty<IRelayCommand?> ToggleFavoriteCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(ToggleFavoriteCommand));
+    public static readonly StyledProperty<IRelayCommand?> OpenDlss5CommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(OpenDlss5Command));
     public static readonly StyledProperty<IRelayCommand?> ToggleSelectionCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(ToggleSelectionCommand));
@@ -120,11 +125,16 @@ public partial class AnimatedGalleryControl : UserControl
         AvaloniaProperty.Register<AnimatedGalleryControl, IAnimatedGalleryOperations?>(
             nameof(Operations));
 
+    internal const double BottomOpacityFadeHeight = 30d;
+
     internal ScrollViewer PreviewScrollViewer => GalleryScrollViewer;
     internal IGenerationPreviewExpansionHost PreviewExpansionHost { get; }
 
     internal event EventHandler? PreviewPointerStateChanged;
     internal event EventHandler? PreviewModifiersChanged;
+
+    private const int OpacityMaskGradientStopCount = 2;
+    private const int BottomOpacityMaskGradientStopIndex = 1;
 
     private AnimatedGalleryResizeController ResizeController =>
         _resizeController ?? throw new InvalidOperationException("Animated gallery resize controller was not created.");
@@ -137,7 +147,6 @@ public partial class AnimatedGalleryControl : UserControl
     private readonly Dictionary<Control, IReadOnlyList<Visual>> _previewOverflowPaths = [];
     private readonly Dictionary<Visual, PreviewClipState> _previewClipStates = [];
     private readonly HashSet<Control> _previewOverflowCards = [];
-
     private AnimatedGalleryResizeController? _resizeController;
     private TopLevel? _previewTopLevel;
     private Point? _previewPointerPosition;
@@ -185,16 +194,6 @@ public partial class AnimatedGalleryControl : UserControl
         _sceneController.RefreshItems();
     }
 
-    internal Guid GetItemId(object item)
-    {
-        if (item is IGalleryItemViewModel galleryItem)
-        {
-            return galleryItem.Id;
-        }
-
-        throw new InvalidOperationException($"Gallery item '{item.GetType().Name}' does not expose a supported identifier.");
-    }
-
     internal static double CalculateBottomFadeStartOffset(double height)
     {
         if (height <= BottomOpacityFadeHeight)
@@ -203,6 +202,16 @@ public partial class AnimatedGalleryControl : UserControl
         }
 
         return (height - BottomOpacityFadeHeight) / height;
+    }
+
+    internal Guid GetItemId(object item)
+    {
+        if (item is IGalleryItemViewModel galleryItem)
+        {
+            return galleryItem.Id;
+        }
+
+        throw new InvalidOperationException($"Gallery item '{item.GetType().Name}' does not expose a supported identifier.");
     }
 
     internal Point? GetPreviewPointerPosition()
@@ -272,9 +281,9 @@ public partial class AnimatedGalleryControl : UserControl
 
     }
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
-        base.OnAttachedToVisualTree(e);
+        base.OnAttachedToVisualTree(eventArgs);
 
         _isAttached = true;
         AttachPreviewKeyboardHandlers();
@@ -287,9 +296,9 @@ public partial class AnimatedGalleryControl : UserControl
         _sceneController.RefreshScene();
     }
 
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
-        base.OnDetachedFromVisualTree(e);
+        base.OnDetachedFromVisualTree(eventArgs);
 
         _isAttached = false;
         DetachPreviewKeyboardHandlers();
@@ -309,25 +318,25 @@ public partial class AnimatedGalleryControl : UserControl
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == ItemsProperty)
+        if (change.Property == AnimatedGalleryControl.ItemsProperty)
         {
             HandleItemsChanged();
             return;
         }
 
-        if (change.Property == OperationsProperty)
+        if (change.Property == AnimatedGalleryControl.OperationsProperty)
         {
             HandleOperationsChanged();
             return;
         }
 
-        if (IsCommandProperty(change.Property))
+        if (AnimatedGalleryControl.IsCommandProperty(change.Property))
         {
             _sceneController.UpdateCardCommands();
             return;
         }
 
-        if (change.Property == IsSelectionModeProperty)
+        if (change.Property == AnimatedGalleryControl.IsSelectionModeProperty)
         {
             if (!change.GetNewValue<bool>())
             {
@@ -345,6 +354,20 @@ public partial class AnimatedGalleryControl : UserControl
             UpdateGalleryOpacityMask();
             ResizeController.Schedule();
         }
+    }
+
+    private static bool IsCommandProperty(AvaloniaProperty property)
+    {
+        return (property == AnimatedGalleryControl.RevealInFolderCommandProperty)
+               || (property == AnimatedGalleryControl.RevealInNewFolderWindowCommandProperty)
+               || (property == AnimatedGalleryControl.OpenViewerCommandProperty)
+               || (property == AnimatedGalleryControl.ShowFailureDetailsCommandProperty)
+               || (property == AnimatedGalleryControl.OpenMetadataCommandProperty)
+               || (property == AnimatedGalleryControl.DeleteOrCancelCommandProperty)
+               || (property == AnimatedGalleryControl.ToggleFavoriteCommandProperty)
+               || (property == AnimatedGalleryControl.OpenDlss5CommandProperty)
+               || (property == AnimatedGalleryControl.ToggleSelectionCommandProperty)
+               || (property == AnimatedGalleryControl.SelectRangeCommandProperty);
     }
 
     private void HandleItemsChanged()
@@ -370,57 +393,9 @@ public partial class AnimatedGalleryControl : UserControl
         _sceneController.RegisterSceneOperations();
     }
 
-    private static bool IsCommandProperty(AvaloniaProperty property)
-    {
-        return (property == RevealInFolderCommandProperty)
-               || (property == RevealInNewFolderWindowCommandProperty)
-               || (property == OpenViewerCommandProperty)
-               || (property == ShowFailureDetailsCommandProperty)
-               || (property == OpenMetadataCommandProperty)
-               || (property == DeleteOrCancelCommandProperty)
-               || (property == ToggleFavoriteCommandProperty)
-               || (property == ToggleSelectionCommandProperty)
-               || (property == SelectRangeCommandProperty);
-    }
-
-    private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        _itemPropertyChangedSubscription.ReplaceSources(Items);
-        ScheduleSelectionVisualRefresh();
-
-        if ((Operations is not null) && (_sceneController.Scene is not null))
-        {
-            return;
-        }
-
-        _sceneController.RefreshItems();
-        _sceneController.RefreshScene();
-    }
-
-    private void OnGalleryItemPropertyChanged(
-        object? sender,
-        PropertyChangedEventArgs e)
-    {
-        _ = sender;
-
-        if (!string.IsNullOrEmpty(e.PropertyName)
-            && !string.Equals(
-                e.PropertyName,
-                nameof(IGalleryItemViewModel.IsSelected),
-                StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        ScheduleSelectionVisualRefresh();
-    }
-
     private void ScheduleSelectionVisualRefresh()
     {
-        if (!_isAttached || _isSelectionVisualRefreshPending)
+        if ((!_isAttached) || (_isSelectionVisualRefreshPending))
         {
             return;
         }
@@ -471,7 +446,7 @@ public partial class AnimatedGalleryControl : UserControl
             return;
         }
 
-        if (opacityMask.GradientStops.Count < 2)
+        if (opacityMask.GradientStops.Count < OpacityMaskGradientStopCount)
         {
             return;
         }
@@ -482,7 +457,8 @@ public partial class AnimatedGalleryControl : UserControl
             return;
         }
 
-        opacityMask.GradientStops[1].Offset = CalculateBottomFadeStartOffset(height);
+        opacityMask.GradientStops[BottomOpacityMaskGradientStopIndex].Offset =
+            AnimatedGalleryControl.CalculateBottomFadeStartOffset(height);
     }
 
     private void ResetPreviewOverflow()
@@ -559,38 +535,6 @@ public partial class AnimatedGalleryControl : UserControl
         _previewClipStates.Remove(visual);
     }
 
-    private void OnPreviewPointerMoved(object? sender, PointerEventArgs e)
-    {
-        _ = sender;
-
-        _previewPointerPosition = e.GetPosition(GalleryScrollViewer);
-        _previewPointerModifiers = e.KeyModifiers;
-
-        if (GenerationPreviewExpansionController.HasExpansionModifier(
-                _previewPointerModifiers))
-        {
-            SchedulePreviewPointerStateChanged();
-        }
-    }
-
-    private void OnPreviewPointerExited(object? sender, PointerEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        _previewPointerPosition = null;
-        _previewPointerModifiers = KeyModifiers.None;
-        NotifyPreviewPointerStateChanged();
-    }
-
-    private void OnPreviewScrollChanged(object? sender, ScrollChangedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        SchedulePreviewPointerStateChanged();
-    }
-
     private void SchedulePreviewPointerStateChanged()
     {
         if (_isPreviewPointerRefreshPending)
@@ -648,23 +592,11 @@ public partial class AnimatedGalleryControl : UserControl
         _previewTopLevel = null;
     }
 
-    private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
-    {
-        _ = sender;
-        UpdatePreviewPointerModifiers(e, PreviewKeyTransition.Down);
-    }
-
-    private void OnPreviewKeyUp(object? sender, KeyEventArgs e)
-    {
-        _ = sender;
-        UpdatePreviewPointerModifiers(e, PreviewKeyTransition.Up);
-    }
-
     private void UpdatePreviewPointerModifiers(
-        KeyEventArgs e,
+        KeyEventArgs eventArgs,
         PreviewKeyTransition transition)
     {
-        KeyModifiers modifier = GenerationPreviewExpansionController.GetExpansionModifier(e.Key);
+        KeyModifiers modifier = GenerationPreviewExpansionController.GetExpansionModifier(eventArgs.Key);
 
         if (modifier == KeyModifiers.None)
         {
@@ -673,12 +605,91 @@ public partial class AnimatedGalleryControl : UserControl
 
         _previewPointerModifiers = transition switch
         {
-            PreviewKeyTransition.Down => e.KeyModifiers | modifier,
-            PreviewKeyTransition.Up => e.KeyModifiers & ~modifier,
+            PreviewKeyTransition.Down => eventArgs.KeyModifiers | modifier,
+            PreviewKeyTransition.Up => eventArgs.KeyModifiers & ~modifier,
             _ => throw new ArgumentOutOfRangeException(nameof(transition), transition, null)
         };
         RaisePreviewPointerStateChanged();
         PreviewModifiersChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
+    {
+        _ = sender;
+        _ = eventArgs;
+
+        _itemPropertyChangedSubscription.ReplaceSources(Items);
+        ScheduleSelectionVisualRefresh();
+
+        if ((Operations is not null) && (_sceneController.Scene is not null))
+        {
+            return;
+        }
+
+        _sceneController.RefreshItems();
+        _sceneController.RefreshScene();
+    }
+
+    private void OnGalleryItemPropertyChanged(
+        object? sender,
+        PropertyChangedEventArgs eventArgs)
+    {
+        _ = sender;
+
+        if ((!string.IsNullOrEmpty(eventArgs.PropertyName))
+            && (!string.Equals(
+                eventArgs.PropertyName,
+                nameof(IGalleryItemViewModel.IsSelected),
+                StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        ScheduleSelectionVisualRefresh();
+    }
+
+    private void OnPreviewPointerMoved(object? sender, PointerEventArgs eventArgs)
+    {
+        _ = sender;
+
+        _previewPointerPosition = eventArgs.GetPosition(GalleryScrollViewer);
+        _previewPointerModifiers = eventArgs.KeyModifiers;
+
+        if (GenerationPreviewExpansionController.HasExpansionModifier(
+                _previewPointerModifiers))
+        {
+            SchedulePreviewPointerStateChanged();
+        }
+    }
+
+    private void OnPreviewPointerExited(object? sender, PointerEventArgs eventArgs)
+    {
+        _ = sender;
+        _ = eventArgs;
+
+        _previewPointerPosition = null;
+        _previewPointerModifiers = KeyModifiers.None;
+        NotifyPreviewPointerStateChanged();
+    }
+
+    private void OnPreviewScrollChanged(object? sender, ScrollChangedEventArgs eventArgs)
+    {
+        _ = sender;
+        _ = eventArgs;
+
+        SchedulePreviewPointerStateChanged();
+    }
+
+    private void OnPreviewKeyDown(object? sender, KeyEventArgs eventArgs)
+    {
+        _ = sender;
+        UpdatePreviewPointerModifiers(eventArgs, PreviewKeyTransition.Down);
+    }
+
+    private void OnPreviewKeyUp(object? sender, KeyEventArgs eventArgs)
+    {
+        _ = sender;
+        UpdatePreviewPointerModifiers(eventArgs, PreviewKeyTransition.Up);
     }
 
     private enum PreviewKeyTransition

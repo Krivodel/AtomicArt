@@ -6,6 +6,8 @@ using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 
+using AtomicArt.Desktop.Services.Windows;
+
 namespace AtomicArt.Desktop.Services;
 
 public sealed class ClipboardImageService :
@@ -16,6 +18,7 @@ public sealed class ClipboardImageService :
     private const string ClipboardImageFileName = "clipboard.png";
 
     private readonly AttachedImageFileReader _fileReader;
+    private readonly IPlatformClipboardImageReader _platformImageReader;
     private readonly ILogger<ClipboardImageService> _logger;
     private IClipboard? _clipboard;
 
@@ -27,8 +30,18 @@ public sealed class ClipboardImageService :
     public ClipboardImageService(
         AttachedImageFileReader fileReader,
         ILogger<ClipboardImageService> logger)
+        : this(fileReader, new WindowsClipboardImageReader(fileReader), logger)
+    {
+    }
+
+    public ClipboardImageService(
+        AttachedImageFileReader fileReader,
+        IPlatformClipboardImageReader platformImageReader,
+        ILogger<ClipboardImageService> logger)
     {
         _fileReader = fileReader ?? throw new ArgumentNullException(nameof(fileReader));
+        _platformImageReader = platformImageReader
+            ?? throw new ArgumentNullException(nameof(platformImageReader));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -111,8 +124,19 @@ public sealed class ClipboardImageService :
 
         if (bitmap is null)
         {
-            _logger.LogDebug("Clipboard contained no supported image representation.");
-            return null;
+            ImageAttachmentInput? fallbackInput = await _platformImageReader
+                .TryGetImageAsync(maxInputBytes, ct)
+                .ConfigureAwait(false);
+
+            if (fallbackInput is null)
+            {
+                _logger.LogDebug("Clipboard contained no supported image representation.");
+                return null;
+            }
+
+            _logger.LogInformation(
+                "Clipboard image was read through the platform fallback.");
+            return fallbackInput;
         }
 
         _logger.LogInformation("Clipboard bitmap image will be encoded on demand.");

@@ -32,7 +32,7 @@ internal static class MotionEasing
         return CubicBezier(value, 0.16d, 0.84d, 0.18d, 1d);
     }
 
-    private static double CubicBezier(double x, double x1, double y1, double x2, double y2)
+    internal static double CubicBezier(double x, double x1, double y1, double x2, double y2)
     {
         double t = x;
 

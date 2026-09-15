@@ -4,16 +4,14 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
-
 using CommunityToolkit.Mvvm.Input;
+using Pica.Viewer.Services;
 
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.ViewModels.Gallery;
-
-using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.Views.Gallery;
 
@@ -24,58 +22,63 @@ public partial class GenerationCardControl :
 {
     public IRelayCommand? RevealInFolderCommand
     {
-        get => GetValue(RevealInFolderCommandProperty);
-        set => SetValue(RevealInFolderCommandProperty, value);
+        get => GetValue(GenerationCardControl.RevealInFolderCommandProperty);
+        set => SetValue(GenerationCardControl.RevealInFolderCommandProperty, value);
     }
     public IRelayCommand? RevealInNewFolderWindowCommand
     {
-        get => GetValue(RevealInNewFolderWindowCommandProperty);
-        set => SetValue(RevealInNewFolderWindowCommandProperty, value);
+        get => GetValue(GenerationCardControl.RevealInNewFolderWindowCommandProperty);
+        set => SetValue(GenerationCardControl.RevealInNewFolderWindowCommandProperty, value);
     }
     public IRelayCommand? OpenViewerCommand
     {
-        get => GetValue(OpenViewerCommandProperty);
-        set => SetValue(OpenViewerCommandProperty, value);
+        get => GetValue(GenerationCardControl.OpenViewerCommandProperty);
+        set => SetValue(GenerationCardControl.OpenViewerCommandProperty, value);
     }
     public IRelayCommand? ShowFailureDetailsCommand
     {
-        get => GetValue(ShowFailureDetailsCommandProperty);
-        set => SetValue(ShowFailureDetailsCommandProperty, value);
+        get => GetValue(GenerationCardControl.ShowFailureDetailsCommandProperty);
+        set => SetValue(GenerationCardControl.ShowFailureDetailsCommandProperty, value);
     }
     public IRelayCommand? OpenMetadataCommand
     {
-        get => GetValue(OpenMetadataCommandProperty);
-        set => SetValue(OpenMetadataCommandProperty, value);
+        get => GetValue(GenerationCardControl.OpenMetadataCommandProperty);
+        set => SetValue(GenerationCardControl.OpenMetadataCommandProperty, value);
     }
     public IRelayCommand? DeleteOrCancelCommand
     {
-        get => GetValue(DeleteOrCancelCommandProperty);
-        set => SetValue(DeleteOrCancelCommandProperty, value);
+        get => GetValue(GenerationCardControl.DeleteOrCancelCommandProperty);
+        set => SetValue(GenerationCardControl.DeleteOrCancelCommandProperty, value);
     }
     public IRelayCommand? ToggleFavoriteCommand
     {
-        get => GetValue(ToggleFavoriteCommandProperty);
-        set => SetValue(ToggleFavoriteCommandProperty, value);
+        get => GetValue(GenerationCardControl.ToggleFavoriteCommandProperty);
+        set => SetValue(GenerationCardControl.ToggleFavoriteCommandProperty, value);
+    }
+    public IRelayCommand? OpenDlss5Command
+    {
+        get => GetValue(GenerationCardControl.OpenDlss5CommandProperty);
+        set => SetValue(GenerationCardControl.OpenDlss5CommandProperty, value);
     }
     public IRelayCommand? ToggleSelectionCommand
     {
-        get => GetValue(ToggleSelectionCommandProperty);
-        set => SetValue(ToggleSelectionCommandProperty, value);
+        get => GetValue(GenerationCardControl.ToggleSelectionCommandProperty);
+        set => SetValue(GenerationCardControl.ToggleSelectionCommandProperty, value);
     }
     public IRelayCommand? SelectRangeCommand
     {
-        get => GetValue(SelectRangeCommandProperty);
-        set => SetValue(SelectRangeCommandProperty, value);
+        get => GetValue(GenerationCardControl.SelectRangeCommandProperty);
+        set => SetValue(GenerationCardControl.SelectRangeCommandProperty, value);
     }
     public bool IsSelectionMode
     {
-        get => GetValue(IsSelectionModeProperty);
-        set => SetValue(IsSelectionModeProperty, value);
+        get => GetValue(GenerationCardControl.IsSelectionModeProperty);
+        set => SetValue(GenerationCardControl.IsSelectionModeProperty, value);
     }
     public bool IsSelectionDimmed
     {
-        get => GetValue(IsSelectionDimmedProperty);
-        set => SetValue(IsSelectionDimmedProperty, value);
+        get => GetValue(GenerationCardControl.IsSelectionDimmedProperty);
+        set => SetValue(GenerationCardControl.IsSelectionDimmedProperty, value);
     }
 
     public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
@@ -99,6 +102,9 @@ public partial class GenerationCardControl :
     public static readonly StyledProperty<IRelayCommand?> ToggleFavoriteCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(ToggleFavoriteCommand));
+    public static readonly StyledProperty<IRelayCommand?> OpenDlss5CommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(OpenDlss5Command));
     public static readonly StyledProperty<IRelayCommand?> ToggleSelectionCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(ToggleSelectionCommand));
@@ -186,8 +192,8 @@ public partial class GenerationCardControl :
     {
         ArgumentNullException.ThrowIfNull(visual);
 
-        return IsVisualOrDescendantOf(visual, RevealInFolderButton)
-            || IsVisualOrDescendantOf(visual, DeleteButton);
+        return (GenerationCardControl.IsVisualOrDescendantOf(visual, RevealInFolderButton))
+            || (GenerationCardControl.IsVisualOrDescendantOf(visual, DeleteButton));
     }
 
     internal void SetPreviewBitmapServices(
@@ -199,22 +205,22 @@ public partial class GenerationCardControl :
             previewSourceScheduler);
     }
 
-    private static bool IsVisualOrDescendantOf(Visual visual, Visual ancestor)
-    {
-        return ReferenceEquals(visual, ancestor)
-            || visual.GetVisualAncestors().Contains(ancestor);
-    }
-
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == IsSelectionDimmedProperty)
+        if (change.Property == GenerationCardControl.IsSelectionDimmedProperty)
         {
             PseudoClasses.Set(
                 ":selection-dimmed",
                 change.GetNewValue<bool>());
         }
+    }
+
+    private static bool IsVisualOrDescendantOf(Visual visual, Visual ancestor)
+    {
+        return (ReferenceEquals(visual, ancestor))
+            || (visual.GetVisualAncestors().Contains(ancestor));
     }
 
     private void ExecuteOpenMetadata(GenerationItemViewModel item)
@@ -248,7 +254,7 @@ public partial class GenerationCardControl :
             OnPromptDragSourcePointerCaptureLost;
     }
 
-    private void OnRevealInFolderClick(object? sender, RoutedEventArgs e)
+    private void OnRevealInFolderClick(object? sender, RoutedEventArgs eventArgs)
     {
         _ = sender;
 
@@ -259,7 +265,7 @@ public partial class GenerationCardControl :
 
         KeyModifiers modifiers = PreviewExpansionHost?.CurrentKeyModifiers
             ?? KeyModifiers.None;
-        IRelayCommand? command = ResolveFileRevealCommand(
+        IRelayCommand? command = GenerationCardControl.ResolveFileRevealCommand(
             modifiers,
             RevealInFolderCommand,
             RevealInNewFolderWindowCommand);
@@ -267,11 +273,11 @@ public partial class GenerationCardControl :
         if (command?.CanExecute(item) == true)
         {
             command.Execute(item);
-            e.Handled = true;
+            eventArgs.Handled = true;
         }
     }
 
-    private void OnSelectionClick(object? sender, RoutedEventArgs e)
+    private void OnSelectionClick(object? sender, RoutedEventArgs eventArgs)
     {
         _ = sender;
 
@@ -282,7 +288,7 @@ public partial class GenerationCardControl :
 
         KeyModifiers modifiers = PreviewExpansionHost?.CurrentKeyModifiers
             ?? KeyModifiers.None;
-        IRelayCommand? command = ResolveSelectionCommand(
+        IRelayCommand? command = GenerationCardControl.ResolveSelectionCommand(
             modifiers,
             ToggleSelectionCommand,
             SelectRangeCommand);
@@ -290,13 +296,13 @@ public partial class GenerationCardControl :
         if (command?.CanExecute(item) == true)
         {
             command.Execute(item);
-            e.Handled = true;
+            eventArgs.Handled = true;
         }
     }
 
     private void OnPromptDragSourcePointerPressed(
         object? sender,
-        PointerPressedEventArgs e)
+        PointerPressedEventArgs eventArgs)
     {
         _ = sender;
 
@@ -305,22 +311,22 @@ public partial class GenerationCardControl :
             return;
         }
 
-        PointerPoint pointerPoint = e.GetCurrentPoint(this);
+        PointerPoint pointerPoint = eventArgs.GetCurrentPoint(this);
         if (!pointerPoint.Properties.IsLeftButtonPressed)
         {
             return;
         }
 
-        e.Pointer.Capture(PromptDragSource);
+        eventArgs.Pointer.Capture(PromptDragSource);
         _promptDragCandidate = new PromptDragCandidate(
-            e,
+            eventArgs,
             pointerPoint.Position,
             item.Prompt);
     }
 
     private async void OnPromptDragSourcePointerMoved(
         object? sender,
-        PointerEventArgs e)
+        PointerEventArgs eventArgs)
     {
         _ = sender;
 
@@ -330,24 +336,24 @@ public partial class GenerationCardControl :
             return;
         }
 
-        PointerPoint pointerPoint = e.GetCurrentPoint(this);
+        PointerPoint pointerPoint = eventArgs.GetCurrentPoint(this);
         if (!pointerPoint.Properties.IsLeftButtonPressed)
         {
             _promptDragCandidate = null;
             return;
         }
 
-        if (!PointerDragThreshold.IsReached(
+        if ((!PointerDragThreshold.IsReached(
                 dragCandidate.Origin,
-                pointerPoint.Position)
-            || string.IsNullOrWhiteSpace(dragCandidate.Prompt))
+                pointerPoint.Position))
+            || (string.IsNullOrWhiteSpace(dragCandidate.Prompt)))
         {
             return;
         }
 
         _promptDragCandidate = null;
         _isPromptDragActive = true;
-        e.Handled = true;
+        eventArgs.Handled = true;
 
         try
         {
@@ -361,42 +367,42 @@ public partial class GenerationCardControl :
         finally
         {
             _isPromptDragActive = false;
-            e.Pointer.Capture(null);
+            eventArgs.Pointer.Capture(null);
         }
     }
 
     private void OnPromptDragSourcePointerReleased(
         object? sender,
-        PointerReleasedEventArgs e)
+        PointerReleasedEventArgs eventArgs)
     {
         _ = sender;
 
         _promptDragCandidate = null;
-        e.Pointer.Capture(null);
+        eventArgs.Pointer.Capture(null);
     }
 
     private void OnPromptDragSourcePointerCaptureLost(
         object? sender,
-        PointerCaptureLostEventArgs e)
+        PointerCaptureLostEventArgs eventArgs)
     {
         _ = sender;
-        _ = e;
+        _ = eventArgs;
 
         _promptDragCandidate = null;
     }
 
-    private void OnPromptDragSourceClick(object? sender, RoutedEventArgs e)
+    private void OnPromptDragSourceClick(object? sender, RoutedEventArgs eventArgs)
     {
         _ = sender;
 
-        if (_isPromptDragActive
-            || DataContext is not GenerationItemViewModel item)
+        if ((_isPromptDragActive)
+            || (DataContext is not GenerationItemViewModel item))
         {
             return;
         }
 
         ExecuteOpenMetadata(item);
-        e.Handled = true;
+        eventArgs.Handled = true;
     }
 
     private sealed record PromptDragCandidate(

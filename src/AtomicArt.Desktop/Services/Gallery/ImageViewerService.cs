@@ -50,7 +50,7 @@ public sealed class ImageViewerService :
             await session.PrepareAsync(request, ct);
             PicaViewerRequest? viewerRequest = session.Request;
 
-            if (viewerRequest is null || viewerRequest.Items.Count == 0)
+            if ((viewerRequest is null) || (viewerRequest.Items.Count == 0))
             {
                 _logger.LogWarning(
                     "Embedded Pica viewer request for selected item {ItemId} contained no usable images",
@@ -66,6 +66,7 @@ public sealed class ImageViewerService :
             ImageViewerWindow window = await _windowFactory.CreateAsync(
                 viewerRequest,
                 session,
+                session.BitmapSources,
                 ct);
             session.AttachWindow(window);
             window.Show();
@@ -73,10 +74,10 @@ public sealed class ImageViewerService :
                 "Embedded Pica viewer window opened for selected item {ItemId}",
                 request.SelectedItemId);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
             _logger.LogWarning(
-                ex,
+                exception,
                 "Embedded Pica viewer session failed during preparation or window creation");
             await session.DisposeAsync();
             throw;
@@ -107,7 +108,7 @@ public sealed class ImageViewerService :
         }
     }
 
-    private void OnSessionDisposed(object? sender, EventArgs e)
+    private void OnSessionDisposed(object? sender, EventArgs eventArgs)
     {
         if (sender is not PicaViewerSession session)
         {

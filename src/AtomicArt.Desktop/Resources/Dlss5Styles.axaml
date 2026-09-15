@@ -1,0 +1,194 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <LinearGradientBrush x:Key="Dlss5PlaceholderBrush"
+                             EndPoint="100%,100%"
+                             StartPoint="0%,0%">
+            <GradientStop Offset="0"
+                          Color="{StaticResource Dlss5PlaceholderStartColor}" />
+            <GradientStop Offset="0.52"
+                          Color="{StaticResource Dlss5PlaceholderMiddleColor}" />
+            <GradientStop Offset="1"
+                          Color="{StaticResource Dlss5PlaceholderEndColor}" />
+        </LinearGradientBrush>
+        <ControlTheme x:Key="Dlss5ResizeGripTheme"
+                      TargetType="GridSplitter">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+        <ControlTheme x:Key="Dlss5ImageButtonTheme"
+                      TargetType="Button">
+            <Setter Property="Padding"
+                    Value="0" />
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Stretch" />
+            <Setter Property="VerticalContentAlignment"
+                    Value="Stretch" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel>
+                        <ContentPresenter HorizontalContentAlignment="Stretch"
+                                          VerticalContentAlignment="Stretch"
+                                          Content="{TemplateBinding Content}" />
+                        <Border x:Name="Outline"
+                                BorderBrush="{DynamicResource SukiText}"
+                                BorderThickness="1"
+                                IsHitTestVisible="False"
+                                Opacity="0">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                                      Easing="{StaticResource TransientOverlayEasing}"
+                                                      Property="Opacity" />
+                                </Transitions>
+                            </Border.Transitions>
+                        </Border>
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#Outline">
+                <Setter Property="Opacity"
+                        Value="0.65" />
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#Outline">
+                <Setter Property="Opacity"
+                        Value="1" />
+            </Style>
+        </ControlTheme>
+        <ControlTheme x:Key="Dlss5IconButtonTheme"
+                      BasedOn="{StaticResource Dlss5ImageButtonTheme}"
+                      TargetType="Button">
+            <Setter Property="Width"
+                    Value="36" />
+            <Setter Property="Height"
+                    Value="36" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border x:Name="Surface"
+                            Background="Transparent">
+                        <Border.Transitions>
+                            <Transitions>
+                                <BrushTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                                 Easing="{StaticResource TransientOverlayEasing}"
+                                                 Property="Background" />
+                            </Transitions>
+                        </Border.Transitions>
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Content}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#Surface">
+                <Setter Property="Background"
+                        Value="{StaticResource Dlss5IconHoverBrush}" />
+            </Style>
+            <Style Selector="^:pressed /template/ Border#Surface">
+                <Setter Property="Background"
+                        Value="{StaticResource Dlss5IconPressedBrush}" />
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#Surface">
+                <Setter Property="Background"
+                        Value="{StaticResource Dlss5IconHoverBrush}" />
+            </Style>
+        </ControlTheme>
+        <ControlTheme x:Key="Dlss5ActionButtonTheme"
+                      TargetType="Button">
+            <Setter Property="Padding"
+                    Value="12,6" />
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Center" />
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border x:Name="Surface"
+                            Padding="{TemplateBinding Padding}"
+                            Background="Transparent"
+                            BorderBrush="{StaticResource NvidiaBrandBrush}"
+                            BorderThickness="1">
+                        <Border.Transitions>
+                            <Transitions>
+                                <BrushTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                                 Easing="{StaticResource TransientOverlayEasing}"
+                                                 Property="Background" />
+                            </Transitions>
+                        </Border.Transitions>
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          Content="{TemplateBinding Content}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover /template/ Border#Surface">
+                <Setter Property="Background"
+                        Value="{StaticResource Dlss5IconHoverBrush}" />
+            </Style>
+            <Style Selector="^:pressed /template/ Border#Surface">
+                <Setter Property="Background"
+                        Value="{StaticResource Dlss5IconPressedBrush}" />
+            </Style>
+            <Style Selector="^:focus-visible /template/ Border#Surface">
+                <Setter Property="Background"
+                        Value="{StaticResource Dlss5IconHoverBrush}" />
+            </Style>
+        </ControlTheme>
+    </Styles.Resources>
+    <Style Selector="Button.dlss5-remove">
+        <Setter Property="Opacity"
+                Value="0" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                  Easing="{StaticResource TransientOverlayEasing}"
+                                  Property="Opacity" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Grid.dlss5-source:pointerover Button.dlss5-remove, Grid.dlss5-source:focus-within Button.dlss5-remove">
+        <Setter Property="Opacity"
+                Value="1" />
+    </Style>
+    <Style Selector="Path.dlss5-icon">
+        <Setter Property="Width"
+                Value="18" />
+        <Setter Property="Height"
+                Value="18" />
+        <Setter Property="Stretch"
+                Value="Uniform" />
+        <Setter Property="Stroke"
+                Value="{DynamicResource SukiText}" />
+        <Setter Property="StrokeLineCap"
+                Value="Round" />
+        <Setter Property="StrokeJoin"
+                Value="Round" />
+        <Setter Property="StrokeThickness"
+                Value="1.6" />
+    </Style>
+    <Style Selector="Grid.dlss5-parameter">
+        <Setter Property="Margin"
+                Value="6,3" />
+    </Style>
+    <Style Selector="TextBlock.dlss5-parameter-value">
+        <Setter Property="Margin"
+                Value="8,0,0,0" />
+        <Setter Property="HorizontalAlignment"
+                Value="Stretch" />
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+        <Setter Property="TextAlignment"
+                Value="Right" />
+    </Style>
+    <Style Selector="Control.dlss5-loading-fade">
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                  Easing="{StaticResource TransientOverlayEasing}"
+                                  Property="Opacity" />
+            </Transitions>
+        </Setter>
+    </Style>
+</Styles>

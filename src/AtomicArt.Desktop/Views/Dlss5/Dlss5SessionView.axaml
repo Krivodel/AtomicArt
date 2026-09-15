@@ -1,0 +1,247 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
+             xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+             xmlns:controls="using:AtomicArt.Desktop.Controls"
+             xmlns:generation="using:AtomicArt.Desktop.Controls.Generation"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:services="using:AtomicArt.Desktop.Services.Dlss5"
+             xmlns:viewModels="using:AtomicArt.Desktop.ViewModels.Dlss5"
+             x:Class="AtomicArt.Desktop.Views.Dlss5.Dlss5SessionView"
+             x:DataType="viewModels:Dlss5SessionViewModel">
+    <Grid x:Name="LayoutGrid"
+          Margin="12,8"
+          behaviors:ImageDropBehavior.IsEnabled="{Binding IsOpen}"
+          behaviors:ImageDropBehavior.Overlay="{Binding #SourceDropOverlay}"
+          behaviors:ImageDropBehavior.TargetKind="GalleryImage"
+          behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding AttachSourceImagesCommand}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*"
+                           MinHeight="160" />
+            <RowDefinition Height="8" />
+            <RowDefinition Height="180"
+                           MinHeight="{x:Static services:Dlss5SessionState.MinimumParameterAreaHeight}" />
+        </Grid.RowDefinitions>
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <Button Theme="{StaticResource Dlss5IconButtonTheme}"
+                    Command="{Binding BackCommand}">
+                <Path Classes="dlss5-icon"
+                      Data="{StaticResource Dlss5BackIcon}" />
+            </Button>
+            <Button Grid.Column="2"
+                    Theme="{StaticResource Dlss5IconButtonTheme}"
+                    Command="{Binding CloseCommand}">
+                <Path Classes="dlss5-icon"
+                      Data="{StaticResource Dlss5CloseIcon}" />
+            </Button>
+        </Grid>
+        <controls:Dlss5ComparisonPanel x:Name="ComparisonPanel"
+                                       Grid.Row="1"
+                                       ProgressBrush="{StaticResource NvidiaBrandBrush}"
+                                       ProgressHighlightBrush="{StaticResource Dlss5ProgressHighlightBrush}"
+                                       HasSource="{Binding HasSource}"
+                                       IsRendering="{Binding IsRendering}"
+                                       SourceHeight="{Binding SourceHeight}"
+                                       SourceWidth="{Binding SourceWidth}">
+            <Grid RowDefinitions="Auto,*,2">
+                <TextBlock Height="28"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Classes="dlss5-off"
+                           Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys.Off}}" />
+                <Grid Grid.Row="1"
+                      Classes="dlss5-source"
+                      Background="{StaticResource Dlss5PlaceholderBrush}">
+                    <Button Theme="{StaticResource Dlss5ImageButtonTheme}"
+                            IsEnabled="{Binding CanInteractWithImages}"
+                            Command="{Binding OpenComparisonCommand}"
+                            CommandParameter="source">
+                        <Image RenderOptions.BitmapInterpolationMode="MediumQuality"
+                               Stretch="Uniform"
+                               Source="{Binding SourceImage}" />
+                    </Button>
+                    <Button Margin="6"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Classes="dlss5-remove"
+                            Theme="{StaticResource Dlss5IconButtonTheme}"
+                            Click="OnClearSourceClick"
+                            IsEnabled="{Binding CanInteractWithImages}">
+                        <Path Classes="dlss5-icon"
+                              Data="{StaticResource Dlss5CloseIcon}" />
+                    </Button>
+                    <controls:Dlss5SourceLoadingControl Width="96"
+                                                       Height="72"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Classes="dlss5-loading-fade"
+                                                       PrimaryBrush="{StaticResource Dlss5LoadingCyanBrush}"
+                                                       SecondaryBrush="{StaticResource Dlss5LoadingVioletBrush}"
+                                                       Opacity="{Binding IsSourceLoading}"
+                                                       IsActive="{Binding IsSourceLoading}" />
+                </Grid>
+            </Grid>
+            <Grid RowDefinitions="28,*,2">
+                <TextBlock HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Classes="dlss5-on"
+                           Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys.On}}" />
+                <Grid Grid.Row="1"
+                      Background="{StaticResource Dlss5PlaceholderBrush}">
+                    <Button Theme="{StaticResource Dlss5ImageButtonTheme}"
+                            IsEnabled="{Binding CanInteractWithImages}"
+                            Command="{Binding OpenComparisonCommand}"
+                            CommandParameter="result">
+                        <Image RenderOptions.BitmapInterpolationMode="MediumQuality"
+                               Stretch="Uniform"
+                               Source="{Binding ResultPreviewImage}" />
+                    </Button>
+                </Grid>
+            </Grid>
+            <Grid Background="{StaticResource Dlss5PlaceholderBrush}">
+                <Button Theme="{StaticResource Dlss5ImageButtonTheme}"
+                        IsEnabled="{Binding !IsSourceLoading}"
+                        Command="{Binding PickSourceCommand}">
+                    <Rectangle Margin="1"
+                               IsHitTestVisible="False"
+                               Stroke="{StaticResource Dlss5OffLabelBrush}"
+                               StrokeDashArray="6,4"
+                               StrokeThickness="1" />
+                </Button>
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Classes="dlss5-loading-fade"
+                            IsHitTestVisible="{Binding !IsSourceLoading}"
+                            Opacity="{Binding !IsSourceLoading}"
+                            Spacing="14">
+                    <Path Width="96"
+                          Height="72"
+                          IsHitTestVisible="False"
+                          Data="{StaticResource Dlss5PlaceholderIcon}"
+                          Stretch="Uniform"
+                          Stroke="{StaticResource Dlss5OffLabelBrush}"
+                          StrokeThickness="2" />
+                    <TextBlock HorizontalAlignment="Center"
+                               IsHitTestVisible="False"
+                               Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys.SelectImage}}" />
+                    <Button HorizontalAlignment="Center"
+                            Theme="{StaticResource Dlss5ActionButtonTheme}"
+                            Content="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys.PasteImage}}"
+                            Command="{Binding PasteSourceCommand}" />
+                </StackPanel>
+                <controls:Dlss5SourceLoadingControl Width="108"
+                                                   Height="84"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Classes="dlss5-loading-fade"
+                                                   PrimaryBrush="{StaticResource Dlss5LoadingCyanBrush}"
+                                                   SecondaryBrush="{StaticResource Dlss5LoadingVioletBrush}"
+                                                   Opacity="{Binding IsSourceLoading}"
+                                                   IsActive="{Binding IsSourceLoading}" />
+            </Grid>
+        </controls:Dlss5ComparisonPanel>
+        <GridSplitter Grid.Row="2"
+                      ZIndex="10"
+                      Height="24"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Center"
+                      Theme="{StaticResource Dlss5ResizeGripTheme}"
+                      Background="Transparent"
+                      Cursor="SizeNorthSouth"
+                      DragCompleted="OnResizeCompleted"
+                      ResizeBehavior="PreviousAndNext"
+                      ResizeDirection="Rows"
+                      ShowsPreview="False" />
+        <ScrollViewer x:Name="ParameterViewport"
+                      Grid.Row="3"
+                      Margin="16,0"
+                      HorizontalScrollBarVisibility="Disabled"
+                      SizeChanged="OnParameterLayoutSizeChanged"
+                      VerticalScrollBarVisibility="Auto">
+            <controls:Dlss5ParameterPanel x:Name="ParametersPanel"
+                                          HorizontalAlignment="Center"
+                                          SizeChanged="OnParameterLayoutSizeChanged">
+                <Grid Classes="dlss5-parameter"
+                      RowDefinitions="Auto,Auto">
+                    <TextBlock Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.Style}}" />
+                    <ComboBox Grid.Row="1"
+                              HorizontalAlignment="Stretch"
+                              SelectedIndex="{Binding StyleIndex}">
+                        <ComboBoxItem Content="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.Default}}" />
+                        <ComboBoxItem Content="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.Natural}}" />
+                        <ComboBoxItem Content="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.Cinematic}}" />
+                    </ComboBox>
+                </Grid>
+                <Grid Classes="dlss5-parameter"
+                      ColumnDefinitions="*,44"
+                      RowDefinitions="Auto,Auto">
+                    <TextBlock Grid.ColumnSpan="2"
+                               TextWrapping="Wrap"
+                               Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.GeneralIntensity}}" />
+                    <Slider Grid.Row="1"
+                            Minimum="0"
+                            Maximum="2"
+                            Value="{Binding GeneralIntensity}"
+                            behaviors:Dlss5SliderCommitBehavior.Command="{Binding CommitSliderRenderCommand}" />
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Classes="dlss5-parameter-value"
+                               Text="{Binding GeneralIntensity, StringFormat={}{0:0.##}}" />
+                </Grid>
+                <Grid Classes="dlss5-parameter"
+                      ColumnDefinitions="*,44"
+                      RowDefinitions="Auto,Auto">
+                    <TextBlock Grid.ColumnSpan="2"
+                               TextWrapping="Wrap"
+                               Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.LocalStructureIntensity}}" />
+                    <Slider Grid.Row="1"
+                            Minimum="0"
+                            Maximum="2"
+                            Value="{Binding LocalStructureIntensity}"
+                            behaviors:Dlss5SliderCommitBehavior.Command="{Binding CommitSliderRenderCommand}" />
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Classes="dlss5-parameter-value"
+                               Text="{Binding LocalStructureIntensity, StringFormat={}{0:0.##}}" />
+                </Grid>
+                <Grid Classes="dlss5-parameter"
+                      ColumnDefinitions="*,44"
+                      RowDefinitions="Auto,Auto">
+                    <TextBlock Grid.ColumnSpan="2"
+                               TextWrapping="Wrap"
+                               Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.SkinStructureStrength}}" />
+                    <Slider Grid.Row="1"
+                            Minimum="-1"
+                            Maximum="2"
+                            Value="{Binding SkinStructureStrength}"
+                            behaviors:Dlss5SliderCommitBehavior.Command="{Binding CommitSliderRenderCommand}" />
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Classes="dlss5-parameter-value"
+                               Text="{Binding SkinStructureStrength, StringFormat={}{0:0.##}}" />
+                </Grid>
+                <Grid Classes="dlss5-parameter"
+                      ColumnDefinitions="*,44"
+                      RowDefinitions="Auto,Auto">
+                    <TextBlock Grid.ColumnSpan="2"
+                               TextWrapping="Wrap"
+                               Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.LocalToneStrength}}" />
+                    <Slider Grid.Row="1"
+                            Minimum="0"
+                            Maximum="2"
+                            Value="{Binding LocalToneStrength}"
+                            behaviors:Dlss5SliderCommitBehavior.Command="{Binding CommitSliderRenderCommand}" />
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="1"
+                               Classes="dlss5-parameter-value"
+                               Text="{Binding LocalToneStrength, StringFormat={}{0:0.##}}" />
+                </Grid>
+            </controls:Dlss5ParameterPanel>
+        </ScrollViewer>
+        <generation:ImageDropOverlayControl x:Name="SourceDropOverlay"
+                                            Grid.RowSpan="4"
+                                            ZIndex="20"
+                                            BackdropCornerRadius="0" />
+    </Grid>
+</UserControl>

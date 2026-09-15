@@ -2,4 +2,5 @@ namespace AtomicArt.Desktop.Services.Gallery;
 
 public sealed record GalleryImageViewerItem(
     Guid Id,
-    GalleryImageViewerSource Source);
+    GalleryImageViewerSource Source,
+    Func<CancellationToken, Task>? ToggleFavoriteAsync = null);

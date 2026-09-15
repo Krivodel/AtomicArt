@@ -38,12 +38,12 @@ public sealed class LocalizationServiceTests : IDisposable
     [Fact]
     public void Constructor_WithRussianSystemCulture_RegistersBuiltInBeforeCatalogRefresh()
     {
-        SetCurrentCulture(new CultureInfo("ru-RU"));
+        LocalizationServiceTests.SetCurrentCulture(new CultureInfo("ru-RU"));
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(Constructor_WithRussianSystemCulture_RegistersBuiltInBeforeCatalogRefresh));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
 
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
 
         service.CurrentLocalization.Should().BeNull();
         service.CurrentCulture?.Name.Should().Be("ru-RU");
@@ -56,7 +56,7 @@ public sealed class LocalizationServiceTests : IDisposable
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(RefreshAvailableLocalizationsAsync_WithEmptyDirectory_LoadsBuiltInsAndCreatesTemplate));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
 
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
 
@@ -75,28 +75,28 @@ public sealed class LocalizationServiceTests : IDisposable
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(RefreshAvailableLocalizationsAsync_WithCustomVariantsUsingSameCulture_KeepsFilenameIdentity));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "Deutsch",
             "de-DE",
             """{"Common":{"Copy":"Kopieren"}}""");
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "Deutsch förmlich",
             "de-DE",
             """{"Common":{"Copy":"Kopieren, bitte"}}""");
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
 
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
 
         service.AvailableLocalizations.Should().Contain(option =>
-            option.Id == "Deutsch"
-            && option.Culture.Name == "de-DE"
-            && !option.IsBuiltIn);
+            (string.Equals(option.Id, "Deutsch", StringComparison.Ordinal))
+            && (string.Equals(option.Culture.Name, "de-DE", StringComparison.Ordinal))
+            && (!option.IsBuiltIn));
         service.AvailableLocalizations.Should().Contain(option =>
-            option.Id == "Deutsch förmlich"
-            && option.Culture.Name == "de-DE"
-            && !option.IsBuiltIn);
+            (string.Equals(option.Id, "Deutsch förmlich", StringComparison.Ordinal))
+            && (string.Equals(option.Culture.Name, "de-DE", StringComparison.Ordinal))
+            && (!option.IsBuiltIn));
 
         service.Select("Deutsch");
         service.Get(CommonLocalizationKeys.Copy).Should().Be("Kopieren");
@@ -111,12 +111,12 @@ public sealed class LocalizationServiceTests : IDisposable
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(Select_WithCustomVariantUsingBuiltInCulture_KeepsFilenameIdentity));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "English formal",
             "en-US",
             """{"Common":{"Copy":"Copy, please"}}""");
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
 
         service.Select("English formal");
@@ -132,13 +132,13 @@ public sealed class LocalizationServiceTests : IDisposable
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(Select_WithPartialCustomLocalization_UsesEnglishFallbackAndIgnoresUnknownKeys));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "Deutsch",
             "de-DE",
             """{"Common":{"Copy":"Kopieren","NewerOnly":"Neu"}}""");
         RecordingLogger<LocalizationService> logger = new();
-        using LocalizationService service = CreateService(pathProvider, logger);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider, logger);
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
 
         service.Select("Deutsch");
@@ -164,32 +164,32 @@ public sealed class LocalizationServiceTests : IDisposable
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(RefreshAvailableLocalizationsAsync_WithInvalidFiles_SkipsEachFileAndKeepsValidOnes));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "Valid",
             "uk-UA",
             """{"Common":{"Copy":"Копіювати"}}""");
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "Bad schema",
             "uk-UA",
             """{"Common":{"Copy":"Копіювати"}}""",
             schemaVersion: 2);
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "Bad culture",
             "not a culture",
             """{"Common":{"Copy":"Copy"}}""");
-        await WriteRawLocalizationAsync(
+        await LocalizationServiceTests.WriteRawLocalizationAsync(
             pathProvider,
             "Bad strings",
             """{"schemaVersion":1,"culture":"en-US","strings":[]}""");
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             LocalizationConstants.EnglishId,
             "en-US",
             """{"Common":{"Copy":"Override"}}""");
-        await WriteRawLocalizationAsync(
+        await LocalizationServiceTests.WriteRawLocalizationAsync(
             pathProvider,
             string.Empty,
             """{"schemaVersion":1,"culture":"en-US","strings":{}}""");
@@ -198,7 +198,7 @@ public sealed class LocalizationServiceTests : IDisposable
             Path.Combine(pathProvider.LocalizationsDirectory, "Oversized.json"),
             oversizedContent);
         RecordingLogger<LocalizationService> logger = new();
-        using LocalizationService service = CreateService(pathProvider, logger);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider, logger);
 
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
 
@@ -215,15 +215,15 @@ public sealed class LocalizationServiceTests : IDisposable
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(RefreshAvailableLocalizationsAsync_WithCurrentFileBecomingInvalid_FallsBackToEnglish));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "Deutsch",
             "de-DE",
             """{"Common":{"Copy":"Kopieren"}}""");
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
         service.Select("Deutsch");
-        await WriteRawLocalizationAsync(pathProvider, "Deutsch", "{");
+        await LocalizationServiceTests.WriteRawLocalizationAsync(pathProvider, "Deutsch", "{");
 
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
         service.ReconcileCurrentOrSystemDefault();
@@ -238,7 +238,7 @@ public sealed class LocalizationServiceTests : IDisposable
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(SelectSavedOrEnglishFallback_WithUnavailableSavedLocalization_SelectsEnglish));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
 
         service.SelectSavedOrEnglishFallback("Deleted localization");
@@ -250,16 +250,16 @@ public sealed class LocalizationServiceTests : IDisposable
     [Fact]
     public async Task ReconcileCurrentOrSystemDefault_WithMatchingCustomSystemCulture_SelectsCustomLocalization()
     {
-        SetCurrentCulture(new CultureInfo("ja-JP"));
+        LocalizationServiceTests.SetCurrentCulture(new CultureInfo("ja-JP"));
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(ReconcileCurrentOrSystemDefault_WithMatchingCustomSystemCulture_SelectsCustomLocalization));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "日本語",
             "ja-JP",
             """{"Common":{"Copy":"コピー"}}""");
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
 
         service.ReconcileCurrentOrSystemDefault();
@@ -271,11 +271,11 @@ public sealed class LocalizationServiceTests : IDisposable
     [Fact]
     public async Task ReconcileCurrentOrSystemDefault_WithoutMatchingSystemCulture_SelectsEnglish()
     {
-        SetCurrentCulture(new CultureInfo("ja-JP"));
+        LocalizationServiceTests.SetCurrentCulture(new CultureInfo("ja-JP"));
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(ReconcileCurrentOrSystemDefault_WithoutMatchingSystemCulture_SelectsEnglish));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
 
         service.ReconcileCurrentOrSystemDefault();
@@ -289,12 +289,12 @@ public sealed class LocalizationServiceTests : IDisposable
         string rootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             nameof(RefreshAvailableLocalizationsAsync_WithUnchangedTemplate_DoesNotRewriteTemplate));
         AtomicArtDataPathProvider pathProvider = new(rootDirectory);
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
         string templatePath = Path.Combine(
             pathProvider.LocalizationsDirectory,
             LocalizationConstants.TemplateFileName);
-        string template = await File.ReadAllTextAsync(templatePath, Utf8WithoutBom);
+        string template = await File.ReadAllTextAsync(templatePath, LocalizationServiceTests.Utf8WithoutBom);
         DateTime fixedWriteTimeUtc = new(
             2020,
             1,
@@ -313,8 +313,8 @@ public sealed class LocalizationServiceTests : IDisposable
         template.Should().NotContain("\\u2026");
         File.GetLastWriteTimeUtc(templatePath).Should().Be(storedWriteTimeUtc);
         service.AvailableLocalizations.Should().NotContain(option =>
-            option.Id == Path.GetFileNameWithoutExtension(
-                LocalizationConstants.TemplateFileName));
+            string.Equals(option.Id, Path.GetFileNameWithoutExtension(
+                LocalizationConstants.TemplateFileName), StringComparison.Ordinal));
 
         using JsonDocument document = JsonDocument.Parse(template);
         document.RootElement.GetProperty("schemaVersion").GetInt32()
@@ -331,16 +331,16 @@ public sealed class LocalizationServiceTests : IDisposable
         string secondRootDirectory = DesktopTestDirectories.CreateCleanDirectory(
             "DataRootSwitchSecond");
         AtomicArtDataPathProvider pathProvider = new(firstRootDirectory);
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "First",
             "de-DE",
             """{"Common":{"Copy":"First"}}""");
-        using LocalizationService service = CreateService(pathProvider);
+        using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider);
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
         service.Select("First");
         pathProvider.SwitchRootDirectory(secondRootDirectory);
-        await WriteLocalizationAsync(
+        await LocalizationServiceTests.WriteLocalizationAsync(
             pathProvider,
             "Second",
             "de-DE",
@@ -349,8 +349,14 @@ public sealed class LocalizationServiceTests : IDisposable
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
         service.ReconcileCurrentOrSystemDefault();
 
-        service.AvailableLocalizations.Should().Contain(option => option.Id == "Second");
-        service.AvailableLocalizations.Should().NotContain(option => option.Id == "First");
+        service.AvailableLocalizations.Should().Contain(option => string.Equals(
+            option.Id,
+            "Second",
+            StringComparison.Ordinal));
+        service.AvailableLocalizations.Should().NotContain(option => string.Equals(
+            option.Id,
+            "First",
+            StringComparison.Ordinal));
         service.CurrentLocalization?.Id.Should().Be(LocalizationConstants.EnglishId);
         File.Exists(Path.Combine(
             pathProvider.LocalizationsDirectory,
@@ -360,7 +366,7 @@ public sealed class LocalizationServiceTests : IDisposable
     [Fact]
     public void BuiltInLocalizationCatalog_WithDeclaredKeys_ContainsExactlyTheApplicationKeySet()
     {
-        IReadOnlySet<string> declaredKeys = GetDeclaredLocalizationKeys();
+        IReadOnlySet<string> declaredKeys = LocalizationServiceTests.GetDeclaredLocalizationKeys();
         BuiltInLocalizationCatalog builtIns = BuiltInLocalizationCatalog.Current;
 
         builtIns.English.Strings.Keys.Should().BeEquivalentTo(declaredKeys);
@@ -400,6 +406,7 @@ public sealed class LocalizationServiceTests : IDisposable
             typeof(ShellLocalizationKeys),
             typeof(GenerationUiLocalizationKeys),
             typeof(GalleryLocalizationKeys),
+            typeof(Dlss5LocalizationKeys),
             typeof(SettingsLocalizationKeys),
             typeof(UpdateLocalizationKeys),
             typeof(GenerationLocalizationKeys)
@@ -407,7 +414,7 @@ public sealed class LocalizationServiceTests : IDisposable
 
         foreach (Type keyOwner in keyOwners)
         {
-            CollectDeclaredLocalizationKeys(keyOwner, keys);
+            LocalizationServiceTests.CollectDeclaredLocalizationKeys(keyOwner, keys);
         }
 
         return keys;
@@ -420,9 +427,9 @@ public sealed class LocalizationServiceTests : IDisposable
         foreach (FieldInfo field in type.GetFields(
                      BindingFlags.Public | BindingFlags.Static))
         {
-            if (field.IsLiteral
-                && field.FieldType == typeof(string)
-                && field.GetRawConstantValue() is string key)
+            if ((field.IsLiteral)
+                && (field.FieldType == typeof(string))
+                && (field.GetRawConstantValue() is string key))
             {
                 keys.Add(key);
             }
@@ -430,7 +437,7 @@ public sealed class LocalizationServiceTests : IDisposable
 
         foreach (Type nestedType in type.GetNestedTypes(BindingFlags.Public))
         {
-            CollectDeclaredLocalizationKeys(nestedType, keys);
+            LocalizationServiceTests.CollectDeclaredLocalizationKeys(nestedType, keys);
         }
     }
 
@@ -460,7 +467,7 @@ public sealed class LocalizationServiceTests : IDisposable
             }
             """;
 
-        await WriteRawLocalizationAsync(pathProvider, localizationId, json);
+        await LocalizationServiceTests.WriteRawLocalizationAsync(pathProvider, localizationId, json);
     }
 
     private static async Task WriteRawLocalizationAsync(
@@ -476,7 +483,7 @@ public sealed class LocalizationServiceTests : IDisposable
             pathProvider.LocalizationsDirectory,
             fileName);
 
-        await File.WriteAllTextAsync(filePath, json, Utf8WithoutBom);
+        await File.WriteAllTextAsync(filePath, json, LocalizationServiceTests.Utf8WithoutBom);
     }
 
     private static void SetCurrentCulture(CultureInfo culture)

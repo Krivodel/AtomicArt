@@ -90,6 +90,53 @@ internal sealed class AtomicArtDataRootMigrationService :
         }
     }
 
+    private static DataRootMigrationJournal CreateJournal(
+        DataRootMigrationPlan plan,
+        DataRootMigrationStage stage,
+        IReadOnlyList<DataRootMigrationFile> files)
+    {
+        return new DataRootMigrationJournal
+        {
+            SourceRootDirectory = plan.SourceRootDirectory,
+            DestinationRootDirectory = plan.DestinationRootDirectory,
+            Stage = stage,
+            Directories = plan.RelativeDirectories,
+            Files = files
+        };
+    }
+
+    private static void Report(
+        IProgress<DataRootMigrationProgress> progress,
+        DataRootMigrationProgressStage stage,
+        long completedBytes,
+        long totalBytes,
+        int completedFiles,
+        int totalFiles)
+    {
+        progress.Report(new DataRootMigrationProgress
+        {
+            Stage = stage,
+            CompletedBytes = completedBytes,
+            TotalBytes = totalBytes,
+            CompletedFiles = completedFiles,
+            TotalFiles = totalFiles
+        });
+    }
+
+    private static void ReportSwitching(
+        IProgress<DataRootMigrationProgress> progress,
+        DataRootMigrationPlan plan)
+    {
+        long totalWorkBytes = checked(plan.TotalBytes * 3);
+        Report(
+            progress,
+            DataRootMigrationProgressStage.Switching,
+            totalWorkBytes,
+            totalWorkBytes,
+            plan.Files.Count,
+            plan.Files.Count);
+    }
+
     private async Task MigrateCoreAsync(
         string destinationRootDirectory,
         IProgress<DataRootMigrationProgress> progress,
@@ -144,7 +191,11 @@ internal sealed class AtomicArtDataRootMigrationService :
             await _generationAdmissionGate.PauseAsync(ct).ConfigureAwait(false);
         await _generationActivityTracker.WaitUntilIdleAsync(ct).ConfigureAwait(false);
         await _uiThreadDispatcher.InvokeAsync(
-            () => _viewerPreparationService.CloseAllAsync(ct),
+            async () =>
+            {
+                await _viewerPreparationService.CloseAllAsync(ct);
+                target.PrepareForDataRootMigration();
+            },
             ct).ConfigureAwait(false);
         await _stateFlushService.FlushAsync(target, ct).ConfigureAwait(false);
 
@@ -248,53 +299,6 @@ internal sealed class AtomicArtDataRootMigrationService :
                 _logRelocationService.Resume(_pathProvider);
             }
         }
-    }
-
-    private static DataRootMigrationJournal CreateJournal(
-        DataRootMigrationPlan plan,
-        DataRootMigrationStage stage,
-        IReadOnlyList<DataRootMigrationFile> files)
-    {
-        return new DataRootMigrationJournal
-        {
-            SourceRootDirectory = plan.SourceRootDirectory,
-            DestinationRootDirectory = plan.DestinationRootDirectory,
-            Stage = stage,
-            Directories = plan.RelativeDirectories,
-            Files = files
-        };
-    }
-
-    private static void Report(
-        IProgress<DataRootMigrationProgress> progress,
-        DataRootMigrationProgressStage stage,
-        long completedBytes,
-        long totalBytes,
-        int completedFiles,
-        int totalFiles)
-    {
-        progress.Report(new DataRootMigrationProgress
-        {
-            Stage = stage,
-            CompletedBytes = completedBytes,
-            TotalBytes = totalBytes,
-            CompletedFiles = completedFiles,
-            TotalFiles = totalFiles
-        });
-    }
-
-    private static void ReportSwitching(
-        IProgress<DataRootMigrationProgress> progress,
-        DataRootMigrationPlan plan)
-    {
-        long totalWorkBytes = checked(plan.TotalBytes * 3);
-        Report(
-            progress,
-            DataRootMigrationProgressStage.Switching,
-            totalWorkBytes,
-            totalWorkBytes,
-            plan.Files.Count,
-            plan.Files.Count);
     }
 
     private async Task CleanupSourceAsync(

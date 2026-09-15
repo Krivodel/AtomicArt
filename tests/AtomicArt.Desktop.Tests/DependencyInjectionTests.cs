@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 
 using FluentAssertions;
+using Pica.Viewer.Services;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -19,22 +20,33 @@ using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.Tests.Services;
+using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Dialogs;
+using AtomicArt.Desktop.ViewModels.Dlss5;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Settings;
 using AtomicArt.Desktop.Views;
 using AtomicArt.Tests.Common;
-using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.Tests;
 
 public sealed class DependencyInjectionTests
 {
     [Fact]
+    public void AddDesktopServices_WithMainWindowViewModel_ResolvesWithoutCircularDependencies()
+    {
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
+
+        MainWindowViewModel viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
+
+        viewModel.Should().NotBeNull();
+    }
+
+    [Fact]
     public void AddDesktopServices_WithLocalizationInterfaces_RegistersSharedService()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         ILocalizationService localizationService =
             serviceProvider.GetRequiredService<ILocalizationService>();
@@ -48,7 +60,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithWindowPlacement_RegistersSharedServicesAndStateSection()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         WindowStateService windowStateService =
             serviceProvider.GetRequiredService<WindowStateService>();
@@ -67,7 +79,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithGenerationStatusRegistry_ResolvesRegistry()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IGenerationItemStatusDescriptorRegistry registry =
             serviceProvider.GetRequiredService<IGenerationItemStatusDescriptorRegistry>();
@@ -80,7 +92,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithGenerationStatusDescriptors_RegistersOnlyFixedStatusDescriptors()
     {
-        ServiceCollection services = CreateServices();
+        ServiceCollection services = DependencyInjectionTests.CreateServices();
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         GenerationItemStatus[] expectedStatuses = Enum.GetValues<GenerationItemStatus>();
 
@@ -89,8 +101,8 @@ public sealed class DependencyInjectionTests
             .ToList();
 
         services.Should().NotContain(descriptor =>
-            descriptor.ServiceType == typeof(UnknownGenerationItemStatusDescriptor)
-            || descriptor.ImplementationType == typeof(UnknownGenerationItemStatusDescriptor));
+            (descriptor.ServiceType == typeof(UnknownGenerationItemStatusDescriptor))
+            || (descriptor.ImplementationType == typeof(UnknownGenerationItemStatusDescriptor)));
         descriptors.Should().OnlyContain(descriptor => descriptor is IRegisteredGenerationItemStatusDescriptor);
         descriptors.Should().NotContain(descriptor => descriptor is UnknownGenerationItemStatusDescriptor);
         descriptors
@@ -102,7 +114,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithUnknownStatusDescriptorFactory_ResolvesFactory()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IUnknownGenerationItemStatusDescriptorFactory factory =
             serviceProvider.GetRequiredService<IUnknownGenerationItemStatusDescriptorFactory>();
@@ -117,7 +129,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithPricePreviewEstimator_RegistersEstimatorWithoutQuoteApiClient()
     {
-        ServiceCollection services = CreateServices();
+        ServiceCollection services = DependencyInjectionTests.CreateServices();
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
 
         GenerationPricePreviewEstimator estimator =
@@ -133,8 +145,8 @@ public sealed class DependencyInjectionTests
 
         estimator.Should().NotBeNull();
         bool containsRemovedQuoteService = services.Any(descriptor =>
-            ContainsTypeName(removedServiceTypeNames, descriptor.ServiceType)
-            || ContainsTypeName(removedServiceTypeNames, descriptor.ImplementationType));
+            (DependencyInjectionTests.ContainsTypeName(removedServiceTypeNames, descriptor.ServiceType))
+            || (DependencyInjectionTests.ContainsTypeName(removedServiceTypeNames, descriptor.ImplementationType)));
 
         containsRemovedQuoteService.Should().BeFalse();
     }
@@ -142,7 +154,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithGenerationConcurrencyLimiter_RegistersSingletonLimiter()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IGenerationConcurrencyLimiter firstLimiter =
             serviceProvider.GetRequiredService<IGenerationConcurrencyLimiter>();
@@ -155,7 +167,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithErrorDialog_ConnectsServiceToViewModel()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
         ErrorDialogViewModel viewModel =
             serviceProvider.GetRequiredService<ErrorDialogViewModel>();
         IDialogService dialogService =
@@ -171,7 +183,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithAttachmentPreparationLimiter_RegistersSingletonLimiter()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         AttachedImagePreparationConcurrencyLimiter firstLimiter =
             serviceProvider.GetRequiredService<AttachedImagePreparationConcurrencyLimiter>();
@@ -184,7 +196,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithAttachmentImageDrag_RegistersSingletonService()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IAttachmentImageDragService firstService =
             serviceProvider.GetRequiredService<IAttachmentImageDragService>();
@@ -197,7 +209,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithPanelAttachmentPathResolver_ReusesAttachmentStore()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IPanelAttachmentStore attachmentStore =
             serviceProvider.GetRequiredService<IPanelAttachmentStore>();
@@ -210,7 +222,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithVirtualFileDrop_RegistersExpectedLifetimes()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IVirtualFileDropAttachmentService firstAttachmentService =
             serviceProvider.GetRequiredService<IVirtualFileDropAttachmentService>();
@@ -228,7 +240,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithGenerationRunDispatcher_RegistersTransientDispatcher()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IGenerationRunDispatcher firstDispatcher =
             serviceProvider.GetRequiredService<IGenerationRunDispatcher>();
@@ -241,7 +253,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithGalleryPreviewPipeline_RegistersSceneScopedServices()
     {
-        ServiceCollection services = CreateServices();
+        ServiceCollection services = DependencyInjectionTests.CreateServices();
 
         ServiceDescriptor previewLoader = services.Single(descriptor =>
             descriptor.ServiceType == typeof(IGalleryPreviewBitmapLoader));
@@ -261,10 +273,11 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithViewTemplates_RegistersMappingsInPriorityOrder()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
         Type[] expectedViewModelTypes =
         [
             typeof(GalleryViewModel),
+            typeof(Dlss5SessionViewModel),
             typeof(IModelPanelViewModel),
             typeof(SettingsViewModel),
             typeof(ErrorDialogViewModel),
@@ -290,7 +303,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithGoogleApiKeySetting_RegistersNewSettingWithoutOldSetting()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IReadOnlyList<ISettingsDefinition> settings = serviceProvider
             .GetServices<ISettingsDefinition>()
@@ -305,7 +318,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithApiBaseAddressSetting_RegistersSettingFirst()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IReadOnlyList<ISettingsDefinition> settings = serviceProvider
             .GetRequiredService<ISettingsDefinitionCatalog>()
@@ -317,7 +330,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithPromptTextSizeSetting_RegistersRuntimeAndEditor()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
         PromptTextSizeSettingDefinition definition = serviceProvider
             .GetRequiredService<ISettingsDefinitionCatalog>()
             .GetRequired<PromptTextSizeSettingDefinition>();
@@ -340,7 +353,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithConfirmDeletionSetting_RegistersRuntimeAndEditor()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
         ConfirmDeletionSettingDefinition definition = serviceProvider
             .GetRequiredService<ISettingsDefinitionCatalog>()
             .GetRequired<ConfirmDeletionSettingDefinition>();
@@ -363,7 +376,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithApiEndpointService_RegistersSingleton()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IApiEndpointService firstService = serviceProvider.GetRequiredService<IApiEndpointService>();
         IApiEndpointService secondService = serviceProvider.GetRequiredService<IApiEndpointService>();
@@ -375,7 +388,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithDataRootMigration_ResolvesSharedServices()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IAtomicArtDataRootMigrationService migrationService =
             serviceProvider.GetRequiredService<IAtomicArtDataRootMigrationService>();
@@ -391,7 +404,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithImageGenerationHttpClient_UsesGenerationAttemptTimeout()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
         IHttpClientFactory httpClientFactory =
             serviceProvider.GetRequiredService<IHttpClientFactory>();
         using HttpClient httpClient = httpClientFactory.CreateClient(
@@ -406,7 +419,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithModelCatalogHttpClient_UsesConfiguredTimeout()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
         IHttpClientFactory httpClientFactory =
             serviceProvider.GetRequiredService<IHttpClientFactory>();
         using HttpClient httpClient = httpClientFactory.CreateClient(
@@ -421,7 +434,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithPicaViewer_ResolvesConstructorRegisteredServices()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         IClipboardImageWriter firstClipboardWriter =
             serviceProvider.GetRequiredService<IClipboardImageWriter>();
@@ -439,7 +452,7 @@ public sealed class DependencyInjectionTests
     [Fact]
     public void AddDesktopServices_WithUiScaleOptions_RegistersExpectedScaleOptions()
     {
-        using ServiceProvider serviceProvider = CreateServiceProvider();
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
 
         ISettingsDefinitionCatalog catalog = serviceProvider.GetRequiredService<ISettingsDefinitionCatalog>();
         IReadOnlyList<UiScaleOption> scaleOptions = catalog.GetScaleOptions();
@@ -483,7 +496,7 @@ public sealed class DependencyInjectionTests
 
     private static ServiceProvider CreateServiceProvider()
     {
-        return CreateServices().BuildServiceProvider();
+        return DependencyInjectionTests.CreateServices().BuildServiceProvider();
     }
 
     private static bool ContainsTypeName(IReadOnlyList<string> typeNames, Type? type)

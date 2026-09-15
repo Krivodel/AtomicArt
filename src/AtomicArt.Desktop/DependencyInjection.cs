@@ -4,41 +4,43 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using CommunityToolkit.Mvvm.Messaging;
+using Pica.Viewer;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
-using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.Localization;
+using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.Services.Updates;
-using AtomicArt.Desktop.Services.Windows;
 using AtomicArt.Desktop.Services.Windowing;
+using AtomicArt.Desktop.Services.Windows;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Dialogs;
+using AtomicArt.Desktop.ViewModels.Dlss5;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Settings;
 using AtomicArt.Desktop.ViewModels.Updates;
 using AtomicArt.Desktop.Views;
 using AtomicArt.Desktop.Views.Dialogs;
+using AtomicArt.Desktop.Views.Dlss5;
 using AtomicArt.Desktop.Views.Gallery;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Desktop.Views.Settings;
 using AtomicArt.Desktop.Views.Shell;
 using AtomicArt.Desktop.Views.Updates;
-
-using Pica.Viewer;
 
 namespace AtomicArt.Desktop;
 
@@ -95,6 +97,7 @@ public static class DependencyInjection
         services.AddGenerationServices();
         services.AddStateServices();
         services.AddUpdateServices();
+        services.AddDlss5Services();
     }
 
     private static IServiceCollection AddStorageConfiguration(
@@ -133,6 +136,7 @@ public static class DependencyInjection
     {
         services.AddTransient<MainWindow>();
         services.AddViewTemplate<GalleryViewModel, GalleryView>();
+        services.AddViewTemplate<Dlss5SessionViewModel, Dlss5SessionView>();
         services.AddViewTemplate<IModelPanelViewModel, GenerationPanelView>();
         services.AddViewTemplate<SettingsViewModel, SettingsOverlayView>();
         services.AddViewTemplate<ErrorDialogViewModel, ErrorDialogOverlayView>();
@@ -152,7 +156,9 @@ public static class DependencyInjection
             GenerationMetadataViewModel,
             GenerationMetadataOverlayView>();
         services.AddTransient<ApplicationUpdateToastPresenter>();
+        services.AddTransient<Dlss5OperationToastPresenter>();
         services.AddTransient<MainWindowViewModel>();
+        services.AddSingleton<Dlss5SessionViewModel>();
         services.AddTransient<ApplicationUpdateViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddModelPanelViewModelsByConvention();
@@ -233,6 +239,9 @@ public static class DependencyInjection
         services.AddSingleton<ISecretStore, ProtectedDesktopSecretStore>();
         services.AddSingleton<IAttachedImageSignatureValidator, AttachedImageSignatureValidator>();
         services.AddSingleton<AttachedImageFileReader>();
+        services.AddSingleton<IPlatformClipboardImageReader>(
+            provider => new WindowsClipboardImageReader(
+                provider.GetRequiredService<AttachedImageFileReader>()));
         services.AddSharedSingletonAliases<ClipboardImageService>(
             typeof(IClipboardImageService),
             typeof(IClipboardAttachmentService),
@@ -376,6 +385,23 @@ public static class DependencyInjection
         return services;
     }
 
+    private static IServiceCollection AddDlss5Services(this IServiceCollection services)
+    {
+        services.AddSingleton<Dlss5ModulePaths>();
+        services.AddSingleton<IDlss5DisplayImageFactory, Dlss5DisplayImageFactory>();
+        services.AddHttpClient<IDlss5ModuleInstaller, Dlss5ModuleInstaller>(client =>
+        {
+            client.Timeout = TimeSpan.FromMinutes(30);
+        });
+        services.AddSingleton<IDlss5NativeEngine, Dlss5NativeEngine>();
+        services.AddSingleton<IDlss5RenderScheduler, Dlss5RenderScheduler>();
+        services.AddSingleton<IDlss5SourceOpener>(provider =>
+            new Dlss5SourceOpener(
+                () => provider.GetRequiredService<Dlss5SessionViewModel>()));
+
+        return services;
+    }
+
     private static IServiceCollection AddStateSectionsByConvention(this IServiceCollection services)
     {
         return services.AddSharedSingletonImplementationsByConvention(
@@ -443,7 +469,7 @@ public static class DependencyInjection
         foreach (Type implementationType in implementationTypes)
         {
             services.AddTransient(implementationType);
-            AddMatchingInterfaceRegistration(services, implementationType, markerType);
+            DependencyInjection.AddMatchingInterfaceRegistration(services, implementationType, markerType);
         }
 
         return services;
@@ -470,9 +496,9 @@ public static class DependencyInjection
     {
         Type? interfaceType = implementationType
             .GetInterfaces()
-            .FirstOrDefault(candidateInterfaceType => candidateInterfaceType != excludedInterfaceType
-                && candidateInterfaceType != typeof(IDisposable)
-                && candidateInterfaceType.Name == $"I{implementationType.Name}");
+            .FirstOrDefault(candidateInterfaceType => (candidateInterfaceType != excludedInterfaceType)
+                && (candidateInterfaceType != typeof(IDisposable))
+                && (string.Equals(candidateInterfaceType.Name, $"I{implementationType.Name}", StringComparison.Ordinal)));
 
         if (interfaceType is not null)
         {

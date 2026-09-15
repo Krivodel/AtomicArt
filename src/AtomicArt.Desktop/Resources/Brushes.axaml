@@ -33,4 +33,26 @@
     <SolidColorBrush x:Key="MetadataMutedTextBrush"
                      Color="{DynamicResource SukiText}"
                      Opacity="0.62" />
+    <SolidColorBrush x:Key="Dlss5OffLabelBrush"
+                     Color="{StaticResource Dlss5OffLabelColor}" />
+    <SolidColorBrush x:Key="NvidiaBrandBrush"
+                     Color="{StaticResource NvidiaBrandColor}" />
+    <SolidColorBrush x:Key="Dlss5LoadingCyanBrush"
+                     Color="{StaticResource Dlss5LoadingCyanColor}" />
+    <SolidColorBrush x:Key="Dlss5LoadingVioletBrush"
+                     Color="{StaticResource Dlss5LoadingVioletColor}" />
+    <SolidColorBrush x:Key="Dlss5IconHoverBrush"
+                     Color="{StaticResource Dlss5IconHoverColor}" />
+    <SolidColorBrush x:Key="Dlss5IconPressedBrush"
+                     Color="{StaticResource Dlss5IconPressedColor}" />
+    <LinearGradientBrush x:Key="Dlss5ProgressHighlightBrush"
+                         EndPoint="100%,0%"
+                         StartPoint="0%,0%">
+        <GradientStop Offset="0"
+                      Color="{StaticResource Dlss5ProgressHighlightEdgeColor}" />
+        <GradientStop Offset="0.5"
+                      Color="{StaticResource Dlss5ProgressHighlightColor}" />
+        <GradientStop Offset="1"
+                      Color="{StaticResource Dlss5ProgressHighlightEdgeColor}" />
+    </LinearGradientBrush>
 </ResourceDictionary>

@@ -60,7 +60,10 @@ public static class ClipboardPasteBehavior
 
     private static async void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is not Control control || !IsPasteGesture(e))
+        if ((sender is not Control control)
+            || (!control.IsEffectivelyVisible)
+            || (e.Handled)
+            || (!IsPasteGesture(e)))
         {
             return;
         }

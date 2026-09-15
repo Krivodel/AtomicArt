@@ -1,6 +1,6 @@
-using Avalonia.Controls;
-
 using Microsoft.Extensions.Options;
+
+using Avalonia.Controls;
 
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Services.Gallery;
@@ -71,7 +71,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         ArgumentNullException.ThrowIfNull(control);
         ArgumentNullException.ThrowIfNull(commands);
 
-        GenerationCardControl generationCard = RequireGenerationCard(control);
+        GenerationCardControl generationCard = GenerationCardControlFactory.RequireGenerationCard(control);
 
         generationCard.OpenViewerCommand = commands.OpenViewer;
         generationCard.ShowFailureDetailsCommand = commands.ShowFailureDetails;
@@ -81,6 +81,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         generationCard.OpenMetadataCommand = commands.OpenMetadata;
         generationCard.DeleteOrCancelCommand = commands.DeleteOrCancel;
         generationCard.ToggleFavoriteCommand = commands.ToggleFavorite;
+        generationCard.OpenDlss5Command = commands.OpenDlss5;
         generationCard.ToggleSelectionCommand = commands.ToggleSelection;
         generationCard.SelectRangeCommand = commands.SelectRange;
     }
@@ -89,7 +90,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
     {
         ArgumentNullException.ThrowIfNull(control);
 
-        GenerationCardControl generationCard = RequireGenerationCard(control);
+        GenerationCardControl generationCard = GenerationCardControlFactory.RequireGenerationCard(control);
         generationCard.IsSelectionMode = isSelectionMode;
     }
 
@@ -97,14 +98,14 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
     {
         ArgumentNullException.ThrowIfNull(control);
 
-        GenerationCardControl generationCard = RequireGenerationCard(control);
+        GenerationCardControl generationCard = GenerationCardControlFactory.RequireGenerationCard(control);
         generationCard.IsSelectionDimmed = isDimmed;
     }
 
     public bool CanRetainRecycledControl(Control control)
     {
         ArgumentNullException.ThrowIfNull(control);
-        RequireGenerationCard(control);
+        GenerationCardControlFactory.RequireGenerationCard(control);
 
         return _pooledControls.Count < _maximumPooledControlCount;
     }
@@ -112,7 +113,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
     public void Recycle(Control control)
     {
         ArgumentNullException.ThrowIfNull(control);
-        GenerationCardControl generationCard = RequireGenerationCard(control);
+        GenerationCardControl generationCard = GenerationCardControlFactory.RequireGenerationCard(control);
 
         _animationScheduler.Cancel(generationCard);
 

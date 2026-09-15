@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Pica.Viewer.Services;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
@@ -12,9 +13,8 @@ using AtomicArt.Desktop.Services.Gallery.Deletion;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Localization;
+using AtomicArt.Desktop.ViewModels.Dlss5;
 using AtomicArt.Desktop.ViewModels.Generation;
-
-using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -50,6 +50,8 @@ public sealed partial class GalleryViewModel :
         }
     }
 
+    private const int SingleItemDeletionCount = 1;
+
     private readonly IFileRevealService _fileRevealService;
     private readonly IImageViewerService _imageViewerService;
     private readonly IDialogService _dialogService;
@@ -66,6 +68,7 @@ public sealed partial class GalleryViewModel :
     private readonly GenerationDurationFormatter _durationFormatter;
     private readonly IGenerationCancellationService _generationCancellationService;
     private readonly ILocalizationTextProvider _textProvider;
+    private readonly Dlss5SessionViewModel? _dlss5;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
     private IGenerationPanelPresetTarget? _generationPanelPresetTarget;
     private GenerationMetadataViewModel? _selectedMetadata;
@@ -94,7 +97,8 @@ public sealed partial class GalleryViewModel :
         GenerationDurationFormatter durationFormatter,
         IMessenger messenger,
         ILocalizationTextProvider textProvider,
-        IGenerationCancellationService? generationCancellationService = null)
+        IGenerationCancellationService? generationCancellationService = null,
+        Dlss5SessionViewModel? dlss5 = null)
     {
         ArgumentNullException.ThrowIfNull(fileRevealService);
         ArgumentNullException.ThrowIfNull(imageViewerService);
@@ -132,6 +136,7 @@ public sealed partial class GalleryViewModel :
         _textProvider = textProvider;
         _generationCancellationService = generationCancellationService
             ?? NullGenerationCancellationService.Instance;
+        _dlss5 = dlss5;
         messenger.Register<LocalizationChangedMessage>(this);
     }
 
@@ -276,7 +281,7 @@ public sealed partial class GalleryViewModel :
         if (_deletionConfirmationService.IsConfirmationRequired)
         {
             LocalizedConfirmationDialogRequest request =
-                CreateDeletionConfirmationRequest(itemCount);
+                GalleryViewModel.CreateDeletionConfirmationRequest(itemCount);
             bool isConfirmed = await _dialogService.ShowConfirmationAsync(
                 request,
                 ct);
@@ -379,7 +384,7 @@ public sealed partial class GalleryViewModel :
                 }
 
                 await ExecuteConfirmedDeletionAsync(
-                    1,
+                    SingleItemDeletionCount,
                     async deletionCt =>
                     {
                         CancelGenerationIfActive(item);
@@ -407,7 +412,7 @@ public sealed partial class GalleryViewModel :
         GenerationItemViewModel? item,
         CancellationToken ct)
     {
-        if (item is null || !CanToggleFavorite(item))
+        if ((item is null) || (!CanToggleFavorite(item)))
         {
             return;
         }
@@ -487,12 +492,12 @@ public sealed partial class GalleryViewModel :
     private void ReuseGeneration(GenerationItemViewModel? item)
     {
         IGenerationPanelPresetTarget? target = _generationPanelPresetTarget;
-        if (item is null || target is null)
+        if ((item is null) || (target is null))
         {
             return;
         }
 
-        GenerationPanelPreset preset = CreateGenerationPanelPreset(item);
+        GenerationPanelPreset preset = GalleryViewModel.CreateGenerationPanelPreset(item);
         if (!target.CanApplyPreset(preset))
         {
             return;
@@ -506,67 +511,101 @@ public sealed partial class GalleryViewModel :
     {
         IGenerationPanelPresetTarget? target = _generationPanelPresetTarget;
 
-        return item is not null
-            && target is not null
-            && target.CanApplyPreset(CreateGenerationPanelPreset(item));
+        return (item is not null)
+            && (target is not null)
+            && (target.CanApplyPreset(GalleryViewModel.CreateGenerationPanelPreset(item)));
     }
 
     private bool CanRunCommand()
     {
-        return !IsLoading && !IsSelectionMode;
+        return (!IsLoading) && (!IsSelectionMode);
     }
 
     private bool CanChangeSelection(GenerationItemViewModel? item)
     {
-        return !IsLoading
-            && item is not null
-            && _itemsController.Contains(item);
+        return (!IsLoading)
+            && (item is not null)
+            && (_itemsController.Contains(item));
     }
 
     private bool CanToggleFavorite(GenerationItemViewModel? item)
     {
-        return !IsLoading
-            && !IsSelectionMode
-            && item is not null
-            && _itemsController.Contains(item);
+        return (!IsLoading)
+            && (!IsSelectionMode)
+            && (item is not null)
+            && (_itemsController.Contains(item));
     }
 
     private bool CanSelectAll()
     {
-        return !IsLoading
-            && !IsEmpty
-            && SelectedCount < Items.Count;
+        return (!IsLoading)
+            && (!IsEmpty)
+            && (SelectedCount < Items.Count);
     }
 
     private bool CanExitSelectionMode()
     {
-        return !IsLoading && IsSelectionMode;
+        return (!IsLoading) && (IsSelectionMode);
     }
 
     private bool CanDeleteSelected()
     {
-        return !IsLoading && IsSelectionMode && SelectedCount > 0;
+        return (!IsLoading) && (IsSelectionMode) && (SelectedCount > 0);
     }
 
     private bool CanOpenViewer(GenerationItemViewModel? item)
     {
-        return !IsLoading
-            && !IsSelectionMode
-            && item is { ShowsGeneratedImage: true }
-            && !string.IsNullOrWhiteSpace(item.ImagePath);
+        return (!IsLoading)
+            && (!IsSelectionMode)
+            && (item is { ShowsGeneratedImage: true })
+            && (!string.IsNullOrWhiteSpace(item.ImagePath));
+    }
+
+    private bool CanOpenDlss5(GenerationItemViewModel? item)
+    {
+        return (CanOpenViewer(item)) && (_dlss5 is not null);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpenDlss5))]
+    private async Task OpenDlss5Async(GenerationItemViewModel? item, CancellationToken ct)
+    {
+        Dlss5SessionViewModel? dlss5 = _dlss5;
+        if ((item?.ImagePath is null) || (dlss5 is null) || (!CanOpenDlss5(item)))
+        {
+            return;
+        }
+
+        await ExecuteUserOperationAsync(
+            operationCt => dlss5.OpenFromImagePathAsync(item.ImagePath, operationCt),
+            nameof(OpenDlss5Async),
+            ct);
+    }
+
+    private async Task ToggleFavoriteFromViewerAsync(
+        GenerationItemViewModel item,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        if (!ToggleFavoriteCommand.CanExecute(item))
+        {
+            return;
+        }
+
+        await ToggleFavoriteCommand.ExecuteAsync(item);
     }
 
     private bool CanShowFailureDetails(GenerationItemViewModel? item)
     {
-        return !IsLoading
-            && !IsSelectionMode
-            && item is { IsFailed: true };
+        return (!IsLoading)
+            && (!IsSelectionMode)
+            && (item is { IsFailed: true });
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenViewer), AllowConcurrentExecutions = true)]
     private async Task OpenViewerAsync(GenerationItemViewModel? item, CancellationToken ct)
     {
-        if (item is null || !CanOpenViewer(item))
+        if ((item is null) || (!CanOpenViewer(item)))
         {
             return;
         }
@@ -583,7 +622,7 @@ public sealed partial class GalleryViewModel :
         GenerationItemViewModel? item,
         CancellationToken ct)
     {
-        if (item is null || !CanShowFailureDetails(item))
+        if ((item is null) || (!CanShowFailureDetails(item)))
         {
             return;
         }
@@ -595,7 +634,7 @@ public sealed partial class GalleryViewModel :
 
     private async Task DeleteItemAsync(GenerationItemViewModel item, CancellationToken ct)
     {
-        GalleryItemDeletionRequest deletionRequest = CreateDeletionRequest(item);
+        GalleryItemDeletionRequest deletionRequest = GalleryViewModel.CreateDeletionRequest(item);
         Guid removedItemId = item.Id;
         _itemsController.Delete(item);
         await _viewStateController.RemoveAsync(removedItemId, ct);
@@ -609,11 +648,11 @@ public sealed partial class GalleryViewModel :
         CancellationToken ct)
     {
         IReadOnlyList<GalleryItemDeletionRequest> deletionRequests = items
-            .Select(CreateDeletionRequest)
+            .Select(GalleryViewModel.CreateDeletionRequest)
             .ToList();
 
         IReadOnlyList<Guid> activeGenerationIds = items
-            .Where(item => item.IsGenerating && item.CorrelationId.HasValue)
+            .Where(item => (item.IsGenerating) && (item.CorrelationId.HasValue))
             .Select(item => item.CorrelationId.GetValueOrDefault())
             .Distinct()
             .ToList();
@@ -632,8 +671,8 @@ public sealed partial class GalleryViewModel :
 
     private void CancelGenerationIfActive(GenerationItemViewModel item)
     {
-        if (item.IsGenerating
-            && item.CorrelationId is Guid logicalGenerationId)
+        if ((item.IsGenerating)
+            && (item.CorrelationId is Guid logicalGenerationId))
         {
             _generationCancellationService.Cancel(logicalGenerationId);
         }
@@ -657,7 +696,7 @@ public sealed partial class GalleryViewModel :
 
         foreach (GenerationItemViewModel item in Items)
         {
-            if (!item.ShowsGeneratedImage || string.IsNullOrWhiteSpace(item.ImagePath))
+            if ((!item.ShowsGeneratedImage) || (string.IsNullOrWhiteSpace(item.ImagePath)))
             {
                 continue;
             }
@@ -667,7 +706,8 @@ public sealed partial class GalleryViewModel :
                 new GalleryFileImageViewerSource(
                     item.ModelId,
                     item.ImagePath,
-                    item.ThumbnailPath)));
+                    item.ThumbnailPath),
+                ct => ToggleFavoriteFromViewerAsync(item, ct)));
         }
 
         if (!viewerItems.Any(item => item.Id == selectedItem.Id))
@@ -699,13 +739,13 @@ public sealed partial class GalleryViewModel :
         catch (OperationCanceledException)
         {
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException exception)
         {
-            _errorHandler.Log(ex, nameof(ObserveGalleryOperationAsync));
+            _errorHandler.Log(exception, nameof(ObserveGalleryOperationAsync));
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            _errorHandler.Log(ex, nameof(ObserveGalleryOperationAsync));
+            _errorHandler.Log(exception, nameof(ObserveGalleryOperationAsync));
         }
     }
 
@@ -754,6 +794,7 @@ public sealed partial class GalleryViewModel :
         ShowFailureDetailsCommand.NotifyCanExecuteChanged();
         DeleteOrCancelCommand.NotifyCanExecuteChanged();
         ToggleFavoriteCommand.NotifyCanExecuteChanged();
+        OpenDlss5Command.NotifyCanExecuteChanged();
         ToggleSelectionCommand.NotifyCanExecuteChanged();
         SelectRangeCommand.NotifyCanExecuteChanged();
         SelectAllCommand.NotifyCanExecuteChanged();

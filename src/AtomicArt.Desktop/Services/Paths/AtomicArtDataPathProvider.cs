@@ -14,6 +14,7 @@ public sealed class AtomicArtDataPathProvider :
     public string StateDirectory => Volatile.Read(ref _snapshot).StateDirectory;
     public string StateAttachmentsDirectory =>
         Volatile.Read(ref _snapshot).StateAttachmentsDirectory;
+    public string ModulesDirectory => Volatile.Read(ref _snapshot).ModulesDirectory;
 
     private AtomicArtDataPathSnapshot _snapshot;
 

@@ -59,6 +59,20 @@ public sealed class AttachedImageFileReader
             .ToList();
     }
 
+    internal ImageAttachmentInput CreateInput(
+        string filePath,
+        int maxInputBytes)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxInputBytes);
+
+        string fullPath = Path.GetFullPath(filePath);
+
+        return new ImageAttachmentInput(
+            Path.GetFileName(fullPath),
+            ct => ReadFileAsync(fullPath, maxInputBytes, ct));
+    }
+
     internal ImageAttachmentInput CreateBufferedInput(
         string fileName,
         byte[] content)
@@ -75,6 +89,25 @@ public sealed class AttachedImageFileReader
                 return Task.FromResult<AttachedImageDto?>(
                     CreateImage(fileName, content));
             });
+    }
+
+    private static async Task<bool> IsFileTooLargeAsync(IStorageFile file, int maxInputBytes)
+    {
+        StorageItemProperties properties = await file.GetBasicPropertiesAsync()
+            .ConfigureAwait(false);
+        object? sizeValue = properties.Size;
+
+        if (sizeValue is ulong unsignedSize)
+        {
+            return unsignedSize > (ulong)maxInputBytes;
+        }
+
+        if (sizeValue is long signedSize)
+        {
+            return signedSize > maxInputBytes;
+        }
+
+        return false;
     }
 
     private async Task<AttachedImageDto?> ReadFileAsync(
@@ -95,6 +128,43 @@ public sealed class AttachedImageFileReader
 
         await using Stream input = await file.OpenReadAsync()
             .ConfigureAwait(false);
+        return await ReadStreamAsync(file.Name, input, maxInputBytes, ct)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<AttachedImageDto?> ReadFileAsync(
+        string filePath,
+        int maxInputBytes,
+        CancellationToken ct)
+    {
+        FileInfo file = new(filePath);
+
+        if (file.Length > maxInputBytes)
+        {
+            _logger.LogWarning(
+                "Selected attachment exceeded the configured input limit of {MaxInputBytes} bytes.",
+                maxInputBytes);
+            throw new InvalidDataException(AttachedImageTooLargeMessage);
+        }
+
+        await using FileStream input = new(
+            file.FullName,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 81920,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+        return await ReadStreamAsync(file.Name, input, maxInputBytes, ct)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<AttachedImageDto> ReadStreamAsync(
+        string fileName,
+        Stream input,
+        int maxInputBytes,
+        CancellationToken ct)
+    {
         byte[] content = await LimitedContentReader
             .ReadAsync(
                 input,
@@ -102,7 +172,7 @@ public sealed class AttachedImageFileReader
                 AttachedImageTooLargeMessage,
                 ct)
             .ConfigureAwait(false);
-        AttachedImageDto image = CreateImage(file.Name, content);
+        AttachedImageDto image = CreateImage(fileName, content);
         _logger.LogInformation(
             "Selected attachment read with {SizeBytes} bytes, recognized signature {SignatureRecognized}, and content type {ContentType}.",
             content.LongLength,
@@ -123,25 +193,6 @@ public sealed class AttachedImageFileReader
             : UnknownImageContentType;
 
         return new AttachedImageDto(fileName, contentType, content);
-    }
-
-    private static async Task<bool> IsFileTooLargeAsync(IStorageFile file, int maxInputBytes)
-    {
-        StorageItemProperties properties = await file.GetBasicPropertiesAsync()
-            .ConfigureAwait(false);
-        object? sizeValue = properties.Size;
-
-        if (sizeValue is ulong unsignedSize)
-        {
-            return unsignedSize > (ulong)maxInputBytes;
-        }
-
-        if (sizeValue is long signedSize)
-        {
-            return signedSize > maxInputBytes;
-        }
-
-        return false;
     }
 
 }

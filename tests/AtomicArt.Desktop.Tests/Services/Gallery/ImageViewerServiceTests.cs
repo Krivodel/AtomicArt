@@ -1,14 +1,15 @@
 using Microsoft.Extensions.Logging.Abstractions;
+
 using Moq;
+using Pica.Protocol;
+using Pica.Viewer.Services;
 using Xunit;
 
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
-
-using Pica.Protocol;
-using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -26,6 +27,7 @@ public sealed class ImageViewerServiceTests
         Mock<IUiThreadDispatcher> uiThreadDispatcherMock = new();
         Mock<IWindowStateService> windowStateServiceMock = new();
         Mock<IAnimatedGalleryOperations> galleryOperationsMock = new();
+        Mock<IDlss5SourceOpener> dlss5SourceOpenerMock = new();
         PicaViewerSessionDependencies sessionDependencies = new(
             clipboardImageWriterMock.Object,
             trustedImageFileServiceMock.Object,
@@ -34,6 +36,7 @@ public sealed class ImageViewerServiceTests
             windowStateServiceMock.Object,
             galleryOperationsMock.Object,
             new AtomicArtPicaActions(TestLocalizationTextProvider.Default),
+            dlss5SourceOpenerMock.Object,
             NullLoggerFactory.Instance);
         PicaViewerSessionFactory sessionFactory = new(sessionDependencies);
         ImageViewerService service = new(
@@ -44,7 +47,7 @@ public sealed class ImageViewerServiceTests
         GalleryImageViewerRequest request = new(
             new GalleryStaticImageViewerItemsSource(
                 new List<GalleryImageViewerItem>()),
-            ItemId,
+            ImageViewerServiceTests.ItemId,
             null);
 
         await service.OpenAsync(request, CancellationToken.None);

@@ -94,6 +94,45 @@ public sealed class ClipboardImageServiceTests
         actualImage.Content.Should().Equal(content);
     }
 
+    [Fact]
+    public async Task TryGetImageAsync_WithoutAvaloniaImage_UsesPlatformFallback()
+    {
+        AttachedImageDto fallbackImage = new(
+            "fallback.png",
+            GenerationImageContentTypes.Png,
+            PngContent);
+        StubPlatformClipboardImageReader fallbackReader = new(
+            ImageAttachmentInput.FromImage(fallbackImage));
+        DataTransfer dataTransfer = new();
+        ClipboardImageService service = CreateService(dataTransfer, fallbackReader);
+
+        ImageAttachmentInput? input = await service.TryGetImageAsync(
+            MaxInputBytes,
+            CancellationToken.None);
+        AttachedImageDto? actualImage = input is null
+            ? null
+            : await input.ReadAsync(CancellationToken.None);
+
+        actualImage.Should().BeEquivalentTo(fallbackImage);
+        fallbackReader.CallCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task TryGetImageAsync_WithAvaloniaImage_DoesNotUsePlatformFallback()
+    {
+        StubPlatformClipboardImageReader fallbackReader = new(fallbackInput: null);
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(CreatePngTransferItem());
+        ClipboardImageService service = CreateService(dataTransfer, fallbackReader);
+
+        ImageAttachmentInput? input = await service.TryGetImageAsync(
+            MaxInputBytes,
+            CancellationToken.None);
+
+        input.Should().NotBeNull();
+        fallbackReader.CallCount.Should().Be(0);
+    }
+
     private static DataTransferItem CreatePngTransferItem()
     {
         DataTransferItem item = new();
@@ -106,12 +145,23 @@ public sealed class ClipboardImageServiceTests
 
     private static ClipboardImageService CreateService(IAsyncDataTransfer dataTransfer)
     {
+        return CreateService(
+            dataTransfer,
+            new StubPlatformClipboardImageReader(fallbackInput: null));
+    }
+
+    private static ClipboardImageService CreateService(
+        IAsyncDataTransfer dataTransfer,
+        IPlatformClipboardImageReader fallbackReader)
+    {
         Mock<IClipboard> clipboardMock = new();
         clipboardMock
             .Setup(clipboard => clipboard.TryGetDataAsync())
             .ReturnsAsync(dataTransfer);
         ClipboardImageService service = new(
-            new AttachedImageFileReader(new AttachedImageSignatureValidator()));
+            new AttachedImageFileReader(new AttachedImageSignatureValidator()),
+            fallbackReader,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ClipboardImageService>.Instance);
         service.Attach(clipboardMock.Object);
 
         return service;
@@ -129,5 +179,22 @@ public sealed class ClipboardImageServiceTests
 
         return input
             ?? throw new InvalidOperationException(missingInputMessage);
+    }
+
+    private sealed class StubPlatformClipboardImageReader(
+        ImageAttachmentInput? fallbackInput) : IPlatformClipboardImageReader
+    {
+        public int CallCount { get; private set; }
+
+        public Task<ImageAttachmentInput?> TryGetImageAsync(
+            int maxInputBytes,
+            CancellationToken ct)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxInputBytes);
+            ct.ThrowIfCancellationRequested();
+            CallCount++;
+
+            return Task.FromResult(fallbackInput);
+        }
     }
 }

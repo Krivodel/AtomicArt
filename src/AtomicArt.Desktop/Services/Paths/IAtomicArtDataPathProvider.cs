@@ -10,6 +10,7 @@ public interface IAtomicArtDataPathProvider
     string ThumbnailsDirectory { get; }
     string StateDirectory { get; }
     string StateAttachmentsDirectory { get; }
+    string ModulesDirectory { get; }
 
     void EnsureDirectoryExists(string directoryPath);
 }

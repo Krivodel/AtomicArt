@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 
@@ -15,6 +16,7 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
         TrustedPathGuard.CreateFailureMessage(
             "Trusted image directories",
             "AtomicArt data root");
+
     private readonly ILogger<TrustedImageFileService> _logger;
     private readonly IGenerationImageFormatRegistry _formatRegistry;
     private readonly IAtomicArtDataPathProvider _pathProvider;
@@ -54,8 +56,8 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
 
     public string GetTrustedImagePath(string? path, string modelId)
     {
-        if (TryGetTrustedImagePath(path, modelId, out string? trustedPath)
-            && trustedPath is not null)
+        if ((TryGetTrustedImagePath(path, modelId, out string? trustedPath))
+            && (trustedPath is not null))
         {
             return trustedPath;
         }
@@ -72,7 +74,7 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
         string trustedRootDirectory = Path.GetFullPath(_pathProvider.RootDirectory);
         string[] trustedDirectories = GetTrustedDirectories();
 
-        if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(modelId))
+        if ((string.IsNullOrWhiteSpace(path)) || (string.IsNullOrWhiteSpace(modelId)))
         {
             throw new InvalidOperationException(InvalidImagePathMessage);
         }
@@ -82,103 +84,6 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
             trustedDirectories,
             trustedRootDirectory,
             validateResolvedPath);
-    }
-
-    private bool TryGetTrustedImagePath(string? path, string modelId, out string? trustedPath)
-    {
-        trustedPath = null;
-
-        if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(modelId))
-        {
-            return false;
-        }
-
-        return TryValidatePath(path, out trustedPath);
-    }
-
-    private bool TryValidatePath(
-        string path,
-        out string? trustedPath)
-    {
-        trustedPath = null;
-
-        try
-        {
-            string trustedRootDirectory = Path.GetFullPath(_pathProvider.RootDirectory);
-            string[] trustedDirectories = GetTrustedDirectories();
-
-            if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
-                path,
-                trustedDirectories,
-                trustedRootDirectory,
-                TrustedPathFailureMessage,
-                out FileStream? stream,
-                out string? trustedFullPath)
-                || stream is null
-                || trustedFullPath is null)
-            {
-                return false;
-            }
-
-            using (stream)
-            {
-                FileInfo fileInfo = new(trustedFullPath);
-
-                if (stream.Length <= 0
-                    || stream.Length > _maxTrustedImageBytes)
-                {
-                    return false;
-                }
-
-                if (!_formatRegistry.TryGetByFileName(
-                    fileInfo.Name,
-                    out IGenerationImageFormat? format)
-                    || format is null)
-                {
-                    return false;
-                }
-
-                byte[] signatureBytes = ReadSignatureBytes(stream);
-
-                if (!format.MatchesSignature(signatureBytes))
-                {
-                    return false;
-                }
-
-                trustedPath = trustedFullPath;
-                return true;
-            }
-        }
-        catch (ArgumentException ex)
-        {
-            LogTrustedImageValidationFailure(ex);
-
-            return false;
-        }
-        catch (PathTooLongException ex)
-        {
-            LogTrustedImageValidationFailure(ex);
-
-            return false;
-        }
-        catch (IOException ex)
-        {
-            LogTrustedImageValidationFailure(ex);
-
-            return false;
-        }
-        catch (NotSupportedException ex)
-        {
-            LogTrustedImageValidationFailure(ex);
-
-            return false;
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            LogTrustedImageValidationFailure(ex);
-
-            return false;
-        }
     }
 
     private static byte[] ReadSignatureBytes(FileStream stream)
@@ -197,6 +102,103 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
         return result;
     }
 
+    private bool TryGetTrustedImagePath(string? path, string modelId, out string? trustedPath)
+    {
+        trustedPath = null;
+
+        if ((string.IsNullOrWhiteSpace(path)) || (string.IsNullOrWhiteSpace(modelId)))
+        {
+            return false;
+        }
+
+        return TryValidatePath(path, out trustedPath);
+    }
+
+    private bool TryValidatePath(
+        string path,
+        out string? trustedPath)
+    {
+        trustedPath = null;
+
+        try
+        {
+            string trustedRootDirectory = Path.GetFullPath(_pathProvider.RootDirectory);
+            string[] trustedDirectories = GetTrustedDirectories();
+
+            if ((!_trustedFileStreamFactory.TryOpenExistingFileForRead(
+                path,
+                trustedDirectories,
+                trustedRootDirectory,
+                TrustedImageFileService.TrustedPathFailureMessage,
+                out FileStream? stream,
+                out string? trustedFullPath))
+                || (stream is null)
+                || (trustedFullPath is null))
+            {
+                return false;
+            }
+
+            using (stream)
+            {
+                FileInfo fileInfo = new(trustedFullPath);
+
+                if ((stream.Length <= 0)
+                    || (stream.Length > _maxTrustedImageBytes))
+                {
+                    return false;
+                }
+
+                if ((!_formatRegistry.TryGetByFileName(
+                    fileInfo.Name,
+                    out IGenerationImageFormat? format))
+                    || (format is null))
+                {
+                    return false;
+                }
+
+                byte[] signatureBytes = TrustedImageFileService.ReadSignatureBytes(stream);
+
+                if (!format.MatchesSignature(signatureBytes))
+                {
+                    return false;
+                }
+
+                trustedPath = trustedFullPath;
+                return true;
+            }
+        }
+        catch (ArgumentException exception)
+        {
+            LogTrustedImageValidationFailure(exception);
+
+            return false;
+        }
+        catch (PathTooLongException exception)
+        {
+            LogTrustedImageValidationFailure(exception);
+
+            return false;
+        }
+        catch (IOException exception)
+        {
+            LogTrustedImageValidationFailure(exception);
+
+            return false;
+        }
+        catch (NotSupportedException exception)
+        {
+            LogTrustedImageValidationFailure(exception);
+
+            return false;
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            LogTrustedImageValidationFailure(exception);
+
+            return false;
+        }
+    }
+
     private void LogTrustedImageValidationFailure(Exception exception)
     {
         _logger.LogWarning(exception, "Failed to validate trusted image file.");
@@ -204,12 +206,18 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
 
     private void EnsureTrustedDirectories()
     {
-        foreach (string trustedDirectory in GetTrustedDirectories())
+        string[] managedDirectories =
+        [
+            Path.GetFullPath(_pathProvider.ArtDirectory),
+            Path.GetFullPath(_pathProvider.ThumbnailsDirectory)
+        ];
+
+        foreach (string trustedDirectory in managedDirectories)
         {
             TrustedPathGuard.EnsureTrustedDirectoryExists(
                 _pathProvider,
                 trustedDirectory,
-                TrustedPathFailureMessage);
+                TrustedImageFileService.TrustedPathFailureMessage);
         }
     }
 
@@ -218,7 +226,11 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
         return
         [
             Path.GetFullPath(_pathProvider.ArtDirectory),
-            Path.GetFullPath(_pathProvider.ThumbnailsDirectory)
+            Path.GetFullPath(_pathProvider.ThumbnailsDirectory),
+            Path.GetFullPath(Path.Combine(
+                _pathProvider.ModulesDirectory,
+                Dlss5FeatureDefinition.ModuleDirectoryName,
+                "session"))
         ];
     }
 }

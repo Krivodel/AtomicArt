@@ -1,13 +1,14 @@
 using Microsoft.Extensions.Logging;
+
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
+using Pica.Protocol;
+using Pica.Viewer.Services;
+using Pica.Viewer.Views;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
-
-using Pica.Protocol;
-using Pica.Viewer.Services;
-using Pica.Viewer.Views;
 
 namespace AtomicArt.Desktop.Services.Gallery;
 
@@ -15,10 +16,18 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 {
     public PicaViewerRequest? Request { get; private set; }
 
+    internal IReadOnlyDictionary<Guid, IPicaImageBitmapSource> BitmapSources =>
+        new Dictionary<Guid, IPicaImageBitmapSource>(_bitmapSources);
+
     internal event EventHandler? Disposed;
+
+    private const int StreamCopyBufferSize = 128 * 1024;
 
     private readonly PicaViewerSessionDependencies _dependencies;
     private readonly HashSet<string> _allowedImagePaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _temporaryImagePaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<Guid, IPicaImageBitmapSource> _bitmapSources = [];
+    private readonly Dictionary<Guid, Func<CancellationToken, Task>> _toggleFavoriteActions = [];
     private readonly HashSet<Guid> _galleryItemIds = [];
     private readonly string _sessionDirectory;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
@@ -42,8 +51,13 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         IReadOnlyList<GalleryImageViewerItem> sourceItems = sourceRequest.ItemsSource.GetItems();
         List<PicaImageItem> items = [];
-        bool canShowInGallery = sourceItems.Count > 0
-            && sourceItems.All(item => item.Source is GalleryFileImageViewerSource);
+        _bitmapSources.Clear();
+        _toggleFavoriteActions.Clear();
+        bool canShowInGallery = (sourceItems.Count > 0)
+            && (sourceItems.All(item => item.Source is GalleryFileImageViewerSource
+            { DeleteImageWhenClosed: false }));
+        bool canToggleFavorite = (canShowInGallery)
+            && (sourceItems.All(item => item.ToggleFavoriteAsync is not null));
 
         foreach (GalleryImageViewerItem sourceItem in sourceItems)
         {
@@ -51,23 +65,46 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             items.Add(item);
             _allowedImagePaths.Add(Path.GetFullPath(item.FilePath));
 
-            if (sourceItem.Source is GalleryFileImageViewerSource)
+            if (sourceItem.Source is GalleryBitmapImageViewerSource bitmapSource)
+            {
+                _bitmapSources[sourceItem.Id] = bitmapSource.BitmapSource;
+            }
+
+            if (sourceItem.Source is GalleryFileImageViewerSource fileSource)
             {
                 _galleryItemIds.Add(sourceItem.Id);
+                if (fileSource.DeleteImageWhenClosed)
+                {
+                    _temporaryImagePaths.Add(Path.GetFullPath(item.FilePath));
+                }
+            }
+
+            if ((sourceItem.Source is GalleryFileImageViewerSource
+                { DeleteImageWhenClosed: false })
+                && (sourceItem.ToggleFavoriteAsync is not null))
+            {
+                _toggleFavoriteActions[sourceItem.Id] = sourceItem.ToggleFavoriteAsync;
             }
         }
 
         _attachImagesCommand = sourceRequest.AttachImagesCommand;
         List<PicaActionDefinition> actions = [];
 
-        if (canShowInGallery)
-        {
-            actions.Add(_dependencies.Actions.ShowInGallery);
-        }
-
         if (_attachImagesCommand is not null)
         {
             actions.Add(_dependencies.Actions.Attach);
+        }
+
+        if (canToggleFavorite)
+        {
+            actions.Add(_dependencies.Actions.Imba);
+        }
+
+        actions.Add(_dependencies.Actions.OpenDlss5);
+
+        if (canShowInGallery)
+        {
+            actions.Add(_dependencies.Actions.ShowInGallery);
         }
 
         Request = new PicaViewerRequest(
@@ -103,12 +140,30 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(item);
 
+        if (string.Equals(action.Id, AtomicArtPicaActions.ImbaId, StringComparison.Ordinal))
+        {
+            await DispatchToggleFavoriteAsync(item, ct).ConfigureAwait(false);
+            return;
+        }
+
         if (string.Equals(
                 action.Id,
                 AtomicArtPicaActions.ShowInGalleryId,
                 StringComparison.Ordinal))
         {
             await DispatchShowInGalleryAsync(item, ct).ConfigureAwait(false);
+            return;
+        }
+
+        if (string.Equals(action.Id, AtomicArtPicaActions.OpenDlss5Id, StringComparison.Ordinal))
+        {
+            if (_bitmapSources.TryGetValue(item.Id, out IPicaImageBitmapSource? dlssBitmapSource))
+            {
+                await DispatchBitmapAsync(action, item, dlssBitmapSource, ct).ConfigureAwait(false);
+                return;
+            }
+
+            await DispatchOpenDlss5Async(item, ct).ConfigureAwait(false);
             return;
         }
 
@@ -121,9 +176,22 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             return;
         }
 
+        if ((_bitmapSources.TryGetValue(
+                item.Id,
+                out IPicaImageBitmapSource? bitmapSource))
+            && (!bitmapSource.IsFileBacked))
+        {
+            await DispatchBitmapAsync(
+                action,
+                item,
+                bitmapSource,
+                ct).ConfigureAwait(false);
+            return;
+        }
+
         string fullPath = Path.GetFullPath(item.FilePath);
 
-        if (!_allowedImagePaths.Contains(fullPath) || !File.Exists(fullPath))
+        if ((!_allowedImagePaths.Contains(fullPath)) || (!File.Exists(fullPath)))
         {
             _dependencies.Logger.LogWarning(
                 "Embedded Pica rejected an unavailable current-image action for item {ItemId}",
@@ -169,6 +237,13 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
         ArgumentNullException.ThrowIfNull(pngContent);
 
+        if (string.Equals(action.Id, AtomicArtPicaActions.OpenDlss5Id, StringComparison.Ordinal))
+        {
+            using MemoryStream source = new(pngContent, writable: false);
+            await DispatchOpenDlss5Async(source.CopyToAsync, PicaImageFormats.PngExtension, ct).ConfigureAwait(false);
+            return;
+        }
+
         if (!CanDispatchAttach(action))
         {
             _dependencies.Logger.LogWarning(
@@ -213,19 +288,44 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             {
                 Directory.Delete(_sessionDirectory, true);
             }
-            catch (IOException ex)
+            catch (IOException exception)
             {
                 _dependencies.Logger.LogWarning(
-                    ex,
+                    exception,
                     "Failed to delete embedded Pica temporary files.");
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException exception)
             {
                 _dependencies.Logger.LogWarning(
-                    ex,
+                    exception,
                     "Access was denied while deleting embedded Pica temporary files.");
             }
         }
+
+        foreach (string temporaryImagePath in _temporaryImagePaths)
+        {
+            try
+            {
+                PicaViewerSession.DeleteFileIfExists(temporaryImagePath);
+            }
+            catch (IOException exception)
+            {
+                _dependencies.Logger.LogWarning(
+                    exception,
+                    "Failed to delete temporary Pica image {ImagePath}.",
+                    temporaryImagePath);
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                _dependencies.Logger.LogWarning(
+                    exception,
+                    "Access was denied while deleting temporary Pica image {ImagePath}.",
+                    temporaryImagePath);
+            }
+        }
+        _temporaryImagePaths.Clear();
+        _bitmapSources.Clear();
+        _toggleFavoriteActions.Clear();
 
         _dependencies.Logger.LogInformation("Embedded Pica viewer session disposed");
         Disposed?.Invoke(this, EventArgs.Empty);
@@ -247,6 +347,48 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         await DisposeAsync();
     }
 
+    private static void DeleteFileIfExists(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+
+    private async Task DispatchBitmapAsync(
+        PicaActionDefinition action,
+        PicaImageItem item,
+        IPicaImageBitmapSource bitmapSource,
+        CancellationToken ct)
+    {
+        IPicaImageBitmapLease bitmapLease =
+            await bitmapSource.AcquireAsync(ct).ConfigureAwait(false);
+
+        using (bitmapLease)
+        using (MemoryStream stream = new())
+        {
+            await Task.Run(() => bitmapLease.Bitmap.Save(stream), ct).ConfigureAwait(false);
+
+            if (string.Equals(action.Id, AtomicArtPicaActions.OpenDlss5Id, StringComparison.Ordinal))
+            {
+                stream.Position = 0;
+                await DispatchOpenDlss5Async(stream.CopyToAsync, PicaImageFormats.PngExtension, ct).ConfigureAwait(false);
+                return;
+            }
+
+            byte[] content = stream.ToArray();
+            await ExecuteAttachAsync(
+                item.FileName,
+                GetContentType(item.FileName),
+                content,
+                ct).ConfigureAwait(false);
+            _dependencies.Logger.LogInformation(
+                "Embedded Pica attached memory-only image {ItemId} with {ByteCount} bytes",
+                item.Id,
+                content.Length);
+        }
+    }
+
     private async Task<PicaImageItem> MaterializeItemAsync(
         GalleryImageViewerItem item,
         CancellationToken ct)
@@ -256,8 +398,39 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             GalleryFileImageViewerSource fileSource => CreateFileItem(item.Id, fileSource),
             GalleryAttachedImageViewerSource attachedSource =>
                 await CreateAttachedItemAsync(item.Id, attachedSource.Image, ct).ConfigureAwait(false),
+            GalleryBitmapImageViewerSource bitmapSource =>
+                CreateBitmapItem(item.Id, bitmapSource),
             _ => throw new NotSupportedException("The image source cannot be opened in Pica.")
         };
+    }
+
+    private PicaImageItem CreateBitmapItem(
+        Guid itemId,
+        GalleryBitmapImageViewerSource source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        string filePath;
+
+        if (source.FilePath is null)
+        {
+            filePath = Path.Combine(
+                Path.GetTempPath(),
+                AtomicArtPathNames.RootDirectory,
+                PicaProtocolConstants.ApplicationName,
+                "virtual",
+                itemId.ToString("N") + Path.GetExtension(source.FileName));
+        }
+        else
+        {
+            filePath = _dependencies.TrustedImageFileService.GetTrustedImagePath(
+                source.FilePath,
+                source.ModelId);
+        }
+
+        return new PicaImageItem(
+            itemId,
+            filePath,
+            Path.GetFileName(source.FileName));
     }
 
     private PicaImageItem CreateFileItem(Guid itemId, GalleryFileImageViewerSource source)
@@ -292,8 +465,8 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
     private bool CanDispatchAttach(PicaActionDefinition action)
     {
-        return _attachImagesCommand is not null
-            && string.Equals(action.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal);
+        return (_attachImagesCommand is not null)
+            && (string.Equals(action.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal));
     }
 
     private async Task DispatchShowInGalleryAsync(
@@ -328,20 +501,111 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             item.Id);
     }
 
+    private async Task DispatchToggleFavoriteAsync(PicaImageItem item, CancellationToken ct)
+    {
+        if (!_toggleFavoriteActions.TryGetValue(
+                item.Id,
+                out Func<CancellationToken, Task>? toggleFavoriteAsync))
+        {
+            _dependencies.Logger.LogWarning(
+                "Embedded Pica rejected IMBA action for unavailable gallery item {ItemId}",
+                item.Id);
+            return;
+        }
+
+        await _dependencies.UiThreadDispatcher.InvokeAsync(
+            () => toggleFavoriteAsync(ct),
+            ct).ConfigureAwait(false);
+        _dependencies.Logger.LogInformation(
+            "Embedded Pica toggled favorite state for gallery item {ItemId}",
+            item.Id);
+    }
+
+    private async Task DispatchOpenDlss5Async(PicaImageItem item, CancellationToken ct)
+    {
+        string fullPath = Path.GetFullPath(item.FilePath);
+
+        if ((!_allowedImagePaths.Contains(fullPath)) || (!File.Exists(fullPath)))
+        {
+            _dependencies.Logger.LogWarning(
+                "Embedded Pica rejected DLSS 5 action for unavailable image {ItemId}",
+                item.Id);
+            return;
+        }
+
+        await DispatchOpenDlss5Async(
+            async (destination, copyCt) =>
+            {
+                await using FileStream source = new(
+                    fullPath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: StreamCopyBufferSize,
+                    FileOptions.Asynchronous | FileOptions.SequentialScan);
+                await source.CopyToAsync(destination, copyCt).ConfigureAwait(false);
+            },
+            Path.GetExtension(fullPath),
+            ct).ConfigureAwait(false);
+    }
+
+    private async Task DispatchOpenDlss5Async(
+        Func<Stream, CancellationToken, Task> writeSourceAsync,
+        string extension,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        string stagingDirectory = Path.Combine(
+            Path.GetTempPath(),
+            AtomicArtPathNames.RootDirectory,
+            "dlss5");
+        Directory.CreateDirectory(stagingDirectory);
+        string stagingPath = Path.Combine(
+            stagingDirectory,
+            Guid.NewGuid().ToString("N") + extension);
+
+        try
+        {
+            await using (FileStream destination = new(
+                stagingPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: StreamCopyBufferSize,
+                FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
+                await writeSourceAsync(destination, ct).ConfigureAwait(false);
+            }
+
+            await _dependencies.UiThreadDispatcher.InvokeAsync(
+                async () =>
+                {
+                    _dependencies.WindowStateService.ShowAndActivate();
+                    await _dependencies.Dlss5SourceOpener.OpenFromImagePathAsync(stagingPath, ct);
+                    _window?.Close();
+                },
+                ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            PicaViewerSession.DeleteFileIfExists(stagingPath);
+        }
+    }
+
     private string GetExtension(string fileName, string contentType)
     {
-        if (_dependencies.FormatRegistry.TryGetByContentType(
+        if ((_dependencies.FormatRegistry.TryGetByContentType(
                 contentType,
-                out IGenerationImageFormat? contentFormat)
-            && contentFormat is not null)
+                out IGenerationImageFormat? contentFormat))
+            && (contentFormat is not null))
         {
             return contentFormat.Extension;
         }
 
-        if (_dependencies.FormatRegistry.TryGetByFileName(
+        if ((_dependencies.FormatRegistry.TryGetByFileName(
                 fileName,
-                out IGenerationImageFormat? fileFormat)
-            && fileFormat is not null)
+                out IGenerationImageFormat? fileFormat))
+            && (fileFormat is not null))
         {
             return fileFormat.Extension;
         }
@@ -351,10 +615,10 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
     private string GetContentType(string fileName)
     {
-        if (_dependencies.FormatRegistry.TryGetByFileName(
+        if ((_dependencies.FormatRegistry.TryGetByFileName(
                 fileName,
-                out IGenerationImageFormat? format)
-            && format is not null)
+                out IGenerationImageFormat? format))
+            && (format is not null))
         {
             return format.ContentType;
         }
@@ -378,7 +642,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         }
 
         string safeFileName = Path.GetFileName(fileName);
-        List<AttachedImageDto> images = [new(safeFileName, contentType, content)];
+        List<AttachedImageDto> images = [new AttachedImageDto(safeFileName, contentType, content)];
         await _dependencies.UiThreadDispatcher.InvokeAsync(
             async () =>
             {
@@ -398,10 +662,10 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             ct).ConfigureAwait(false);
     }
 
-    private async void OnWindowClosed(object? sender, EventArgs e)
+    private async void OnWindowClosed(object? sender, EventArgs eventArgs)
     {
         _ = sender;
-        _ = e;
+        _ = eventArgs;
 
         await _dependencies.ClipboardImageWriter.FlushAsync(CancellationToken.None);
         await DisposeAsync();

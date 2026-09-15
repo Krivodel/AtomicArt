@@ -1,22 +1,20 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Rectangle = Avalonia.Controls.Shapes.Rectangle;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
 using Avalonia.Media;
 using Avalonia.VisualTree;
-
-using Rectangle = Avalonia.Controls.Shapes.Rectangle;
-
 using CommunityToolkit.Mvvm.Input;
-
 using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -34,6 +32,49 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     private static readonly Size PreviewSize = new(220d, 220d);
     private static readonly Rect DefaultViewportBounds = new(0d, 0d, 1000d, 600d);
     private static readonly TimeSpan AnimationCompletionTimeout = TimeSpan.FromSeconds(1d);
+
+    [Fact]
+    public void ContextFlyout_WhenOpened_RendersDlss5IconWithFillWithoutStroke()
+    {
+        Dispatch(() =>
+        {
+            GenerationCardControl control = new()
+            {
+                DataContext = GenerationCardControlTests.CreateItem("missing-image.png", "missing-thumbnail.jpg"),
+                OpenDlss5Command = new RelayCommand(() => { })
+            };
+
+            Show(control, window =>
+            {
+                Border container = control.FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException("Generation card container was not found.");
+                AnimatedContextMenuFlyout flyout = container.ContextFlyout.Should()
+                    .BeOfType<AnimatedContextMenuFlyout>().Subject;
+
+                flyout.ShowAt(container);
+                window.CaptureRenderedFrame();
+
+                try
+                {
+                    MenuItem menuItem = control.FindControl<MenuItem>("OpenDlss5MenuItem")
+                        ?? throw new InvalidOperationException("DLSS 5 menu item was not found.");
+                    PathIcon icon = menuItem.Icon.Should().BeOfType<PathIcon>().Subject;
+                    Avalonia.Controls.Shapes.Path shape = icon.GetVisualDescendants()
+                        .OfType<Avalonia.Controls.Shapes.Path>().Single();
+
+                    shape.Fill.Should().NotBeNull();
+                    shape.Stroke.Should().BeNull();
+                    shape.Data.Should().NotBeNull();
+                    double iconSize = control.FindResource("ContextMenuIconSize").Should().BeOfType<double>().Subject;
+                    icon.Bounds.Width.Should().Be(iconSize);
+                }
+                finally
+                {
+                    flyout.Hide();
+                }
+            });
+        });
+    }
 
     [Theory]
     [InlineData(KeyModifiers.None, false)]
@@ -97,7 +138,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     [Fact]
     public void Calculate_WithWideSource_ScalesFullAspectRatioAndFitsRightViewportEdge()
     {
-        AssertExpansion(
+        GenerationCardControlTests.AssertExpansion(
             new Size(440d, 220d),
             new Rect(780d, 40d, 220d, 220d),
             new Size(748d, 374d),
@@ -107,7 +148,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     [Fact]
     public void Calculate_WithTallSource_ScalesFullAspectRatioAndFitsViewportStart()
     {
-        AssertExpansion(
+        GenerationCardControlTests.AssertExpansion(
             new Size(220d, 440d),
             new Rect(40d, 380d, 220d, 220d),
             new Size(374d, 748d),
@@ -117,7 +158,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     [Fact]
     public void Calculate_WithCenteredWideSource_ExpandsEvenlyAroundPreview()
     {
-        AssertExpansion(
+        GenerationCardControlTests.AssertExpansion(
             new Size(330d, 220d),
             new Rect(390d, 40d, 220d, 220d),
             new Size(561d, 374d),
@@ -131,7 +172,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         Rect previewBounds = new(780d, 40d, 220d, 220d);
         Rect viewportBounds = new(20d, 0d, 960d, 600d);
 
-        (Size size, Vector translation) = Calculate(
+        (Size size, Vector translation) = GenerationCardControlTests.Calculate(
             sourceSize,
             previewBounds,
             viewportBounds);
@@ -160,7 +201,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         try
         {
             File.Delete(imagePath);
-            GenerationItemViewModel item = CreateItem(imagePath, thumbnailPath);
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(imagePath, thumbnailPath);
 
             string? dragPath = GenerationCardControl.GetImageDragPathOrDefault(item);
 
@@ -191,7 +232,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         try
         {
             File.Delete(thumbnailPath);
-            GenerationItemViewModel item = CreateItem(imagePath, thumbnailPath);
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(imagePath, thumbnailPath);
 
             string? previewPath = GenerationCardControl.GetImageDragPreviewPathOrDefault(item);
 
@@ -209,7 +250,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         await DispatchAsync(() =>
         {
             bool isMetadataOpened = false;
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             RelayCommand command = new(() => isMetadataOpened = true);
@@ -242,11 +283,43 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     }
 
     [Fact]
+    public void PreviewArea_WhenClicked_ExecutesOpenViewerCommand()
+    {
+        Dispatch(() =>
+        {
+            using ExistingImagePaths paths = new();
+            bool opened = false;
+            RelayCommand command = new(() => opened = true);
+            GenerationCardControl control = new()
+            {
+                DataContext = paths.Item,
+                OpenViewerCommand = command
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                window.MouseDown(new Point(110d, 110d), MouseButton.Left);
+                window.MouseUp(new Point(110d, 110d), MouseButton.Left);
+
+                opened.Should().BeTrue();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public void ContextFlyout_WhenCardCreated_ContainsExpectedItemsAndIcons()
     {
         Dispatch(() =>
         {
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             RelayCommand selectCommand = new(() => item.IsSelected = true);
@@ -377,10 +450,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .Should()
                     .BeOfType<Avalonia.Controls.Shapes.Path>()
                     .Subject;
-                control.TryFindResource(
-                    "GalleryImbaIcon",
-                    out object? imbaResource).Should().BeTrue();
-                imbaIcon.Data.Should().BeSameAs(imbaResource);
+                imbaIcon.Data?.ToString().Should().Be(GalleryIconGeometry.Imba);
                 imbaMenuItem.IsEnabled.Should().BeTrue();
                 imbaMenuItem.Command.Should().BeSameAs(favoriteCommand);
                 imbaMenuItem.CommandParameter.Should().BeSameAs(item);
@@ -412,7 +482,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     {
         Dispatch(() =>
         {
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             GenerationCardControl control = new()
@@ -470,7 +540,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             GenerationCardControl control = new()
@@ -560,8 +630,8 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .BeOfType<LinearGradientBrush>()
                     .Subject;
                 menuFlyout.IsOpen.Should().BeTrue();
-                menuItems.Should().HaveCount(4);
-                menuItems[3].Should().BeSameAs(selectMenuItem);
+                menuItems.Should().HaveCount(5);
+                menuItems[4].Should().BeSameAs(selectMenuItem);
                 selectMenuItem.IsSelected.Should().BeFalse();
                 selectMenuItem.IsPointerOver.Should().BeFalse();
                 selectMenuItem.IsFocused.Should().BeFalse();
@@ -573,11 +643,11 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     border => border.Margin == default);
                 presenterChromeBorders[0].IsVisible.Should().BeFalse();
                 presenterChromeBorders[1].IsVisible.Should().BeTrue();
-                iconSeparators.Should().HaveCount(4);
+                iconSeparators.Should().HaveCount(5);
                 iconSeparators.Should().OnlyContain(separator => separator.Opacity == 0d);
-                iconPresenters.Should().HaveCount(4);
-                headerPresenters.Should().HaveCount(4);
-                menuHeaderTextBlocks.Should().HaveCount(4);
+                iconPresenters.Should().HaveCount(5);
+                headerPresenters.Should().HaveCount(5);
+                menuHeaderTextBlocks.Should().HaveCount(5);
                 menuHeaderTextBlocks.Should().OnlyContain(
                     textBlock => textBlock.FontWeight == FontWeight.Normal);
 
@@ -587,14 +657,14 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                         .OfType<Avalonia.Controls.Shapes.Path>())
                     .Where(path => path.Classes.Contains("gallery-outline-icon"))
                     .ToArray();
-                pathIcons.Should().HaveCount(4);
+                pathIcons.Should().HaveCount(5);
 
                 pathIcons.Should().OnlyContain(path =>
-                    path.Fill == null
-                    && path.Stroke != null
-                    && path.StrokeThickness == 1.5d
-                    && path.StrokeLineCap == PenLineCap.Round
-                    && path.StrokeJoin == PenLineJoin.Round);
+                    (object.ReferenceEquals(path.Fill, null))
+                    && (!object.ReferenceEquals(path.Stroke, null))
+                    && (path.StrokeThickness == 1.5d)
+                    && (path.StrokeLineCap == PenLineCap.Round)
+                    && (path.StrokeJoin == PenLineJoin.Round));
 
                 Avalonia.Controls.Shapes.Path dangerPath = pathIcons
                     .Single(path => path.Classes.Contains("Danger"));
@@ -675,7 +745,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     {
         await DispatchAsync(() =>
         {
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             GenerationCardControl control = new()
@@ -712,7 +782,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
 
                 window.MouseDown(cardCenter, MouseButton.Right);
                 window.MouseUp(cardCenter, MouseButton.Right);
-                StartContextMenuOpening(window);
+                GenerationCardControlTests.StartContextMenuOpening(window);
 
                 ContextMenuRevealHost revealHost = menuFlyout.Popup.Child
                     .Should()
@@ -739,7 +809,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     {
         Dispatch(() =>
         {
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             GenerationCardControl control = new()
@@ -766,7 +836,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     GalleryLayoutService.CardHeight / 2d);
                 window.MouseDown(cardCenter, MouseButton.Right);
                 window.MouseUp(cardCenter, MouseButton.Right);
-                StartContextMenuOpening(window);
+                GenerationCardControlTests.StartContextMenuOpening(window);
                 ContextMenuRevealHost revealHost = menuFlyout.Popup.Child
                     .Should()
                     .BeOfType<ContextMenuRevealHost>()
@@ -803,7 +873,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         Dispatch(() =>
         {
             bool commandExecuted = false;
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             RelayCommand revealCommand = new(() => commandExecuted = true);
@@ -834,7 +904,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     GalleryLayoutService.CardHeight / 2d);
                 window.MouseDown(cardCenter, MouseButton.Right);
                 window.MouseUp(cardCenter, MouseButton.Right);
-                StartContextMenuOpening(window);
+                GenerationCardControlTests.StartContextMenuOpening(window);
                 ContextMenuRevealHost revealHost = menuFlyout.Popup.Child
                     .Should()
                     .BeOfType<ContextMenuRevealHost>()
@@ -845,7 +915,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                         "Show-in-folder menu item was not found.");
                 revealHost.WidthRatio.Should().BeLessThan(1d);
 
-                ClickMenuItem(showInFolderMenuItem, revealHost);
+                GenerationCardControlTests.ClickMenuItem(showInFolderMenuItem, revealHost);
 
                 commandExecuted.Should().BeTrue();
                 closingCount.Should().Be(1);
@@ -863,7 +933,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             GenerationCardControl control = new()
@@ -910,7 +980,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 menuFlyout.IsOpen.Should().BeTrue();
                 Task completedTask = await Task.WhenAny(
                     closed.Task,
-                    Task.Delay(AnimationCompletionTimeout));
+                    Task.Delay(GenerationCardControlTests.AnimationCompletionTimeout));
                 completedTask.Should().BeSameAs(closed.Task);
                 menuFlyout.IsOpen.Should().BeFalse();
                 closingCount.Should().Be(1);
@@ -928,7 +998,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     {
         await DispatchAsync(async () =>
         {
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             GenerationCardControl control = new()
@@ -956,7 +1026,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     GalleryLayoutService.CardHeight / 2d);
                 window.MouseDown(cardCenter, MouseButton.Right);
                 window.MouseUp(cardCenter, MouseButton.Right);
-                StartContextMenuOpening(window);
+                GenerationCardControlTests.StartContextMenuOpening(window);
                 ContextMenuRevealHost firstRevealHost = menuFlyout.Popup.Child
                     .Should()
                     .BeOfType<ContextMenuRevealHost>()
@@ -970,16 +1040,16 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     TaskCreationOptions.RunContinuationsAsynchronously);
                 menuFlyout.Closed += OnFirstClosed;
 
-                ClickMenuItem(showInFolderMenuItem, firstRevealHost);
+                GenerationCardControlTests.ClickMenuItem(showInFolderMenuItem, firstRevealHost);
 
                 Task firstCompletedTask = await Task.WhenAny(
                     firstClose.Task,
-                    Task.Delay(AnimationCompletionTimeout));
+                    Task.Delay(GenerationCardControlTests.AnimationCompletionTimeout));
                 firstCompletedTask.Should().BeSameAs(firstClose.Task);
                 menuFlyout.Closed -= OnFirstClosed;
                 window.MouseDown(cardCenter, MouseButton.Right);
                 window.MouseUp(cardCenter, MouseButton.Right);
-                StartContextMenuOpening(window);
+                GenerationCardControlTests.StartContextMenuOpening(window);
                 ContextMenuRevealHost secondRevealHost = menuFlyout.Popup.Child
                     .Should()
                     .BeOfType<ContextMenuRevealHost>()
@@ -1005,7 +1075,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
 
                 Task secondCompletedTask = await Task.WhenAny(
                     secondClose.Task,
-                    Task.Delay(AnimationCompletionTimeout));
+                    Task.Delay(GenerationCardControlTests.AnimationCompletionTimeout));
                 secondCompletedTask.Should().BeSameAs(secondClose.Task);
                 menuFlyout.Closed -= OnSecondClosed;
 
@@ -1028,28 +1098,28 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
 
     [Theory]
     [InlineData(
-        "Сделай первую картинку (игра 3 в ряд, 2д) в стиле второй " +
-        "картинки (игра borderlands 3). Не меняй игру на 1 картинке, " +
-        "нужны лишь другие текстуры/рисовка/фон.")]
+        "Сделай первую картинку (игра 3 в ряд, 2д) в стиле второй "
+        + "картинки (игра borderlands 3). Не меняй игру на 1 картинке, "
+        + "нужны лишь другие текстуры/рисовка/фон.")]
     [InlineData(
-        "Первая строка\n" +
-        "Вторая строка\n" +
-        "Третья строка\n" +
-        "Скрытая четвёртая строка")]
+        "Первая строка\n"
+        + "Вторая строка\n"
+        + "Третья строка\n"
+        + "Скрытая четвёртая строка")]
     [InlineData(
-        "ОченьДлинныйНеразрывныйПромптОченьДлинныйНеразрывныйПромпт" +
-        "ОченьДлинныйНеразрывныйПромптОченьДлинныйНеразрывныйПромпт" +
-        "ОченьДлинныйНеразрывныйПромптОченьДлинныйНеразрывныйПромпт")]
+        "ОченьДлинныйНеразрывныйПромптОченьДлинныйНеразрывныйПромпт"
+        + "ОченьДлинныйНеразрывныйПромптОченьДлинныйНеразрывныйПромпт"
+        + "ОченьДлинныйНеразрывныйПромптОченьДлинныйНеразрывныйПромпт")]
     public async Task Prompt_WhenReusedCardTextOverflows_EndsWithEllipsisAsync(
         string overflowingPrompt)
     {
         await DispatchAsync(() =>
         {
             const string Ellipsis = "…";
-            GenerationItemViewModel initialItem = CreateItem(
+            GenerationItemViewModel initialItem = GenerationCardControlTests.CreateItem(
                 "initial-image.png",
                 "initial-thumbnail.jpg");
-            GenerationItemViewModel overflowingItem = CreateItem(
+            GenerationItemViewModel overflowingItem = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg",
                 overflowingPrompt);
@@ -1064,8 +1134,8 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
 
             try
             {
-                TextBlock initialPrompt = GetPromptTextBlock(control, Prompt);
-                GetRenderedText(initialPrompt).Should().Be(Prompt);
+                TextBlock initialPrompt = GenerationCardControlTests.GetPromptTextBlock(control, Prompt);
+                GenerationCardControlTests.GetRenderedText(initialPrompt).Should().Be(Prompt);
 
                 control.DataContext = overflowingItem;
                 Size cardSize = new(
@@ -1074,7 +1144,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 control.Measure(cardSize);
                 control.Arrange(new Rect(cardSize));
 
-                OverflowEllipsisTextBlock prompt = GetPromptTextBlock(
+                OverflowEllipsisTextBlock prompt = GenerationCardControlTests.GetPromptTextBlock(
                         control,
                         overflowingPrompt)
                     .Should()
@@ -1082,7 +1152,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .Subject;
                 prompt.TextTrimming.Should().NotBe(TextTrimming.None);
                 prompt.TextLayout.TextLines.Should().HaveCount(prompt.MaxLines);
-                string renderedText = GetRenderedText(prompt);
+                string renderedText = GenerationCardControlTests.GetRenderedText(prompt);
                 renderedText.Should().EndWith(Ellipsis);
                 renderedText.Should().NotEndWith(Ellipsis + Ellipsis);
             }
@@ -1100,7 +1170,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     {
         await DispatchAsync(() =>
         {
-            GenerationItemViewModel item = CreateItem(
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             GenerationCardControl control = new()
@@ -1114,8 +1184,8 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
 
             try
             {
-                TextBlock prompt = GetPromptTextBlock(control, Prompt);
-                TextBlock model = GetPromptTextBlock(
+                TextBlock prompt = GenerationCardControlTests.GetPromptTextBlock(control, Prompt);
+                TextBlock model = GenerationCardControlTests.GetPromptTextBlock(
                     control,
                     item.ModelDisplayName);
 
@@ -1185,10 +1255,10 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         string prompt = Prompt)
     {
         GenerationItemDto item = GenerationItemDtoTestFactory.Create(
-            id: ItemId,
+            id: GenerationCardControlTests.ItemId,
             prompt: prompt,
             aspectRatio: AspectRatio,
-            createdAtUtc: CreatedAtUtc,
+            createdAtUtc: GenerationCardControlTests.CreatedAtUtc,
             imagePath: imagePath);
         GenerationItemViewModel viewModel = new(
             item,
@@ -1209,10 +1279,10 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         Rect? viewportBounds = null)
     {
         return GenerationPreviewExpansionCalculator.Calculate(
-            PreviewSize,
+            GenerationCardControlTests.PreviewSize,
             sourceSize,
             previewBounds,
-            viewportBounds ?? DefaultViewportBounds);
+            viewportBounds ?? GenerationCardControlTests.DefaultViewportBounds);
     }
 
     private static void AssertExpansion(
@@ -1221,7 +1291,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         Size expectedSize,
         Vector expectedTranslation)
     {
-        (Size size, Vector translation) = Calculate(sourceSize, previewBounds);
+        (Size size, Vector translation) = GenerationCardControlTests.Calculate(sourceSize, previewBounds);
 
         size.Should().Be(expectedSize);
         translation.Should().Be(expectedTranslation);
@@ -1237,7 +1307,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         {
             ImagePath = Path.GetTempFileName();
             ThumbnailPath = Path.GetTempFileName();
-            Item = CreateItem(ImagePath, ThumbnailPath);
+            Item = GenerationCardControlTests.CreateItem(ImagePath, ThumbnailPath);
         }
 
         public void Dispose()

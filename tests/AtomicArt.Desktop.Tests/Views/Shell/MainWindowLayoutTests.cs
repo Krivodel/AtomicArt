@@ -21,6 +21,7 @@ using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
@@ -33,6 +34,7 @@ using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views;
 using AtomicArt.Desktop.Views.Dialogs;
+using AtomicArt.Desktop.Views.Dlss5;
 using AtomicArt.Desktop.Views.Gallery;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Desktop.Views.Shell;
@@ -69,12 +71,41 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         TimeSpan.FromMilliseconds(100d);
 
     [Fact]
+    public void MainWindow_WhenShown_RendersDlss5TitleIconInNvidiaGreen()
+    {
+        Dispatch(() =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            MainWindowViewModel viewModel = window.DataContext.Should()
+                .BeOfType<MainWindowViewModel>().Subject;
+            Button button = window.GetVisualDescendants().OfType<Button>()
+                .Single(candidate => ReferenceEquals(candidate.Command, viewModel.OpenDlss5Command));
+            PathIcon icon = button.Content.Should().BeOfType<PathIcon>().Subject;
+            ISolidColorBrush brush = icon.Foreground.Should().BeAssignableTo<ISolidColorBrush>().Subject;
+
+            brush.Color.Should().Be(Color.Parse("#76B900"));
+            Button settingsButton = window.GetVisualDescendants().OfType<Button>()
+                .Single(candidate => ReferenceEquals(candidate.Command, viewModel.OpenSettingsCommand));
+            Point dlssPosition = button.TranslatePoint(default, window)
+                ?? throw new InvalidOperationException("DLSS button position was not found.");
+            Point settingsPosition = settingsButton.TranslatePoint(default, window)
+                ?? throw new InvalidOperationException("Settings button position was not found.");
+            dlssPosition.X.Should().BeLessThan(settingsPosition.X);
+        });
+    }
+
+    [Fact]
     public async Task MainWindow_WhenUpdateIsAvailable_ShowsSukiToastActions()
     {
         await DispatchAsync(async () =>
         {
             Mock<IApplicationUpdateService> updateServiceMock =
-                CreateAvailableUpdateServiceMock();
+                MainWindowLayoutTests.CreateAvailableUpdateServiceMock();
 
             using MainWindowTestContext context = new(services =>
             {
@@ -83,7 +114,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             MainWindow window = context.Window;
 
             window.Show();
-            await ShowAvailableUpdateAsync(window);
+            await MainWindowLayoutTests.ShowAvailableUpdateAsync(window);
 
             SukiToast toast = window
                 .GetVisualDescendants()
@@ -117,7 +148,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             GridSplitter resizeGrip = window
                 .GetVisualDescendants()
                 .OfType<GridSplitter>()
-                .Single(splitter => splitter.Name == GenerationPanelResizeGripName);
+                .Single(splitter => string.Equals(splitter.Name, GenerationPanelResizeGripName, StringComparison.Ordinal));
             Grid shellContentGrid = resizeGrip.Parent
                 .Should()
                 .BeOfType<Grid>()
@@ -133,6 +164,66 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeApproximately(
                 rowDefinitions[GenerationPanelRowIndex].ActualHeight,
                 HeightTolerance);
+        });
+    }
+
+    [Fact]
+    public void Dlss5BackCommand_WhenPanelIsOpen_HidesPanelWithoutStoppingEngine()
+    {
+        Dispatch(() =>
+        {
+            Mock<IDlss5NativeEngine> nativeEngine = new();
+            using MainWindowTestContext context = new(services =>
+            {
+                services.AddSingleton(nativeEngine.Object);
+            });
+            MainWindowViewModel viewModel = context.Window.DataContext
+                .Should()
+                .BeOfType<MainWindowViewModel>()
+                .Subject;
+            viewModel.Dlss5.IsOpen = true;
+
+            viewModel.Dlss5.BackCommand.Execute(null);
+
+            viewModel.Dlss5.IsOpen.Should().BeFalse();
+            nativeEngine.Verify(engine => engine.Stop(), Times.Never);
+        });
+    }
+
+    [Fact]
+    public void Dlss5CloseCommand_WhenPanelIsOpen_StopsEngineAndRenderingAnimation()
+    {
+        Dispatch(() =>
+        {
+            Mock<IDlss5NativeEngine> nativeEngine = new();
+            using MainWindowTestContext context = new(services =>
+            {
+                services.AddSingleton(nativeEngine.Object);
+            });
+            MainWindow window = context.Window;
+            MainWindowViewModel viewModel = context.Window.DataContext
+                .Should()
+                .BeOfType<MainWindowViewModel>()
+                .Subject;
+            viewModel.Dlss5.IsOpen = true;
+            viewModel.Dlss5.IsRendering = true;
+            window.Show();
+            window.CaptureRenderedFrame();
+            ProgressBar renderingProgress = window
+                .GetVisualDescendants()
+                .OfType<Dlss5SessionView>()
+                .Single()
+                .GetVisualDescendants()
+                .OfType<ProgressBar>()
+                .Single();
+
+            renderingProgress.IsIndeterminate.Should().BeTrue();
+
+            viewModel.Dlss5.CloseCommand.Execute(null);
+
+            viewModel.Dlss5.IsOpen.Should().BeFalse();
+            renderingProgress.IsIndeterminate.Should().BeFalse();
+            nativeEngine.Verify(engine => engine.Stop(), Times.Once);
         });
     }
 
@@ -228,10 +319,10 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 menuFlyout.Hide();
             }
 
-            void OnMenuFlyoutOpened(object? sender, EventArgs e)
+            void OnMenuFlyoutOpened(object? sender, EventArgs eventArgs)
             {
                 _ = sender;
-                _ = e;
+                _ = eventArgs;
                 openedCount++;
             }
         });
@@ -243,7 +334,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         await DispatchAsync(async () =>
         {
             Mock<IApplicationUpdateService> updateServiceMock =
-                CreateAvailableUpdateServiceMock();
+                MainWindowLayoutTests.CreateAvailableUpdateServiceMock();
             RecordingUiScaleService uiScaleService = new(InitialUiScale);
             using MainWindowTestContext context = new(services =>
             {
@@ -252,12 +343,12 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             });
             MainWindow window = context.Window;
             window.Show();
-            await ShowAvailableUpdateAsync(window);
+            await MainWindowLayoutTests.ShowAvailableUpdateAsync(window);
 
             SukiToastHost toastHost = window
                 .GetVisualDescendants()
                 .OfType<SukiToastHost>()
-                .Single(host => host.Name == UpdateToastHostName);
+                .Single(host => string.Equals(host.Name, UpdateToastHostName, StringComparison.Ordinal));
             ScaleTransform scaleTransform = toastHost.RenderTransform
                 .Should()
                 .BeOfType<ScaleTransform>()
@@ -280,7 +371,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                     "The updated toast anchor position is unavailable.");
             scaleTransform.ScaleX.Should().Be(UiScale);
             scaleTransform.ScaleY.Should().Be(UiScale);
-            toastHost.RenderTransformOrigin.Should().Be(BottomRightOrigin);
+            toastHost.RenderTransformOrigin.Should().Be(MainWindowLayoutTests.BottomRightOrigin);
             anchorAfterScaleChange.X.Should().BeApproximately(
                 anchorBeforeScaleChange.X,
                 PositionTolerance);
@@ -304,11 +395,11 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             SukiDialogHost dialogHost = window
                 .GetVisualDescendants()
                 .OfType<SukiDialogHost>()
-                .Single(host => host.Name == ConfirmationDialogHostName);
+                .Single(host => string.Equals(host.Name, ConfirmationDialogHostName, StringComparison.Ordinal));
             Control titleBar = window
                 .GetVisualDescendants()
                 .OfType<Control>()
-                .Single(control => control.Name == TitleBarName);
+                .Single(control => string.Equals(control.Name, TitleBarName, StringComparison.Ordinal));
             Point dialogHostPosition = dialogHost
                 .TranslatePoint(default, window)
                 ?? throw new InvalidOperationException(
@@ -337,11 +428,14 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             SukiDialogHost dialogHost = window
                 .GetVisualDescendants()
                 .OfType<SukiDialogHost>()
-                .Single(host => host.Name == ConfirmationDialogHostName);
+                .Single(host => string.Equals(host.Name, ConfirmationDialogHostName, StringComparison.Ordinal));
             ContentControl dialogContent = dialogHost
                 .GetVisualDescendants()
                 .OfType<ContentControl>()
-                .Single(control => control.Name == "PART_DialogContent");
+                .Single(control => string.Equals(
+                    control.Name,
+                    "PART_DialogContent",
+                    StringComparison.Ordinal));
             Transitions transitions = dialogContent.Transitions
                 ?? throw new InvalidOperationException(
                     "The confirmation dialog transitions were not found.");
@@ -356,11 +450,11 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 .Single();
 
             movementTransition.Duration.Should().Be(
-                ConfirmationDialogTransitionDuration);
+                MainWindowLayoutTests.ConfirmationDialogTransitionDuration);
             opacityTransition.Duration.Should().Be(
-                ConfirmationDialogOpacityTransitionDuration);
+                MainWindowLayoutTests.ConfirmationDialogOpacityTransitionDuration);
             transformTransition.Duration.Should().Be(
-                ConfirmationDialogTransitionDuration);
+                MainWindowLayoutTests.ConfirmationDialogTransitionDuration);
         });
     }
 
@@ -373,7 +467,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             MainWindow window = context.Window;
             window.Show();
             Task<bool> resultTask = context.DialogService.ShowConfirmationAsync(
-                CreateDeletionConfirmationRequest(),
+                MainWindowLayoutTests.CreateDeletionConfirmationRequest(),
                 CancellationToken.None);
             window.CaptureRenderedFrame();
 
@@ -390,7 +484,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 .OfType<Border>()
                 .Where(border => border.Classes.Contains("GlassCardBorderPartCard"))
                 .ToArray();
-            Color popupBackground = GetColorResource(
+            Color popupBackground = MainWindowLayoutTests.GetColorResource(
                 dialog,
                 "SukiPopupBackground");
 
@@ -412,7 +506,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 .OfType<Button>()
                 .First();
             cancelButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            bool result = await resultTask.WaitAsync(DialogCompletionTimeout);
+            bool result = await resultTask.WaitAsync(MainWindowLayoutTests.DialogCompletionTimeout);
 
             result.Should().BeFalse();
         });
@@ -436,7 +530,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             GenerationItemViewModel item = viewModel.Gallery.Items.Single();
             viewModel.Gallery.ToggleSelectionCommand.Execute(item);
             Task<bool> resultTask = context.DialogService.ShowConfirmationAsync(
-                CreateDeletionConfirmationRequest(),
+                MainWindowLayoutTests.CreateDeletionConfirmationRequest(),
                 CancellationToken.None);
             window.CaptureRenderedFrame();
             KeyEventArgs keyEventArgs = new()
@@ -447,7 +541,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             };
 
             window.RaiseEvent(keyEventArgs);
-            bool result = await resultTask.WaitAsync(DialogCompletionTimeout);
+            bool result = await resultTask.WaitAsync(MainWindowLayoutTests.DialogCompletionTimeout);
 
             result.Should().BeFalse();
             viewModel.Gallery.IsSelectionMode.Should().BeTrue();
@@ -548,12 +642,12 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             Border generationPanel = window
                 .GetVisualDescendants()
                 .OfType<Border>()
-                .Single(border => border.Name == GenerationPanelHostName);
+                .Single(border => string.Equals(border.Name, GenerationPanelHostName, StringComparison.Ordinal));
             Grid shellContentGrid = window
                 .GetVisualDescendants()
                 .OfType<Grid>()
-                .Single(grid => grid.Name == ShellContentGridName);
-            double preferredWidth = GetDoubleResource(
+                .Single(grid => string.Equals(grid.Name, ShellContentGridName, StringComparison.Ordinal));
+            double preferredWidth = MainWindowLayoutTests.GetDoubleResource(
                 generationPanel,
                 GenerationPanelWidthResourceKey);
 
@@ -637,7 +731,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
 
     private static double GetDoubleResource(Control control, string resourceKey)
     {
-        if (control.TryFindResource(resourceKey, out object? value)
+        if ((control.TryFindResource(resourceKey, out object? value))
             && (value is double doubleValue))
         {
             return doubleValue;
@@ -648,7 +742,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
 
     private static Color GetColorResource(Control control, string resourceKey)
     {
-        if (control.TryFindResource(resourceKey, out object? value)
+        if ((control.TryFindResource(resourceKey, out object? value))
             && (value is Color color))
         {
             return color;
@@ -704,7 +798,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             configureServices?.Invoke(services);
 
             _serviceProvider = services.BuildServiceProvider();
-            RegisterViewTemplates(_serviceProvider);
+            MainWindowLayoutTests.RegisterViewTemplates(_serviceProvider);
             DialogService = _serviceProvider.GetRequiredService<IDialogService>();
             TextProvider =
                 _serviceProvider.GetRequiredService<ILocalizationTextProvider>();

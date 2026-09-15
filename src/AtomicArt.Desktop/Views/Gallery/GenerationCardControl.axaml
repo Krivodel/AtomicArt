@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:i18n="https://codewf.com"
              xmlns:controls="using:AtomicArt.Desktop.Views.Gallery"
+             xmlns:dlss5="using:AtomicArt.Desktop.Services.Dlss5"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:uiControls="using:AtomicArt.Desktop.Controls"
@@ -33,7 +34,20 @@
                     </MenuItem.Header>
                     <MenuItem.Icon>
                         <Path Classes="gallery-outline-icon"
-                              Data="{StaticResource GalleryImbaIcon}" />
+                              Data="{x:Static resources:GalleryIconGeometry.Imba}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem x:Name="OpenDlss5MenuItem"
+                          Command="{Binding #GenerationCard.OpenDlss5Command}"
+                          CommandParameter="{Binding #GenerationCard.DataContext}">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.OpenDlss5}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <PathIcon Width="{StaticResource ContextMenuIconSize}"
+                                  Height="{StaticResource ContextMenuIconSize}"
+                                  Data="{x:Static dlss5:Dlss5FeatureDefinition.NvidiaIconGeometry}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem x:Name="DeleteMenuItem"

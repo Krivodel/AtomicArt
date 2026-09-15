@@ -112,7 +112,8 @@
         "Select": "Select",
         "ShowInGallery": "Show in gallery",
         "ShowInFolder": "Show in folder",
-        "Imba": "IMBA"
+        "Imba": "IMBA",
+        "OpenDlss5": "Open in DLSS 5"
       },
       "Selection": {
         "SelectedCount": "Selected: {0}",
@@ -189,6 +190,41 @@
       "Errors": {
         "CheckFailed": "Could not check for updates.",
         "InstallFailed": "Could not install the update."
+      }
+    },
+    "Dlss5": {
+      "Title": "DLSS 5",
+      "SelectImage": "Select image",
+      "PasteImage": "Paste from clipboard",
+      "Off": "DLSS 5 Off",
+      "On": "DLSS 5 On",
+      "Downloading": "Downloading DLSS 5 module…",
+      "Starting": "Starting DLSS 5…",
+      "Errors": {
+        "SourceFailed": "Could not load the image.",
+        "InstallFailed": "DLSS 5 module installation failed. Detailed diagnostics were written to the application log.",
+        "RenderFailed": "DLSS 5 could not process the image. Detailed diagnostics were written to the application log."
+      },
+      "Install": {
+        "Title": "Download DLSS 5 module",
+        "Message": "Download the DLSS 5 module ({0})?",
+        "Confirm": "Download"
+      },
+      "InstallCompleted": {
+        "Title": "DLSS 5 downloaded",
+        "Message": "The DLSS 5 module has finished downloading.",
+        "Okay": "OK",
+        "Launch": "Launch"
+      },
+      "Controls": {
+        "Style": "Style",
+        "Default": "Default",
+        "Natural": "Natural",
+        "Cinematic": "Cinematic",
+        "GeneralIntensity": "General Intensity",
+        "LocalStructureIntensity": "Local Structure Intensity",
+        "SkinStructureStrength": "Skin Structure Strength",
+        "LocalToneStrength": "Local Tone Strength"
       }
     }
   }

@@ -86,6 +86,48 @@ internal static class WindowsStorageMediumReader
         }
     }
 
+    internal static byte[] ReadGlobalMemory(
+        nint memoryHandle,
+        int maxBytes,
+        string tooLargeMessage)
+    {
+        if (memoryHandle == nint.Zero)
+        {
+            throw new InvalidDataException(
+                "The transferred memory is unavailable.");
+        }
+
+        nuint size = WindowsNativeDragDrop.GlobalSize(memoryHandle);
+
+        if (size > (nuint)maxBytes)
+        {
+            throw new InvalidDataException(tooLargeMessage);
+        }
+
+        if (size == 0)
+        {
+            return Array.Empty<byte>();
+        }
+
+        nint dataPointer = WindowsNativeDragDrop.GlobalLock(memoryHandle);
+
+        if (dataPointer == nint.Zero)
+        {
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+        }
+
+        try
+        {
+            byte[] data = new byte[checked((int)size)];
+            Marshal.Copy(dataPointer, data, 0, data.Length);
+            return data;
+        }
+        finally
+        {
+            _ = WindowsNativeDragDrop.GlobalUnlock(memoryHandle);
+        }
+    }
+
     [SupportedOSPlatform("windows")]
     private static byte[] ReadComStream(
         nint streamPointer,
@@ -155,48 +197,6 @@ internal static class WindowsStorageMediumReader
             {
                 _ = Marshal.ReleaseComObject(streamObject);
             }
-        }
-    }
-
-    private static byte[] ReadGlobalMemory(
-        nint memoryHandle,
-        int maxBytes,
-        string tooLargeMessage)
-    {
-        if (memoryHandle == nint.Zero)
-        {
-            throw new InvalidDataException(
-                "The transferred memory is unavailable.");
-        }
-
-        nuint size = WindowsNativeDragDrop.GlobalSize(memoryHandle);
-
-        if (size > (nuint)maxBytes)
-        {
-            throw new InvalidDataException(tooLargeMessage);
-        }
-
-        if (size == 0)
-        {
-            return Array.Empty<byte>();
-        }
-
-        nint dataPointer = WindowsNativeDragDrop.GlobalLock(memoryHandle);
-
-        if (dataPointer == nint.Zero)
-        {
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-        }
-
-        try
-        {
-            byte[] data = new byte[checked((int)size)];
-            Marshal.Copy(dataPointer, data, 0, data.Length);
-            return data;
-        }
-        finally
-        {
-            _ = WindowsNativeDragDrop.GlobalUnlock(memoryHandle);
         }
     }
 
