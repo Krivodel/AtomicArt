@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 
 using FluentAssertions;
 using SkiaSharp;
@@ -235,17 +234,5 @@ public sealed class BlurBackdropControlTests : AnimatedGalleryControlTestBase
         root.Children.Add(blurBackdrop);
 
         return root;
-    }
-
-    private static SKBitmap CaptureRenderedBitmap(Window window)
-    {
-        using Bitmap frame = window.CaptureRenderedFrame()
-            ?? throw new InvalidOperationException("Rendered frame was not captured.");
-        using MemoryStream stream = new();
-        frame.Save(stream);
-        stream.Position = 0;
-
-        return SKBitmap.Decode(stream)
-            ?? throw new InvalidOperationException("Rendered frame could not be decoded.");
     }
 }

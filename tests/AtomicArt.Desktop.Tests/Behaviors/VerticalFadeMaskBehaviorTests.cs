@@ -4,7 +4,6 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 
 using FluentAssertions;
@@ -131,18 +130,6 @@ public sealed class VerticalFadeMaskBehaviorTests : AnimatedGalleryControlTestBa
                 window.Close();
             }
         });
-    }
-
-    private static SKBitmap CaptureRenderedBitmap(Window window)
-    {
-        using Bitmap frame = window.CaptureRenderedFrame()
-            ?? throw new InvalidOperationException("Rendered frame was not captured.");
-        using MemoryStream stream = new();
-        frame.Save(stream);
-        stream.Position = 0;
-
-        return SKBitmap.Decode(stream)
-            ?? throw new InvalidOperationException("Rendered frame could not be decoded.");
     }
 
     private static long GetBrightness(SKBitmap bitmap, int height)

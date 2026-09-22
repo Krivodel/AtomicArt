@@ -36,7 +36,8 @@ public sealed class Dlss5ComparisonPanelTests : DesktopControlTestBase
             Rect source = panel.Children[1].Bounds;
             Rect result = panel.Children[2].Bounds;
             source.Size.Should().Be(result.Size);
-            (source.Width / (source.Height - 30)).Should().BeApproximately(imageWidth / imageHeight, 0.0001);
+            double contentHeight = Dlss5ComparisonPanelTests.GetImageContentHeight(source);
+            (source.Width / contentHeight).Should().BeApproximately(imageWidth / imageHeight, 0.0001);
             source.Left.Should().BeGreaterThanOrEqualTo(0);
             source.Top.Should().BeGreaterThanOrEqualTo(0);
             result.Right.Should().BeLessThanOrEqualTo(width);
@@ -90,7 +91,8 @@ public sealed class Dlss5ComparisonPanelTests : DesktopControlTestBase
             Rect result = panel.Children[2].Bounds;
             double placeholderOpacity = panel.Children[3].Opacity;
             source.Size.Should().Be(result.Size);
-            (source.Width / (source.Height - 30)).Should().BeApproximately(16d / 9d, 0.0001);
+            double contentHeight = Dlss5ComparisonPanelTests.GetImageContentHeight(source);
+            (source.Width / contentHeight).Should().BeApproximately(16d / 9d, 0.0001);
             source.Left.Should().BeLessThan(result.Left);
             panel.Children[3].Bounds.Size.Should().Be(available);
             panel.Children[3].Opacity.Should().BeInRange(0, 1);
@@ -125,7 +127,8 @@ public sealed class Dlss5ComparisonPanelTests : DesktopControlTestBase
             panel.Arrange(new Rect(available));
 
             Rect source = panel.Children[1].Bounds;
-            (source.Width / (source.Height - 30)).Should().BeApproximately(16d / 9d, 0.0001);
+            double contentHeight = Dlss5ComparisonPanelTests.GetImageContentHeight(source);
+            (source.Width / contentHeight).Should().BeApproximately(16d / 9d, 0.0001);
         });
     }
 
@@ -153,8 +156,9 @@ public sealed class Dlss5ComparisonPanelTests : DesktopControlTestBase
             progress.IsVisible.Should().BeTrue();
             progress.Opacity.Should().Be(1);
             progress.Bounds.Width.Should().Be(result.Width);
-            progress.Bounds.Height.Should().Be(2);
+            progress.Bounds.Height.Should().Be(Dlss5ComparisonPanel.ProgressHeight);
             progress.Bounds.Bottom.Should().Be(result.Bottom);
+            progress.ZIndex.Should().BeGreaterThan(panel.Children[2].ZIndex);
             DoubleTransition fade = progress.Transitions.Should()
                 .ContainSingle()
                 .Which.Should()
@@ -329,5 +333,12 @@ public sealed class Dlss5ComparisonPanelTests : DesktopControlTestBase
                 window.Close();
             }
         });
+    }
+
+    private static double GetImageContentHeight(Rect frame)
+    {
+        return frame.Height
+            - Dlss5ComparisonPanel.CaptionHeight
+            - Dlss5ComparisonPanel.ProgressHeight;
     }
 }

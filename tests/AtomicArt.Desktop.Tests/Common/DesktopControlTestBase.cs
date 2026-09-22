@@ -1,6 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Media.Imaging;
+
+using SkiaSharp;
 
 using AtomicArt.Tests.Avalonia;
 
@@ -35,12 +38,12 @@ public abstract class DesktopControlTestBase
 
     private protected static Window Show(Control control)
     {
-        return Show(control, 640d, 640d);
+        return DesktopControlTestBase.Show(control, 640d, 640d);
     }
 
     private protected static void Show(Control control, Action<Window> action)
     {
-        Show(control, 640d, 640d, action);
+        DesktopControlTestBase.Show(control, 640d, 640d, action);
     }
 
     private protected static Window Show(
@@ -71,7 +74,7 @@ public abstract class DesktopControlTestBase
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        Window window = Show(control, width, height);
+        Window window = DesktopControlTestBase.Show(control, width, height);
 
         try
         {
@@ -81,5 +84,19 @@ public abstract class DesktopControlTestBase
         {
             window.Close();
         }
+    }
+
+    private protected SKBitmap CaptureRenderedBitmap(Window window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+
+        using Bitmap frame = window.CaptureRenderedFrame()
+            ?? throw new InvalidOperationException("Rendered frame was not captured.");
+        using MemoryStream stream = new();
+        frame.Save(stream);
+        stream.Position = 0;
+
+        return SKBitmap.Decode(stream)
+            ?? throw new InvalidOperationException("Rendered frame could not be decoded.");
     }
 }

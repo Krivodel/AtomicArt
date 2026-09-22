@@ -496,7 +496,7 @@ public sealed class Dlss5SessionViewModelTests : DesktopControlTestBase
                 window.CaptureRenderedFrame();
                 panel.Children[1].Bounds.Size.Should().Be(panel.Children[2].Bounds.Size);
                 panel.Children[2].Bounds.Width.Should().BeGreaterThan(0);
-                progress.Bounds.Height.Should().Be(2);
+                progress.Bounds.Height.Should().Be(Dlss5ComparisonPanel.ProgressHeight);
                 progress.Bounds.Width.Should().Be(panel.Children[2].Bounds.Width);
                 progress.IsActive.Should().BeTrue();
                 progress.IsVisible.Should().BeTrue();

@@ -38,14 +38,19 @@
         </Grid>
         <controls:Dlss5ComparisonPanel x:Name="ComparisonPanel"
                                        Grid.Row="1"
-                                       ProgressBrush="{StaticResource NvidiaBrandBrush}"
+                                       ProgressBrush="{StaticResource Dlss5ProgressCellBrush}"
                                        ProgressHighlightBrush="{StaticResource Dlss5ProgressHighlightBrush}"
                                        HasSource="{Binding HasSource}"
                                        IsRendering="{Binding IsRendering}"
                                        SourceHeight="{Binding SourceHeight}"
                                        SourceWidth="{Binding SourceWidth}">
-            <Grid RowDefinitions="Auto,*,2">
-                <TextBlock Height="28"
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="{x:Static controls:Dlss5ComparisonPanel.ProgressRowHeight}" />
+                </Grid.RowDefinitions>
+                <TextBlock Height="{x:Static controls:Dlss5ComparisonPanel.CaptionHeight}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            Classes="dlss5-off"
@@ -82,7 +87,12 @@
                                                        IsActive="{Binding IsSourceLoading}" />
                 </Grid>
             </Grid>
-            <Grid RowDefinitions="28,*,2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="{x:Static controls:Dlss5ComparisonPanel.CaptionRowHeight}" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="{x:Static controls:Dlss5ComparisonPanel.ProgressRowHeight}" />
+                </Grid.RowDefinitions>
                 <TextBlock HorizontalAlignment="Center"
                            VerticalAlignment="Center"
                            Classes="dlss5-on"

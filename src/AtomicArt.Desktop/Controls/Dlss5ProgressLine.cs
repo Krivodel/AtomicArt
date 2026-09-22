@@ -33,17 +33,24 @@ public sealed class Dlss5ProgressLine : Control
         AvaloniaProperty.Register<Dlss5ProgressLine, bool>(nameof(IsActive));
 
     private const int FrameIntervalMilliseconds = 16;
-    private const int CycleDurationMilliseconds = 1050;
-    private const double MinimumHighlightWidth = 32d;
-    private const double MaximumHighlightWidth = 180d;
-    private const double HighlightWidthRatio = 0.24d;
+    private const int CycleDurationMilliseconds = 2250;
+    private const int MaximumCellCount = 32;
+    private const double CellPitch = 15d;
+    private const double CellGap = 3d;
+    private const double CellHeight = 5d;
+    private const double HorizontalInset = 7d;
+    private const double ActiveCellSpan = 4d;
+    private const double TailOpacity = 0.35d;
 
     private readonly PresentationAwareAnimationClock _animationClock;
     private TimeSpan _renderElapsed;
 
     static Dlss5ProgressLine()
     {
-        AffectsRender<Dlss5ProgressLine>(BaseBrushProperty, HighlightBrushProperty, IsActiveProperty);
+        AffectsRender<Dlss5ProgressLine>(
+            BaseBrushProperty,
+            HighlightBrushProperty,
+            IsActiveProperty);
     }
 
     public Dlss5ProgressLine()
@@ -56,35 +63,61 @@ public sealed class Dlss5ProgressLine : Control
 
     public override void Render(DrawingContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
+
         base.Render(context);
 
-        if ((Bounds.Width <= 0d) || (Bounds.Height <= 0d))
+        if (!double.IsFinite(Bounds.Width)
+            || !double.IsFinite(Bounds.Height)
+            || (Bounds.Width <= 0d)
+            || (Bounds.Height <= 0d))
         {
             return;
         }
 
         IBrush baseBrush = BaseBrush ?? Brushes.LimeGreen;
         IBrush highlightBrush = HighlightBrush ?? Brushes.White;
-        Rect bounds = new(Bounds.Size);
-        context.DrawRectangle(baseBrush, null, bounds);
 
-        double highlightWidth = Math.Clamp(
-            Bounds.Width * HighlightWidthRatio,
-            MinimumHighlightWidth,
-            MaximumHighlightWidth);
-        TimeSpan elapsed = IsActive ? _animationClock.Elapsed : _renderElapsed;
-        double cycle = (elapsed.TotalMilliseconds % CycleDurationMilliseconds)
-            / CycleDurationMilliseconds;
-        double highlightLeft = -highlightWidth + ((Bounds.Width + highlightWidth) * cycle);
-        double visibleLeft = Math.Max(0d, highlightLeft);
-        double visibleRight = Math.Min(Bounds.Width, highlightLeft + highlightWidth);
+        double usableWidth = Math.Max(0d, Bounds.Width - (2d * HorizontalInset));
 
-        if (visibleRight > visibleLeft)
+        if (usableWidth <= 0d)
         {
-            context.DrawRectangle(
-                highlightBrush,
-                null,
-                new Rect(visibleLeft, 0d, visibleRight - visibleLeft, Bounds.Height));
+            return;
+        }
+
+        int cellCount = (int)Math.Clamp(
+            Math.Floor(usableWidth / CellPitch),
+            1d,
+            MaximumCellCount);
+        double cellWidth = (usableWidth - ((cellCount - 1) * CellGap)) / cellCount;
+        double cellHeight = Math.Min(CellHeight, Bounds.Height);
+        double cellTop = (Bounds.Height - cellHeight) / 2d;
+        TimeSpan elapsed = IsActive ? _animationClock.Elapsed : _renderElapsed;
+        double headPosition = ((elapsed.TotalMilliseconds % CycleDurationMilliseconds)
+            / CycleDurationMilliseconds) * cellCount;
+
+        for (int cellIndex = 0; cellIndex < cellCount; cellIndex++)
+        {
+            Rect cell = new(
+                HorizontalInset + (cellIndex * (cellWidth + CellGap)),
+                cellTop,
+                cellWidth,
+                cellHeight);
+            context.DrawRectangle(baseBrush, null, cell);
+
+            double distanceBehindHead = (headPosition - cellIndex + cellCount) % cellCount;
+
+            if (distanceBehindHead >= ActiveCellSpan)
+            {
+                continue;
+            }
+
+            double opacity = 1d - ((distanceBehindHead / ActiveCellSpan) * (1d - TailOpacity));
+
+            using (context.PushOpacity(opacity))
+            {
+                context.DrawRectangle(highlightBrush, null, cell);
+            }
         }
     }
 

@@ -37,6 +37,8 @@
                      Color="{StaticResource Dlss5OffLabelColor}" />
     <SolidColorBrush x:Key="NvidiaBrandBrush"
                      Color="{StaticResource NvidiaBrandColor}" />
+    <SolidColorBrush x:Key="Dlss5ProgressCellBrush"
+                     Color="{StaticResource Dlss5ProgressCellColor}" />
     <SolidColorBrush x:Key="Dlss5LoadingCyanBrush"
                      Color="{StaticResource Dlss5LoadingCyanColor}" />
     <SolidColorBrush x:Key="Dlss5LoadingVioletBrush"

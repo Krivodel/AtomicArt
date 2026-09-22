@@ -11,6 +11,12 @@ namespace AtomicArt.Desktop.Controls;
 
 public sealed class Dlss5ComparisonPanel : Panel
 {
+    public const double CaptionHeight = 28d;
+    public const double ProgressHeight = 10d;
+
+    public static GridLength CaptionRowHeight => new GridLength(CaptionHeight);
+    public static GridLength ProgressRowHeight => new GridLength(ProgressHeight);
+
     public bool HasSource
     {
         get => GetValue(HasSourceProperty);
@@ -76,8 +82,6 @@ public sealed class Dlss5ComparisonPanel : Panel
     private const int ClosingDurationMilliseconds = OpeningDurationMilliseconds;
     private const int ProgressFadeDurationMilliseconds = 120;
     private const double ImageGap = 12d;
-    private const double CaptionHeight = 28d;
-    private const double ProgressHeight = 2d;
     private const double DealKeyFrameOffset = 0.4d;
     private const double DealScale = 1.07d;
     private const double DealRotation = 4d;
@@ -118,7 +122,7 @@ public sealed class Dlss5ComparisonPanel : Panel
         _frameScheduler = frameScheduler;
         _progressLine.Opacity = 0d;
         _progressLine.IsVisible = true;
-        _progressLine.ZIndex = -1;
+        _progressLine.ZIndex = 1;
         _progressLine.Transitions =
         [
             new DoubleTransition
@@ -477,6 +481,7 @@ public sealed class Dlss5ComparisonPanel : Panel
     {
         _progressLine.BaseBrush = ProgressBrush;
         _progressLine.HighlightBrush = ProgressHighlightBrush;
+
         bool showsProgress = IsRendering && !_isTransitioning;
         _progressLine.IsActive = showsProgress;
         _progressLine.Opacity = showsProgress ? 1d : 0d;

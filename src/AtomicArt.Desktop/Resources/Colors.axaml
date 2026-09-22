@@ -12,6 +12,7 @@
     <Color x:Key="GalleryDeleteIconColor">#FF3333</Color>
     <Color x:Key="Dlss5OffLabelColor">#7A8290</Color>
     <Color x:Key="NvidiaBrandColor">#76B900</Color>
+    <Color x:Key="Dlss5ProgressCellColor">#315137</Color>
     <Color x:Key="Dlss5PlaceholderStartColor">#173C66</Color>
     <Color x:Key="Dlss5PlaceholderMiddleColor">#1D526F</Color>
     <Color x:Key="Dlss5PlaceholderEndColor">#472A68</Color>
