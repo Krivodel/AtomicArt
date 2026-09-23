@@ -359,10 +359,14 @@ public partial class GenerationCardControl :
         {
             DataTransfer dataTransfer = AtomicArtPromptDragData.Create(
                 dragCandidate.Prompt);
-            await DragDrop.DoDragDropAsync(
+            DragPreviewWindow? previewWindow = OperatingSystem.IsWindows()
+                ? DragPreviewWindow.CreatePrompt(dragCandidate.Prompt)
+                : null;
+            await DragPreviewWindow.DoDragDropAsync(
                 dragCandidate.PointerPressedEventArgs,
                 dataTransfer,
-                DragDropEffects.Copy);
+                previewWindow,
+                TopLevel.GetTopLevel(this) as Window);
         }
         finally
         {

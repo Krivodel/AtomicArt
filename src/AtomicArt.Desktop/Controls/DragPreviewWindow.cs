@@ -14,9 +14,12 @@ using AtomicArt.Desktop.Services.UiAnimation;
 
 namespace AtomicArt.Desktop.Controls;
 
-internal sealed class ImageDragPreviewWindow : Window, IDisposable
+internal sealed class DragPreviewWindow : Window, IDisposable
 {
-    private const int PreviewSize = 96;
+    private const int ImagePreviewSize = 96;
+    private const int PromptPreviewWidth = 248;
+    private const int PromptPreviewHeight = 112;
+    private const int PromptPreviewMaxLines = 4;
     private const int PreviewAnimationDurationMilliseconds = 160;
     private const int CursorOffset = 14;
     private const int PollIntervalMilliseconds = 16;
@@ -39,22 +42,24 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
     private nint _windowHandle;
     private bool _isDisposed;
 
-    private ImageDragPreviewWindow(
-        Bitmap bitmap,
+    private DragPreviewWindow(
+        Control previewContent,
+        double width,
+        double height,
         Bitmap? ownedBitmap,
         IUiFrameScheduler? frameScheduler)
     {
-        ArgumentNullException.ThrowIfNull(bitmap);
+        ArgumentNullException.ThrowIfNull(previewContent);
 
         _ownedBitmap = ownedBitmap;
         _providedFrameScheduler = frameScheduler;
-        _previewContent = CreateContent(bitmap);
+        _previewContent = previewContent;
         _previewTransformState =
             AnimatedTransformState.GetOrCreate(_previewContent);
         ApplyPreviewScale(0d);
 
-        Width = PreviewSize;
-        Height = PreviewSize;
+        Width = width;
+        Height = height;
         CanResize = false;
         ShowActivated = false;
         ShowInTaskbar = false;
@@ -66,18 +71,68 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
         Content = _previewContent;
     }
 
-    public static ImageDragPreviewWindow CreateOwned(Bitmap bitmap)
+    public static DragPreviewWindow CreateOwnedImage(Bitmap bitmap)
     {
         ArgumentNullException.ThrowIfNull(bitmap);
 
-        return new ImageDragPreviewWindow(bitmap, bitmap, null);
+        return new DragPreviewWindow(
+            CreateImageContent(bitmap),
+            ImagePreviewSize,
+            ImagePreviewSize,
+            bitmap,
+            null);
     }
 
-    public static ImageDragPreviewWindow CreateBorrowed(Bitmap bitmap)
+    public static DragPreviewWindow CreateBorrowedImage(Bitmap bitmap)
     {
         ArgumentNullException.ThrowIfNull(bitmap);
 
-        return new ImageDragPreviewWindow(bitmap, null, null);
+        return new DragPreviewWindow(
+            CreateImageContent(bitmap),
+            ImagePreviewSize,
+            ImagePreviewSize,
+            null,
+            null);
+    }
+
+    public static DragPreviewWindow CreatePrompt(string prompt)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
+
+        return new DragPreviewWindow(
+            CreatePromptContent(prompt),
+            PromptPreviewWidth,
+            PromptPreviewHeight,
+            null,
+            null);
+    }
+
+    public static async Task DoDragDropAsync(
+        PointerPressedEventArgs pointerPressedEventArgs,
+        DataTransfer dataTransfer,
+        DragPreviewWindow? previewWindow,
+        Window? owner)
+    {
+        ArgumentNullException.ThrowIfNull(pointerPressedEventArgs);
+        ArgumentNullException.ThrowIfNull(dataTransfer);
+
+        using DragPreviewWindow? ownedPreviewWindow = previewWindow;
+        ownedPreviewWindow?.Start(owner);
+
+        try
+        {
+            await DragDrop.DoDragDropAsync(
+                pointerPressedEventArgs,
+                dataTransfer,
+                DragDropEffects.Copy);
+        }
+        finally
+        {
+            if (ownedPreviewWindow is not null)
+            {
+                await ownedPreviewWindow.FinishAsync();
+            }
+        }
     }
 
     public void Start(Window? owner)
@@ -148,17 +203,22 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
         Close();
     }
 
-    internal static ImageDragPreviewWindow CreateBorrowed(
+    internal static DragPreviewWindow CreateBorrowedImage(
         Bitmap bitmap,
         IUiFrameScheduler frameScheduler)
     {
         ArgumentNullException.ThrowIfNull(bitmap);
         ArgumentNullException.ThrowIfNull(frameScheduler);
 
-        return new ImageDragPreviewWindow(bitmap, null, frameScheduler);
+        return new DragPreviewWindow(
+            CreateImageContent(bitmap),
+            ImagePreviewSize,
+            ImagePreviewSize,
+            null,
+            frameScheduler);
     }
 
-    private static Control CreateContent(Bitmap bitmap)
+    private static Control CreateImageContent(Bitmap bitmap)
     {
         Image image = new()
         {
@@ -168,14 +228,35 @@ internal sealed class ImageDragPreviewWindow : Window, IDisposable
 
         return new Border
         {
-            Width = PreviewSize,
-            Height = PreviewSize,
+            Width = ImagePreviewSize,
+            Height = ImagePreviewSize,
             Opacity = 0.86,
             ClipToBounds = true,
             CornerRadius = new CornerRadius(8d),
             Background = Brushes.Transparent,
             Child = image
         };
+    }
+
+    private static Control CreatePromptContent(string prompt)
+    {
+        OverflowEllipsisTextBlock text = new()
+        {
+            Text = prompt,
+            MaxLines = PromptPreviewMaxLines,
+            TextWrapping = TextWrapping.Wrap
+        };
+        text.Classes.Add("prompt-drag-preview-text");
+
+        Border border = new()
+        {
+            Width = PromptPreviewWidth,
+            Height = PromptPreviewHeight,
+            Child = text
+        };
+        border.Classes.Add("prompt-drag-preview");
+
+        return border;
     }
 
     private static void MoveNativeWindowToCursor(nint windowHandle)

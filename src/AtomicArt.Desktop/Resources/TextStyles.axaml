@@ -101,6 +101,11 @@
                 Value="Wrap" />
     </Style>
 
+    <Style Selector="TextBlock.prompt-drag-preview-text">
+        <Setter Property="Foreground"
+                Value="{DynamicResource SukiText}" />
+    </Style>
+
     <Style Selector="TextBlock.generation-card-model">
         <Setter Property="Margin"
                 Value="0,0,8,0" />

@@ -56,7 +56,7 @@ internal static class ImageFileDragSource
         Control source,
         PointerPressedEventArgs e,
         string imagePath,
-        Func<ImageDragPreviewWindow?> previewWindowFactory,
+        Func<DragPreviewWindow?> previewWindowFactory,
         AtomicArtImageDragSourceKind sourceKind)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -80,23 +80,14 @@ internal static class ImageFileDragSource
         }
 
         DataTransfer dataTransfer = CreateDataTransfer(file, sourceKind);
-        using ImageDragPreviewWindow? previewWindow = previewWindowFactory();
-        previewWindow?.Start(topLevel as Window);
-
-        try
-        {
-            await DragDrop.DoDragDropAsync(e, dataTransfer, DragDropEffects.Copy);
-        }
-        finally
-        {
-            if (previewWindow is not null)
-            {
-                await previewWindow.FinishAsync();
-            }
-        }
+        await DragPreviewWindow.DoDragDropAsync(
+            e,
+            dataTransfer,
+            previewWindowFactory(),
+            topLevel as Window);
     }
 
-    private static ImageDragPreviewWindow? CreateOwnedPreviewWindowOrDefault(
+    private static DragPreviewWindow? CreateOwnedPreviewWindowOrDefault(
         string previewPath)
     {
         if (!OperatingSystem.IsWindows())
@@ -108,10 +99,10 @@ internal static class ImageFileDragSource
 
         return bitmap is null
             ? null
-            : ImageDragPreviewWindow.CreateOwned(bitmap);
+            : DragPreviewWindow.CreateOwnedImage(bitmap);
     }
 
-    private static ImageDragPreviewWindow? CreateBorrowedPreviewWindowOrDefault(
+    private static DragPreviewWindow? CreateBorrowedPreviewWindowOrDefault(
         Bitmap? previewBitmap)
     {
         if (!OperatingSystem.IsWindows() || previewBitmap is null)
@@ -119,7 +110,7 @@ internal static class ImageFileDragSource
             return null;
         }
 
-        return ImageDragPreviewWindow.CreateBorrowed(previewBitmap);
+        return DragPreviewWindow.CreateBorrowedImage(previewBitmap);
     }
 
     private static Bitmap? CreatePreviewBitmapOrDefault(string previewPath)

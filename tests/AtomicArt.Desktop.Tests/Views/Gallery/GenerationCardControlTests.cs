@@ -657,7 +657,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                         .OfType<Avalonia.Controls.Shapes.Path>())
                     .Where(path => path.Classes.Contains("gallery-outline-icon"))
                     .ToArray();
-                pathIcons.Should().HaveCount(5);
+                pathIcons.Should().HaveCount(4);
 
                 pathIcons.Should().OnlyContain(path =>
                     (object.ReferenceEquals(path.Fill, null))

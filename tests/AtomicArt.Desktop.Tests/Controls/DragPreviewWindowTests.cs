@@ -11,16 +11,39 @@ using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 
 namespace AtomicArt.Desktop.Tests.Controls;
 
-public sealed class ImageDragPreviewWindowTests : DesktopControlTestBase
+public sealed class DragPreviewWindowTests : DesktopControlTestBase
 {
+    [Fact]
+    public void CreatePrompt_WithMultilinePrompt_ShowsTextInBoundedPreview()
+    {
+        Dispatch(() =>
+        {
+            string prompt = "A castle at dawn\nwith dramatic lighting";
+
+            using DragPreviewWindow window = DragPreviewWindow.CreatePrompt(prompt);
+            window.Start(null);
+
+            Border previewContent = window.Content.Should().BeOfType<Border>().Subject;
+            OverflowEllipsisTextBlock text = previewContent.Child
+                .Should().BeOfType<OverflowEllipsisTextBlock>().Subject;
+            text.Text.Should().Be(prompt);
+            text.MaxLines.Should().Be(4);
+            text.TextWrapping.Should().Be(TextWrapping.Wrap);
+            window.Width.Should().BeGreaterThan(window.Height);
+            previewContent.Classes.Should().Contain("prompt-drag-preview");
+            previewContent.Background.Should().NotBeNull();
+            text.Foreground.Should().NotBeNull();
+        });
+    }
+
     [Fact]
     public void Dispose_WithBorrowedBitmap_LeavesBitmapUsable()
     {
         Dispatch(() =>
         {
             using Bitmap bitmap = CreateBitmap();
-            using ImageDragPreviewWindow window =
-                ImageDragPreviewWindow.CreateBorrowed(bitmap);
+            using DragPreviewWindow window =
+                DragPreviewWindow.CreateBorrowedImage(bitmap);
 
             window.Dispose();
 
@@ -37,8 +60,8 @@ public sealed class ImageDragPreviewWindowTests : DesktopControlTestBase
         {
             using Bitmap bitmap = CreateBitmap();
             TestUiFrameScheduler frameScheduler = new();
-            using ImageDragPreviewWindow window =
-                ImageDragPreviewWindow.CreateBorrowed(bitmap, frameScheduler);
+            using DragPreviewWindow window =
+                DragPreviewWindow.CreateBorrowedImage(bitmap, frameScheduler);
             Border previewContent = window.Content.Should().BeOfType<Border>().Subject;
             ScaleTransform previewScale = GetScaleTransform(previewContent);
             double initialWidth = window.Width;
@@ -75,8 +98,8 @@ public sealed class ImageDragPreviewWindowTests : DesktopControlTestBase
         {
             using Bitmap bitmap = CreateBitmap();
             TestUiFrameScheduler frameScheduler = new();
-            using ImageDragPreviewWindow window =
-                ImageDragPreviewWindow.CreateBorrowed(bitmap, frameScheduler);
+            using DragPreviewWindow window =
+                DragPreviewWindow.CreateBorrowedImage(bitmap, frameScheduler);
             Border previewContent = window.Content.Should().BeOfType<Border>().Subject;
             ScaleTransform previewScale = GetScaleTransform(previewContent);
             double initialWidth = window.Width;
