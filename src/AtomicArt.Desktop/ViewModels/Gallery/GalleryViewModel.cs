@@ -69,7 +69,6 @@ public sealed partial class GalleryViewModel :
     private readonly IGenerationCancellationService _generationCancellationService;
     private readonly ILocalizationTextProvider _textProvider;
     private readonly Dlss5SessionViewModel? _dlss5;
-    private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
     private IGenerationPanelPresetTarget? _generationPanelPresetTarget;
     private GenerationMetadataViewModel? _selectedMetadata;
     private string? _errorLocalizationKey;
@@ -145,7 +144,7 @@ public sealed partial class GalleryViewModel :
     {
         ArgumentNullException.ThrowIfNull(attachImagesCommand);
 
-        _attachImagesCommand = attachImagesCommand;
+        _imageViewerService.ConfigureAttachments(attachImagesCommand);
     }
 
     public void ConfigureGenerationPresetTarget(IGenerationPanelPresetTarget target)
@@ -718,7 +717,7 @@ public sealed partial class GalleryViewModel :
         return new GalleryImageViewerRequest(
             new GalleryStaticImageViewerItemsSource(viewerItems),
             selectedItem.Id,
-            _attachImagesCommand);
+            null);
     }
 
     private void ObserveGalleryOperation(

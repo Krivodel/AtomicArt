@@ -1,3 +1,6 @@
+using CommunityToolkit.Mvvm.Input;
+
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Gallery;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
@@ -10,6 +13,11 @@ internal sealed class BlockingImageViewerService : IImageViewerService
     private readonly TaskCompletionSource _releaseSignal = new(
         TaskCreationOptions.RunContinuationsAsynchronously);
     private int _openCallCount;
+
+    public void ConfigureAttachments(IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+    }
 
     public async Task OpenAsync(GalleryImageViewerRequest request, CancellationToken ct)
     {

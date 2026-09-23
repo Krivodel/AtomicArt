@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
 using Moq;
 using Pica.Viewer.Services;
@@ -26,6 +27,20 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
 public sealed class GalleryViewModelTests
 {
+    [Fact]
+    public void ConfigureImageViewerAttachments_WithCommand_RegistersSharedViewerAction()
+    {
+        RecordingImageViewerService imageViewerService = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            imageViewerService: imageViewerService);
+        AsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachCommand = new(
+            _ => Task.CompletedTask);
+
+        viewModel.ConfigureImageViewerAttachments(attachCommand);
+
+        imageViewerService.AttachImagesCommand.Should().BeSameAs(attachCommand);
+    }
+
     [Theory]
     [InlineData(GenerationItemStatus.Generated)]
     [InlineData(GenerationItemStatus.Generating)]

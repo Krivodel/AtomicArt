@@ -1,10 +1,13 @@
 using Microsoft.Extensions.Logging.Abstractions;
 
+using CommunityToolkit.Mvvm.Input;
+using FluentAssertions;
 using Moq;
 using Pica.Protocol;
 using Pica.Viewer.Services;
 using Xunit;
 
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Gallery;
@@ -21,6 +24,74 @@ public sealed class ImageViewerServiceTests
     public async Task OpenAsync_WithNoImages_DoesNotCreateWindow()
     {
         Mock<IImageViewerWindowFactory> windowFactoryMock = new();
+        ImageViewerService service = ImageViewerServiceTests.CreateService(windowFactoryMock);
+        GalleryImageViewerRequest request = new(
+            new GalleryStaticImageViewerItemsSource(
+                new List<GalleryImageViewerItem>()),
+            ImageViewerServiceTests.ItemId,
+            null);
+
+        await service.OpenAsync(request, CancellationToken.None);
+
+        windowFactoryMock.Verify(
+            factory => factory.CreateAsync(
+                It.IsAny<PicaViewerRequest>(),
+                It.IsAny<IViewerActionDispatcher>(),
+                It.IsAny<IReadOnlyDictionary<Guid, IPicaImageBitmapSource>?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OpenAsync_WithConfiguredAttachmentsAndDlssBitmap_OffersAttachForImageAndSelection()
+    {
+        Mock<IImageViewerWindowFactory> windowFactoryMock = new();
+        PicaViewerRequest? preparedRequest = null;
+        InvalidOperationException factoryFailure = new("Stop after preparing viewer actions.");
+        windowFactoryMock
+            .Setup(factory => factory.CreateAsync(
+                It.IsAny<PicaViewerRequest>(),
+                It.IsAny<IViewerActionDispatcher>(),
+                It.IsAny<IReadOnlyDictionary<Guid, IPicaImageBitmapSource>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback((PicaViewerRequest request,
+                IViewerActionDispatcher dispatcher,
+                IReadOnlyDictionary<Guid, IPicaImageBitmapSource>? bitmapSources,
+                CancellationToken ct) => preparedRequest = request)
+            .ThrowsAsync(factoryFailure);
+        ImageViewerService service = ImageViewerServiceTests.CreateService(windowFactoryMock);
+        AsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachCommand = new(
+            _ => Task.CompletedTask);
+        service.ConfigureAttachments(attachCommand);
+        Mock<IPicaImageBitmapSource> bitmapSource = new();
+        List<GalleryImageViewerItem> items =
+        [
+            new GalleryImageViewerItem(
+                ImageViewerServiceTests.ItemId,
+                new GalleryBitmapImageViewerSource(
+                    "dlss5",
+                    "dlss5-result.png",
+                    bitmapSource.Object))
+        ];
+        GalleryImageViewerRequest request = new(
+            new GalleryStaticImageViewerItemsSource(items),
+            ImageViewerServiceTests.ItemId,
+            null);
+
+        Func<Task> act = () => service.OpenAsync(request, CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .Where(exception => ReferenceEquals(exception, factoryFailure));
+        PicaViewerRequest prepared = preparedRequest
+            ?? throw new InvalidOperationException("Viewer actions were not prepared.");
+        PicaActionDefinition attach = prepared.Actions.Single(action =>
+            string.Equals(action.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal));
+        attach.Targets.Should().Be(PicaActionTargets.CurrentImage | PicaActionTargets.Selection);
+    }
+
+    private static ImageViewerService CreateService(
+        Mock<IImageViewerWindowFactory> windowFactoryMock)
+    {
         Mock<IClipboardImageWriter> clipboardImageWriterMock = new();
         Mock<ITrustedImageFileService> trustedImageFileServiceMock = new();
         Mock<IGenerationImageFormatRegistry> formatRegistryMock = new();
@@ -39,24 +110,10 @@ public sealed class ImageViewerServiceTests
             dlss5SourceOpenerMock.Object,
             NullLoggerFactory.Instance);
         PicaViewerSessionFactory sessionFactory = new(sessionDependencies);
-        ImageViewerService service = new(
+        return new ImageViewerService(
             windowFactoryMock.Object,
             sessionFactory,
             new DataRootAccessCoordinator(),
             NullLogger<ImageViewerService>.Instance);
-        GalleryImageViewerRequest request = new(
-            new GalleryStaticImageViewerItemsSource(
-                new List<GalleryImageViewerItem>()),
-            ImageViewerServiceTests.ItemId,
-            null);
-
-        await service.OpenAsync(request, CancellationToken.None);
-
-        windowFactoryMock.Verify(
-            factory => factory.CreateAsync(
-                It.IsAny<PicaViewerRequest>(),
-                It.IsAny<IViewerActionDispatcher>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
     }
 }
