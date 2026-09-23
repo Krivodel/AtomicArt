@@ -140,6 +140,11 @@ public partial class GenerationCardControl :
         InitializeComponent();
         GenerationPreview.OverflowOwner = this;
         AttachPromptDragHandlers();
+        GenerationCardContainer.AddHandler(
+            PointerPressedEvent,
+            OnContextMenuPointerPressed,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
     }
 
     Control IGalleryCardSurfaceProvider.CardSurface => GenerationCardRoot;
@@ -260,6 +265,22 @@ public partial class GenerationCardControl :
             handledEventsToo: true);
         PromptDragSource.PointerCaptureLost +=
             OnPromptDragSourcePointerCaptureLost;
+    }
+
+    private void OnContextMenuPointerPressed(
+        object? sender,
+        PointerPressedEventArgs eventArgs)
+    {
+        _ = sender;
+
+        if ((eventArgs.GetCurrentPoint(GenerationCardContainer)
+                .Properties.PointerUpdateKind == PointerUpdateKind.RightButtonPressed)
+            && (GenerationCardContainer.ContextFlyout
+                is AnimatedContextMenuFlyout contextFlyout))
+        {
+            eventArgs.Handled = true;
+            contextFlyout.ShowAt(GenerationCardContainer, true);
+        }
     }
 
     private void OnRevealInFolderClick(object? sender, RoutedEventArgs eventArgs)

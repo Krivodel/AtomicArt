@@ -551,6 +551,57 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     }
 
     [Fact]
+    public void ContextFlyout_WhenCardRightPressed_OpensBeforeReleaseWithoutReopening()
+    {
+        Dispatch(() =>
+        {
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
+                "missing-image.png",
+                "missing-thumbnail.jpg");
+            GenerationCardControl control = new()
+            {
+                DataContext = item
+            };
+            Window window = Show(
+                control,
+                GalleryLayoutService.CardWidth,
+                GalleryLayoutService.CardHeight);
+
+            try
+            {
+                Border cardContainer = control
+                    .FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException(
+                        "Generation card container was not found.");
+                AnimatedContextMenuFlyout menuFlyout = cardContainer.ContextFlyout
+                    .Should()
+                    .BeOfType<AnimatedContextMenuFlyout>()
+                    .Subject;
+                Point cardCenter = new(
+                    GalleryLayoutService.CardWidth / 2d,
+                    GalleryLayoutService.CardHeight / 2d);
+
+                window.MouseDown(cardCenter, MouseButton.Right);
+
+                menuFlyout.IsOpen.Should().BeTrue();
+                ContextMenuRevealHost revealHost = menuFlyout.Popup.Child
+                    .Should()
+                    .BeOfType<ContextMenuRevealHost>()
+                    .Subject;
+
+                window.MouseUp(cardCenter, MouseButton.Right);
+
+                menuFlyout.IsOpen.Should().BeTrue();
+                menuFlyout.Popup.Child.Should().BeSameAs(revealHost);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public async Task ContextFlyout_WhenCardRightClicked_OpensWithLivePresenterRevealAsync()
     {
         await DispatchAsync(async () =>
