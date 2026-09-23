@@ -29,10 +29,42 @@ public sealed class DragPreviewWindowTests : DesktopControlTestBase
             text.Text.Should().Be(prompt);
             text.MaxLines.Should().Be(4);
             text.TextWrapping.Should().Be(TextWrapping.Wrap);
-            window.Width.Should().BeGreaterThan(window.Height);
+            window.Bounds.Width.Should().BeGreaterThan(window.Bounds.Height);
             previewContent.Classes.Should().Contain("prompt-drag-preview");
             previewContent.Background.Should().NotBeNull();
             text.Foreground.Should().NotBeNull();
+        });
+    }
+
+    [Fact]
+    public void CreatePrompt_WithShortPrompt_SizesPreviewToText()
+    {
+        Dispatch(() =>
+        {
+            using DragPreviewWindow window = DragPreviewWindow.CreatePrompt("1");
+
+            window.Start(null);
+
+            window.Bounds.Width.Should().BeLessThan(100d);
+            window.Bounds.Height.Should().BeLessThan(60d);
+        });
+    }
+
+    [Fact]
+    public void CreatePrompt_WithLongPrompt_RespectsPreviewLimits()
+    {
+        Dispatch(() =>
+        {
+            string prompt = string.Join(' ',
+                Enumerable.Repeat("A dramatic landscape at dawn", 12));
+            using DragPreviewWindow window = DragPreviewWindow.CreatePrompt(prompt);
+
+            window.Start(null);
+
+            window.Bounds.Width.Should().BeLessThanOrEqualTo(248d);
+            window.Bounds.Height.Should().BeLessThanOrEqualTo(112d);
+            window.Bounds.Width.Should().BeGreaterThan(100d);
+            window.Bounds.Height.Should().BeGreaterThan(60d);
         });
     }
 

@@ -44,8 +44,7 @@ internal sealed class DragPreviewWindow : Window, IDisposable
 
     private DragPreviewWindow(
         Control previewContent,
-        double width,
-        double height,
+        Size? fixedSize,
         Bitmap? ownedBitmap,
         IUiFrameScheduler? frameScheduler)
     {
@@ -58,8 +57,16 @@ internal sealed class DragPreviewWindow : Window, IDisposable
             AnimatedTransformState.GetOrCreate(_previewContent);
         ApplyPreviewScale(0d);
 
-        Width = width;
-        Height = height;
+        if (fixedSize is Size size)
+        {
+            Width = size.Width;
+            Height = size.Height;
+        }
+        else
+        {
+            SizeToContent = SizeToContent.WidthAndHeight;
+        }
+
         CanResize = false;
         ShowActivated = false;
         ShowInTaskbar = false;
@@ -77,8 +84,7 @@ internal sealed class DragPreviewWindow : Window, IDisposable
 
         return new DragPreviewWindow(
             CreateImageContent(bitmap),
-            ImagePreviewSize,
-            ImagePreviewSize,
+            new Size(ImagePreviewSize, ImagePreviewSize),
             bitmap,
             null);
     }
@@ -89,8 +95,7 @@ internal sealed class DragPreviewWindow : Window, IDisposable
 
         return new DragPreviewWindow(
             CreateImageContent(bitmap),
-            ImagePreviewSize,
-            ImagePreviewSize,
+            new Size(ImagePreviewSize, ImagePreviewSize),
             null,
             null);
     }
@@ -101,8 +106,7 @@ internal sealed class DragPreviewWindow : Window, IDisposable
 
         return new DragPreviewWindow(
             CreatePromptContent(prompt),
-            PromptPreviewWidth,
-            PromptPreviewHeight,
+            null,
             null,
             null);
     }
@@ -212,8 +216,7 @@ internal sealed class DragPreviewWindow : Window, IDisposable
 
         return new DragPreviewWindow(
             CreateImageContent(bitmap),
-            ImagePreviewSize,
-            ImagePreviewSize,
+            new Size(ImagePreviewSize, ImagePreviewSize),
             null,
             frameScheduler);
     }
@@ -250,8 +253,8 @@ internal sealed class DragPreviewWindow : Window, IDisposable
 
         Border border = new()
         {
-            Width = PromptPreviewWidth,
-            Height = PromptPreviewHeight,
+            MaxWidth = PromptPreviewWidth,
+            MaxHeight = PromptPreviewHeight,
             Child = text
         };
         border.Classes.Add("prompt-drag-preview");
