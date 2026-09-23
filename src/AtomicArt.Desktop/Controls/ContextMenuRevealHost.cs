@@ -114,7 +114,6 @@ internal sealed class ContextMenuRevealHost : Decorator, IDisposable
         _origin = origin;
         Opacity = 0d;
         _presenter.Opacity = 1d;
-        _presenter.IsHitTestVisible = false;
         ApplyOpeningProgress(0d);
     }
 

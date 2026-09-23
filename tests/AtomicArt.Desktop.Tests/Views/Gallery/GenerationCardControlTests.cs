@@ -703,7 +703,6 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
 
                 presenter.RenderTransform.Should().BeNull();
                 presenter.Opacity.Should().Be(1d);
-                presenter.IsHitTestVisible.Should().BeFalse();
                 presenter.Clip.Should().BeOfType<RectangleGeometry>();
                 backgroundFound.Should().BeTrue();
                 presenter.Background.Should().BeSameAs(backgroundResource);
@@ -929,6 +928,11 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     ?? throw new InvalidOperationException(
                         "Show-in-folder menu item was not found.");
                 revealHost.WidthRatio.Should().BeLessThan(1d);
+                MenuFlyoutPresenter presenter = revealHost.Child
+                    .Should()
+                    .BeOfType<MenuFlyoutPresenter>()
+                    .Subject;
+                presenter.IsHitTestVisible.Should().BeTrue();
 
                 GenerationCardControlTests.ClickMenuItem(showInFolderMenuItem, revealHost);
 
