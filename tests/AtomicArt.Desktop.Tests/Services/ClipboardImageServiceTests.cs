@@ -20,6 +20,35 @@ public sealed class ClipboardImageServiceTests
     private static readonly byte[] JpegContent = GenerationImageFileSignatures.Jpeg.ToArray();
 
     [Fact]
+    public async Task SetImageAsync_WithImagePath_DelegatesToPicaCopier()
+    {
+        Mock<IClipboard> clipboardMock = new();
+        Mock<IStorageProvider> storageProviderMock = new();
+        Mock<IClipboardImageCopier> copierMock = new();
+        copierMock
+            .Setup(copier => copier.CopyFileAsync(
+                "source.jpg",
+                clipboardMock.Object,
+                storageProviderMock.Object,
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        ClipboardImageService service = new(
+            new AttachedImageFileReader(new AttachedImageSignatureValidator()),
+            new StubPlatformClipboardImageReader(fallbackInput: null),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ClipboardImageService>.Instance,
+            copierMock.Object);
+        service.Attach(clipboardMock.Object, storageProviderMock.Object);
+
+        await service.SetImageAsync("source.jpg", CancellationToken.None);
+
+        copierMock.Verify(copier => copier.CopyFileAsync(
+            "source.jpg",
+            clipboardMock.Object,
+            storageProviderMock.Object,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task TryGetImageAsync_WithFileAndPngFormats_ReturnsFileInput()
     {
         Mock<IStorageFile> fileMock = new();
@@ -161,8 +190,9 @@ public sealed class ClipboardImageServiceTests
         ClipboardImageService service = new(
             new AttachedImageFileReader(new AttachedImageSignatureValidator()),
             fallbackReader,
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<ClipboardImageService>.Instance);
-        service.Attach(clipboardMock.Object);
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ClipboardImageService>.Instance,
+            new Mock<IClipboardImageCopier>().Object);
+        service.Attach(clipboardMock.Object, new Mock<IStorageProvider>().Object);
 
         return service;
     }

@@ -58,6 +58,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
     {
         Dispatch(() =>
         {
+            RelayCommand copyImageCommand = new(() => { });
             RelayCommand revealCommand = new(() => { });
             RelayCommand revealInNewWindowCommand = new(() => { });
             RelayCommand metadataCommand = new(() => { });
@@ -66,6 +67,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
             RelayCommand toggleSelectionCommand = new(() => { });
             RelayCommand selectRangeCommand = new(() => { });
             AnimatedGalleryControl control = CreateControlWithCommands(
+                copyImageCommand,
                 revealCommand,
                 revealInNewWindowCommand,
                 metadataCommand,
@@ -78,6 +80,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
             {
                 GenerationCardControl card = GetSingleCard(control);
 
+                card.CopyImageCommand.Should().BeSameAs(copyImageCommand);
                 card.RevealInFolderCommand.Should().BeSameAs(revealCommand);
                 card.RevealInNewFolderWindowCommand.Should()
                     .BeSameAs(revealInNewWindowCommand);
@@ -122,6 +125,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
     }
 
     private static AnimatedGalleryControl CreateControlWithCommands(
+        RelayCommand copyImageCommand,
         RelayCommand revealCommand,
         RelayCommand revealInNewWindowCommand,
         RelayCommand metadataCommand,
@@ -131,6 +135,7 @@ public sealed class AnimatedGalleryControlAttachmentTests : AnimatedGalleryContr
         RelayCommand selectRangeCommand)
     {
         AnimatedGalleryControl control = CreateControlWithItem(CreateItem());
+        control.CopyImageCommand = copyImageCommand;
         control.RevealInFolderCommand = revealCommand;
         control.RevealInNewFolderWindowCommand = revealInNewWindowCommand;
         control.OpenMetadataCommand = metadataCommand;

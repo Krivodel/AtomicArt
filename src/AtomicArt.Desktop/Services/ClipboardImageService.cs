@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Pica.Viewer.Services;
 
 using AtomicArt.Desktop.Services.Windows;
 
@@ -20,36 +20,30 @@ public sealed class ClipboardImageService :
     private readonly AttachedImageFileReader _fileReader;
     private readonly IPlatformClipboardImageReader _platformImageReader;
     private readonly ILogger<ClipboardImageService> _logger;
+    private readonly IClipboardImageCopier _imageCopier;
     private IClipboard? _clipboard;
-
-    public ClipboardImageService(AttachedImageFileReader fileReader)
-        : this(fileReader, NullLogger<ClipboardImageService>.Instance)
-    {
-    }
-
-    public ClipboardImageService(
-        AttachedImageFileReader fileReader,
-        ILogger<ClipboardImageService> logger)
-        : this(fileReader, new WindowsClipboardImageReader(fileReader), logger)
-    {
-    }
+    private IStorageProvider? _storageProvider;
 
     public ClipboardImageService(
         AttachedImageFileReader fileReader,
         IPlatformClipboardImageReader platformImageReader,
-        ILogger<ClipboardImageService> logger)
+        ILogger<ClipboardImageService> logger,
+        IClipboardImageCopier imageCopier)
     {
         _fileReader = fileReader ?? throw new ArgumentNullException(nameof(fileReader));
         _platformImageReader = platformImageReader
             ?? throw new ArgumentNullException(nameof(platformImageReader));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _imageCopier = imageCopier ?? throw new ArgumentNullException(nameof(imageCopier));
     }
 
-    public void Attach(IClipboard clipboard)
+    public void Attach(IClipboard clipboard, IStorageProvider storageProvider)
     {
         ArgumentNullException.ThrowIfNull(clipboard);
+        ArgumentNullException.ThrowIfNull(storageProvider);
 
         _clipboard = clipboard;
+        _storageProvider = storageProvider;
     }
 
     public async Task SetTextAsync(string text, CancellationToken ct)
@@ -61,6 +55,21 @@ public sealed class ClipboardImageService :
             ?? throw new InvalidOperationException("Clipboard is not attached.");
 
         await clipboard.SetTextAsync(text).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+    }
+
+    public async Task SetImageAsync(string imagePath, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(imagePath);
+        ct.ThrowIfCancellationRequested();
+
+        IClipboard clipboard = _clipboard
+            ?? throw new InvalidOperationException("Clipboard is not attached.");
+        IStorageProvider storageProvider = _storageProvider
+            ?? throw new InvalidOperationException("Storage provider is not attached.");
+        await _imageCopier
+            .CopyFileAsync(imagePath, clipboard, storageProvider, ct)
+            .ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
     }
 

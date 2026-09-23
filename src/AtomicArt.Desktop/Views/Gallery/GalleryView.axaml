@@ -22,6 +22,7 @@
                                          IsSelectionMode="{Binding IsSelectionMode}"
                                          Items="{Binding Items}"
                                          Operations="{Binding GalleryOperations, ElementName=GalleryRoot}"
+                                         CopyImageCommand="{Binding CopyImageCommand}"
                                          DeleteOrCancelCommand="{Binding DeleteOrCancelCommand}"
                                          OpenMetadataCommand="{Binding OpenMetadataCommand}"
                                          OpenDlss5Command="{Binding OpenDlss5Command}"

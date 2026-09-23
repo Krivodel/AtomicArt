@@ -13,6 +13,18 @@
             Classes="generation-card-container">
         <Border.ContextFlyout>
             <uiControls:AnimatedContextMenuFlyout>
+                <MenuItem x:Name="CopyImageMenuItem"
+                          Command="{Binding #GenerationCard.CopyImageCommand}"
+                          CommandParameter="{Binding #GenerationCard.DataContext}">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Copy}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <Path Classes="gallery-outline-icon"
+                              Data="{StaticResource MetadataCopyIcon}" />
+                    </MenuItem.Icon>
+                </MenuItem>
                 <MenuItem x:Name="ShowInFolderMenuItem"
                           Command="{Binding #GenerationCard.RevealInFolderCommand}"
                           CommandParameter="{Binding #GenerationCard.DataContext}">

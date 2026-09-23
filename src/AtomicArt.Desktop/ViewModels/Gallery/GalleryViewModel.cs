@@ -64,6 +64,7 @@ public sealed partial class GalleryViewModel :
     private readonly GalleryLifecycleController _lifecycleController;
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly ITextClipboardService _textClipboardService;
+    private readonly IClipboardImageService _clipboardImageService;
     private readonly GenerationPriceFormatter _priceFormatter;
     private readonly GenerationDurationFormatter _durationFormatter;
     private readonly IGenerationCancellationService _generationCancellationService;
@@ -92,6 +93,7 @@ public sealed partial class GalleryViewModel :
         GalleryLifecycleController lifecycleController,
         IViewModelErrorHandler errorHandler,
         ITextClipboardService textClipboardService,
+        IClipboardImageService clipboardImageService,
         GenerationPriceFormatter priceFormatter,
         GenerationDurationFormatter durationFormatter,
         IMessenger messenger,
@@ -110,6 +112,7 @@ public sealed partial class GalleryViewModel :
         ArgumentNullException.ThrowIfNull(lifecycleController);
         ArgumentNullException.ThrowIfNull(errorHandler);
         ArgumentNullException.ThrowIfNull(textClipboardService);
+        ArgumentNullException.ThrowIfNull(clipboardImageService);
         ArgumentNullException.ThrowIfNull(priceFormatter);
         ArgumentNullException.ThrowIfNull(durationFormatter);
         ArgumentNullException.ThrowIfNull(messenger);
@@ -130,6 +133,7 @@ public sealed partial class GalleryViewModel :
         _lifecycleController = lifecycleController;
         _errorHandler = errorHandler;
         _textClipboardService = textClipboardService;
+        _clipboardImageService = clipboardImageService;
         _priceFormatter = priceFormatter;
         _durationFormatter = durationFormatter;
         _textProvider = textProvider;
@@ -292,6 +296,22 @@ public sealed partial class GalleryViewModel :
         }
 
         await deletion(ct);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCopyImage))]
+    private async Task CopyImageAsync(
+        GenerationItemViewModel? item,
+        CancellationToken ct)
+    {
+        if ((item is { ImagePath: string imagePath }) && (CanCopyImage(item)))
+        {
+            await ExecuteUserOperationAsync(
+                operationCt => _clipboardImageService.SetImageAsync(
+                    imagePath,
+                    operationCt),
+                nameof(CopyImageAsync),
+                ct);
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -518,6 +538,13 @@ public sealed partial class GalleryViewModel :
     private bool CanRunCommand()
     {
         return (!IsLoading) && (!IsSelectionMode);
+    }
+
+    private bool CanCopyImage(GenerationItemViewModel? item)
+    {
+        return (item is not null)
+            && (_itemsController.Contains(item))
+            && (CanOpenViewer(item));
     }
 
     private bool CanChangeSelection(GenerationItemViewModel? item)
@@ -787,6 +814,7 @@ public sealed partial class GalleryViewModel :
 
     private void NotifyInteractiveCommandsCanExecuteChanged()
     {
+        CopyImageCommand.NotifyCanExecuteChanged();
         RevealInFolderCommand.NotifyCanExecuteChanged();
         RevealInNewFolderWindowCommand.NotifyCanExecuteChanged();
         OpenViewerCommand.NotifyCanExecuteChanged();

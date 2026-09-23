@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 using CommunityToolkit.Mvvm.Messaging;
 
@@ -43,6 +44,7 @@ internal static class GalleryViewModelTestFactory
         IGenerationCancellationService? generationCancellationService = null,
         IAnimatedGalleryOperations? animatedGalleryOperations = null,
         IViewModelErrorHandler? errorHandler = null,
+        IClipboardImageService? clipboardImageService = null,
         IGalleryStateService? galleryStateService = null,
         IGalleryItemDeletionService? galleryItemDeletionService = null,
         IGalleryThumbnailStorage? galleryThumbnailStorage = null,
@@ -134,6 +136,7 @@ internal static class GalleryViewModelTestFactory
             lifecycleController,
             viewModelErrorHandler,
             new RecordingTextClipboardService(),
+            clipboardImageService ?? new Mock<IClipboardImageService>().Object,
             new GenerationPriceFormatter(),
             new GenerationDurationFormatter(
                 TestLocalizationTextProvider.Default),

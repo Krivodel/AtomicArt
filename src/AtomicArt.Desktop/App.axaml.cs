@@ -197,7 +197,9 @@ public class App : Avalonia.Application
 
         if (mainWindow.Clipboard is not null)
         {
-            clipboardAttachmentService.Attach(mainWindow.Clipboard);
+            clipboardAttachmentService.Attach(
+                mainWindow.Clipboard,
+                mainWindow.StorageProvider);
         }
 
         desktopLifetime.MainWindow = mainWindow;

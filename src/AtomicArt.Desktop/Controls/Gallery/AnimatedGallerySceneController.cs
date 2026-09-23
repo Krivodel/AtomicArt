@@ -296,6 +296,7 @@ internal sealed class AnimatedGallerySceneController
     private GalleryCardCommands CreateCardCommands()
     {
         return new GalleryCardCommands(
+            _owner.CopyImageCommand,
             _owner.OpenViewerCommand,
             _owner.ShowFailureDetailsCommand,
             _owner.RevealInFolderCommand,

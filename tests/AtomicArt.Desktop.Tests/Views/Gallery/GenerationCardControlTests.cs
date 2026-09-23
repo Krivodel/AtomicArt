@@ -323,12 +323,14 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 "missing-image.png",
                 "missing-thumbnail.jpg");
             RelayCommand selectCommand = new(() => item.IsSelected = true);
+            RelayCommand copyCommand = new(() => { });
             RelayCommand revealCommand = new(() => { });
             RelayCommand deleteCommand = new(() => { });
             RelayCommand favoriteCommand = new(() => { });
             GenerationCardControl control = new()
             {
                 DataContext = item,
+                CopyImageCommand = copyCommand,
                 DeleteOrCancelCommand = deleteCommand,
                 RevealInFolderCommand = revealCommand,
                 ToggleFavoriteCommand = favoriteCommand,
@@ -406,6 +408,10 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .FindControl<MenuItem>("SelectMenuItem")
                     ?? throw new InvalidOperationException(
                         "Select menu item was not found.");
+                MenuItem copyMenuItem = control
+                    .FindControl<MenuItem>("CopyImageMenuItem")
+                    ?? throw new InvalidOperationException(
+                        "Copy-image menu item was not found.");
                 MenuItem showInFolderMenuItem = control
                     .FindControl<MenuItem>("ShowInFolderMenuItem")
                     ?? throw new InvalidOperationException(
@@ -419,10 +425,19 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     ?? throw new InvalidOperationException(
                         "Delete menu item was not found.");
 
-                menuFlyout.Items.Should().HaveCount(4);
-                menuFlyout.Items[0].Should().BeSameAs(showInFolderMenuItem);
-                menuFlyout.Items[2].Should().BeSameAs(deleteMenuItem);
-                menuFlyout.Items[3].Should().BeSameAs(selectMenuItem);
+                menuFlyout.Items.Should().HaveCount(5);
+                menuFlyout.Items[0].Should().BeSameAs(copyMenuItem);
+                menuFlyout.Items[1].Should().BeSameAs(showInFolderMenuItem);
+                menuFlyout.Items[3].Should().BeSameAs(deleteMenuItem);
+                menuFlyout.Items[4].Should().BeSameAs(selectMenuItem);
+                Avalonia.Controls.Shapes.Path copyIcon = copyMenuItem.Icon
+                    .Should()
+                    .BeOfType<Avalonia.Controls.Shapes.Path>()
+                    .Subject;
+                copyIcon.Data.Should().BeSameAs(
+                    control.FindResource("MetadataCopyIcon"));
+                copyMenuItem.Command.Should().BeSameAs(copyCommand);
+                copyMenuItem.CommandParameter.Should().BeSameAs(item);
                 Avalonia.Controls.Shapes.Path selectIcon = selectMenuItem.Icon
                     .Should()
                     .BeOfType<Avalonia.Controls.Shapes.Path>()
@@ -630,8 +645,8 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     .BeOfType<LinearGradientBrush>()
                     .Subject;
                 menuFlyout.IsOpen.Should().BeTrue();
-                menuItems.Should().HaveCount(5);
-                menuItems[4].Should().BeSameAs(selectMenuItem);
+                menuItems.Should().HaveCount(6);
+                menuItems[5].Should().BeSameAs(selectMenuItem);
                 selectMenuItem.IsSelected.Should().BeFalse();
                 selectMenuItem.IsPointerOver.Should().BeFalse();
                 selectMenuItem.IsFocused.Should().BeFalse();
@@ -643,11 +658,11 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     border => border.Margin == default);
                 presenterChromeBorders[0].IsVisible.Should().BeFalse();
                 presenterChromeBorders[1].IsVisible.Should().BeTrue();
-                iconSeparators.Should().HaveCount(5);
+                iconSeparators.Should().HaveCount(6);
                 iconSeparators.Should().OnlyContain(separator => separator.Opacity == 0d);
-                iconPresenters.Should().HaveCount(5);
-                headerPresenters.Should().HaveCount(5);
-                menuHeaderTextBlocks.Should().HaveCount(5);
+                iconPresenters.Should().HaveCount(6);
+                headerPresenters.Should().HaveCount(6);
+                menuHeaderTextBlocks.Should().HaveCount(6);
                 menuHeaderTextBlocks.Should().OnlyContain(
                     textBlock => textBlock.FontWeight == FontWeight.Normal);
 
@@ -657,7 +672,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                         .OfType<Avalonia.Controls.Shapes.Path>())
                     .Where(path => path.Classes.Contains("gallery-outline-icon"))
                     .ToArray();
-                pathIcons.Should().HaveCount(4);
+                pathIcons.Should().HaveCount(5);
 
                 pathIcons.Should().OnlyContain(path =>
                     (object.ReferenceEquals(path.Fill, null))

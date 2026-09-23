@@ -24,6 +24,11 @@ public partial class AnimatedGalleryControl : UserControl
         get => GetValue(AnimatedGalleryControl.ItemsProperty);
         set => SetValue(AnimatedGalleryControl.ItemsProperty, value);
     }
+    public IRelayCommand? CopyImageCommand
+    {
+        get => GetValue(AnimatedGalleryControl.CopyImageCommandProperty);
+        set => SetValue(AnimatedGalleryControl.CopyImageCommandProperty, value);
+    }
     public IRelayCommand? RevealInFolderCommand
     {
         get => GetValue(AnimatedGalleryControl.RevealInFolderCommandProperty);
@@ -88,6 +93,9 @@ public partial class AnimatedGalleryControl : UserControl
     public static readonly StyledProperty<IEnumerable<IGalleryItemViewModel>?> ItemsProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IEnumerable<IGalleryItemViewModel>?>(
             nameof(Items));
+    public static readonly StyledProperty<IRelayCommand?> CopyImageCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(CopyImageCommand));
     public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(RevealInFolderCommand));
@@ -358,7 +366,8 @@ public partial class AnimatedGalleryControl : UserControl
 
     private static bool IsCommandProperty(AvaloniaProperty property)
     {
-        return (property == AnimatedGalleryControl.RevealInFolderCommandProperty)
+        return (property == AnimatedGalleryControl.CopyImageCommandProperty)
+               || (property == AnimatedGalleryControl.RevealInFolderCommandProperty)
                || (property == AnimatedGalleryControl.RevealInNewFolderWindowCommandProperty)
                || (property == AnimatedGalleryControl.OpenViewerCommandProperty)
                || (property == AnimatedGalleryControl.ShowFailureDetailsCommandProperty)

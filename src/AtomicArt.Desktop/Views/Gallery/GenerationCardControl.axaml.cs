@@ -20,6 +20,11 @@ public partial class GenerationCardControl :
     IGalleryCardSurfaceProvider,
     IGalleryRemovalAnimationParticipant
 {
+    public IRelayCommand? CopyImageCommand
+    {
+        get => GetValue(GenerationCardControl.CopyImageCommandProperty);
+        set => SetValue(GenerationCardControl.CopyImageCommandProperty, value);
+    }
     public IRelayCommand? RevealInFolderCommand
     {
         get => GetValue(GenerationCardControl.RevealInFolderCommandProperty);
@@ -81,6 +86,9 @@ public partial class GenerationCardControl :
         set => SetValue(GenerationCardControl.IsSelectionDimmedProperty, value);
     }
 
+    public static readonly StyledProperty<IRelayCommand?> CopyImageCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(CopyImageCommand));
     public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(RevealInFolderCommand));

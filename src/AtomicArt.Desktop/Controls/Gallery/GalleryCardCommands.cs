@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace AtomicArt.Desktop.Controls.Gallery;
 
 internal sealed record GalleryCardCommands(
+    IRelayCommand? CopyImage,
     IRelayCommand? OpenViewer,
     IRelayCommand? ShowFailureDetails,
     IRelayCommand? RevealInFolder,

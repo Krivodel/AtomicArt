@@ -50,6 +50,7 @@ public sealed class GenerationCardControlFactoryTests : AnimatedGalleryControlTe
                 null,
                 null,
                 null,
+                null,
                 null);
             StandaloneGenerationPreviewExpansionHost expansionHost = new(new Border());
             Control firstControl = factory.Create(

@@ -28,6 +28,41 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 public sealed class GalleryViewModelTests
 {
     [Fact]
+    public async Task CopyImageCommand_WithGeneratedImage_CopiesImageFile()
+    {
+        Mock<IClipboardImageService> clipboardMock = new();
+        clipboardMock
+            .Setup(clipboard => clipboard.SetImageAsync(
+                "image.png",
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            clipboardImageService: clipboardMock.Object);
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(imagePath: "image.png"));
+
+        await viewModel.CopyImageCommand.ExecuteAsync(item);
+
+        clipboardMock.Verify(clipboard => clipboard.SetImageAsync(
+            "image.png",
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void CopyImageCommand_WithoutImage_DisablesAction()
+    {
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(imagePath: null));
+
+        bool canCopy = viewModel.CopyImageCommand.CanExecute(item);
+
+        canCopy.Should().BeFalse();
+    }
+
+    [Fact]
     public void ConfigureImageViewerAttachments_WithCommand_RegistersSharedViewerAction()
     {
         RecordingImageViewerService imageViewerService = new();

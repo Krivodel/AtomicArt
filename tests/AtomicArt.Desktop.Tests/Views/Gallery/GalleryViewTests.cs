@@ -194,6 +194,8 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 GalleryViewTests.AssertGalleryViewOperations(scenario.View);
                 AnimatedGalleryControl galleryControl =
                     GalleryViewTests.GetGalleryControl(scenario.View);
+                galleryControl.CopyImageCommand.Should().BeSameAs(
+                    scenario.ViewModel.CopyImageCommand);
                 galleryControl.DeleteOrCancelCommand.Should().BeSameAs(
                     scenario.ViewModel.DeleteOrCancelCommand);
                 galleryControl.ToggleFavoriteCommand.Should().BeSameAs(
