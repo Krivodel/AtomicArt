@@ -2,6 +2,8 @@ using Microsoft.Extensions.Logging;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 
@@ -11,26 +13,32 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
 {
     private readonly IAppStateStore _stateStore;
     private readonly IGalleryItemDeletionService _deletionService;
+    private readonly IGalleryThumbnailStorage _thumbnailStorage;
     private readonly IGalleryFileOrderSynchronizer _fileOrderSynchronizer;
     private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly GalleryStatePathConverter _pathConverter;
     private readonly GalleryStateSection _section;
     private readonly GalleryOrderTimestampNormalizer _timestampNormalizer;
+    private readonly GenerationImageFileNamePolicy _fileNamePolicy;
     private readonly ILogger<GalleryStateConsistencyService> _logger;
 
     public GalleryStateConsistencyService(
         IAppStateStore stateStore,
         IGalleryItemDeletionService deletionService,
+        IGalleryThumbnailStorage thumbnailStorage,
         IGalleryFileOrderSynchronizer fileOrderSynchronizer,
         IDataRootAccessCoordinator accessCoordinator,
         GalleryStatePathConverter pathConverter,
         GalleryStateSection section,
         GalleryOrderTimestampNormalizer timestampNormalizer,
+        GenerationImageFileNamePolicy fileNamePolicy,
         ILogger<GalleryStateConsistencyService> logger)
     {
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
         _deletionService = deletionService
             ?? throw new ArgumentNullException(nameof(deletionService));
+        _thumbnailStorage = thumbnailStorage
+            ?? throw new ArgumentNullException(nameof(thumbnailStorage));
         _fileOrderSynchronizer = fileOrderSynchronizer
             ?? throw new ArgumentNullException(nameof(fileOrderSynchronizer));
         _accessCoordinator = accessCoordinator
@@ -39,16 +47,23 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
         _section = section ?? throw new ArgumentNullException(nameof(section));
         _timestampNormalizer = timestampNormalizer
             ?? throw new ArgumentNullException(nameof(timestampNormalizer));
+        _fileNamePolicy = fileNamePolicy
+            ?? throw new ArgumentNullException(nameof(fileNamePolicy));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task ReconcileAsync(CancellationToken ct)
     {
-        using DataRootAccessLease accessLease =
-            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
-        GalleryState state = await _stateStore
-            .LoadAsync<GalleryState>(_section, ct)
-            .ConfigureAwait(false);
+        GalleryState state;
+
+        using (DataRootAccessLease accessLease =
+            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false))
+        {
+            state = await _stateStore
+                .LoadAsync<GalleryState>(_section, ct)
+                .ConfigureAwait(false);
+        }
+
         List<GalleryItemState> missingImageItems = state.Items
             .Where(HasMissingGeneratedImage)
             .ToList();
@@ -81,14 +96,23 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
             .SynchronizeAsync(normalizedItems, ct)
             .ConfigureAwait(false);
 
-        if (missingImageItems.Count == 0 && !galleryOrderChanged)
+        List<GalleryItemState> repairedItems = normalizedItems.ToList();
+        await RepairMissingThumbnailsAsync(repairedItems, ct).ConfigureAwait(false);
+        int updatedThumbnailPathCount = repairedItems
+            .Where((item, index) =>
+                item.ThumbnailPath != normalizedItems[index].ThumbnailPath)
+            .Count();
+
+        if (missingImageItems.Count == 0
+            && !galleryOrderChanged
+            && updatedThumbnailPathCount == 0)
         {
             return;
         }
 
         GalleryState reconciledState = new()
         {
-            Items = normalizedItems
+            Items = repairedItems
         };
         await _stateStore
             .SaveAsync(_section, reconciledState, ct)
@@ -105,6 +129,90 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
             _logger.LogInformation(
                 "Initialized or repaired gallery file ordering metadata for {ItemCount} items.",
                 galleryOrderChangeCount);
+        }
+
+        if (updatedThumbnailPathCount > 0)
+        {
+            _logger.LogInformation(
+                "Restored gallery thumbnail paths for {ItemCount} items.",
+                updatedThumbnailPathCount);
+        }
+    }
+
+    private async Task RepairMissingThumbnailsAsync(
+        List<GalleryItemState> items,
+        CancellationToken ct)
+    {
+        for (int index = 0; index < items.Count; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            GalleryItemState item = items[index];
+
+            if (item.Status != GenerationItemStatus.Generated
+                || _pathConverter.GetRuntimeThumbnailPath(item.ThumbnailPath, item.ModelId)
+                    is not null)
+            {
+                continue;
+            }
+
+            string? managedImagePath = _pathConverter.GetImagePathForDeletion(item.ImagePath);
+            string? trustedImagePath = _pathConverter.GetValidatedRuntimePath(
+                managedImagePath,
+                item.ModelId);
+
+            if (trustedImagePath is null
+                || !_fileNamePolicy.TryGetBatchIdForItem(
+                    Path.GetFileName(trustedImagePath),
+                    item.Id,
+                    out Guid batchId))
+            {
+                continue;
+            }
+
+            try
+            {
+                string? thumbnailPath = _thumbnailStorage.GetThumbnailPathOrDefault(
+                    batchId,
+                    item.Id,
+                    item.ModelId);
+
+                if (thumbnailPath is null)
+                {
+                    await _thumbnailStorage.SaveAsync(
+                        batchId,
+                        item.Id,
+                        item.ModelId,
+                        trustedImagePath,
+                        ct).ConfigureAwait(false);
+                    thumbnailPath = _thumbnailStorage.GetThumbnailPathOrDefault(
+                        batchId,
+                        item.Id,
+                        item.ModelId);
+                }
+
+                string? storedThumbnailPath = _pathConverter.GetStoragePath(thumbnailPath);
+
+                if (storedThumbnailPath is not null)
+                {
+                    items[index] = GalleryItemStateMapper.NormalizeForStorage(
+                        item,
+                        source => source.ImagePath,
+                        _ => storedThumbnailPath);
+                }
+            }
+            catch (Exception ex) when (ex is ArgumentException
+                or InvalidDataException
+                or InvalidOperationException
+                or IOException
+                or NotSupportedException
+                or UnauthorizedAccessException)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to restore gallery thumbnail for item {ItemId}.",
+                    item.Id);
+            }
         }
     }
 

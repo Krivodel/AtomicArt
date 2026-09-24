@@ -26,6 +26,16 @@ public sealed class GenerationImageFileNamePolicy
 
     public bool IsFileNameForItem(string fileName, Guid itemId)
     {
+        return TryGetBatchIdForItem(fileName, itemId, out Guid _);
+    }
+
+    internal bool TryGetBatchIdForItem(
+        string fileName,
+        Guid itemId,
+        out Guid batchId)
+    {
+        batchId = Guid.Empty;
+
         if (string.IsNullOrWhiteSpace(fileName) || itemId == Guid.Empty)
         {
             return false;
@@ -49,13 +59,13 @@ public sealed class GenerationImageFileNamePolicy
         return segments switch
         {
             [string batchIdSegment, string itemIdSegment] =>
-                IsMatchingItem(batchIdSegment, itemIdSegment, itemId),
+                TryParseMatchingItem(batchIdSegment, itemIdSegment, itemId, out batchId),
             [string prefix, string batchIdSegment, string itemIdSegment]
                 when string.Equals(
                     prefix,
                     LegacyFileNamePrefix,
                     StringComparison.Ordinal) =>
-                IsMatchingItem(batchIdSegment, itemIdSegment, itemId),
+                TryParseMatchingItem(batchIdSegment, itemIdSegment, itemId, out batchId),
             _ => false
         };
     }
@@ -82,13 +92,23 @@ public sealed class GenerationImageFileNamePolicy
         return $".{trimmedExtension}";
     }
 
-    private static bool IsMatchingItem(
+    private static bool TryParseMatchingItem(
         string batchIdSegment,
         string itemIdSegment,
-        Guid itemId)
+        Guid itemId,
+        out Guid batchId)
     {
-        return Guid.TryParseExact(batchIdSegment, "N", out Guid _)
-            && Guid.TryParseExact(itemIdSegment, "N", out Guid parsedItemId)
-            && parsedItemId == itemId;
+        batchId = Guid.Empty;
+
+        if (!Guid.TryParseExact(batchIdSegment, "N", out Guid parsedBatchId)
+            || !Guid.TryParseExact(itemIdSegment, "N", out Guid parsedItemId)
+            || parsedItemId != itemId)
+        {
+            return false;
+        }
+
+        batchId = parsedBatchId;
+
+        return true;
     }
 }

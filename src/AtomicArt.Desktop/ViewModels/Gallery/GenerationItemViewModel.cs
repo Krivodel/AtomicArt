@@ -23,8 +23,7 @@ public sealed partial class GenerationItemViewModel :
     public DateTime? GalleryOrderTimestampUtc { get; private set; }
     public string? FailureCode { get; private set; }
     public string DisplayImagePath => ImagePath ?? string.Empty;
-    public string DisplayThumbnailPath =>
-        string.IsNullOrWhiteSpace(ThumbnailPath) ? DisplayImagePath : ThumbnailPath;
+    public string DisplayThumbnailPath => ThumbnailPath ?? string.Empty;
     public bool HasDisplayImagePath => !string.IsNullOrWhiteSpace(DisplayImagePath);
     public string Status => StatusDescriptor.DisplayText;
     public bool IsGenerated => StatusDescriptor.VisualState == GenerationItemVisualState.Generated;

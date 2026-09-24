@@ -7,10 +7,12 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
 using AtomicArt.Tests.Common.Generation;
@@ -308,23 +310,27 @@ public sealed class GalleryStateConsistencyServiceTests
         IGalleryItemDeletionService deletionService,
         IDataRootAccessCoordinator accessCoordinator,
         GalleryStatePathConverter pathConverter,
-        GalleryStateSection? section = null)
+        GalleryStateSection? section = null,
+        IGalleryThumbnailStorage? thumbnailStorage = null)
     {
+        GenerationImageFileNamePolicy fileNamePolicy = new();
         IGalleryFileOrderSynchronizer fileOrderSynchronizer =
             new GalleryFileOrderSynchronizer(
                 accessCoordinator,
                 pathConverter,
-                new GenerationImageFileNamePolicy(),
+                fileNamePolicy,
                 NullLogger<GalleryFileOrderSynchronizer>.Instance);
 
         return new GalleryStateConsistencyService(
             stateStore,
             deletionService,
+            thumbnailStorage ?? new NullGalleryThumbnailStorage(),
             fileOrderSynchronizer,
             accessCoordinator,
             pathConverter,
             section ?? new GalleryStateSection(),
             TestApiConfiguration.CreateGalleryOrderTimestampNormalizer(),
+            fileNamePolicy,
             NullLogger<GalleryStateConsistencyService>.Instance);
     }
 
@@ -410,6 +416,90 @@ public sealed class GalleryStateConsistencyServiceTests
             _requests.AddRange(requests);
 
             return Task.CompletedTask;
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReconcileAsync_WithMissingThumbnail_RegeneratesAndPersistsPreview(
+        bool hasStoredThumbnailPath)
+    {
+        string rootDirectory = TestDirectories.GetUniqueDirectoryPath(
+            typeof(GalleryStateConsistencyServiceTests),
+            $"{nameof(ReconcileAsync_WithMissingThumbnail_RegeneratesAndPersistsPreview)}-{hasStoredThumbnailPath}");
+
+        try
+        {
+            AtomicArtDataPathProvider pathProvider = CreatePathProvider(rootDirectory);
+            GenerationImageFileNamePolicy fileNamePolicy = new();
+            string imageFileName = fileNamePolicy.BuildFileName(
+                BatchId,
+                MissingImageItemId,
+                ".png");
+            string imagePath = Path.Combine(pathProvider.ArtDirectory, imageFileName);
+            await File.WriteAllBytesAsync(
+                imagePath,
+                GalleryThumbnailTestImages.CreatePngBytes(
+                    GalleryThumbnailSpecification.ThumbnailShortSidePixels * 2,
+                    GalleryThumbnailSpecification.ThumbnailShortSidePixels * 2));
+            string thumbnailFileName = fileNamePolicy.BuildFileName(
+                BatchId,
+                MissingImageItemId,
+                ".jpg");
+            string? storedThumbnailPath = hasStoredThumbnailPath
+                ? Path.Combine("Thumbnails", thumbnailFileName)
+                : null;
+            GalleryItemState item = CreateItem(
+                MissingImageItemId,
+                GenerationItemStatus.Generated,
+                Path.Combine("Art", imageFileName),
+                storedThumbnailPath);
+            RecordingAppStateStore stateStore = new(new GalleryState { Items = [item] });
+            DataRootAccessCoordinator accessCoordinator = new();
+            TrustedImageFileService trustedImageFileService = new(
+                pathProvider,
+                GenerationImageFormatRegistryTestFactory.Create(),
+                NullLogger<TrustedImageFileService>.Instance,
+                TestApiConfiguration.CreateGenerationOptionsWrapper(),
+                TestApiConfiguration.CreateTrustedFileStreamFactory());
+            GalleryStatePathConverter pathConverter = new(
+                pathProvider,
+                trustedImageFileService,
+                NullLogger<GalleryStatePathConverter>.Instance);
+            GalleryThumbnailStorage thumbnailStorage = new(
+                pathProvider,
+                trustedImageFileService,
+                fileNamePolicy,
+                new GalleryThumbnailImageFormat(),
+                TestApiConfiguration.CreateGalleryThumbnailGenerator(),
+                accessCoordinator,
+                TestApiConfiguration.CreateTrustedFileStreamFactory(),
+                NullLogger<GalleryThumbnailStorage>.Instance);
+            GalleryStateConsistencyService service = CreateService(
+                stateStore,
+                new RecordingDeletionService(),
+                accessCoordinator,
+                pathConverter,
+                thumbnailStorage: thumbnailStorage);
+
+            await service.ReconcileAsync(CancellationToken.None);
+
+            string thumbnailPath = Path.Combine(
+                pathProvider.ThumbnailsDirectory,
+                thumbnailFileName);
+            File.Exists(thumbnailPath).Should().BeTrue();
+            GalleryThumbnailTestImages.ReadSize(thumbnailPath).Width.Should().Be(
+                GalleryThumbnailSpecification.ThumbnailShortSidePixels);
+            GalleryState savedState = stateStore.SavedState
+                ?? throw new InvalidOperationException("Expected repaired gallery state.");
+            savedState.Items.Should().ContainSingle();
+            savedState.Items[0].ThumbnailPath.Should().Be(
+                $"Thumbnails/{thumbnailFileName}");
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(rootDirectory);
         }
     }
 

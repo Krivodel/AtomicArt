@@ -76,4 +76,28 @@ public sealed class GenerationImageFileNamePolicyTests
 
         result.Should().BeTrue();
     }
+
+    [Fact]
+    public void TryGetBatchIdForItem_WithMatchingGeneratedFileName_ReturnsBatchId()
+    {
+        GenerationImageFileNamePolicy policy = new();
+        string fileName = policy.BuildFileName(BatchId, ItemId, ".png");
+
+        bool isMatching = policy.TryGetBatchIdForItem(fileName, ItemId, out Guid batchId);
+
+        isMatching.Should().BeTrue();
+        batchId.Should().Be(BatchId);
+    }
+
+    [Fact]
+    public void TryGetBatchIdForItem_WithDifferentItemId_RejectsFileName()
+    {
+        GenerationImageFileNamePolicy policy = new();
+        string fileName = policy.BuildFileName(BatchId, OtherItemId, ".png");
+
+        bool isMatching = policy.TryGetBatchIdForItem(fileName, ItemId, out Guid batchId);
+
+        isMatching.Should().BeFalse();
+        batchId.Should().Be(Guid.Empty);
+    }
 }

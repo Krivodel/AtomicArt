@@ -114,7 +114,7 @@ public sealed class GenerationItemViewModelTests
     }
 
     [Fact]
-    public void DisplayThumbnailPath_WithoutThumbnailPath_ReturnsImagePath()
+    public void DisplayThumbnailPath_WithoutThumbnailPath_ReturnsEmptyPath()
     {
         GenerationItemViewModel viewModel = CreateViewModel(
             CreatedAtUtc,
@@ -122,7 +122,7 @@ public sealed class GenerationItemViewModelTests
 
         string displayPath = viewModel.DisplayThumbnailPath;
 
-        displayPath.Should().Be("image.png");
+        displayPath.Should().BeEmpty();
     }
 
     [Fact]

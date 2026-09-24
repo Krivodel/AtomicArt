@@ -76,7 +76,7 @@ public sealed class GalleryItemsControllerTests
 
         item.ImagePath.Should().Be("generation.png");
         item.ThumbnailPath.Should().BeNull();
-        item.DisplayThumbnailPath.Should().Be("generation.png");
+        item.DisplayThumbnailPath.Should().BeEmpty();
     }
 
     [Fact]
