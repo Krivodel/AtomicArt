@@ -65,6 +65,7 @@ public sealed partial class GalleryViewModel :
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly ITextClipboardService _textClipboardService;
     private readonly IClipboardImageService _clipboardImageService;
+    private readonly IPicaImageFileActions _picaImageFileActions;
     private readonly GenerationPriceFormatter _priceFormatter;
     private readonly GenerationDurationFormatter _durationFormatter;
     private readonly IGenerationCancellationService _generationCancellationService;
@@ -98,6 +99,7 @@ public sealed partial class GalleryViewModel :
         GenerationDurationFormatter durationFormatter,
         IMessenger messenger,
         ILocalizationTextProvider textProvider,
+        IPicaImageFileActions picaImageFileActions,
         IGenerationCancellationService? generationCancellationService = null,
         Dlss5SessionViewModel? dlss5 = null)
     {
@@ -117,6 +119,7 @@ public sealed partial class GalleryViewModel :
         ArgumentNullException.ThrowIfNull(durationFormatter);
         ArgumentNullException.ThrowIfNull(messenger);
         ArgumentNullException.ThrowIfNull(textProvider);
+        ArgumentNullException.ThrowIfNull(picaImageFileActions);
 
         _fileRevealService = fileRevealService;
         _imageViewerService = imageViewerService;
@@ -134,6 +137,7 @@ public sealed partial class GalleryViewModel :
         _errorHandler = errorHandler;
         _textClipboardService = textClipboardService;
         _clipboardImageService = clipboardImageService;
+        _picaImageFileActions = picaImageFileActions;
         _priceFormatter = priceFormatter;
         _durationFormatter = durationFormatter;
         _textProvider = textProvider;
@@ -310,6 +314,90 @@ public sealed partial class GalleryViewModel :
                     imagePath,
                     operationCt),
                 nameof(CopyImageAsync),
+                ct);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpenViewer))]
+    private async Task SaveAsAsync(
+        GenerationItemViewModel? item,
+        CancellationToken ct)
+    {
+        if ((item?.ImagePath is string imagePath)
+            && (CanOpenViewer(item)))
+        {
+            await ExecuteUserOperationAsync(
+                async operationCt =>
+                {
+                    await _picaImageFileActions.SaveAsAsync(imagePath, operationCt);
+                },
+                nameof(SaveAsAsync),
+                ct);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpenWith))]
+    private async Task LoadOpenWithApplicationsAsync(
+        GenerationItemViewModel? item,
+        CancellationToken ct)
+    {
+        if ((item?.ImagePath is not string imagePath)
+            || (!CanOpenWith(item)))
+        {
+            return;
+        }
+
+        item.OpenWithApplications = Array.Empty<OpenWithApplication>();
+
+        await ExecuteUserOperationAsync(
+            async operationCt =>
+            {
+                IReadOnlyList<OpenWithApplication> applications =
+                    await _picaImageFileActions.GetOpenWithApplicationsAsync(
+                        imagePath,
+                        operationCt);
+
+                if (_itemsController.Contains(item)
+                    && string.Equals(item.ImagePath, imagePath, StringComparison.Ordinal))
+                {
+                    item.OpenWithApplications = applications;
+                }
+            },
+            nameof(LoadOpenWithApplicationsAsync),
+            ct);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpenWithApplication))]
+    private async Task OpenWithApplicationAsync(
+        GalleryOpenWithApplicationRequest? request,
+        CancellationToken ct)
+    {
+        if ((request is { FilePath: string imagePath })
+            && (CanOpenWithApplication(request)))
+        {
+            await ExecuteUserOperationAsync(
+                operationCt => _picaImageFileActions.OpenWithAsync(
+                    imagePath,
+                    request.Application,
+                    operationCt),
+                nameof(OpenWithApplicationAsync),
+                ct);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpenWith))]
+    private async Task ChooseApplicationAsync(
+        GenerationItemViewModel? item,
+        CancellationToken ct)
+    {
+        if ((item?.ImagePath is string imagePath)
+            && (CanOpenWith(item)))
+        {
+            await ExecuteUserOperationAsync(
+                operationCt => _picaImageFileActions.ChooseApplicationAsync(
+                    imagePath,
+                    operationCt),
+                nameof(ChooseApplicationAsync),
                 ct);
         }
     }
@@ -545,6 +633,22 @@ public sealed partial class GalleryViewModel :
         return (item is not null)
             && (_itemsController.Contains(item))
             && (CanOpenViewer(item));
+    }
+
+    private bool CanOpenWith(GenerationItemViewModel? item)
+    {
+        return _picaImageFileActions.SupportsOpenWith
+            && CanOpenViewer(item);
+    }
+
+    private bool CanOpenWithApplication(GalleryOpenWithApplicationRequest? request)
+    {
+        return (request is not null)
+            && (CanOpenWith(request.Item))
+            && string.Equals(
+                request.Item.ImagePath,
+                request.FilePath,
+                StringComparison.Ordinal);
     }
 
     private bool CanChangeSelection(GenerationItemViewModel? item)
@@ -815,6 +919,10 @@ public sealed partial class GalleryViewModel :
     private void NotifyInteractiveCommandsCanExecuteChanged()
     {
         CopyImageCommand.NotifyCanExecuteChanged();
+        SaveAsCommand.NotifyCanExecuteChanged();
+        LoadOpenWithApplicationsCommand.NotifyCanExecuteChanged();
+        OpenWithApplicationCommand.NotifyCanExecuteChanged();
+        ChooseApplicationCommand.NotifyCanExecuteChanged();
         RevealInFolderCommand.NotifyCanExecuteChanged();
         RevealInNewFolderWindowCommand.NotifyCanExecuteChanged();
         OpenViewerCommand.NotifyCanExecuteChanged();

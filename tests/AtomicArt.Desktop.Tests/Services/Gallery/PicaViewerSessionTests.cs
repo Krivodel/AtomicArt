@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
 using Moq;
 using Pica.Protocol;
+using Pica.Viewer.Resources;
 using Pica.Viewer.Services;
 using Xunit;
 
@@ -120,7 +121,8 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
         PicaActionDefinition imbaAction = preparedRequest.Actions[1];
         imbaAction.DisplayName.Should().Be(
             TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Actions.Imba));
-        imbaAction.IconGeometry.Should().Be(GalleryIconGeometry.Imba);
+        imbaAction.IconGeometry.Should().Be(ViewerActionIconGeometry.Star);
+        imbaAction.UseOutlineIcon.Should().BeTrue();
         imbaAction.Targets.Should().Be(PicaActionTargets.CurrentImage);
         imbaAction.Order.Should().Be(preparedRequest.Actions[0].Order + 1);
     }

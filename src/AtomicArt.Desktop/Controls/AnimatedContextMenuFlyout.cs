@@ -15,6 +15,7 @@ public sealed class AnimatedContextMenuFlyout : MenuFlyout
     private const string PresenterStyleClass = "animated-context-menu";
     private const string PopupShadowResourceKey = "SukiPopupShadow";
 
+    private readonly List<AnimatedContextSubmenu> _submenus = [];
     private AvaloniaUiFrameScheduler? _frameScheduler;
     private UiAnimationScheduler? _animationScheduler;
     private MenuFlyoutPresenter? _presenter;
@@ -27,6 +28,16 @@ public sealed class AnimatedContextMenuFlyout : MenuFlyout
     {
         FlyoutPresenterClasses.Add(PresenterStyleClass);
         Popup.InheritsTransform = true;
+    }
+
+    protected override Control CreatePresenter()
+    {
+        return new MenuFlyoutPresenter(new ImmediateSubmenuMenuInteractionHandler())
+        {
+            ItemsSource = Items,
+            [!ItemsControl.ItemTemplateProperty] = this[!ItemTemplateProperty],
+            [!ItemsControl.ItemContainerThemeProperty] = this[!ItemContainerThemeProperty]
+        };
     }
 
     protected override void OnOpening(CancelEventArgs args)
@@ -72,6 +83,15 @@ public sealed class AnimatedContextMenuFlyout : MenuFlyout
 
         _frameScheduler = new AvaloniaUiFrameScheduler(topLevel);
         _animationScheduler = new UiAnimationScheduler(_frameScheduler);
+
+        foreach (MenuItem menuItem in Items.OfType<MenuItem>()
+                     .Where(menuItem => menuItem.Items.Count > 0))
+        {
+            _submenus.Add(new AnimatedContextSubmenu(
+                menuItem,
+                _animationScheduler));
+        }
+
         int animationVersion = ++_animationVersion;
         _animationScheduler.RequestAnimationFrame(
             _ => StartOpeningAnimation(animationVersion));
@@ -161,17 +181,9 @@ public sealed class AnimatedContextMenuFlyout : MenuFlyout
             return;
         }
 
-        ContextMenuRevealOrigin origin = ContextMenuRevealOriginResolver.Resolve(
-            _presenter);
-        _revealHost.BeginReveal(origin);
-        _ = _animationScheduler.AnimateValueAsync(
-            _revealHost,
-            0d,
-            1d,
-            ContextMenuRevealHost.OpeningDurationMilliseconds,
-            0,
-            MotionEasing.Linear,
-            _revealHost.ApplyOpeningProgress,
+        _revealHost.AnimateOpen(
+            _animationScheduler,
+            ContextMenuRevealOriginResolver.Resolve(_presenter),
             () => CompleteOpeningAnimation(animationVersion));
     }
 
@@ -204,6 +216,13 @@ public sealed class AnimatedContextMenuFlyout : MenuFlyout
     {
         _animationVersion++;
 
+        foreach (AnimatedContextSubmenu submenu in _submenus)
+        {
+            submenu.Dispose();
+        }
+
+        _submenus.Clear();
+
         if (_animationScheduler is not null && _revealHost is not null)
         {
             _animationScheduler.Cancel(_revealHost);
@@ -221,7 +240,7 @@ public sealed class AnimatedContextMenuFlyout : MenuFlyout
             return;
         }
 
-        MenuFlyoutPresenter presenter = _revealHost.DetachPresenter();
+        MenuFlyoutPresenter presenter = (MenuFlyoutPresenter)_revealHost.DetachContent();
         _revealHost.Dispose();
         Popup.Child = presenter;
     }

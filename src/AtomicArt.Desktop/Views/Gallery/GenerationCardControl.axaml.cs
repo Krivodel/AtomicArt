@@ -25,6 +25,26 @@ public partial class GenerationCardControl :
         get => GetValue(GenerationCardControl.CopyImageCommandProperty);
         set => SetValue(GenerationCardControl.CopyImageCommandProperty, value);
     }
+    public IRelayCommand? SaveAsCommand
+    {
+        get => GetValue(GenerationCardControl.SaveAsCommandProperty);
+        set => SetValue(GenerationCardControl.SaveAsCommandProperty, value);
+    }
+    public IRelayCommand? LoadOpenWithApplicationsCommand
+    {
+        get => GetValue(GenerationCardControl.LoadOpenWithApplicationsCommandProperty);
+        set => SetValue(GenerationCardControl.LoadOpenWithApplicationsCommandProperty, value);
+    }
+    public IRelayCommand? OpenWithApplicationCommand
+    {
+        get => GetValue(GenerationCardControl.OpenWithApplicationCommandProperty);
+        set => SetValue(GenerationCardControl.OpenWithApplicationCommandProperty, value);
+    }
+    public IRelayCommand? ChooseApplicationCommand
+    {
+        get => GetValue(GenerationCardControl.ChooseApplicationCommandProperty);
+        set => SetValue(GenerationCardControl.ChooseApplicationCommandProperty, value);
+    }
     public IRelayCommand? RevealInFolderCommand
     {
         get => GetValue(GenerationCardControl.RevealInFolderCommandProperty);
@@ -89,6 +109,18 @@ public partial class GenerationCardControl :
     public static readonly StyledProperty<IRelayCommand?> CopyImageCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(CopyImageCommand));
+    public static readonly StyledProperty<IRelayCommand?> SaveAsCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(SaveAsCommand));
+    public static readonly StyledProperty<IRelayCommand?> LoadOpenWithApplicationsCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(LoadOpenWithApplicationsCommand));
+    public static readonly StyledProperty<IRelayCommand?> OpenWithApplicationCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(OpenWithApplicationCommand));
+    public static readonly StyledProperty<IRelayCommand?> ChooseApplicationCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
+            nameof(ChooseApplicationCommand));
     public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(RevealInFolderCommand));
@@ -132,14 +164,22 @@ public partial class GenerationCardControl :
         set => GenerationPreview.ExpansionHost = value;
     }
 
+    private readonly OpenWithApplicationIconStore _openWithIcons = new();
     private PromptDragCandidate? _promptDragCandidate;
     private bool _isPromptDragActive;
+    private long _openWithLoadVersion;
 
     public GenerationCardControl()
     {
         InitializeComponent();
         GenerationPreview.OverflowOwner = this;
         AttachPromptDragHandlers();
+        OpenWithMenuItem.PropertyChanged += OnOpenWithMenuItemPropertyChanged;
+        if (GenerationCardContainer.ContextFlyout is AnimatedContextMenuFlyout contextFlyout)
+        {
+            contextFlyout.Opening += OnContextFlyoutOpening;
+        }
+
         GenerationCardContainer.AddHandler(
             PointerPressedEvent,
             OnContextMenuPointerPressed,
@@ -218,6 +258,13 @@ public partial class GenerationCardControl :
             previewSourceScheduler);
     }
 
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs eventArgs)
+    {
+        _openWithLoadVersion++;
+        ClearOpenWithApplicationItems(OpenWithMenuItem);
+        base.OnDetachedFromVisualTree(eventArgs);
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -267,6 +314,16 @@ public partial class GenerationCardControl :
             OnPromptDragSourcePointerCaptureLost;
     }
 
+    private void ClearOpenWithApplicationItems(MenuItem menuItem)
+    {
+        while (menuItem.Items.Count > 1)
+        {
+            menuItem.Items.RemoveAt(0);
+        }
+
+        _openWithIcons.Clear();
+    }
+
     private void OnContextMenuPointerPressed(
         object? sender,
         PointerPressedEventArgs eventArgs)
@@ -280,6 +337,79 @@ public partial class GenerationCardControl :
         {
             eventArgs.Handled = true;
             contextFlyout.ShowAt(GenerationCardContainer, true);
+        }
+    }
+
+    private void OnContextFlyoutOpening(object? sender, EventArgs eventArgs)
+    {
+        _ = sender;
+        _ = eventArgs;
+        OpenWithMenuItem.IsEnabled =
+            LoadOpenWithApplicationsCommand?.CanExecute(DataContext) == true;
+    }
+
+    private async void OnOpenWithSubmenuOpened(
+        object? sender,
+        RoutedEventArgs eventArgs)
+    {
+        _ = eventArgs;
+
+        if ((sender is not MenuItem menuItem)
+            || (DataContext is not GenerationItemViewModel item)
+            || (item.ImagePath is not string imagePath)
+            || (LoadOpenWithApplicationsCommand is not IAsyncRelayCommand command)
+            || (!command.CanExecute(item)))
+        {
+            return;
+        }
+
+        long loadVersion = ++_openWithLoadVersion;
+
+        ClearOpenWithApplicationItems(menuItem);
+
+        await command.ExecuteAsync(item);
+
+        if ((loadVersion != _openWithLoadVersion)
+            || (!ReferenceEquals(DataContext, item))
+            || (!string.Equals(item.ImagePath, imagePath, StringComparison.Ordinal))
+            || (!menuItem.IsSubMenuOpen))
+        {
+            return;
+        }
+
+        int index = 0;
+
+        foreach (OpenWithApplication application in item.OpenWithApplications)
+        {
+            TextBlock header = new() { Text = application.DisplayName };
+            header.Classes.Add("context-menu-item-header");
+            Image? icon = _openWithIcons.CreateIcon(application);
+            icon?.Classes.Add("gallery-open-with-application-icon");
+            MenuItem applicationMenuItem = new()
+            {
+                Header = header,
+                Icon = icon,
+                Command = OpenWithApplicationCommand,
+                CommandParameter = new GalleryOpenWithApplicationRequest(
+                    item,
+                    imagePath,
+                    application)
+            };
+            menuItem.Items.Insert(index++, applicationMenuItem);
+        }
+    }
+
+    private void OnOpenWithMenuItemPropertyChanged(
+        object? sender,
+        AvaloniaPropertyChangedEventArgs eventArgs)
+    {
+        _ = sender;
+
+        if ((eventArgs.Property == MenuItem.IsSubMenuOpenProperty)
+            && !OpenWithMenuItem.IsSubMenuOpen)
+        {
+            _openWithLoadVersion++;
+            ClearOpenWithApplicationItems(OpenWithMenuItem);
         }
     }
 

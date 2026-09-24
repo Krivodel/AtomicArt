@@ -4,6 +4,7 @@
              xmlns:controls="using:AtomicArt.Desktop.Views.Gallery"
              xmlns:dlss5="using:AtomicArt.Desktop.Services.Dlss5"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:picaResources="using:Pica.Viewer.Resources"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:uiControls="using:AtomicArt.Desktop.Controls"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationCardControl"
@@ -22,19 +23,19 @@
                     </MenuItem.Header>
                     <MenuItem.Icon>
                         <Path Classes="gallery-outline-icon"
-                              Data="{StaticResource MetadataCopyIcon}" />
+                              Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem x:Name="ShowInFolderMenuItem"
-                          Command="{Binding #GenerationCard.RevealInFolderCommand}"
+                <MenuItem x:Name="SaveAsMenuItem"
+                          Command="{Binding #GenerationCard.SaveAsCommand}"
                           CommandParameter="{Binding #GenerationCard.DataContext}">
                     <MenuItem.Header>
                         <TextBlock Classes="context-menu-item-header"
-                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.ShowInFolder}}" />
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.SaveAs}}" />
                     </MenuItem.Header>
                     <MenuItem.Icon>
                         <Path Classes="gallery-outline-icon"
-                              Data="{StaticResource GalleryContextMenuFolderIcon}" />
+                              Data="{x:Static picaResources:ViewerActionIconGeometry.Save}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem x:Name="ImbaMenuItem"
@@ -46,7 +47,7 @@
                     </MenuItem.Header>
                     <MenuItem.Icon>
                         <Path Classes="gallery-outline-icon"
-                              Data="{x:Static resources:GalleryIconGeometry.Imba}" />
+                              Data="{x:Static picaResources:ViewerActionIconGeometry.Star}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem x:Name="OpenDlss5MenuItem"
@@ -62,6 +63,37 @@
                                   Data="{x:Static dlss5:Dlss5FeatureDefinition.NvidiaIconGeometry}" />
                     </MenuItem.Icon>
                 </MenuItem>
+                <MenuItem x:Name="ShowInFolderMenuItem"
+                          Command="{Binding #GenerationCard.RevealInFolderCommand}"
+                          CommandParameter="{Binding #GenerationCard.DataContext}">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.ShowInFolder}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <Path Classes="gallery-outline-icon"
+                              Data="{x:Static picaResources:ViewerActionIconGeometry.ShowInFolder}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem x:Name="OpenWithMenuItem"
+                          SubmenuOpened="OnOpenWithSubmenuOpened">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.OpenWith}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <Path Classes="gallery-outline-icon"
+                              Data="{x:Static picaResources:ViewerActionIconGeometry.OpenWith}" />
+                    </MenuItem.Icon>
+                    <MenuItem x:Name="ChooseApplicationMenuItem"
+                              Command="{Binding #GenerationCard.ChooseApplicationCommand}"
+                              CommandParameter="{Binding #GenerationCard.DataContext}">
+                        <MenuItem.Header>
+                            <TextBlock Classes="context-menu-item-header"
+                                       Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.ChooseApplication}}" />
+                        </MenuItem.Header>
+                    </MenuItem>
+                </MenuItem>
                 <MenuItem x:Name="DeleteMenuItem"
                           Command="{Binding #GenerationCard.DeleteOrCancelCommand}"
                           CommandParameter="{Binding #GenerationCard.DataContext}">
@@ -70,8 +102,13 @@
                                    Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys.ConfirmDeletion}}" />
                     </MenuItem.Header>
                     <MenuItem.Icon>
-                        <Path Classes="Danger gallery-outline-icon"
-                              Data="{StaticResource GalleryContextMenuDeleteIcon}" />
+                        <Grid Width="{StaticResource ContextMenuIconSize}"
+                              Height="{StaticResource ContextMenuIconSize}">
+                            <Path HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Classes="Danger gallery-outline-icon"
+                                  Data="{StaticResource GalleryContextMenuDeleteIcon}" />
+                        </Grid>
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem x:Name="SelectMenuItem"
@@ -166,7 +203,7 @@
                         IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
                         Click="OnRevealInFolderClick">
                     <Path Classes="gallery-outline-icon"
-                          Data="{StaticResource GalleryContextMenuFolderIcon}" />
+                          Data="{x:Static picaResources:ViewerActionIconGeometry.ShowInFolder}" />
                 </Button>
 
                 <Button x:Name="DeleteButton"

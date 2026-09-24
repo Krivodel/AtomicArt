@@ -3,6 +3,7 @@
              xmlns:i18n="https://codewf.com"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
              xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
+             xmlns:picaResources="using:Pica.Viewer.Resources"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:views="using:AtomicArt.Desktop.Views.Gallery"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationMetadataOverlayView"
@@ -253,7 +254,7 @@
                             <Path Width="15"
                                   Height="15"
                                   Classes="metadata-outline-icon"
-                                  Data="{StaticResource MetadataCopyIcon}"
+                                  Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
                                   Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
                         </Button>
                     </Grid>
@@ -294,7 +295,7 @@
                                 <Path Width="15"
                                       Height="15"
                                       Classes="metadata-outline-icon"
-                                      Data="{StaticResource MetadataCopyIcon}"
+                                      Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
                                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
                             </Button>
                         </Grid>

@@ -31,15 +31,39 @@
         <ControlTheme x:Key="ContextMenuItemTheme"
                       BasedOn="{StaticResource SukiMenuItemStyle}"
                       TargetType="MenuItem">
-            <Style Selector="^:icon /template/ ContentPresenter#PART_IconPresenter">
-                <Setter Property="RenderTransform">
-                    <TranslateTransform X="4" />
-                </Setter>
+            <Style Selector="^:icon /template/ ContentPresenter#PART_HeaderPresenter">
+                <Setter Property="Margin"
+                        Value="8,0,5,0" />
             </Style>
 
             <Style Selector="^:icon /template/ Rectangle#PART_HorizontalSeparator">
+                <Setter Property="Width"
+                        Value="0" />
+                <Setter Property="Margin"
+                        Value="{StaticResource ZeroThickness}" />
                 <Setter Property="Opacity"
                         Value="0" />
+            </Style>
+
+            <Style Selector="^.custom-submenu-animation /template/ Popup#PART_Popup">
+                <Setter Property="InheritsTransform"
+                        Value="True" />
+                <Setter Property="Opacity"
+                        Value="1" />
+            </Style>
+
+            <Style Selector="^.custom-submenu-animation /template/ Border#PART_Border">
+                <Setter Property="Background"
+                        Value="{StaticResource ContextMenuBackgroundBrush}" />
+                <Setter Property="BorderThickness"
+                        Value="{StaticResource ZeroThickness}" />
+                <Setter Property="CornerRadius"
+                        Value="{StaticResource ContextMenuCornerRadius}" />
+            </Style>
+
+            <Style Selector="^.custom-submenu-animation /template/ Panel > Border:nth-child(1)">
+                <Setter Property="IsVisible"
+                        Value="False" />
             </Style>
         </ControlTheme>
     </Styles.Resources>
@@ -78,7 +102,7 @@
         <Setter Property="BorderThickness"
                 Value="{StaticResource ZeroThickness}" />
         <Setter Property="CornerRadius"
-                Value="8" />
+                Value="{StaticResource ContextMenuCornerRadius}" />
         <Setter Property="Focusable"
                 Value="True" />
     </Style>
@@ -111,6 +135,8 @@
     </Style>
 
     <Style Selector="Button.card-action Path.gallery-outline-icon">
+        <Setter Property="Height"
+                Value="{StaticResource GalleryCardOutlineIconSize}" />
         <Setter Property="Stroke"
                 Value="{Binding $parent[Button].Foreground}" />
         <Setter Property="Effect">
@@ -120,11 +146,27 @@
                               OffsetY="{StaticResource GalleryCardActionIconShadowOffsetY}"
                               Opacity="{StaticResource GalleryCardActionIconShadowOpacity}" />
         </Setter>
+        <Setter Property="Width"
+                Value="{StaticResource GalleryCardOutlineIconSize}" />
     </Style>
 
     <Style Selector="Path.gallery-outline-icon.Danger">
         <Setter Property="Stroke"
                 Value="{DynamicResource GalleryDeleteIconColor}" />
+        <Setter Property="Width"
+                Value="{StaticResource GalleryDeleteIconWidth}" />
+    </Style>
+
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu Path.gallery-outline-icon.Danger">
+        <Setter Property="Width"
+                Value="{StaticResource ContextMenuDeleteIconWidth}" />
+    </Style>
+
+    <Style Selector="Image.gallery-open-with-application-icon">
+        <Setter Property="Height"
+                Value="{StaticResource ContextMenuIconSize}" />
+        <Setter Property="Width"
+                Value="{StaticResource ContextMenuIconSize}" />
     </Style>
 
     <Style Selector="MenuFlyoutPresenter.animated-context-menu /template/ Panel">

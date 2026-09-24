@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Pica.Viewer.Services;
 
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Logging;
@@ -191,6 +192,7 @@ public class App : Avalonia.Application
         windowAttachmentService.Attach(mainWindow);
         trayAttachmentService.Attach(mainWindow);
         filePickerAttachmentService.Attach(mainWindow.StorageProvider);
+        GetRequiredService<IPicaImageFileActions>().Attach(mainWindow.StorageProvider);
         virtualFileDropAttachmentService.Attach(mainWindow);
         s_singleInstanceCoordinator?.AttachActivationHandler(
             () => ActivateMainWindowAsync(windowStateService));

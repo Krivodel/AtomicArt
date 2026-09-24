@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Pica.Viewer.Services;
 
 using CommunityToolkit.Mvvm.Messaging;
 
@@ -48,7 +49,8 @@ internal static class GalleryViewModelTestFactory
         IGalleryStateService? galleryStateService = null,
         IGalleryItemDeletionService? galleryItemDeletionService = null,
         IGalleryThumbnailStorage? galleryThumbnailStorage = null,
-        IMessenger? messenger = null)
+        IMessenger? messenger = null,
+        IPicaImageFileActions? picaImageFileActions = null)
     {
         IFileRevealService revealService =
             fileRevealService ?? new SuccessfulFileRevealService();
@@ -142,6 +144,7 @@ internal static class GalleryViewModelTestFactory
                 TestLocalizationTextProvider.Default),
             localizationMessenger,
             TestLocalizationTextProvider.Default,
+            picaImageFileActions ?? new Mock<IPicaImageFileActions>().Object,
             generationCancellationService);
     }
 

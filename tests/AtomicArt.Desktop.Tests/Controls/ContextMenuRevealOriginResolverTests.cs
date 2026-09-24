@@ -30,4 +30,25 @@ public sealed class ContextMenuRevealOriginResolverTests
 
         origin.Should().Be(expectedOrigin);
     }
+
+    [Theory]
+    [InlineData(300, 200, (int)ContextMenuRevealOrigin.TopLeft)]
+    [InlineData(0, 200, (int)ContextMenuRevealOrigin.TopRight)]
+    [InlineData(300, 20, (int)ContextMenuRevealOrigin.BottomLeft)]
+    [InlineData(0, 20, (int)ContextMenuRevealOrigin.BottomRight)]
+    public void ResolveSubmenu_WithRelativePosition_RevealsFromAttachedCorner(
+        int submenuX,
+        int submenuY,
+        int expectedOriginValue)
+    {
+        PixelRect parentBounds = new(200, 200, 100, 40);
+        PixelRect submenuBounds = new(submenuX, submenuY, 200, 160);
+        ContextMenuRevealOrigin expectedOrigin = (ContextMenuRevealOrigin)expectedOriginValue;
+
+        ContextMenuRevealOrigin origin = ContextMenuRevealOriginResolver.ResolveSubmenu(
+            parentBounds,
+            submenuBounds);
+
+        origin.Should().Be(expectedOrigin);
+    }
 }

@@ -13,4 +13,8 @@ internal sealed record GalleryCardCommands(
     IRelayCommand? ToggleFavorite,
     IRelayCommand? ToggleSelection,
     IRelayCommand? SelectRange,
-    IRelayCommand? OpenDlss5 = null);
+    IRelayCommand? OpenDlss5 = null,
+    IRelayCommand? SaveAs = null,
+    IRelayCommand? LoadOpenWithApplications = null,
+    IRelayCommand? OpenWithApplication = null,
+    IRelayCommand? ChooseApplication = null);

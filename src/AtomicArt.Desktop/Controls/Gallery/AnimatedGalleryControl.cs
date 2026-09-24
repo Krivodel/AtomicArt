@@ -29,6 +29,26 @@ public partial class AnimatedGalleryControl : UserControl
         get => GetValue(AnimatedGalleryControl.CopyImageCommandProperty);
         set => SetValue(AnimatedGalleryControl.CopyImageCommandProperty, value);
     }
+    public IRelayCommand? SaveAsCommand
+    {
+        get => GetValue(AnimatedGalleryControl.SaveAsCommandProperty);
+        set => SetValue(AnimatedGalleryControl.SaveAsCommandProperty, value);
+    }
+    public IRelayCommand? LoadOpenWithApplicationsCommand
+    {
+        get => GetValue(AnimatedGalleryControl.LoadOpenWithApplicationsCommandProperty);
+        set => SetValue(AnimatedGalleryControl.LoadOpenWithApplicationsCommandProperty, value);
+    }
+    public IRelayCommand? OpenWithApplicationCommand
+    {
+        get => GetValue(AnimatedGalleryControl.OpenWithApplicationCommandProperty);
+        set => SetValue(AnimatedGalleryControl.OpenWithApplicationCommandProperty, value);
+    }
+    public IRelayCommand? ChooseApplicationCommand
+    {
+        get => GetValue(AnimatedGalleryControl.ChooseApplicationCommandProperty);
+        set => SetValue(AnimatedGalleryControl.ChooseApplicationCommandProperty, value);
+    }
     public IRelayCommand? RevealInFolderCommand
     {
         get => GetValue(AnimatedGalleryControl.RevealInFolderCommandProperty);
@@ -96,6 +116,18 @@ public partial class AnimatedGalleryControl : UserControl
     public static readonly StyledProperty<IRelayCommand?> CopyImageCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(CopyImageCommand));
+    public static readonly StyledProperty<IRelayCommand?> SaveAsCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(SaveAsCommand));
+    public static readonly StyledProperty<IRelayCommand?> LoadOpenWithApplicationsCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(LoadOpenWithApplicationsCommand));
+    public static readonly StyledProperty<IRelayCommand?> OpenWithApplicationCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(OpenWithApplicationCommand));
+    public static readonly StyledProperty<IRelayCommand?> ChooseApplicationCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
+            nameof(ChooseApplicationCommand));
     public static readonly StyledProperty<IRelayCommand?> RevealInFolderCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(RevealInFolderCommand));
@@ -367,6 +399,10 @@ public partial class AnimatedGalleryControl : UserControl
     private static bool IsCommandProperty(AvaloniaProperty property)
     {
         return (property == AnimatedGalleryControl.CopyImageCommandProperty)
+               || (property == AnimatedGalleryControl.SaveAsCommandProperty)
+               || (property == AnimatedGalleryControl.LoadOpenWithApplicationsCommandProperty)
+               || (property == AnimatedGalleryControl.OpenWithApplicationCommandProperty)
+               || (property == AnimatedGalleryControl.ChooseApplicationCommandProperty)
                || (property == AnimatedGalleryControl.RevealInFolderCommandProperty)
                || (property == AnimatedGalleryControl.RevealInNewFolderWindowCommandProperty)
                || (property == AnimatedGalleryControl.OpenViewerCommandProperty)

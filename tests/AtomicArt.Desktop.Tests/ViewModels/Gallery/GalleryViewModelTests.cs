@@ -63,6 +63,91 @@ public sealed class GalleryViewModelTests
     }
 
     [Fact]
+    public async Task SaveAsCommand_WithGeneratedImage_UsesPicaFileActions()
+    {
+        Mock<IPicaImageFileActions> fileActions = new();
+        fileActions.Setup(actions => actions.SaveAsAsync(
+                "image.webp",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            picaImageFileActions: fileActions.Object);
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(imagePath: "image.webp"));
+
+        await viewModel.SaveAsCommand.ExecuteAsync(item);
+
+        fileActions.Verify(actions => actions.SaveAsAsync(
+            "image.webp",
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task OpenWithCommands_WithGeneratedImage_UsePicaAssociationsAndApplication()
+    {
+        OpenWithApplication application = new("image-editor", "Image Editor", null);
+        Mock<IPicaImageFileActions> fileActions = new();
+        fileActions.SetupGet(actions => actions.SupportsOpenWith).Returns(true);
+        fileActions.Setup(actions => actions.GetOpenWithApplicationsAsync(
+                "image.webp",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<OpenWithApplication> { application });
+        fileActions.Setup(actions => actions.OpenWithAsync(
+                "image.webp",
+                application,
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        fileActions.Setup(actions => actions.ChooseApplicationAsync(
+                "image.webp",
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            picaImageFileActions: fileActions.Object);
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(imagePath: "image.webp"));
+
+        await viewModel.LoadOpenWithApplicationsCommand.ExecuteAsync(item);
+        await viewModel.OpenWithApplicationCommand.ExecuteAsync(
+            new GalleryOpenWithApplicationRequest(item, "image.webp", application));
+        await viewModel.ChooseApplicationCommand.ExecuteAsync(item);
+
+        item.OpenWithApplications.Should().ContainSingle().Which.Should().Be(application);
+        fileActions.Verify(actions => actions.GetOpenWithApplicationsAsync(
+            "image.webp",
+            It.IsAny<CancellationToken>()), Times.Once);
+        fileActions.Verify(actions => actions.OpenWithAsync(
+            "image.webp",
+            application,
+            It.IsAny<CancellationToken>()), Times.Once);
+        fileActions.Verify(actions => actions.ChooseApplicationAsync(
+            "image.webp",
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void OpenWithApplicationCommand_AfterImagePathChanges_DisablesStaleApplication()
+    {
+        Mock<IPicaImageFileActions> fileActions = new();
+        fileActions.SetupGet(actions => actions.SupportsOpenWith).Returns(true);
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            picaImageFileActions: fileActions.Object);
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(imagePath: "original.webp"));
+        GalleryOpenWithApplicationRequest request = new(
+            item,
+            "original.webp",
+            new OpenWithApplication("image-editor", "Image Editor", null));
+        item.ImagePath = "replacement.png";
+
+        bool canExecute = viewModel.OpenWithApplicationCommand.CanExecute(request);
+
+        canExecute.Should().BeFalse();
+    }
+
+    [Fact]
     public void ConfigureImageViewerAttachments_WithCommand_RegistersSharedViewerAction()
     {
         RecordingImageViewerService imageViewerService = new();

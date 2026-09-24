@@ -306,7 +306,11 @@ internal sealed class AnimatedGallerySceneController
             _owner.ToggleFavoriteCommand,
             _owner.ToggleSelectionCommand,
             _owner.SelectRangeCommand,
-            _owner.OpenDlss5Command);
+            _owner.OpenDlss5Command,
+            _owner.SaveAsCommand,
+            _owner.LoadOpenWithApplicationsCommand,
+            _owner.OpenWithApplicationCommand,
+            _owner.ChooseApplicationCommand);
     }
 
     private void ApplyCurrentSelectionMode(Control control)

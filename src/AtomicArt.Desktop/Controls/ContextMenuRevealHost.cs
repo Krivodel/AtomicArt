@@ -16,7 +16,7 @@ internal sealed class ContextMenuRevealHost : Decorator, IDisposable
     internal const double InitialHeightRatio = 0.3d;
 
     internal Rect RevealBounds => CalculateRevealBounds(
-        _presenter.Bounds,
+        _content.Bounds,
         _widthRatio,
         _heightRatio,
         _origin);
@@ -26,36 +26,39 @@ internal sealed class ContextMenuRevealHost : Decorator, IDisposable
 
     private const double ShadowMeasurementSize = 1d;
 
-    private readonly MenuFlyoutPresenter _presenter;
+    private readonly Control _content;
     private BoxShadows _boxShadows;
     private ContextMenuRevealOrigin _origin;
     private bool _isRevealActive;
     private double _widthRatio = InitialWidthRatio;
     private double _heightRatio = InitialHeightRatio;
 
-    internal ContextMenuRevealHost(MenuFlyoutPresenter presenter)
+    internal ContextMenuRevealHost(Control content)
     {
-        _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
-        Child = presenter;
+        _content = content ?? throw new ArgumentNullException(nameof(content));
+        Child = content;
         Opacity = 0d;
     }
 
     public override void Render(DrawingContext context)
     {
-        Rect contentBounds = _isRevealActive
-            ? RevealBounds
-            : _presenter.Bounds;
-        Rect shadowBounds = CalculateShadowBounds(
-            contentBounds,
-            _presenter.BorderThickness);
-        RoundedRect roundedShadowBounds = new(
-            shadowBounds,
-            _presenter.CornerRadius);
-        context.DrawRectangle(
-            null,
-            null,
-            roundedShadowBounds,
-            _boxShadows);
+        if (_content is MenuFlyoutPresenter presenter)
+        {
+            Rect contentBounds = _isRevealActive
+                ? RevealBounds
+                : presenter.Bounds;
+            Rect shadowBounds = CalculateShadowBounds(
+                contentBounds,
+                presenter.BorderThickness);
+            RoundedRect roundedShadowBounds = new(
+                shadowBounds,
+                presenter.CornerRadius);
+            context.DrawRectangle(
+                null,
+                null,
+                roundedShadowBounds,
+                _boxShadows);
+        }
 
         base.Render(context);
     }
@@ -64,9 +67,9 @@ internal sealed class ContextMenuRevealHost : Decorator, IDisposable
     {
         _isRevealActive = false;
         Opacity = 1d;
-        _presenter.Clip = null;
-        _presenter.Opacity = 1d;
-        _presenter.IsHitTestVisible = true;
+        _content.Clip = null;
+        _content.Opacity = 1d;
+        _content.IsHitTestVisible = true;
     }
 
     internal static Rect CalculateRevealBounds(
@@ -98,14 +101,14 @@ internal sealed class ContextMenuRevealHost : Decorator, IDisposable
         return contentBounds.Deflate(borderThickness);
     }
 
-    internal MenuFlyoutPresenter DetachPresenter()
+    internal Control DetachContent()
     {
         Child = null;
-        _presenter.Clip = null;
-        _presenter.Opacity = 1d;
-        _presenter.IsHitTestVisible = true;
+        _content.Clip = null;
+        _content.Opacity = 1d;
+        _content.IsHitTestVisible = true;
 
-        return _presenter;
+        return _content;
     }
 
     internal void BeginReveal(ContextMenuRevealOrigin origin)
@@ -113,8 +116,28 @@ internal sealed class ContextMenuRevealHost : Decorator, IDisposable
         _isRevealActive = true;
         _origin = origin;
         Opacity = 0d;
-        _presenter.Opacity = 1d;
+        _content.Opacity = 1d;
         ApplyOpeningProgress(0d);
+    }
+
+    internal void AnimateOpen(
+        UiAnimationScheduler animationScheduler,
+        ContextMenuRevealOrigin origin,
+        Action completed)
+    {
+        ArgumentNullException.ThrowIfNull(animationScheduler);
+        ArgumentNullException.ThrowIfNull(completed);
+
+        BeginReveal(origin);
+        _ = animationScheduler.AnimateValueAsync(
+            this,
+            0d,
+            1d,
+            OpeningDurationMilliseconds,
+            0,
+            MotionEasing.Linear,
+            ApplyOpeningProgress,
+            completed);
     }
 
     internal void ApplyOpeningProgress(double progress)
@@ -133,7 +156,7 @@ internal sealed class ContextMenuRevealHost : Decorator, IDisposable
             elapsedMilliseconds / OpacityRevealDurationMilliseconds,
             0d,
             1d));
-        UpdatePresenterClip();
+        UpdateContentClip();
         InvalidateVisual();
     }
 
@@ -143,36 +166,41 @@ internal sealed class ContextMenuRevealHost : Decorator, IDisposable
         _heightRatio = 1d;
         _isRevealActive = false;
         Opacity = 1d;
-        _presenter.Clip = null;
-        _presenter.Opacity = 1d;
-        _presenter.IsHitTestVisible = true;
+        _content.Clip = null;
+        _content.Opacity = 1d;
+        _content.IsHitTestVisible = true;
         InvalidateVisual();
     }
 
     internal void SetBoxShadows(BoxShadows boxShadows)
     {
         _boxShadows = boxShadows;
-        Padding = CalculateShadowPadding(
-            boxShadows,
-            _presenter.BorderThickness);
+
+        if (_content is MenuFlyoutPresenter presenter)
+        {
+            Padding = CalculateShadowPadding(
+                boxShadows,
+                presenter.BorderThickness);
+        }
+
         InvalidateVisual();
     }
 
-    private void UpdatePresenterClip()
+    private void UpdateContentClip()
     {
         if (!_isRevealActive)
         {
-            _presenter.Clip = null;
+            _content.Clip = null;
             return;
         }
 
         Rect revealBounds = RevealBounds;
-        Rect presenterClipBounds = new(
-            revealBounds.X - _presenter.Bounds.X,
-            revealBounds.Y - _presenter.Bounds.Y,
+        Rect contentClipBounds = new(
+            revealBounds.X - _content.Bounds.X,
+            revealBounds.Y - _content.Bounds.Y,
             revealBounds.Width,
             revealBounds.Height);
-        _presenter.Clip = new RectangleGeometry(presenterClipBounds);
+        _content.Clip = new RectangleGeometry(contentClipBounds);
     }
 
     private static Thickness CalculateShadowPadding(

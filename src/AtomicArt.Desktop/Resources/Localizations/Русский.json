@@ -112,6 +112,9 @@
         "Select": "Выделить",
         "ShowInGallery": "Показать в галерее",
         "ShowInFolder": "Показать в папке",
+        "SaveAs": "Сохранить как",
+        "OpenWith": "Открыть с помощью",
+        "ChooseApplication": "Выбрать другое приложение…",
         "Imba": "ИМБА",
         "OpenDlss5": "Открыть в DLSS 5"
       },

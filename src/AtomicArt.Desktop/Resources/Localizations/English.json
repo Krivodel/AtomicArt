@@ -112,6 +112,9 @@
         "Select": "Select",
         "ShowInGallery": "Show in gallery",
         "ShowInFolder": "Show in folder",
+        "SaveAs": "Save as",
+        "OpenWith": "Open with",
+        "ChooseApplication": "Choose another application…",
         "Imba": "IMBA",
         "OpenDlss5": "Open in DLSS 5"
       },

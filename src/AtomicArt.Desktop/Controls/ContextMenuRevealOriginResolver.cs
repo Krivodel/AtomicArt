@@ -13,21 +13,30 @@ internal static class ContextMenuRevealOriginResolver
         TopLevel? topLevel = TopLevel.GetTopLevel(menuVisual);
         Screens? screens = topLevel?.Screens;
         Screen? screen = screens?.ScreenFromVisual(menuVisual);
-        if (topLevel is null
-            || screen is null
-            || (menuVisual.Bounds.Width <= 0d)
-            || (menuVisual.Bounds.Height <= 0d))
+        PixelRect? menuBounds = GetScreenBounds(menuVisual);
+        if (screen is null || menuBounds is null)
         {
             return ContextMenuRevealOrigin.TopLeft;
         }
 
-        PixelPoint topLeft = menuVisual.PointToScreen(new Point());
-        PixelSize pixelSize = PixelSize.FromSize(
-            menuVisual.Bounds.Size,
-            topLevel.RenderScaling);
-        PixelRect menuBounds = new(topLeft, pixelSize);
+        return Resolve(screen.WorkingArea, menuBounds.Value);
+    }
 
-        return Resolve(screen.WorkingArea, menuBounds);
+    public static ContextMenuRevealOrigin ResolveSubmenu(
+        Visual parentMenuItem,
+        Visual submenu)
+    {
+        ArgumentNullException.ThrowIfNull(parentMenuItem);
+        ArgumentNullException.ThrowIfNull(submenu);
+
+        PixelRect? parentBounds = GetScreenBounds(parentMenuItem);
+        PixelRect? submenuBounds = GetScreenBounds(submenu);
+        if (parentBounds is null || submenuBounds is null)
+        {
+            return Resolve(submenu);
+        }
+
+        return ResolveSubmenu(parentBounds.Value, submenuBounds.Value);
     }
 
     public static ContextMenuRevealOrigin Resolve(
@@ -49,5 +58,44 @@ internal static class ContextMenuRevealOriginResolver
         return revealFromBottom
             ? ContextMenuRevealOrigin.BottomLeft
             : ContextMenuRevealOrigin.TopLeft;
+    }
+
+    public static ContextMenuRevealOrigin ResolveSubmenu(
+        PixelRect parentBounds,
+        PixelRect submenuBounds)
+    {
+        bool revealFromRight = submenuBounds.X + (submenuBounds.Width / 2d)
+            < parentBounds.X + (parentBounds.Width / 2d);
+        bool revealFromBottom = submenuBounds.Y + (submenuBounds.Height / 2d)
+            < parentBounds.Y + (parentBounds.Height / 2d);
+
+        if (revealFromRight)
+        {
+            return revealFromBottom
+                ? ContextMenuRevealOrigin.BottomRight
+                : ContextMenuRevealOrigin.TopRight;
+        }
+
+        return revealFromBottom
+            ? ContextMenuRevealOrigin.BottomLeft
+            : ContextMenuRevealOrigin.TopLeft;
+    }
+
+    private static PixelRect? GetScreenBounds(Visual visual)
+    {
+        TopLevel? topLevel = TopLevel.GetTopLevel(visual);
+        if (topLevel is null
+            || (visual.Bounds.Width <= 0d)
+            || (visual.Bounds.Height <= 0d))
+        {
+            return null;
+        }
+
+        PixelPoint topLeft = visual.PointToScreen(new Point());
+        PixelSize pixelSize = PixelSize.FromSize(
+            visual.Bounds.Size,
+            topLevel.RenderScaling);
+
+        return new PixelRect(topLeft, pixelSize);
     }
 }

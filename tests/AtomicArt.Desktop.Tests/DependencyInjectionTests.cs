@@ -444,9 +444,14 @@ public sealed class DependencyInjectionTests
             serviceProvider.GetRequiredService<IImageViewerWindowFactory>();
         IImageViewerWindowFactory secondWindowFactory =
             serviceProvider.GetRequiredService<IImageViewerWindowFactory>();
+        IPicaImageFileActions firstFileActions =
+            serviceProvider.GetRequiredService<IPicaImageFileActions>();
+        IPicaImageFileActions secondFileActions =
+            serviceProvider.GetRequiredService<IPicaImageFileActions>();
 
         firstClipboardWriter.Should().BeSameAs(secondClipboardWriter);
         firstWindowFactory.Should().BeSameAs(secondWindowFactory);
+        firstFileActions.Should().BeSameAs(secondFileActions);
     }
 
     [Fact]

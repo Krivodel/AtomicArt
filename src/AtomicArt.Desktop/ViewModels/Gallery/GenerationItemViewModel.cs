@@ -1,6 +1,7 @@
 using System.Globalization;
 
 using CommunityToolkit.Mvvm.ComponentModel;
+using Pica.Viewer.Services;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
@@ -32,6 +33,8 @@ public sealed partial class GenerationItemViewModel :
     public bool ShowsGeneratedImage => HasDisplayImagePath && !IsFailed;
     public bool ShowsGenerationProgress => IsGenerating && !HasDisplayImagePath && !IsFailed;
     public bool ShowsEmptyPreview => !ShowsGeneratedImage && !ShowsGenerationProgress && !IsFailed;
+    internal IReadOnlyList<OpenWithApplication> OpenWithApplications { get; set; } =
+        Array.Empty<OpenWithApplication>();
     private IGenerationItemStatusDescriptor StatusDescriptor => _statusDescriptorRegistry.Get(StatusKind);
 
     private readonly IGenerationItemStatusDescriptorRegistry _statusDescriptorRegistry;
