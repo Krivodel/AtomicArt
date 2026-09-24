@@ -58,7 +58,7 @@
 
     <suki:SukiWindow.Hosts>
         <suki:SukiToastHost x:Name="UpdateToastHost"
-                            MaxToasts="1"
+                            MaxToasts="3"
                             Position="BottomRight"
                             RenderTransformOrigin="100%,100%">
             <suki:SukiToastHost.RenderTransform>

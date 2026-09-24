@@ -107,6 +107,9 @@
       "Errors": {
         "FileRevealFailed": "Не удалось показать файл в папке."
       },
+      "Notifications": {
+        "SavingTitle": "Сохранение"
+      },
       "Actions": {
         "Attach": "Прикрепить",
         "Select": "Выделить",

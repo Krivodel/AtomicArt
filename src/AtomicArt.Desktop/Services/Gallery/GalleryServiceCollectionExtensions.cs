@@ -135,6 +135,7 @@ internal static class GalleryServiceCollectionExtensions
     private static IServiceCollection AddGalleryViewModelServices(this IServiceCollection services)
     {
         services.AddSingleton<IGalleryItemDeletionService, GalleryItemDeletionService>();
+        services.AddTransient<IGallerySaveNotificationService, GallerySaveToastPresenter>();
         services.AddTransient<GalleryItemsController>();
         services.AddTransient(provider =>
         {

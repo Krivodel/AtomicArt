@@ -66,6 +66,7 @@ public sealed partial class GalleryViewModel :
     private readonly ITextClipboardService _textClipboardService;
     private readonly IClipboardImageService _clipboardImageService;
     private readonly IPicaImageFileActions _picaImageFileActions;
+    private readonly IGallerySaveNotificationService _saveNotificationService;
     private readonly GenerationPriceFormatter _priceFormatter;
     private readonly GenerationDurationFormatter _durationFormatter;
     private readonly IGenerationCancellationService _generationCancellationService;
@@ -100,6 +101,7 @@ public sealed partial class GalleryViewModel :
         IMessenger messenger,
         ILocalizationTextProvider textProvider,
         IPicaImageFileActions picaImageFileActions,
+        IGallerySaveNotificationService saveNotificationService,
         IGenerationCancellationService? generationCancellationService = null,
         Dlss5SessionViewModel? dlss5 = null)
     {
@@ -120,6 +122,7 @@ public sealed partial class GalleryViewModel :
         ArgumentNullException.ThrowIfNull(messenger);
         ArgumentNullException.ThrowIfNull(textProvider);
         ArgumentNullException.ThrowIfNull(picaImageFileActions);
+        ArgumentNullException.ThrowIfNull(saveNotificationService);
 
         _fileRevealService = fileRevealService;
         _imageViewerService = imageViewerService;
@@ -138,6 +141,7 @@ public sealed partial class GalleryViewModel :
         _textClipboardService = textClipboardService;
         _clipboardImageService = clipboardImageService;
         _picaImageFileActions = picaImageFileActions;
+        _saveNotificationService = saveNotificationService;
         _priceFormatter = priceFormatter;
         _durationFormatter = durationFormatter;
         _textProvider = textProvider;
@@ -332,7 +336,18 @@ public sealed partial class GalleryViewModel :
             await ExecuteUserOperationAsync(
                 async operationCt =>
                 {
-                    await _picaImageFileActions.SaveAsAsync(imagePath, operationCt);
+                    try
+                    {
+                        _saveNotificationService.ShowSaving(Path.GetFileName(imagePath));
+
+                        await _picaImageFileActions.SaveAsAsync(
+                            imagePath,
+                            operationCt);
+                    }
+                    finally
+                    {
+                        _saveNotificationService.Dismiss();
+                    }
                 },
                 nameof(SaveAsAsync),
                 ct);

@@ -107,6 +107,9 @@
       "Errors": {
         "FileRevealFailed": "Could not show the file in its folder."
       },
+      "Notifications": {
+        "SavingTitle": "Saving"
+      },
       "Actions": {
         "Attach": "Attach",
         "Select": "Select",

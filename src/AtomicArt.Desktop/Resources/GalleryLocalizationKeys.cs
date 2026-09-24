@@ -36,6 +36,11 @@ public static class GalleryLocalizationKeys
         public const string FileRevealFailed = "Gallery.Errors.FileRevealFailed";
     }
 
+    public static class Notifications
+    {
+        public const string SavingTitle = "Gallery.Notifications.SavingTitle";
+    }
+
     public static class Actions
     {
         public const string Attach = "Gallery.Actions.Attach";

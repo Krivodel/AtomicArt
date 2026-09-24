@@ -63,24 +63,73 @@ public sealed class GalleryViewModelTests
     }
 
     [Fact]
-    public async Task SaveAsCommand_WithGeneratedImage_UsesPicaFileActions()
+    public async Task SaveAsCommand_WithGeneratedImage_ShowsSourceFileName()
     {
+        string imagePath = Path.Combine("gallery", "image.webp");
         Mock<IPicaImageFileActions> fileActions = new();
+        Mock<IGallerySaveNotificationService> notifications = new();
         fileActions.Setup(actions => actions.SaveAsAsync(
-                "image.webp",
+                imagePath,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
-            picaImageFileActions: fileActions.Object);
+            picaImageFileActions: fileActions.Object,
+            saveNotificationService: notifications.Object);
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(imagePath: imagePath));
+
+        await viewModel.SaveAsCommand.ExecuteAsync(item);
+
+        fileActions.Verify(actions => actions.SaveAsAsync(
+            imagePath,
+            It.IsAny<CancellationToken>()), Times.Once);
+        notifications.Verify(service => service.ShowSaving("image.webp"), Times.Once);
+        notifications.Verify(service => service.Dismiss(), Times.Once);
+    }
+
+    [Fact]
+    public async Task SaveAsCommand_WhenDialogIsCanceled_DismissesSavingNotification()
+    {
+        Mock<IPicaImageFileActions> fileActions = new();
+        Mock<IGallerySaveNotificationService> notifications = new();
+        fileActions.Setup(actions => actions.SaveAsAsync(
+                "image.webp",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            picaImageFileActions: fileActions.Object,
+            saveNotificationService: notifications.Object);
         GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
             viewModel,
             GalleryViewModelTestFactory.CreateItem(imagePath: "image.webp"));
 
         await viewModel.SaveAsCommand.ExecuteAsync(item);
 
-        fileActions.Verify(actions => actions.SaveAsAsync(
-            "image.webp",
-            It.IsAny<CancellationToken>()), Times.Once);
+        notifications.Verify(service => service.ShowSaving("image.webp"), Times.Once);
+        notifications.Verify(service => service.Dismiss(), Times.Once);
+    }
+
+    [Fact]
+    public async Task SaveAsCommand_WhenSaveFails_DismissesSavingNotification()
+    {
+        Mock<IPicaImageFileActions> fileActions = new();
+        Mock<IGallerySaveNotificationService> notifications = new();
+        fileActions.Setup(actions => actions.SaveAsAsync(
+                "image.webp",
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new IOException("Could not save the test image."));
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            picaImageFileActions: fileActions.Object,
+            saveNotificationService: notifications.Object);
+        GenerationItemViewModel item = GalleryViewModelTests.AddGeneratedItem(
+            viewModel,
+            GalleryViewModelTestFactory.CreateItem(imagePath: "image.webp"));
+
+        await viewModel.SaveAsCommand.ExecuteAsync(item);
+
+        notifications.Verify(service => service.ShowSaving("image.webp"), Times.Once);
+        notifications.Verify(service => service.Dismiss(), Times.Once);
     }
 
     [Fact]

@@ -50,7 +50,8 @@ internal static class GalleryViewModelTestFactory
         IGalleryItemDeletionService? galleryItemDeletionService = null,
         IGalleryThumbnailStorage? galleryThumbnailStorage = null,
         IMessenger? messenger = null,
-        IPicaImageFileActions? picaImageFileActions = null)
+        IPicaImageFileActions? picaImageFileActions = null,
+        IGallerySaveNotificationService? saveNotificationService = null)
     {
         IFileRevealService revealService =
             fileRevealService ?? new SuccessfulFileRevealService();
@@ -145,6 +146,7 @@ internal static class GalleryViewModelTestFactory
             localizationMessenger,
             TestLocalizationTextProvider.Default,
             picaImageFileActions ?? new Mock<IPicaImageFileActions>().Object,
+            saveNotificationService ?? new Mock<IGallerySaveNotificationService>().Object,
             generationCancellationService);
     }
 
