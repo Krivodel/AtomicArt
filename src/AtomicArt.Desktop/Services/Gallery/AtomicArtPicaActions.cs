@@ -23,7 +23,7 @@ public sealed class AtomicArtPicaActions
         AttachOrder);
     public PicaActionDefinition Imba => new(
         ImbaId,
-        _textProvider.Get(GalleryLocalizationKeys.Actions.Imba),
+        GetImbaDisplayName(isFavorite: false),
         ViewerActionIconGeometry.Star,
         NoIconRotationDegrees,
         PicaActionTargets.CurrentImage,
@@ -48,6 +48,12 @@ public sealed class AtomicArtPicaActions
     {
         SelectionPlacement = PicaSelectionActionPlacement.AfterSave
     };
+
+    public string GetImbaDisplayName(bool isFavorite)
+    {
+        return _textProvider.Get(
+            GalleryLocalizationKeys.Actions.GetImbaActionKey(isFavorite));
+    }
 
     private const string AttachIconGeometry = "M16.24,2.93 L21.07,7.76 C22.4,9.08 22.03,11.32 20.35,12.16 L15.48,14.6 C15.31,14.69 15.17,14.84 15.11,15.02 L13.67,19.19 C13.37,20.06 12.26,20.32 11.6,19.67 L8.5,16.56 L4.06,21 H3 V19.94 L7.44,15.5 L4.33,12.4 C3.68,11.74 3.94,10.63 4.81,10.33 L8.98,8.89 C9.16,8.83 9.32,8.69 9.4,8.52 L11.84,3.65 C12.68,1.97 14.92,1.6 16.24,2.93 Z M20.01,8.82 L15.18,3.99 C14.58,3.39 13.56,3.55 13.18,4.32 L10.74,9.19 C10.48,9.71 10.02,10.12 9.47,10.31 L5.68,11.62 L12.38,18.32 L13.69,14.53 C13.88,13.98 14.29,13.52 14.81,13.26 L19.68,10.82 C20.45,10.44 20.61,9.42 20.01,8.82 Z";
     private const int AttachOrder = 100;

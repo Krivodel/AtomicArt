@@ -129,6 +129,40 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
     }
 
     [Fact]
+    public async Task GetCurrentImageActionDisplayName_WhenFavoriteChanges_UsesCurrentState()
+    {
+        const string ModelId = "model";
+        const string ImagePath = "images/source.png";
+        const string TrustedImagePath = "trusted/source.png";
+        PicaViewerSessionTestDependencies dependencies = new();
+        dependencies.TrustedImageFileService
+            .Setup(service => service.GetTrustedImagePath(ImagePath, ModelId))
+            .Returns(TrustedImagePath);
+        bool isFavorite = true;
+        GalleryImageViewerRequest request = PicaViewerSessionTests.CreateRequest(
+            new GalleryFileImageViewerSource(ModelId, ImagePath, null),
+            null,
+            _ => Task.CompletedTask,
+            () => isFavorite);
+
+        await using PicaViewerSession session = dependencies.CreateSession();
+        await session.PrepareAsync(request, CancellationToken.None);
+        PicaViewerRequest preparedRequest = PicaViewerSessionTests.GetPreparedRequest(session);
+        PicaActionDefinition action = preparedRequest.Actions.Single(candidate =>
+            string.Equals(candidate.Id, AtomicArtPicaActions.ImbaId, StringComparison.Ordinal));
+        PicaImageItem item = preparedRequest.Items.Single();
+
+        string selectedDisplayName = session.GetCurrentImageActionDisplayName(action, item);
+        isFavorite = false;
+        string unselectedDisplayName = session.GetCurrentImageActionDisplayName(action, item);
+
+        selectedDisplayName.Should().Be(TestLocalizationTextProvider.Default.Get(
+            GalleryLocalizationKeys.Actions.RemoveImba));
+        unselectedDisplayName.Should().Be(TestLocalizationTextProvider.Default.Get(
+            GalleryLocalizationKeys.Actions.Imba));
+    }
+
+    [Fact]
     public async Task PrepareAsync_WithTemporaryFileSource_UsesFilePathWithoutGalleryAction()
     {
         string directoryPath = Path.Combine(
@@ -676,11 +710,16 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
     private static GalleryImageViewerRequest CreateRequest(
         GalleryImageViewerSource source,
         IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? attachCommand,
-        Func<CancellationToken, Task>? toggleFavoriteAsync = null)
+        Func<CancellationToken, Task>? toggleFavoriteAsync = null,
+        Func<bool>? getIsFavorite = null)
     {
         List<GalleryImageViewerItem> items =
         [
-            new GalleryImageViewerItem(PicaViewerSessionTests.ItemId, source, toggleFavoriteAsync)
+            new GalleryImageViewerItem(
+                PicaViewerSessionTests.ItemId,
+                source,
+                toggleFavoriteAsync,
+                getIsFavorite)
         ];
 
         return new GalleryImageViewerRequest(

@@ -29,6 +29,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
     private readonly HashSet<string> _temporaryImagePaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<Guid, IPicaImageBitmapSource> _bitmapSources = [];
     private readonly Dictionary<Guid, Func<CancellationToken, Task>> _toggleFavoriteActions = [];
+    private readonly Dictionary<Guid, Func<bool>> _getFavoriteStates = [];
     private readonly HashSet<Guid> _galleryItemIds = [];
     private readonly string _sessionDirectory;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
@@ -55,6 +56,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         List<PicaImageItem> items = [];
         _bitmapSources.Clear();
         _toggleFavoriteActions.Clear();
+        _getFavoriteStates.Clear();
         bool canShowInGallery = (sourceItems.Count > 0)
             && (sourceItems.All(item => item.Source is GalleryFileImageViewerSource
             { DeleteImageWhenClosed: false }));
@@ -86,6 +88,10 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
                 && (sourceItem.ToggleFavoriteAsync is not null))
             {
                 _toggleFavoriteActions[sourceItem.Id] = sourceItem.ToggleFavoriteAsync;
+                if (sourceItem.GetIsFavorite is not null)
+                {
+                    _getFavoriteStates[sourceItem.Id] = sourceItem.GetIsFavorite;
+                }
             }
         }
 
@@ -144,6 +150,24 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         return CanDispatchAttach(action)
             && _attachImageInputsCommand is not null;
+    }
+
+    public string GetCurrentImageActionDisplayName(
+        PicaActionDefinition action,
+        PicaImageItem item)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(item);
+
+        return string.Equals(
+                action.Id,
+                AtomicArtPicaActions.ImbaId,
+                StringComparison.Ordinal)
+            && _getFavoriteStates.TryGetValue(
+                item.Id,
+                out Func<bool>? getIsFavorite)
+            ? _dependencies.Actions.GetImbaDisplayName(getIsFavorite())
+            : action.DisplayName;
     }
 
     public async Task DispatchBitmapAsync(

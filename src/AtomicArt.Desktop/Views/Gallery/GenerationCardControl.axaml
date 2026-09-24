@@ -43,7 +43,7 @@
                           CommandParameter="{Binding #GenerationCard.DataContext}">
                     <MenuItem.Header>
                         <TextBlock Classes="context-menu-item-header"
-                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Actions.Imba}}" />
+                                   Text="{i18n:I18n {Binding FavoriteActionLocalizationKey}}" />
                     </MenuItem.Header>
                     <MenuItem.Icon>
                         <Path Classes="gallery-outline-icon"

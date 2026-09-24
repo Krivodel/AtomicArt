@@ -33,6 +33,8 @@ public sealed partial class GenerationItemViewModel :
     public bool ShowsGeneratedImage => HasDisplayImagePath && !IsFailed;
     public bool ShowsGenerationProgress => IsGenerating && !HasDisplayImagePath && !IsFailed;
     public bool ShowsEmptyPreview => !ShowsGeneratedImage && !ShowsGenerationProgress && !IsFailed;
+    public string FavoriteActionLocalizationKey =>
+        GalleryLocalizationKeys.Actions.GetImbaActionKey(IsFavorite);
     internal IReadOnlyList<OpenWithApplication> OpenWithApplications { get; set; } =
         Array.Empty<OpenWithApplication>();
     private IGenerationItemStatusDescriptor StatusDescriptor => _statusDescriptorRegistry.Get(StatusKind);
@@ -78,6 +80,7 @@ public sealed partial class GenerationItemViewModel :
     [ObservableProperty]
     private int _attachedImagesCount;
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FavoriteActionLocalizationKey))]
     private bool _isFavorite;
     [ObservableProperty]
     private bool _isSelected;

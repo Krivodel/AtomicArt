@@ -860,10 +860,15 @@ public sealed class GalleryViewModelTests
             .Subject;
         Func<CancellationToken, Task> toggleFavoriteAsync = viewerItem.ToggleFavoriteAsync
             ?? throw new InvalidOperationException("The favorite action was not provided.");
+        Func<bool> getIsFavorite = viewerItem.GetIsFavorite
+            ?? throw new InvalidOperationException("The favorite state was not provided.");
+
+        getIsFavorite().Should().BeFalse();
 
         await toggleFavoriteAsync(CancellationToken.None);
 
         item.IsFavorite.Should().BeTrue();
+        getIsFavorite().Should().BeTrue();
         galleryStateService.SaveCallCount.Should().Be(1);
         galleryStateService.SavedItems.Should().ContainSingle()
             .Which.IsFavorite.Should().BeTrue();

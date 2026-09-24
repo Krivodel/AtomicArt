@@ -840,7 +840,8 @@ public sealed partial class GalleryViewModel :
                     item.ModelId,
                     item.ImagePath,
                     item.ThumbnailPath),
-                ct => ToggleFavoriteFromViewerAsync(item, ct)));
+                ct => ToggleFavoriteFromViewerAsync(item, ct),
+                () => item.IsFavorite));
         }
 
         if (!viewerItems.Any(item => item.Id == selectedItem.Id))

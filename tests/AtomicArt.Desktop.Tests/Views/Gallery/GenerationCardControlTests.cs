@@ -11,6 +11,7 @@ using Avalonia.Media;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
+using Lang.Avalonia;
 using Pica.Viewer.Resources;
 using Pica.Viewer.Services;
 using Xunit;
@@ -18,6 +19,7 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
+using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
@@ -36,6 +38,51 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     private static readonly Size PreviewSize = new(220d, 220d);
     private static readonly Rect DefaultViewportBounds = new(0d, 0d, 1000d, 600d);
     private static readonly TimeSpan AnimationCompletionTimeout = TimeSpan.FromSeconds(1d);
+
+    [Fact]
+    public void ContextFlyout_WhenFavoriteChanges_UpdatesImbaActionLabel()
+    {
+        Dispatch(() =>
+        {
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
+                "image.webp",
+                "thumbnail.jpg");
+            item.IsFavorite = true;
+            GenerationCardControl control = new()
+            {
+                DataContext = item
+            };
+
+            Show(control, GalleryLayoutService.CardWidth, 420d, window =>
+            {
+                Border container = control.FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException("Generation card container was not found.");
+                AnimatedContextMenuFlyout flyout = container.ContextFlyout.Should()
+                    .BeOfType<AnimatedContextMenuFlyout>().Subject;
+                flyout.ShowAt(container);
+                window.CaptureRenderedFrame();
+
+                MenuItem menuItem = control.FindControl<MenuItem>("ImbaMenuItem")
+                    ?? throw new InvalidOperationException("IMBA menu item was not found.");
+                TextBlock header = menuItem.Header.Should()
+                    .BeOfType<TextBlock>().Subject;
+                header.Text.Should().Be(I18nManager.Instance.GetResource(
+                    GalleryLocalizationKeys.Actions.RemoveImba));
+
+                item.IsFavorite = false;
+                window.CaptureRenderedFrame();
+
+                header.Text.Should().Be(I18nManager.Instance.GetResource(
+                    GalleryLocalizationKeys.Actions.Imba));
+
+                item.IsFavorite = true;
+                window.CaptureRenderedFrame();
+
+                header.Text.Should().Be(I18nManager.Instance.GetResource(
+                    GalleryLocalizationKeys.Actions.RemoveImba));
+            });
+        });
+    }
 
     [Fact]
     public async Task ContextFlyout_WhenCreated_HasRequestedActionOrder()

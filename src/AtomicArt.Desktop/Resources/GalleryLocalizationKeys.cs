@@ -46,6 +46,12 @@ public static class GalleryLocalizationKeys
         public const string OpenWith = "Gallery.Actions.OpenWith";
         public const string ChooseApplication = "Gallery.Actions.ChooseApplication";
         public const string Imba = "Gallery.Actions.Imba";
+        public const string RemoveImba = "Gallery.Actions.RemoveImba";
         public const string OpenDlss5 = "Gallery.Actions.OpenDlss5";
+
+        public static string GetImbaActionKey(bool isFavorite)
+        {
+            return isFavorite ? RemoveImba : Imba;
+        }
     }
 }
