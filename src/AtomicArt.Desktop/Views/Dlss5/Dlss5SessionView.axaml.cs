@@ -4,9 +4,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 
+using Pica.Viewer.Services;
+
 using AtomicArt.Desktop.Controls;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.ViewModels.Dlss5;
 
@@ -19,12 +23,132 @@ public partial class Dlss5SessionView : UserControl
     private const double ParameterRowHeight = 68;
 
     private Dlss5SessionViewModel? _subscribedViewModel;
+    private PointerPressedEventArgs? _resultDragPress;
+    private object? _resultDragImage;
+    private Point _resultDragOrigin;
     private bool _isClearingSource;
     private bool _isAttached;
 
     public Dlss5SessionView()
     {
         InitializeComponent();
+        ResultDragSource.AddHandler(
+            InputElement.PointerPressedEvent,
+            OnResultPointerPressed,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        ResultDragSource.AddHandler(
+            InputElement.PointerMovedEvent,
+            OnResultPointerMoved,
+            RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        ResultDragSource.AddHandler(
+            InputElement.PointerReleasedEvent,
+            OnResultPointerReleased,
+            RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        ResultDragSource.PointerCaptureLost += OnResultPointerCaptureLost;
+    }
+
+    private void OnResultPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _ = sender;
+
+        _resultDragPress = null;
+        _resultDragImage = null;
+        PointerPoint pointerPoint = e.GetCurrentPoint(ResultDragSource);
+        if (!pointerPoint.Properties.IsLeftButtonPressed
+            || DataContext is not Dlss5SessionViewModel viewModel)
+        {
+            return;
+        }
+
+        Bitmap? image = viewModel.ResultImage as Bitmap;
+        if (viewModel.UseResultAsSourceCommand.CanExecute(image))
+        {
+            e.Pointer.Capture(ResultDragSource);
+            _resultDragPress = e;
+            _resultDragImage = image;
+            _resultDragOrigin = pointerPoint.Position;
+        }
+    }
+
+    private async void OnResultPointerMoved(object? sender, PointerEventArgs e)
+    {
+        _ = sender;
+
+        PointerPressedEventArgs? press = _resultDragPress;
+        Bitmap? image = _resultDragImage as Bitmap;
+        if (press is null || image is null)
+        {
+            return;
+        }
+
+        PointerPoint pointerPoint = e.GetCurrentPoint(ResultDragSource);
+        if (!pointerPoint.Properties.IsLeftButtonPressed)
+        {
+            ClearResultDragCandidate();
+            return;
+        }
+
+        if (!PointerDragThreshold.IsReached(_resultDragOrigin, pointerPoint.Position))
+        {
+            return;
+        }
+
+        ClearResultDragCandidate();
+        if (DataContext is not Dlss5SessionViewModel viewModel
+            || !viewModel.UseResultAsSourceCommand.CanExecute(image))
+        {
+            return;
+        }
+
+        using IPicaImageBitmapLease? lease = viewModel.AcquireResultDragLease(image);
+        if (lease is null)
+        {
+            return;
+        }
+
+        e.Handled = true;
+
+        try
+        {
+            DataTransfer dataTransfer = AtomicArtImageDragData.CreateDlss5Result(lease.Bitmap);
+            DragPreviewWindow? preview = OperatingSystem.IsWindows()
+                ? DragPreviewWindow.CreateBorrowedImage(lease.Bitmap)
+                : null;
+            await DragPreviewWindow.DoDragDropAsync(
+                press,
+                dataTransfer,
+                preview,
+                TopLevel.GetTopLevel(this) as Window);
+        }
+        finally
+        {
+            e.Pointer.Capture(null);
+        }
+    }
+
+    private void OnResultPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        ClearResultDragCandidate();
+    }
+
+    private void OnResultPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        ClearResultDragCandidate();
+    }
+
+    private void ClearResultDragCandidate()
+    {
+        _resultDragPress = null;
+        _resultDragImage = null;
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)

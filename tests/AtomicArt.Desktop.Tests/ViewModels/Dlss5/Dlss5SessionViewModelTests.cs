@@ -5,10 +5,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Input;
-using Avalonia.VisualTree;
-using AtomicArt.Contracts.Generation;
-using AtomicArt.Desktop.Controls;
 using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
 using FluentAssertions;
 using Moq;
 using Pica.Viewer.Services;
@@ -16,6 +14,9 @@ using SkiaSharp;
 using SukiUI.Toasts;
 using Xunit;
 
+using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Behaviors;
+using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Dlss5;
@@ -223,6 +224,103 @@ public sealed class Dlss5SessionViewModelTests : DesktopControlTestBase
 
         context.ViewModel.ResultPreviewImage.Should().BeSameAs(generatedImage);
         context.ViewModel.CloseCommand.Execute(null);
+    }
+
+    [Fact]
+    public async Task UseResultAsSourceCommand_WithRenderedImage_ReplacesSourceAndQueuesRender()
+    {
+        using Dlss5SessionTestContext context = new();
+        Mock<IDlss5DisplayImage> resultImage = new();
+        resultImage.SetupGet(image => image.Value).Returns(new object());
+        Mock<IDlss5DisplayImage> nextSourceImage = new();
+        nextSourceImage.SetupGet(image => image.Value).Returns(new object());
+        context.DisplayImageFactory.SetupSequence(factory => factory.Create(It.IsAny<SKBitmap>()))
+            .Returns(context.SourceDisplayImage.Object)
+            .Returns(resultImage.Object)
+            .Returns(nextSourceImage.Object);
+        await context.ViewModel.RestoreAsync(CancellationToken.None);
+        await context.ViewModel.OpenAsync(CancellationToken.None);
+        context.ViewModel.UseResultAsSourceCommand.CanExecute(
+            context.ViewModel.ResultPreviewImage).Should().BeFalse();
+        Moq.IInvocation render = context.RenderScheduler.Invocations.Single(invocation =>
+            invocation.Method.Name == "Request");
+        Func<long, Dlss5NativeRenderResult, Task> publish =
+            (Func<long, Dlss5NativeRenderResult, Task>)render.Arguments[3];
+        SKBitmap renderedBitmap = new(2, 1);
+        renderedBitmap.SetPixel(0, 0, SKColors.Red);
+        await publish((long)render.Arguments[2], new Dlss5NativeRenderResult(
+            renderedBitmap, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero));
+        object draggedImage = context.ViewModel.ResultImage
+            ?? throw new InvalidOperationException("The rendered image was not published.");
+
+        await context.ViewModel.UseResultAsSourceCommand.ExecuteAsync(draggedImage);
+
+        context.ViewModel.SourceWidth.Should().Be(2);
+        context.ViewModel.SourceHeight.Should().Be(1);
+        context.ViewModel.ResultImage.Should().BeNull();
+        context.ViewModel.UseResultAsSourceCommand.CanExecute(draggedImage).Should().BeFalse();
+        using SKBitmap storedSource = SKBitmap.Decode(
+            Path.Combine(context.SessionDirectory, "source.png"));
+        storedSource.GetPixel(0, 0).Should().Be(SKColors.Red);
+        context.RenderScheduler.Invocations.Count(invocation =>
+            invocation.Method.Name == "Request").Should().Be(2);
+    }
+
+    [Fact]
+    public async Task SessionView_DropResultOnSource_ReplacesSource()
+    {
+        await DispatchAsync(async () =>
+        {
+            using Dlss5SessionTestContext context = new();
+            using TrackingBitmap resultBitmap = new();
+            Mock<IDlss5DisplayImage> resultImage = new();
+            resultImage.SetupGet(image => image.Value).Returns(resultBitmap);
+            Mock<IDlss5DisplayImage> nextSourceImage = new();
+            nextSourceImage.SetupGet(image => image.Value).Returns(new object());
+            context.DisplayImageFactory.SetupSequence(factory => factory.Create(It.IsAny<SKBitmap>()))
+                .Returns(context.SourceDisplayImage.Object)
+                .Returns(resultImage.Object)
+                .Returns(nextSourceImage.Object);
+            await context.ViewModel.RestoreAsync(CancellationToken.None);
+            await context.ViewModel.OpenAsync(CancellationToken.None);
+            Moq.IInvocation render = context.RenderScheduler.Invocations.Single(invocation =>
+                invocation.Method.Name == "Request");
+            Func<long, Dlss5NativeRenderResult, Task> publish =
+                (Func<long, Dlss5NativeRenderResult, Task>)render.Arguments[3];
+            await publish((long)render.Arguments[2], new Dlss5NativeRenderResult(
+                new SKBitmap(2, 1), TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero));
+            Dlss5SessionView view = new() { DataContext = context.ViewModel };
+            Window window = Show(view, 1200d, 800d);
+
+            try
+            {
+                Grid sourceArea = view.FindControl<Grid>("SourceImageDropArea")
+                    ?? throw new InvalidOperationException("The DLSS 5 source drop area was not found.");
+                ImageDropBehavior.GetTargetKind(sourceArea)
+                    .Should().Be(ImageDropTargetKind.Dlss5Result);
+                ImageDropBehavior.GetUseDlss5ResultCommand(sourceArea)
+                    .Should().BeSameAs(context.ViewModel.UseResultAsSourceCommand);
+                DataTransfer dataTransfer = AtomicArtImageDragData.CreateDlss5Result(resultBitmap);
+
+                sourceArea.RaiseEvent(new DragEventArgs(
+                    DragDrop.DropEvent,
+                    dataTransfer,
+                    sourceArea,
+                    new Point(20d, 20d),
+                    KeyModifiers.None));
+                Task operation = context.ViewModel.UseResultAsSourceCommand.ExecutionTask
+                    ?? throw new InvalidOperationException("The DLSS 5 source replacement was not started.");
+                await operation;
+
+                context.ViewModel.SourceWidth.Should().Be(2);
+                context.RenderScheduler.Invocations.Count(invocation =>
+                    invocation.Method.Name == "Request").Should().Be(2);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
     }
 
     [Fact]

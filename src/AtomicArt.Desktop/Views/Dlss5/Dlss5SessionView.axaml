@@ -56,9 +56,14 @@
                            VerticalAlignment="Center"
                            Classes="dlss5-off"
                            Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys.Off}}" />
-                <Grid Grid.Row="1"
+                <Grid x:Name="SourceImageDropArea"
+                      Grid.Row="1"
                       Classes="dlss5-source"
-                      Background="{StaticResource Dlss5PlaceholderBrush}">
+                      Background="{StaticResource Dlss5PlaceholderBrush}"
+                      behaviors:ImageDropBehavior.IsEnabled="{Binding IsOpen}"
+                      behaviors:ImageDropBehavior.Overlay="{Binding #ResultSourceDropOverlay}"
+                      behaviors:ImageDropBehavior.TargetKind="Dlss5Result"
+                      behaviors:ImageDropBehavior.UseDlss5ResultCommand="{Binding UseResultAsSourceCommand}">
                     <Button Theme="{StaticResource Dlss5ImageButtonTheme}"
                             IsEnabled="{Binding CanInteractWithImages}"
                             Command="{Binding OpenComparisonCommand}"
@@ -86,6 +91,7 @@
                                                        SecondaryBrush="{StaticResource Dlss5LoadingVioletBrush}"
                                                        Opacity="{Binding IsSourceLoading}"
                                                        IsActive="{Binding IsSourceLoading}" />
+                    <generation:ImageDropOverlayControl x:Name="ResultSourceDropOverlay" />
                 </Grid>
             </Grid>
             <Grid>
@@ -100,7 +106,8 @@
                            Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys.On}}" />
                 <Grid Grid.Row="1"
                       Background="{StaticResource Dlss5PlaceholderBrush}">
-                    <Button Theme="{StaticResource Dlss5ImageButtonTheme}"
+                    <Button x:Name="ResultDragSource"
+                            Theme="{StaticResource Dlss5ImageButtonTheme}"
                             IsEnabled="{Binding CanInteractWithImages}"
                             Command="{Binding OpenComparisonCommand}"
                             CommandParameter="result">

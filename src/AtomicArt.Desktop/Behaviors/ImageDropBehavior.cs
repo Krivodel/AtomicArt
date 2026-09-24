@@ -3,6 +3,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 
+using CommunityToolkit.Mvvm.Input;
+
 using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Services;
 
@@ -36,6 +38,11 @@ public static class ImageDropBehavior
             "TargetKind",
             typeof(ImageDropBehavior),
             defaultValue: ImageDropTargetKind.ExternalFiles);
+
+    public static readonly AttachedProperty<IAsyncRelayCommand<object?>?> UseDlss5ResultCommandProperty =
+        AvaloniaProperty.RegisterAttached<Control, IAsyncRelayCommand<object?>?>(
+            "UseDlss5ResultCommand",
+            typeof(ImageDropBehavior));
 
     static ImageDropBehavior()
     {
@@ -92,6 +99,18 @@ public static class ImageDropBehavior
         AttachedPropertyValueAccessor.Set(control, TargetKindProperty, value);
     }
 
+    public static IAsyncRelayCommand<object?>? GetUseDlss5ResultCommand(Control control)
+    {
+        return AttachedPropertyValueAccessor.Get(control, UseDlss5ResultCommandProperty);
+    }
+
+    public static void SetUseDlss5ResultCommand(
+        Control control,
+        IAsyncRelayCommand<object?>? value)
+    {
+        AttachedPropertyValueAccessor.Set(control, UseDlss5ResultCommandProperty, value);
+    }
+
     internal static bool AcceptsData(
         IDataTransfer dataTransfer,
         ImageDropTargetKind targetKind)
@@ -107,6 +126,11 @@ public static class ImageDropBehavior
         {
             return dataTransfer.Contains(DataFormat.File)
                 && AtomicArtImageDragData.IsGalleryImage(dataTransfer);
+        }
+
+        if (targetKind == ImageDropTargetKind.Dlss5Result)
+        {
+            return AtomicArtImageDragData.GetDlss5ResultOrDefault(dataTransfer) is not null;
         }
 
         if (targetKind != ImageDropTargetKind.ExternalFiles
@@ -141,6 +165,13 @@ public static class ImageDropBehavior
 
         bool acceptsData = AcceptsData(e.DataTransfer, targetKind)
             && IsInsideDropArea(control, e);
+
+        if (acceptsData && targetKind == ImageDropTargetKind.Dlss5Result)
+        {
+            object? image = AtomicArtImageDragData.GetDlss5ResultOrDefault(e.DataTransfer);
+            acceptsData = GetUseDlss5ResultCommand(control)?.CanExecute(image) == true;
+        }
+
         SetOverlayActive(control, acceptsData);
 
         if (acceptsData)
@@ -285,6 +316,18 @@ public static class ImageDropBehavior
         }
 
         e.Handled = true;
+
+        if (targetKind == ImageDropTargetKind.Dlss5Result)
+        {
+            object? image = AtomicArtImageDragData.GetDlss5ResultOrDefault(e.DataTransfer);
+            IAsyncRelayCommand<object?>? command = GetUseDlss5ResultCommand(control);
+            if (command?.CanExecute(image) == true)
+            {
+                await command.ExecuteAsync(image);
+            }
+
+            return;
+        }
 
         if (IsAttachmentLimitReached(control))
         {

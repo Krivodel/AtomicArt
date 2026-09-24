@@ -4,7 +4,11 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
+
+using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -44,6 +48,70 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
         DataTransfer dataTransfer = CreatePanelAttachmentImageDataTransfer();
 
         AssertAcceptedTargets(dataTransfer, false, false);
+    }
+
+    [Fact]
+    public void AcceptsData_WithDlss5Result_AcceptsOnlyResultTarget()
+    {
+        Dispatch(() =>
+        {
+            using WriteableBitmap image = CreateDlss5ResultBitmap();
+            DataTransfer dataTransfer = AtomicArtImageDragData.CreateDlss5Result(image);
+
+            AssertAcceptedTargets(dataTransfer, false, false);
+            ImageDropBehavior.AcceptsData(dataTransfer, ImageDropTargetKind.Dlss5Result)
+                .Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public async Task Drop_WithDlss5Result_ExecutesSourceReplacementCommand()
+    {
+        await DispatchAsync(async () =>
+        {
+            using WriteableBitmap image = CreateDlss5ResultBitmap();
+            DataTransfer dataTransfer = AtomicArtImageDragData.CreateDlss5Result(image);
+            OverlayPanelTestContext context = CreateOverlayPanelContext();
+            TaskCompletionSource<object?> receivedImage = new(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            AsyncRelayCommand<object?> command = new(value =>
+            {
+                receivedImage.TrySetResult(value);
+                return Task.CompletedTask;
+            });
+            ImageDropBehavior.SetOverlay(context.Panel, context.Overlay);
+            ImageDropBehavior.SetTargetKind(context.Panel, ImageDropTargetKind.Dlss5Result);
+            ImageDropBehavior.SetUseDlss5ResultCommand(context.Panel, command);
+            ImageDropBehavior.SetIsEnabled(context.Panel, true);
+            Window window = ShowTestWindow(context.Panel);
+
+            try
+            {
+                Point position = new(160d, 90d);
+                context.Panel.RaiseEvent(new DragEventArgs(
+                    DragDrop.DragOverEvent,
+                    dataTransfer,
+                    context.Panel,
+                    position,
+                    KeyModifiers.None));
+                context.Overlay.IsActive.Should().BeTrue();
+
+                context.Panel.RaiseEvent(new DragEventArgs(
+                    DragDrop.DropEvent,
+                    dataTransfer,
+                    context.Panel,
+                    position,
+                    KeyModifiers.None));
+                object? droppedImage = await receivedImage.Task.WaitAsync(TimeSpan.FromSeconds(1));
+
+                droppedImage.Should().BeSameAs(image);
+                context.Overlay.IsActive.Should().BeFalse();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
     }
 
     [Fact]
@@ -273,6 +341,15 @@ public sealed class ImageDropBehaviorTests : AnimatedGalleryControlTestBase
     {
         return CreateAtomicArtImageDataTransfer(
             AtomicArtImageDragSourceKind.Gallery);
+    }
+
+    private static WriteableBitmap CreateDlss5ResultBitmap()
+    {
+        return new WriteableBitmap(
+            new PixelSize(1, 1),
+            new Vector(96d, 96d),
+            PixelFormat.Bgra8888,
+            AlphaFormat.Premul);
     }
 
     private static DataTransfer CreatePanelAttachmentImageDataTransfer()

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Pica.Viewer.Services;
 using SkiaSharp;
 
 using AtomicArt.Contracts.Generation;
@@ -528,6 +529,59 @@ public sealed partial class Dlss5SessionViewModel : ObservableObject, IDlss5Sour
         return LoadSourceInputAsync(input, ++_sourceLoadRevision, ct);
     }
 
+    [RelayCommand(CanExecute = nameof(CanUseResultAsSource))]
+    private async Task UseResultAsSourceAsync(object? draggedImage, CancellationToken ct)
+    {
+        if (!CanUseResultAsSource(draggedImage))
+        {
+            return;
+        }
+
+        SKBitmap result = _resultBitmap
+            ?? throw new InvalidOperationException("The DLSS 5 result is unavailable.");
+        long loadRevision = ++_sourceLoadRevision;
+        IsSourceLoading = true;
+
+        try
+        {
+            SKBitmap source = result.Copy()
+                ?? throw new InvalidDataException("The DLSS 5 result cannot be copied as a source.");
+            await StoreSourceBitmapAsync(source, loadRevision, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            ReportSourceFailure(exception, nameof(UseResultAsSourceAsync));
+        }
+        finally
+        {
+            if (loadRevision == _sourceLoadRevision)
+            {
+                IsSourceLoading = false;
+            }
+        }
+    }
+
+    private bool CanUseResultAsSource(object? draggedImage)
+    {
+        return IsOpen
+            && CanInteractWithImages
+            && (_resultBitmap is not null)
+            && (draggedImage is not null)
+            && ReferenceEquals(ResultImage, draggedImage);
+    }
+
+    internal IPicaImageBitmapLease? AcquireResultDragLease(object draggedImage)
+    {
+        ArgumentNullException.ThrowIfNull(draggedImage);
+
+        return CanUseResultAsSource(draggedImage)
+            ? _resultDisplayImage?.AcquirePicaLease()
+            : null;
+    }
+
     private async Task LoadSourceInputAsync(ImageAttachmentInput? input, long loadRevision, CancellationToken ct)
     {
         using (input)
@@ -546,33 +600,9 @@ public sealed partial class Dlss5SessionViewModel : ObservableObject, IDlss5Sour
                     return;
                 }
 
-                string sessionDirectory = Path.Combine(_paths.ModuleDirectory, "session");
-                Directory.CreateDirectory(sessionDirectory);
-                string sourceFileName = "source.png";
-                string destinationPath = Path.Combine(sessionDirectory, sourceFileName);
-                string temporaryPath = $"{destinationPath}.{loadRevision}.partial";
-                SKBitmap? bitmap = await Task.Run(() => SKBitmap.Decode(image.Content), ct)
+                SKBitmap bitmap = await Task.Run(() => SKBitmap.Decode(image.Content), ct)
                     ?? throw new InvalidDataException("The selected image cannot be decoded for DLSS 5.");
-
-                try
-                {
-                    byte[] encodedSource = await Task.Run(() => Dlss5SessionViewModel.EncodePng(bitmap), ct);
-                    await File.WriteAllBytesAsync(temporaryPath, encodedSource, ct);
-                    if (loadRevision != _sourceLoadRevision)
-                    {
-                        return;
-                    }
-
-                    PublishSessionSource(temporaryPath, destinationPath);
-                    SKBitmap source = bitmap;
-                    bitmap = null;
-                    await ReplaceSourceAsync(source, sourceFileName, ct, loadRevision);
-                }
-                finally
-                {
-                    bitmap?.Dispose();
-                    File.Delete(temporaryPath);
-                }
+                await StoreSourceBitmapAsync(bitmap, loadRevision, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -588,6 +618,35 @@ public sealed partial class Dlss5SessionViewModel : ObservableObject, IDlss5Sour
                     IsSourceLoading = false;
                 }
             }
+        }
+    }
+
+    private async Task StoreSourceBitmapAsync(SKBitmap bitmap, long loadRevision, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(bitmap);
+
+        string sessionDirectory = Path.Combine(_paths.ModuleDirectory, "session");
+        string sourceFileName = "source.png";
+        string destinationPath = Path.Combine(sessionDirectory, sourceFileName);
+        string temporaryPath = $"{destinationPath}.{loadRevision}.partial";
+        SKBitmap? pendingBitmap = bitmap;
+
+        try
+        {
+            Directory.CreateDirectory(sessionDirectory);
+            byte[] encodedSource = await Task.Run(() => Dlss5SessionViewModel.EncodePng(bitmap), ct);
+            await File.WriteAllBytesAsync(temporaryPath, encodedSource, ct);
+            if (loadRevision == _sourceLoadRevision)
+            {
+                PublishSessionSource(temporaryPath, destinationPath);
+                pendingBitmap = null;
+                await ReplaceSourceAsync(bitmap, sourceFileName, ct, loadRevision);
+            }
+        }
+        finally
+        {
+            pendingBitmap?.Dispose();
+            File.Delete(temporaryPath);
         }
     }
 
