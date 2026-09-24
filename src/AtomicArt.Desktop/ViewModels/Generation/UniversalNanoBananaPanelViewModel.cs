@@ -786,7 +786,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         GalleryImageViewerRequest request = new(
             new GalleryDelegateImageViewerItemsSource(CreateAttachedImageViewerItems),
             attachedImage.Id,
-            AttachImagesCommand);
+            AttachImagesCommand,
+            AttachImageInputsCommand);
 
         await _imageViewerService.OpenAsync(request, ct);
     }

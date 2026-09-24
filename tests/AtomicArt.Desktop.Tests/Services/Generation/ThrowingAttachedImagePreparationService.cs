@@ -1,3 +1,5 @@
+using Avalonia.Media.Imaging;
+
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
@@ -15,6 +17,15 @@ internal sealed class ThrowingAttachedImagePreparationService : IAttachedImagePr
         _ = selectedModel;
         _ = ct;
 
+        throw new InvalidOperationException("Preparation failed.");
+    }
+
+    public Task<AttachedImageDto?> PrepareBitmapAsync(
+        string fileName,
+        Bitmap bitmap,
+        ImageModelOption selectedModel,
+        CancellationToken ct)
+    {
         throw new InvalidOperationException("Preparation failed.");
     }
 }

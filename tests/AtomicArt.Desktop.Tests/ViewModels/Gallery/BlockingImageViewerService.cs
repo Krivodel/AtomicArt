@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
@@ -14,7 +15,9 @@ internal sealed class BlockingImageViewerService : IImageViewerService
         TaskCreationOptions.RunContinuationsAsynchronously);
     private int _openCallCount;
 
-    public void ConfigureAttachments(IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> command)
+    public void ConfigureAttachments(
+        IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> command,
+        IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? inputCommand = null)
     {
         ArgumentNullException.ThrowIfNull(command);
     }

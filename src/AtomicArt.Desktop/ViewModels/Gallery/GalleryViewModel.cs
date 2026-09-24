@@ -148,11 +148,14 @@ public sealed partial class GalleryViewModel :
     }
 
     public void ConfigureImageViewerAttachments(
-        IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachImagesCommand)
+        IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachImagesCommand,
+        IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? attachImageInputsCommand = null)
     {
         ArgumentNullException.ThrowIfNull(attachImagesCommand);
 
-        _imageViewerService.ConfigureAttachments(attachImagesCommand);
+        _imageViewerService.ConfigureAttachments(
+            attachImagesCommand,
+            attachImageInputsCommand);
     }
 
     public void ConfigureGenerationPresetTarget(IGenerationPanelPresetTarget target)

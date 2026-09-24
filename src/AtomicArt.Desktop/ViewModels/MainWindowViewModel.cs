@@ -99,7 +99,9 @@ public sealed partial class MainWindowViewModel :
         Gallery = gallery;
         ErrorDialog = errorDialog;
         ActiveGenerationPanel = desktopModelPanelRegistry.GetDefaultPanel(panels);
-        Gallery.ConfigureImageViewerAttachments(ActiveGenerationPanel.AttachImagesCommand);
+        Gallery.ConfigureImageViewerAttachments(
+            ActiveGenerationPanel.AttachImagesCommand,
+            ActiveGenerationPanel.AttachImageInputsCommand);
 
         if (ActiveGenerationPanel is IGenerationPanelPresetTarget presetTarget)
         {

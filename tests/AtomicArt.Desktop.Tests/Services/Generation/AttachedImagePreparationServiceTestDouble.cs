@@ -1,3 +1,5 @@
+using Avalonia.Media.Imaging;
+
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
@@ -17,6 +19,16 @@ internal abstract class AttachedImagePreparationServiceTestDouble :
         ct.ThrowIfCancellationRequested();
 
         return PrepareCoreAsync(image, selectedModel, ct);
+    }
+
+    public virtual Task<AttachedImageDto?> PrepareBitmapAsync(
+        string fileName,
+        Bitmap bitmap,
+        ImageModelOption selectedModel,
+        CancellationToken ct)
+    {
+        throw new NotSupportedException(
+            "This test preparation service does not handle bitmap inputs.");
     }
 
     protected abstract Task<AttachedImageDto?> PrepareCoreAsync(

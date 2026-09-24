@@ -244,16 +244,8 @@ public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerat
 
         try
         {
-            AttachedImageDto? image = await input.ReadAsync(cancellation.Token);
-
-            if (image is null)
-            {
-                FailPreparation(pendingImage, cancellation, null);
-                return;
-            }
-
-            AttachedImageDto? preparedImage = await _attachmentPreparationService.PrepareAsync(
-                image,
+            AttachedImageDto? preparedImage = await input.PrepareAsync(
+                _attachmentPreparationService,
                 selectedModel,
                 cancellation.Token);
 

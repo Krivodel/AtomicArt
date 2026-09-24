@@ -1,17 +1,20 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
+using Avalonia.Media.Imaging;
 using FluentAssertions;
 using SkiaSharp;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
-public sealed class AttachedImagePreparationServiceTests
+public sealed class AttachedImagePreparationServiceTests : DesktopControlTestBase
 {
     private const int SourceWidth = 192;
     private const int SourceHeight = 144;
@@ -29,6 +32,36 @@ public sealed class AttachedImagePreparationServiceTests
 
         result.Should().BeSameAs(image);
         result?.Content.Should().BeSameAs(content);
+    }
+
+    [Fact]
+    public async Task PrepareBitmapAsync_WithAvaloniaBitmap_SkipsEncodedImageDecoding()
+    {
+        await DispatchAsync(async () =>
+        {
+            byte[] sourceContent = CreateDeterministicPng();
+            using SKBitmap sourceBitmap = Decode(sourceContent);
+            using Bitmap bitmap = Dlss5BitmapPreparation.CreateAvaloniaBitmap(sourceBitmap);
+            RecordingAttachedImageCodec codec = new()
+            {
+                LosslessEncoder = _ => new byte[90]
+            };
+            ImageModelOption selectedModel = CreateModel(100);
+            AttachedImagePreparationService service = CreateService(codec);
+
+            AttachedImageDto? result = await service.PrepareBitmapAsync(
+                "source.png",
+                bitmap,
+                selectedModel,
+                CancellationToken.None);
+
+            result.Should().NotBeNull();
+            codec.DecodeCallCount.Should().Be(0);
+            codec.LosslessCalls.Should().ContainSingle()
+                .Which.Should().Be((
+                    AttachedImageEncodingFormat.Webp,
+                    AttachedImageCompressionEffort.Fast));
+        });
     }
 
     [Fact]

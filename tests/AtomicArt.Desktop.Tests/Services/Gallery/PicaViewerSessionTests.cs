@@ -10,6 +10,7 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Common;
@@ -197,6 +198,61 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
             string.Equals(action.Id, AtomicArtPicaActions.ShowInGalleryId, StringComparison.Ordinal));
         preparedRequest.Actions.Should().NotContain(action =>
             string.Equals(action.Id, AtomicArtPicaActions.ImbaId, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DispatchBitmapAsync_WithAttachAction_UsesDeferredBitmapInput()
+    {
+        await DispatchAsync(async () =>
+        {
+            PicaViewerSessionTestDependencies dependencies = new();
+            dependencies.UiThreadDispatcher
+                .Setup(dispatcher => dispatcher.InvokeAsync(
+                    It.IsAny<Func<Task>>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns((Func<Task> action, CancellationToken _) => action());
+            ImageAttachmentInput? receivedInput = null;
+            AsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?> inputCommand = new(inputs =>
+            {
+                receivedInput = inputs?.Single();
+
+                return Task.CompletedTask;
+            });
+            AsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> imageCommand = new(_ =>
+                Task.CompletedTask);
+            GalleryImageViewerRequest request = PicaViewerSessionTests.CreateRequest(
+                new GalleryBitmapImageViewerSource(
+                    "dlss5",
+                    "result.png",
+                    new TestBitmapSource()),
+                imageCommand) with
+            {
+                AttachImageInputsCommand = inputCommand
+            };
+            using MemoryStream stream = new(PngContent, writable: false);
+            using Bitmap bitmap = new(stream);
+
+            await using PicaViewerSession session = dependencies.CreateSession();
+            await session.PrepareAsync(request, CancellationToken.None);
+            PicaViewerRequest preparedRequest = PicaViewerSessionTests.GetPreparedRequest(session);
+            PicaImageItem item = preparedRequest.Items.Single();
+            PicaActionDefinition action = preparedRequest.Actions.Single(candidate =>
+                string.Equals(candidate.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal));
+            session.CanDispatchBitmapWithoutEncoding(action, item).Should().BeTrue();
+
+            await session.DispatchBitmapAsync(
+                action,
+                item,
+                bitmap,
+                "result.png",
+                CancellationToken.None);
+
+            receivedInput.Should().NotBeNull();
+            receivedInput?.FileName.Should().Be("result.png");
+            Func<Task> readEncodedImage = () => receivedInput?.ReadAsync(CancellationToken.None)
+                ?? throw new InvalidOperationException("The bitmap input was not received.");
+            await readEncodedImage.Should().ThrowAsync<InvalidOperationException>();
+        });
     }
 
     [Fact]

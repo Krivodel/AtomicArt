@@ -6,6 +6,7 @@ using Pica.Viewer.Services;
 using Pica.Viewer.Views;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Services.Gallery;
@@ -21,6 +22,7 @@ public sealed class ImageViewerService :
     private readonly object _syncRoot = new();
     private readonly HashSet<PicaViewerSession> _sessions = [];
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
+    private IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? _attachImageInputsCommand;
 
     public ImageViewerService(
         IImageViewerWindowFactory windowFactory,
@@ -35,11 +37,14 @@ public sealed class ImageViewerService :
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public void ConfigureAttachments(IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> command)
+    public void ConfigureAttachments(
+        IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> command,
+        IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? inputCommand = null)
     {
         ArgumentNullException.ThrowIfNull(command);
 
         _attachImagesCommand = command;
+        _attachImageInputsCommand = inputCommand;
     }
 
     public async Task OpenAsync(GalleryImageViewerRequest request, CancellationToken ct)
@@ -59,7 +64,8 @@ public sealed class ImageViewerService :
         {
             GalleryImageViewerRequest preparedRequest = request with
             {
-                AttachImagesCommand = request.AttachImagesCommand ?? _attachImagesCommand
+                AttachImagesCommand = request.AttachImagesCommand ?? _attachImagesCommand,
+                AttachImageInputsCommand = request.AttachImageInputsCommand ?? _attachImageInputsCommand
             };
             await session.PrepareAsync(preparedRequest, ct);
             PicaViewerRequest? viewerRequest = session.Request;

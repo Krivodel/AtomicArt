@@ -2,6 +2,7 @@ using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Avalonia.Media.Imaging;
 using SkiaSharp;
 
 using AtomicArt.Contracts.Generation;
@@ -127,6 +128,44 @@ public sealed class AttachedImagePreparationService :
         }
     }
 
+    public async Task<AttachedImageDto?> PrepareBitmapAsync(
+        string fileName,
+        Bitmap bitmap,
+        ImageModelOption selectedModel,
+        CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+        ArgumentNullException.ThrowIfNull(bitmap);
+        ArgumentNullException.ThrowIfNull(selectedModel);
+        await _concurrencyLimiter.WaitAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            return await Task.Run(
+                    () =>
+                    {
+                        using SKBitmap sourceBitmap = AvaloniaAttachmentBitmapCopy.Create(bitmap, ct);
+                        AttachedImageCodecInfo imageInfo = new(
+                            sourceBitmap.Width,
+                            sourceBitmap.Height,
+                            sourceBitmap.AlphaType);
+
+                        return PrepareBitmap(
+                            fileName,
+                            sourceBitmap,
+                            selectedModel,
+                            imageInfo,
+                            ct);
+                    },
+                    ct)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            _concurrencyLimiter.Release();
+        }
+    }
+
     private AttachedImageDto? Prepare(
         AttachedImageDto image,
         ImageModelOption selectedModel,
@@ -134,7 +173,6 @@ public sealed class AttachedImagePreparationService :
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        SKSizeI sourceSize = new(imageInfo.Width, imageInfo.Height);
         Stopwatch decodeStopwatch = Stopwatch.StartNew();
         _logger.LogInformation(
             "Attached image decoding started. Width: {Width}, Height: {Height}",
@@ -156,6 +194,24 @@ public sealed class AttachedImagePreparationService :
             sourceBitmap.Width,
             sourceBitmap.Height,
             decodeStopwatch.ElapsedMilliseconds);
+
+        return PrepareBitmap(
+            image.FileName,
+            sourceBitmap,
+            selectedModel,
+            imageInfo,
+            ct);
+    }
+
+    private AttachedImageDto? PrepareBitmap(
+        string fileName,
+        SKBitmap sourceBitmap,
+        ImageModelOption selectedModel,
+        AttachedImageCodecInfo imageInfo,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        SKSizeI sourceSize = new(imageInfo.Width, imageInfo.Height);
         int maximumDimension = ResolveLosslessFormat(selectedModel)
                                == AttachedImageEncodingFormat.Webp
             ? AttachedImagePreparationPlanner.MaximumWebpDimension
@@ -184,7 +240,7 @@ public sealed class AttachedImagePreparationService :
                 shouldTryLossless);
 
             return PrepareEncodedImage(
-                image,
+                fileName,
                 sourceBitmap,
                 selectedModel,
                 shouldTryLossless,
@@ -206,7 +262,7 @@ public sealed class AttachedImagePreparationService :
             resizeStopwatch.ElapsedMilliseconds);
 
         return PrepareEncodedImage(
-            image,
+            fileName,
             workingBitmap,
             selectedModel,
             false,
@@ -214,7 +270,7 @@ public sealed class AttachedImagePreparationService :
     }
 
     private AttachedImageDto? PrepareEncodedImage(
-        AttachedImageDto image,
+        string fileName,
         SKBitmap sourceBitmap,
         ImageModelOption selectedModel,
         bool shouldTryLossless,
@@ -222,7 +278,7 @@ public sealed class AttachedImagePreparationService :
     {
         LosslessEncodingResult? losslessResult = shouldTryLossless
             ? TryEncodeLosslessly(
-                image.FileName,
+                fileName,
                 sourceBitmap,
                 selectedModel,
                 ct)
@@ -252,11 +308,11 @@ public sealed class AttachedImagePreparationService :
 
             if (lossyResult.BestBytes is not null)
             {
-                return CreatePreparedImage(image.FileName, lossyFormat.Value, lossyResult.BestBytes);
+                return CreatePreparedImage(fileName, lossyFormat.Value, lossyResult.BestBytes);
             }
 
             return TryResizeToFit(
-                image.FileName,
+                fileName,
                 sourceBitmap,
                 selectedModel,
                 lossyFormat.Value,
@@ -265,7 +321,7 @@ public sealed class AttachedImagePreparationService :
         }
 
         return PreparePng(
-            image.FileName,
+            fileName,
             sourceBitmap,
             selectedModel,
             losslessResult,

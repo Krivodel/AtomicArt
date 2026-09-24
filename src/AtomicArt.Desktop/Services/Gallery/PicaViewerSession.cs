@@ -7,6 +7,7 @@ using Pica.Viewer.Services;
 using Pica.Viewer.Views;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 
@@ -31,6 +32,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
     private readonly HashSet<Guid> _galleryItemIds = [];
     private readonly string _sessionDirectory;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
+    private IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? _attachImageInputsCommand;
     private ImageViewerWindow? _window;
     private bool _isDisposed;
 
@@ -88,6 +90,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         }
 
         _attachImagesCommand = sourceRequest.AttachImagesCommand;
+        _attachImageInputsCommand = sourceRequest.AttachImageInputsCommand;
         List<PicaActionDefinition> actions = [];
 
         if (_attachImagesCommand is not null)
@@ -130,6 +133,48 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         _window = window;
         _window.Closed += OnWindowClosed;
+    }
+
+    public bool CanDispatchBitmapWithoutEncoding(
+        PicaActionDefinition action,
+        PicaImageItem item)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(item);
+
+        return CanDispatchAttach(action)
+            && _attachImageInputsCommand is not null;
+    }
+
+    public async Task DispatchBitmapAsync(
+        PicaActionDefinition action,
+        PicaImageItem item,
+        Bitmap bitmap,
+        string fileName,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(bitmap);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+        IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? command =
+            _attachImageInputsCommand;
+
+        if (!CanDispatchAttach(action) || command is null)
+        {
+            throw new InvalidOperationException(
+                "The direct bitmap attachment command is unavailable for this Pica session.");
+        }
+
+        string safeFileName = Path.GetFileName(fileName);
+        using ImageAttachmentInput input = ImageAttachmentInput.FromBorrowedBitmap(
+            safeFileName,
+            bitmap);
+        List<ImageAttachmentInput> inputs = [input];
+        await _dependencies.UiThreadDispatcher.InvokeAsync(
+            () => ExecuteAttachmentCommandAsync(command, inputs),
+            ct).ConfigureAwait(false);
     }
 
     public async Task DispatchCurrentImageAsync(
@@ -591,22 +636,26 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         string safeFileName = Path.GetFileName(fileName);
         List<AttachedImageDto> images = [new AttachedImageDto(safeFileName, contentType, content)];
         await _dependencies.UiThreadDispatcher.InvokeAsync(
-            async () =>
-            {
-                if (command.CanExecute(images))
-                {
-                    await command.ExecuteAsync(images);
-                    _dependencies.Logger.LogDebug(
-                        "Embedded Pica delivered {ImageCount} attachment to the generation panel",
-                        images.Count);
-                }
-                else
-                {
-                    _dependencies.Logger.LogWarning(
-                        "Embedded Pica attachment was rejected by the generation panel");
-                }
-            },
+            () => ExecuteAttachmentCommandAsync(command, images),
             ct).ConfigureAwait(false);
+    }
+
+    private async Task ExecuteAttachmentCommandAsync<TImage>(
+        IAsyncRelayCommand<IReadOnlyList<TImage>?> command,
+        IReadOnlyList<TImage> images)
+    {
+        if (command.CanExecute(images))
+        {
+            await command.ExecuteAsync(images);
+            _dependencies.Logger.LogDebug(
+                "Embedded Pica delivered {ImageCount} attachment to the generation panel",
+                images.Count);
+        }
+        else
+        {
+            _dependencies.Logger.LogWarning(
+                "Embedded Pica attachment was rejected by the generation panel");
+        }
     }
 
     private async void OnWindowClosed(object? sender, EventArgs eventArgs)

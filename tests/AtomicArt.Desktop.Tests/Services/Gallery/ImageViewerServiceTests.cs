@@ -43,10 +43,11 @@ public sealed class ImageViewerServiceTests
     }
 
     [Fact]
-    public async Task OpenAsync_WithConfiguredAttachmentsAndDlssBitmap_OffersAttachForImageAndSelection()
+    public async Task OpenAsync_WithConfiguredAttachmentsAndDlssBitmap_OffersDirectAttach()
     {
         Mock<IImageViewerWindowFactory> windowFactoryMock = new();
         PicaViewerRequest? preparedRequest = null;
+        bool canDispatchBitmapWithoutEncoding = false;
         InvalidOperationException factoryFailure = new("Stop after preparing viewer actions.");
         windowFactoryMock
             .Setup(factory => factory.CreateAsync(
@@ -57,12 +58,22 @@ public sealed class ImageViewerServiceTests
             .Callback((PicaViewerRequest request,
                 IViewerActionDispatcher dispatcher,
                 IReadOnlyDictionary<Guid, IPicaImageBitmapSource>? bitmapSources,
-                CancellationToken ct) => preparedRequest = request)
+                CancellationToken ct) =>
+            {
+                preparedRequest = request;
+                PicaActionDefinition attachAction = request.Actions.Single(action =>
+                    string.Equals(action.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal));
+                canDispatchBitmapWithoutEncoding = dispatcher.CanDispatchBitmapWithoutEncoding(
+                    attachAction,
+                    request.Items.Single());
+            })
             .ThrowsAsync(factoryFailure);
         ImageViewerService service = ImageViewerServiceTests.CreateService(windowFactoryMock);
         AsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachCommand = new(
             _ => Task.CompletedTask);
-        service.ConfigureAttachments(attachCommand);
+        AsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?> inputCommand = new(
+            _ => Task.CompletedTask);
+        service.ConfigureAttachments(attachCommand, inputCommand);
         Mock<IPicaImageBitmapSource> bitmapSource = new();
         List<GalleryImageViewerItem> items =
         [
@@ -87,6 +98,7 @@ public sealed class ImageViewerServiceTests
         PicaActionDefinition attach = prepared.Actions.Single(action =>
             string.Equals(action.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal));
         attach.Targets.Should().Be(PicaActionTargets.CurrentImage | PicaActionTargets.Selection);
+        canDispatchBitmapWithoutEncoding.Should().BeTrue();
     }
 
     private static ImageViewerService CreateService(
