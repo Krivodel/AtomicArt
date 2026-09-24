@@ -299,8 +299,11 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
         }
     }
 
-    [Fact]
-    public async Task DispatchCurrentImageAsync_WithMemoryOnlyBitmap_AttachesEncodedBitmap()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DispatchDerivedImageAsync_WithMemoryOnlyBitmap_AttachesPng(
+        bool closeBeforeDispatch)
     {
         await DispatchAsync(async () =>
         {
@@ -320,7 +323,7 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
             GalleryImageViewerRequest request = PicaViewerSessionTests.CreateRequest(
                 new GalleryBitmapImageViewerSource(
                     "dlss5",
-                    "dlss5-result.png",
+                    "memory-only.jpg",
                     bitmapSource),
                 attachCommand);
 
@@ -330,20 +333,28 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
             PicaActionDefinition attachAction = preparedRequest.Actions.Single(action =>
                 string.Equals(action.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal));
 
-            await session.DispatchCurrentImageAsync(
+            if (closeBeforeDispatch)
+            {
+                await session.DisposeAsync();
+            }
+
+            await session.DispatchDerivedImageAsync(
                 attachAction,
                 preparedRequest.Items.Single(),
+                "memory-only.png",
+                PicaViewerSessionTests.PngContent,
                 CancellationToken.None);
 
             attachedImages.Should().ContainSingle();
-            attachedImages?[0].FileName.Should().Be("dlss5-result.png");
+            attachedImages?[0].FileName.Should().Be("memory-only.png");
             attachedImages?[0].ContentType.Should().Be(GenerationImageContentTypes.Png);
-            bitmapSource.AcquireCount.Should().Be(1);
+            attachedImages?[0].Content.Should().Equal(PicaViewerSessionTests.PngContent);
+            bitmapSource.AcquireCount.Should().Be(0);
         });
     }
 
     [Fact]
-    public async Task DispatchCurrentImageAsync_WithMemoryOnlyBitmap_OpensDlss5UsingTemporaryPng()
+    public async Task DispatchDerivedImageAsync_WithMemoryOnlyBitmap_OpensDlss5UsingTemporaryPng()
     {
         await DispatchAsync(async () =>
         {
@@ -370,9 +381,14 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
             PicaActionDefinition action = prepared.Actions.Single(candidate =>
                 string.Equals(candidate.Id, AtomicArtPicaActions.OpenDlss5Id, StringComparison.Ordinal));
 
-            await session.DispatchCurrentImageAsync(action, prepared.Items.Single(), CancellationToken.None);
+            await session.DispatchDerivedImageAsync(
+                action,
+                prepared.Items.Single(),
+                "derived-image.png",
+                PicaViewerSessionTests.PngContent,
+                CancellationToken.None);
 
-            bitmapSource.AcquireCount.Should().Be(1);
+            bitmapSource.AcquireCount.Should().Be(0);
             stagingPath.Should().NotBeNull();
             File.Exists(stagingPath).Should().BeFalse();
             dependencies.Dlss5SourceOpener.Verify(

@@ -157,12 +157,6 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         if (string.Equals(action.Id, AtomicArtPicaActions.OpenDlss5Id, StringComparison.Ordinal))
         {
-            if (_bitmapSources.TryGetValue(item.Id, out IPicaImageBitmapSource? dlssBitmapSource))
-            {
-                await DispatchBitmapAsync(action, item, dlssBitmapSource, ct).ConfigureAwait(false);
-                return;
-            }
-
             await DispatchOpenDlss5Async(item, ct).ConfigureAwait(false);
             return;
         }
@@ -173,19 +167,6 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
                 "Embedded Pica rejected unsupported action {ActionId} for item {ItemId}",
                 action.Id,
                 item.Id);
-            return;
-        }
-
-        if ((_bitmapSources.TryGetValue(
-                item.Id,
-                out IPicaImageBitmapSource? bitmapSource))
-            && (!bitmapSource.IsFileBacked))
-        {
-            await DispatchBitmapAsync(
-                action,
-                item,
-                bitmapSource,
-                ct).ConfigureAwait(false);
             return;
         }
 
@@ -352,40 +333,6 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         if (File.Exists(path))
         {
             File.Delete(path);
-        }
-    }
-
-    private async Task DispatchBitmapAsync(
-        PicaActionDefinition action,
-        PicaImageItem item,
-        IPicaImageBitmapSource bitmapSource,
-        CancellationToken ct)
-    {
-        IPicaImageBitmapLease bitmapLease =
-            await bitmapSource.AcquireAsync(ct).ConfigureAwait(false);
-
-        using (bitmapLease)
-        using (MemoryStream stream = new())
-        {
-            await Task.Run(() => bitmapLease.Bitmap.Save(stream), ct).ConfigureAwait(false);
-
-            if (string.Equals(action.Id, AtomicArtPicaActions.OpenDlss5Id, StringComparison.Ordinal))
-            {
-                stream.Position = 0;
-                await DispatchOpenDlss5Async(stream.CopyToAsync, PicaImageFormats.PngExtension, ct).ConfigureAwait(false);
-                return;
-            }
-
-            byte[] content = stream.ToArray();
-            await ExecuteAttachAsync(
-                item.FileName,
-                GetContentType(item.FileName),
-                content,
-                ct).ConfigureAwait(false);
-            _dependencies.Logger.LogInformation(
-                "Embedded Pica attached memory-only image {ItemId} with {ByteCount} bytes",
-                item.Id,
-                content.Length);
         }
     }
 
