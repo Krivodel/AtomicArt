@@ -13,7 +13,7 @@
     <Border x:Name="GenerationCardContainer"
             Classes="generation-card-container">
         <Border.ContextFlyout>
-            <uiControls:AnimatedContextMenuFlyout>
+            <uiControls:AnimatedContextMenuFlyout FlyoutPresenterClasses="gallery-card-context-menu">
                 <MenuItem x:Name="CopyImageMenuItem"
                           Command="{Binding #GenerationCard.CopyImageCommand}"
                           CommandParameter="{Binding #GenerationCard.DataContext}">

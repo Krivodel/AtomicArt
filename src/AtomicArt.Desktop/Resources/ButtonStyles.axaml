@@ -107,6 +107,11 @@
                 Value="True" />
     </Style>
 
+    <Style Selector="MenuFlyoutPresenter.animated-context-menu.gallery-card-context-menu MenuItem /template/ Border#root > Panel > Grid">
+        <Setter Property="Margin"
+                Value="9,10,5,10" />
+    </Style>
+
     <Style Selector="MenuFlyoutPresenter.animated-context-menu MenuItem">
         <Setter Property="Theme"
                 Value="{StaticResource ContextMenuItemTheme}" />
