@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using FluentAssertions;
 using Xunit;
@@ -114,11 +115,13 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
     }
 
     [Fact]
-    public void ModifierPressedAfterScroll_WithPointerOverPreview_ExpandsWithoutPointerMovement()
+    public async Task ModifierPressedAfterScroll_WithPointerOverPreview_ExpandsWithoutPointerMovement()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using PreviewTestContext context = CreateScenarioWithImage("atomic-art-preview-modifier-after-scroll");
+            context.Window.Height = 220d;
+            context.Window.CaptureRenderedFrame();
 
             AssertPreviewIsOpaque(context);
             Point pointerPosition = GetPointerPosition(context, 150d);
@@ -138,6 +141,8 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
 
             context.PreviewHost.Width.Should().Be(748d);
             AssertPreviewIsOpaque(context);
+
+            return Task.CompletedTask;
         });
     }
 
@@ -299,10 +304,10 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
     [InlineData(KeyModifiers.Shift)]
     [InlineData(KeyModifiers.Control)]
     [InlineData(KeyModifiers.Alt)]
-    public void ModifierPressed_WithStaleHostPointerOutsidePreview_DoesNotExpand(
+    public async Task ModifierPressed_WithStaleHostPointerOverPrompt_DoesNotExpand(
         KeyModifiers modifier)
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             string imagePath = Path.Combine(
                 Path.GetTempPath(),
@@ -320,14 +325,26 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             };
             Grid viewport = new()
             {
-                Width = 500d,
-                Height = 300d
+                Width = 300d,
+                Height = 300d,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left
+            };
+            TextBox prompt = new()
+            {
+                Width = 180d,
+                Height = 200d,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+            };
+            Grid layout = new()
+            {
+                Children = { viewport, prompt }
             };
             StalePointerExpansionHost expansionHost = new(viewport);
             preview.ExpansionHost = expansionHost;
             preview.OverflowOwner = preview;
             viewport.Children.Add(preview);
-            Window window = Show(viewport, 500d, 300d);
+            Window window = Show(layout, 500d, 300d);
+            using WriteableBitmap bitmap = CreatePreviewBitmap();
 
             try
             {
@@ -340,6 +357,10 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                     ?? throw new InvalidOperationException("Preview window position was not resolved.");
                 Grid previewHost = preview.FindControl<Grid>("PreviewExpansionHost")
                     ?? throw new InvalidOperationException("Preview expansion host was not found.");
+                Image previewImage = preview.FindControl<Image>("PreviewImage")
+                    ?? throw new InvalidOperationException("Preview image was not found.");
+                previewImage.Source = bitmap;
+                previewHost.Transitions = null;
                 expansionHost.SetPointerPosition(pointerInsidePreview);
                 expansionHost.NotifyPointerStateChanged();
 
@@ -351,6 +372,8 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
 
                 expansionHost.SetModifiersAndNotify(KeyModifiers.None);
                 window.MouseMove(new Point(400d, 100d), RawInputModifiers.None);
+                prompt.Focus().Should().BeTrue();
+                viewport.IsPointerOver.Should().BeFalse();
                 expansionHost.SetModifiersAndNotify(modifier);
                 window.CaptureRenderedFrame();
 
@@ -361,6 +384,8 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
                 window.Close();
                 File.Delete(imagePath);
             }
+
+            return Task.CompletedTask;
         });
     }
 
@@ -398,6 +423,9 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             ?? throw new InvalidOperationException("Generation preview host was not found.");
         Image previewImage = preview.FindControl<Image>("PreviewImage")
             ?? throw new InvalidOperationException("Generation preview image was not found.");
+        WriteableBitmap bitmap = CreatePreviewBitmap();
+        previewImage.Source = bitmap;
+        previewHost.Transitions = null;
         ScrollViewer scrollViewer = GetGalleryScrollViewer(gallery);
 
         return new PreviewTestContext(
@@ -408,6 +436,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             previewHost,
             previewImage,
             scrollViewer,
+            bitmap,
             imagePath);
     }
 
@@ -417,6 +446,11 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         context.Preview.ZIndex.Should().Be(10);
         context.Preview.Opacity.Should().Be(1d);
         context.PreviewImage.Opacity.Should().Be(1d);
+    }
+
+    private static WriteableBitmap CreatePreviewBitmap()
+    {
+        return new WriteableBitmap(new PixelSize(440, 220), new Vector(96d, 96d));
     }
 
     private static void AssertExpandedPreviewAttachedToCard(
@@ -453,6 +487,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         public ScrollViewer ScrollViewer { get; }
 
         private readonly string _imagePath;
+        private readonly Bitmap _bitmap;
 
         public PreviewTestContext(
             AnimatedGalleryControl gallery,
@@ -462,6 +497,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             Grid previewHost,
             Image previewImage,
             ScrollViewer scrollViewer,
+            Bitmap bitmap,
             string imagePath)
         {
             Gallery = gallery;
@@ -471,12 +507,14 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
             PreviewHost = previewHost;
             PreviewImage = previewImage;
             ScrollViewer = scrollViewer;
+            _bitmap = bitmap ?? throw new ArgumentNullException(nameof(bitmap));
             _imagePath = imagePath ?? throw new ArgumentNullException(nameof(imagePath));
         }
 
         public void Dispose()
         {
             Window.Close();
+            _bitmap.Dispose();
             File.Delete(_imagePath);
         }
     }
@@ -509,6 +547,7 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         public void SetModifiersAndNotify(KeyModifiers modifiers)
         {
             CurrentKeyModifiers = modifiers;
+            NotifyPointerStateChanged();
             ModifiersChanged?.Invoke(this, EventArgs.Empty);
         }
 
