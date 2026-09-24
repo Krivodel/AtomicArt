@@ -6,6 +6,7 @@
              xmlns:generation="using:AtomicArt.Desktop.Controls.Generation"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:services="using:AtomicArt.Desktop.Services.Dlss5"
+             xmlns:system="clr-namespace:System;assembly=netstandard"
              xmlns:viewModels="using:AtomicArt.Desktop.ViewModels.Dlss5"
              x:Class="AtomicArt.Desktop.Views.Dlss5.Dlss5SessionView"
              x:DataType="viewModels:Dlss5SessionViewModel">
@@ -177,10 +178,13 @@
                     <TextBlock Text="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.Style}}" />
                     <ComboBox Grid.Row="1"
                               HorizontalAlignment="Stretch"
+                              ItemsSource="{x:Static resources:Dlss5LocalizationKeys+Controls.StyleOptionKeys}"
                               SelectedIndex="{Binding StyleIndex}">
-                        <ComboBoxItem Content="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.Default}}" />
-                        <ComboBoxItem Content="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.Natural}}" />
-                        <ComboBoxItem Content="{i18n:I18n {x:Static resources:Dlss5LocalizationKeys+Controls.Cinematic}}" />
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="system:String">
+                                <TextBlock Text="{i18n:I18n {Binding}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
                     </ComboBox>
                 </Grid>
                 <Grid Classes="dlss5-parameter"

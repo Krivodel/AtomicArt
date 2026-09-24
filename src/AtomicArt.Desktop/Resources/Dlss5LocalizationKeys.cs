@@ -42,5 +42,8 @@ public static class Dlss5LocalizationKeys
         public const string Default = "Dlss5.Controls.Default";
         public const string Natural = "Dlss5.Controls.Natural";
         public const string Cinematic = "Dlss5.Controls.Cinematic";
+
+        public static IReadOnlyList<string> StyleOptionKeys { get; } =
+            Array.AsReadOnly(new string[] { Default, Natural, Cinematic });
     }
 }
