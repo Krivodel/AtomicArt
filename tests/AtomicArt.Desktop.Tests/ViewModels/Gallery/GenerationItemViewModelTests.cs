@@ -1,8 +1,11 @@
+using System.Text.Json;
+
 using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Generation;
@@ -100,6 +103,68 @@ public sealed class GenerationItemViewModelTests
         viewModel.Usage.Should().BeSameAs(usage);
     }
 
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(30)]
+    [InlineData(3600)]
+    public void UpdateFromResult_WithDifferentServerTime_KeepsElapsedTimeFromLocalStart(
+        int serverTimeOffsetSeconds)
+    {
+        GenerationItemViewModel viewModel = CreatePlaceholder();
+        DateTime serverCreatedAtUtc = CreatedAtUtc.AddSeconds(serverTimeOffsetSeconds);
+        GenerationItemDto result = GenerationItemDtoTestFactory.Create(
+            id: ItemId,
+            createdAtUtc: serverCreatedAtUtc,
+            completedAtUtc: serverCreatedAtUtc.AddSeconds(30),
+            generationDuration: TimeSpan.FromSeconds(30));
+
+        viewModel.UpdateFromResult(result, "result.png", null);
+        viewModel.RefreshElapsedText(CreatedAtUtc.AddSeconds(45));
+
+        viewModel.CreatedAtUtc.Should().Be(CreatedAtUtc);
+        viewModel.ElapsedText.Should().Be(string.Concat(
+            "45",
+            TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.SecondShort)));
+        viewModel.CompletedAtUtc.Should().Be(result.CompletedAtUtc);
+        viewModel.GenerationDuration.Should().Be(result.GenerationDuration);
+    }
+
+    [Fact]
+    public void Restore_AfterCompletionAndStateSerialization_KeepsLocalStartTime()
+    {
+        GenerationItemViewModel viewModel = CreatePlaceholder();
+        GenerationItemDto result = GenerationItemDtoTestFactory.Create(
+            id: ItemId,
+            createdAtUtc: CreatedAtUtc.AddHours(1));
+        JsonSerializerOptions serializerOptions = new(JsonSerializerDefaults.Web);
+        GalleryStateSection section = new();
+
+        viewModel.UpdateFromResult(result, "result.png", null);
+        GalleryState savedState = new()
+        {
+            Items = new List<GalleryItemState> { viewModel.CreateState() }
+        };
+        JsonElement payload = JsonSerializer.SerializeToElement(savedState, serializerOptions);
+        GalleryState restoredState = (GalleryState)section.DeserializePayload(
+            section.SchemaVersion,
+            payload,
+            serializerOptions);
+        GalleryItemState restoredItem = restoredState.Items.Single();
+        GenerationItemViewModel restoredViewModel = GenerationItemViewModel.Restore(
+            restoredItem,
+            restoredItem.ImagePath,
+            restoredItem.ThumbnailPath,
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
+        restoredViewModel.RefreshElapsedText(CreatedAtUtc.AddMinutes(2));
+
+        restoredViewModel.CreatedAtUtc.Should().Be(CreatedAtUtc);
+        restoredViewModel.ElapsedText.Should().Be(string.Concat(
+            "2",
+            TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.MinuteShort)));
+        restoredViewModel.GalleryOrderTimestampUtc.Should().Be(CreatedAtUtc);
+    }
+
     [Fact]
     public void DisplayThumbnailPath_WithThumbnailPath_ReturnsThumbnailPath()
     {
@@ -179,6 +244,25 @@ public sealed class GenerationItemViewModelTests
         viewModel.IsFailed.Should().BeTrue();
         viewModel.FailureCode.Should().Be(
             GenerationProviderFailureErrorCodes.RequestRejected);
+    }
+
+    private static GenerationItemViewModel CreatePlaceholder()
+    {
+        GenerationLifecycleEvent startedEvent = GalleryLifecycleTestFactory.CreateStartedEvent(
+            ItemId,
+            CreatedAtUtc,
+            generationCount: 1,
+            attachedImagesCount: 0);
+        GenerationStartSnapshot start = startedEvent.Start
+            ?? throw new InvalidOperationException("Test generation start snapshot is missing.");
+
+        return GenerationItemViewModel.CreatePlaceholder(
+            start,
+            ItemId,
+            0,
+            CreatedAtUtc,
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
     }
 
     private static GenerationItemViewModel CreateViewModel(

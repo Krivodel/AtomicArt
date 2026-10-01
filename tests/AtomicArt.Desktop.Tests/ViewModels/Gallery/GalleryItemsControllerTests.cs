@@ -188,6 +188,7 @@ public sealed class GalleryItemsControllerTests
 
         placeholder.UpdateFromResult(result, null, null);
 
+        placeholder.CreatedAtUtc.Should().Be(CreatedAtUtc);
         placeholder.GalleryOrderTimestampUtc.Should()
             .Be(galleryOrderTimestampUtc);
     }

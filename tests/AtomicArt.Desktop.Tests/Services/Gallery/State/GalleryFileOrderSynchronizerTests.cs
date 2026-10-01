@@ -27,8 +27,11 @@ public sealed class GalleryFileOrderSynchronizerTests
         0,
         DateTimeKind.Utc);
 
-    [Fact]
-    public async Task SynchronizeAsync_WithManagedImage_SetsSortableFileDates()
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(1)]
+    public async Task SynchronizeAsync_WithManagedImage_SetsSortableFileDates(
+        int creationTimeOffsetHours)
     {
         string rootDirectory = TestDirectories.GetUniqueDirectoryPath(
             typeof(GalleryFileOrderSynchronizerTests),
@@ -49,6 +52,7 @@ public sealed class GalleryFileOrderSynchronizerTests
                 GenerationImageTestData.ValidPngBytes);
             GalleryItemState item = GalleryItemStateTestFactory.CreateGenerated(
                 id: ItemId,
+                createdAtUtc: GalleryOrderTimestampUtc.AddHours(creationTimeOffsetHours),
                 galleryOrderTimestampUtc: GalleryOrderTimestampUtc,
                 imagePath: Path.Combine("Art", fileName));
             GalleryFileOrderSynchronizer synchronizer = CreateSynchronizer(

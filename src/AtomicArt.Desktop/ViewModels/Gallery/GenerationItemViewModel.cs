@@ -107,7 +107,8 @@ public sealed partial class GenerationItemViewModel :
         _statusDescriptorRegistry = statusDescriptorRegistry;
         _textProvider = textProvider;
 
-        ApplyItem(item);
+        CreatedAtUtc = item.CreatedAtUtc;
+        ApplyResultMetadata(item);
         GalleryOrderTimestampUtc = item.CreatedAtUtc;
         ImagePath = imagePath;
         AttachedImagesCount = attachedImagesCount;
@@ -214,7 +215,7 @@ public sealed partial class GenerationItemViewModel :
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        ApplyItem(item);
+        ApplyResultMetadata(item);
         ImagePath = imagePath;
         ThumbnailPath = thumbnailPath;
         CorrelationId = null;
@@ -340,7 +341,7 @@ public sealed partial class GenerationItemViewModel :
             _textProvider.Get(unitKey));
     }
 
-    private void ApplyItem(GenerationItemDto item)
+    private void ApplyResultMetadata(GenerationItemDto item)
     {
         Id = item.Id;
         ModelId = item.ModelId;
@@ -348,7 +349,6 @@ public sealed partial class GenerationItemViewModel :
         Prompt = item.Prompt;
         Resolution = item.Resolution;
         AspectRatio = item.AspectRatio;
-        CreatedAtUtc = item.CreatedAtUtc;
         CompletedAtUtc = item.CompletedAtUtc;
         GenerationDuration = item.GenerationDuration;
         Price = item.Price;
