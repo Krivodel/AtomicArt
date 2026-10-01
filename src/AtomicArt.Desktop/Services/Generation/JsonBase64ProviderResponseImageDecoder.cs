@@ -61,10 +61,10 @@ public sealed class JsonBase64ProviderResponseImageDecoder
         ArgumentNullException.ThrowIfNull(imageDestination);
         ArgumentNullException.ThrowIfNull(result);
 
-        byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(_inputBufferSize);
-        DecoderState state = new(
+        using DecoderState state = new(
             _outputBufferSize,
             _maximumImageBytes);
+        byte[] inputBuffer = ArrayPool<byte>.Shared.Rent(_inputBufferSize);
 
         try
         {
@@ -91,26 +91,37 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                 }
             }
 
-            if (state.Complete())
+            bool hasImage = state.Complete();
+            await state.FlushAsync(imageDestination, ct).ConfigureAwait(false);
+            await imageDestination.FlushAsync(ct).ConfigureAwait(false);
+
+            if (hasImage)
             {
                 result.SetHasImage();
             }
-
-            await state.FlushAsync(imageDestination, ct).ConfigureAwait(false);
-            await imageDestination.FlushAsync(ct).ConfigureAwait(false);
         }
         finally
         {
-            state.Dispose();
             ArrayPool<byte>.Shared.Return(inputBuffer);
         }
     }
 
     private sealed class DecoderState : IDisposable
     {
+        public bool ShouldFlush =>
+            _outputCount >= _outputBufferSize - MaximumDecodedQuartetBytes;
+
+        private const int Base64QuartetLength = 4;
+        private const int MaximumDecodedQuartetBytes = 3;
+        private const int MaximumDataUrlPrefixLength = 128;
+        private const string ImageDataUrlPrefix = "data:image/";
+        private const string InvalidBase64Message =
+            "Provider response contains invalid Base64 image data.";
+
         private readonly byte[] _outputBuffer;
-        private readonly byte[] _base64Quartet = new byte[4];
-        private readonly byte[] _dataUrlPrefix = new byte[128];
+        private readonly byte[] _base64Quartet = new byte[Base64QuartetLength];
+        private readonly byte[] _dataUrlPrefix = new byte[MaximumDataUrlPrefixLength];
+        private readonly JsonStringEscapeDecoder _escapeDecoder = new();
         private readonly long _maximumImageBytes;
         private readonly int _outputBufferSize;
         private AnalyzerState _state;
@@ -122,11 +133,10 @@ public sealed class JsonBase64ProviderResponseImageDecoder
         private bool _colonSeen;
         private bool _expectsDataUrl;
         private bool _hasDataUrlPrefix;
+        private bool _isEscapePending;
+        private bool _hasBase64Padding;
         private int _dataUrlPrefixLength;
         private ImageDataProperty _candidateProperty;
-
-        public bool ShouldFlush =>
-            _outputCount >= _outputBufferSize - 3;
 
         public DecoderState(
             int outputBufferSize,
@@ -162,7 +172,7 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                     ProcessAfterDataKey(value);
                     break;
                 case AnalyzerState.DecodeDataString:
-                    ProcessBase64(value);
+                    ProcessDataString(value);
                     break;
                 default:
                     throw new InvalidOperationException(
@@ -201,6 +211,14 @@ public sealed class JsonBase64ProviderResponseImageDecoder
         public void Dispose()
         {
             ArrayPool<byte>.Shared.Return(_outputBuffer);
+        }
+
+        private static bool IsJsonWhitespace(int value)
+        {
+            return value is (byte)' '
+                or (byte)'\t'
+                or (byte)'\r'
+                or (byte)'\n';
         }
 
         private void ProcessOutsideString(byte value)
@@ -278,6 +296,7 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                 }
 
                 _hasDataUrlPrefix = false;
+                _hasBase64Padding = false;
                 _dataUrlPrefixLength = 0;
                 _state = AnalyzerState.DecodeDataString;
                 return;
@@ -286,15 +305,39 @@ public sealed class JsonBase64ProviderResponseImageDecoder
             _state = AnalyzerState.NormalOutsideString;
         }
 
-        private void ProcessBase64(byte value)
+        private void ProcessDataString(byte value)
         {
-            if (_expectsDataUrl && !_hasDataUrlPrefix)
+            if (_isEscapePending)
             {
-                ProcessDataUrlPrefix(value);
+                _escapeDecoder.Process(value);
+
+                if (_escapeDecoder.DecodedCharacter is int character)
+                {
+                    _isEscapePending = false;
+                    ProcessImageStringCharacter(character);
+                }
+
+                return;
+            }
+
+            if (value == (byte)'\\')
+            {
+                _isEscapePending = true;
                 return;
             }
 
             if (value == (byte)'"')
+            {
+                CompleteDataString();
+                return;
+            }
+
+            ProcessImageStringCharacter(value);
+        }
+
+        private void CompleteDataString()
+        {
+            if (!_expectsDataUrl || _hasDataUrlPrefix)
             {
                 if (_base64Count != 0)
                 {
@@ -303,7 +346,16 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                 }
 
                 _imageCount++;
-                _state = AnalyzerState.NormalOutsideString;
+            }
+
+            _state = AnalyzerState.NormalOutsideString;
+        }
+
+        private void ProcessImageStringCharacter(int value)
+        {
+            if (_expectsDataUrl && !_hasDataUrlPrefix)
+            {
+                ProcessDataUrlPrefix(value);
                 return;
             }
 
@@ -312,7 +364,12 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                 return;
             }
 
-            _base64Quartet[_base64Count] = value;
+            if (_hasBase64Padding || value > byte.MaxValue)
+            {
+                throw new InvalidDataException(InvalidBase64Message);
+            }
+
+            _base64Quartet[_base64Count] = (byte)value;
             _base64Count++;
 
             if (_base64Count < _base64Quartet.Length)
@@ -329,11 +386,11 @@ public sealed class JsonBase64ProviderResponseImageDecoder
             if (status != OperationStatus.Done
                 || consumed != _base64Quartet.Length)
             {
-                throw new InvalidDataException(
-                    "Provider response contains invalid Base64 image data.");
+                throw new InvalidDataException(InvalidBase64Message);
             }
 
             _base64Count = 0;
+            _hasBase64Padding = _base64Quartet[^1] == (byte)'=';
             _outputCount += written;
             _totalOutputBytes += written;
 
@@ -342,14 +399,6 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                 throw new InvalidDataException(
                     "Provider image exceeds the configured size limit.");
             }
-        }
-
-        private static bool IsJsonWhitespace(byte value)
-        {
-            return value is (byte)' '
-                or (byte)'\t'
-                or (byte)'\r'
-                or (byte)'\n';
         }
 
         private ReadOnlySpan<byte> GetCandidatePropertyName()
@@ -361,15 +410,17 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                 ImageDataProperty.Content => ContentPropertyName,
                 ImageDataProperty.ImageUrl => ImageUrlPropertyName,
                 ImageDataProperty.Url => UrlPropertyName,
-                _ => []
+                _ => ReadOnlySpan<byte>.Empty
             };
         }
 
-        private void ProcessDataUrlPrefix(byte value)
+        private void ProcessDataUrlPrefix(int value)
         {
-            if (value == (byte)'"')
+            if (value > byte.MaxValue
+                || (_dataUrlPrefixLength < ImageDataUrlPrefix.Length
+                    && char.ToLowerInvariant((char)value) != ImageDataUrlPrefix[_dataUrlPrefixLength]))
             {
-                _state = AnalyzerState.NormalOutsideString;
+                _state = AnalyzerState.NormalInsideString;
                 return;
             }
 
@@ -378,7 +429,7 @@ public sealed class JsonBase64ProviderResponseImageDecoder
                 throw new InvalidDataException("Provider image data URL prefix is too long.");
             }
 
-            _dataUrlPrefix[_dataUrlPrefixLength] = value;
+            _dataUrlPrefix[_dataUrlPrefixLength] = (byte)value;
             _dataUrlPrefixLength++;
 
             if (value != (byte)',')
@@ -388,8 +439,7 @@ public sealed class JsonBase64ProviderResponseImageDecoder
 
             string prefix = Encoding.ASCII.GetString(_dataUrlPrefix, 0, _dataUrlPrefixLength);
 
-            if (!prefix.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)
-                || !prefix.EndsWith(";base64,", StringComparison.OrdinalIgnoreCase))
+            if (!prefix.EndsWith(";base64,", StringComparison.OrdinalIgnoreCase))
             {
                 _state = AnalyzerState.NormalInsideString;
                 return;

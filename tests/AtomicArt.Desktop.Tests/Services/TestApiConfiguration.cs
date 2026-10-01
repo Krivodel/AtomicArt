@@ -20,6 +20,7 @@ internal static class TestApiConfiguration
     public const string BaseAddress = "https://atomicart.test/";
     public const int MaxAutomaticRetries = 4;
     public const int MaxConcurrentGenerations = 4;
+    public const long MaxDecodedProviderResponseImageBytes = 512L * 1024L * 1024L;
     public const int MaxInputImageBytes = 128 * 1024 * 1024;
     public const long MaximumThumbnailSourceImageBytes = 500L * 1024L * 1024L;
     public const int ThumbnailShortSidePixels =
@@ -185,7 +186,8 @@ internal static class TestApiConfiguration
     public static GenerationClientOptions CreateGenerationOptions(
         int maxConcurrentGenerations = MaxConcurrentGenerations,
         int maxAutomaticRetries = MaxAutomaticRetries,
-        int attachedImagePreparationConcurrency = 2)
+        int attachedImagePreparationConcurrency = 2,
+        long maxDecodedProviderResponseImageBytes = MaxDecodedProviderResponseImageBytes)
     {
         return new GenerationClientOptions
         {
@@ -200,7 +202,7 @@ internal static class TestApiConfiguration
             LossyQualitySearchSteps = 6,
             MaxAutomaticRetries = maxAutomaticRetries,
             MaxConcurrentGenerations = maxConcurrentGenerations,
-            MaxDecodedProviderResponseImageBytes = 512L * 1024L * 1024L,
+            MaxDecodedProviderResponseImageBytes = maxDecodedProviderResponseImageBytes,
             MaxInputImageBytes = MaxInputImageBytes,
             MaximumLosslessCandidateRatio = 1.05d,
             MaximumLossyQuality = 100,
@@ -330,12 +332,14 @@ internal static class TestApiConfiguration
     public static IOptions<GenerationClientOptions> CreateGenerationOptionsWrapper(
         int maxConcurrentGenerations = MaxConcurrentGenerations,
         int maxAutomaticRetries = MaxAutomaticRetries,
-        int attachedImagePreparationConcurrency = 2)
+        int attachedImagePreparationConcurrency = 2,
+        long maxDecodedProviderResponseImageBytes = MaxDecodedProviderResponseImageBytes)
     {
         GenerationClientOptions options = CreateGenerationOptions(
             maxConcurrentGenerations,
             maxAutomaticRetries,
-            attachedImagePreparationConcurrency);
+            attachedImagePreparationConcurrency,
+            maxDecodedProviderResponseImageBytes);
 
         return Options.Create(options);
     }
