@@ -306,23 +306,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     public async Task PrepareStateRestoreAsync(CancellationToken ct)
     {
-        long endpointRevision = _apiEndpointService.Revision;
+        _acceptApiEndpointChanges = true;
 
-        try
+        if (LoadModelCatalogCommand.CanExecute(null))
         {
-            if (LoadModelCatalogCommand.CanExecute(null))
-            {
-                await LoadModelCatalogCommand.ExecuteAsync(null);
-            }
-        }
-        finally
-        {
-            _acceptApiEndpointChanges = true;
-
-            if (!_isDisposed && endpointRevision != _apiEndpointService.Revision)
-            {
-                _ = DispatchCatalogReloadAsync();
-            }
+            await LoadModelCatalogCommand.ExecuteAsync(null);
         }
     }
 

@@ -896,7 +896,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
-    public async Task PrepareStateRestoreAsync_WhenEndpointChangesDuringInitialCatalogLoad_ReloadsCatalog()
+    public async Task PrepareStateRestoreAsync_WhenEndpointChangesDuringInitialCatalogLoad_CancelsAndReloadsCatalog()
     {
         SequencedGenerationModelCatalogApiClient catalogApiClient = new();
         IApiEndpointService endpointService = TestApiEndpointServiceFactory.Create();
@@ -910,16 +910,18 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             () => catalogApiClient.RequestCount == 1,
             CancellationToken.None);
         SetApiBaseAddress(endpointService, "https://new.atomicart.test/");
-        catalogApiClient.Complete(0, ApiModelMetadataTestCatalog.LoadCatalog());
-        await AsyncTestWaiter.WaitForConditionAsync(
-            () => catalogApiClient.RequestCount == 2,
-            CancellationToken.None);
+
+        catalogApiClient.GetRequestCancellationToken(0).IsCancellationRequested.Should().BeTrue();
+        catalogApiClient.RequestCount.Should().Be(2);
+
         catalogApiClient.Complete(1, ApiModelMetadataTestCatalog.LoadCatalog());
-        await prepareTask;
         await AsyncTestWaiter.WaitForConditionAsync(
             () => viewModel.HasLoadedCatalog,
             CancellationToken.None);
+        catalogApiClient.Complete(0, ApiModelMetadataTestCatalog.LoadCatalog());
+        await prepareTask;
 
+        catalogApiClient.RequestCount.Should().Be(2);
         viewModel.AvailableModels.Should().NotBeEmpty();
         viewModel.ErrorMessage.Should().BeNull();
     }
@@ -2340,6 +2342,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             new(
                 TaskCreationOptions.RunContinuationsAsynchronously)
         ];
+        private readonly List<CancellationToken> _requestCancellationTokens = [];
         private int _requestCount;
         private int _returnedResponseCount;
 
@@ -2356,12 +2359,21 @@ public sealed class UniversalNanoBananaPanelViewModelTests
                 }
 
                 responseTask = _responses[_requestCount].Task;
+                _requestCancellationTokens.Add(ct);
                 _requestCount++;
             }
 
             GenerationModelCatalogDto response = await responseTask;
             Interlocked.Increment(ref _returnedResponseCount);
             return response;
+        }
+
+        public CancellationToken GetRequestCancellationToken(int index)
+        {
+            lock (_syncRoot)
+            {
+                return _requestCancellationTokens[index];
+            }
         }
 
         public void Complete(int index, GenerationModelCatalogDto catalog)

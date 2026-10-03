@@ -64,17 +64,6 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         _modelCatalog.LoadingChanged += OnCatalogLoadingChanged;
     }
 
-    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
-    {
-        base.OnPropertyChanged(e);
-
-        if (e.PropertyName == nameof(IsLoading)
-            || e.PropertyName == nameof(IsCatalogLoading))
-        {
-            OnPropertyChanged(nameof(IsBusy));
-        }
-    }
-
     public static ValidationResult? ValidateBaseAddress(string? value, ValidationContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -121,6 +110,17 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         _disposeCancellationSource.Dispose();
     }
 
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        if (e.PropertyName == nameof(IsLoading)
+            || e.PropertyName == nameof(IsCatalogLoading))
+        {
+            OnPropertyChanged(nameof(IsBusy));
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync(CancellationToken ct)
     {
@@ -151,7 +151,7 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
 
     private bool CanSave()
     {
-        return !IsBusy
+        return !IsLoading
             && !string.Equals(Value, _committedValue, StringComparison.Ordinal);
     }
 
@@ -197,6 +197,5 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         }
 
         OnPropertyChanged(nameof(IsCatalogLoading));
-        NotifyOperationCanExecuteChanged();
     }
 }
