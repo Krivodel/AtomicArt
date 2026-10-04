@@ -1,6 +1,7 @@
 using System.Globalization;
 
 using AtomicArt.Desktop.Services.Localization;
+using BuiltInLocalizationCatalog = Krivodeling.Localization.Avalonia.BuiltInLocalizationCatalog;
 
 namespace AtomicArt.Desktop.Tests.TestDoubles;
 
@@ -13,7 +14,8 @@ internal sealed class TestLocalizationTextProvider : ILocalizationTextProvider
     public TestLocalizationTextProvider(
         IReadOnlyDictionary<string, string>? strings = null)
     {
-        _strings = strings ?? BuiltInLocalizationCatalog.Current.English.Strings;
+        _strings = strings ?? BuiltInLocalizationCatalog.FromAssemblies(
+            typeof(LocalizationService).Assembly).English.Strings;
     }
 
     public string Get(string key)

@@ -247,7 +247,7 @@
                 Value="{DynamicResource SukiDangerDarkColor}" />
     </Style>
 
-    <Style Selector="Button.Icon PathIcon">
+    <Style Selector="Button.Icon PathIcon, Button.title-action PathIcon">
         <Setter Property="Width"
                 Value="{StaticResource GenerationCardActionIconSize}" />
         <Setter Property="Height"

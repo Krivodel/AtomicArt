@@ -24,15 +24,6 @@ public sealed class LanguageOptionViewModel : ObservableObject
 
     public void ApplySearch(string? searchText)
     {
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            IsSearchMatch = true;
-            return;
-        }
-
-        string normalizedSearchText = searchText.Trim();
-        IsSearchMatch = DisplayName.Contains(
-            normalizedSearchText,
-            StringComparison.CurrentCultureIgnoreCase);
+        IsSearchMatch = Localization.MatchesSearch(searchText);
     }
 }

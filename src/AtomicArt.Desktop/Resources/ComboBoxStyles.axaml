@@ -176,9 +176,9 @@
                 Value="{ReflectionBinding IsSearchMatch}" />
     </Style>
 
-    <Style Selector="TextBox.combo-box-search /template/ Button">
-        <Setter Property="ToolTip.Tip"
-                Value="{x:Null}" />
+    <Style Selector="TextBox.combo-box-search">
+        <Setter Property="ToolTip.ServiceEnabled"
+                Value="False" />
     </Style>
 
     <Style Selector="ComboBox[IsDropDownOpen=true] /template/ LayoutTransformControl.animated-drop-down-panel">

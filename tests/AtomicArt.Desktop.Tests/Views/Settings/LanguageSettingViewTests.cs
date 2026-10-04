@@ -139,7 +139,19 @@ public sealed class LanguageSettingViewTests : DesktopControlTestBase
                     searchTextBox);
 
                 clearButton.IsEffectivelyVisible.Should().BeTrue();
-                ToolTip.GetTip(clearButton).Should().BeNull();
+                Point clearCenter = clearButton.TranslatePoint(
+                    new Point(clearButton.Bounds.Width / 2d, clearButton.Bounds.Height / 2d), window)
+                    ?? throw new InvalidOperationException("The clear button must be attached to the window.");
+                window.MouseMove(clearCenter);
+                window.CaptureRenderedFrame();
+                Dispatcher.UIThread.RunJobs();
+
+                clearButton.IsPointerOver.Should().BeTrue();
+                Control[] tooltipOwners = searchTextBox.GetSelfAndVisualDescendants().OfType<Control>()
+                    .Where(control => control.IsEffectivelyVisible && (ToolTip.GetTip(control) is not null))
+                    .ToArray();
+                tooltipOwners.Should().NotBeEmpty();
+                tooltipOwners.Should().OnlyContain(control => !ToolTip.GetServiceEnabled(control));
                 clearButtonBounds.Center.X.Should().BeGreaterThan(
                     searchTextBox.Bounds.Width / 2d);
                 searchTextBox.Focus();

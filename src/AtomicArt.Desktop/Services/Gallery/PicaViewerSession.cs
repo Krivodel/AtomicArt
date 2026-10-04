@@ -2,14 +2,14 @@ using Microsoft.Extensions.Logging;
 
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
-using Pica.Protocol;
-using Pica.Viewer.Services;
-using Pica.Viewer.Views;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
+using Pica.Protocol;
+using Pica.Viewer.Services;
+using Pica.Viewer.Views;
 
 namespace AtomicArt.Desktop.Services.Gallery;
 
@@ -159,15 +159,15 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(item);
 
-        return string.Equals(
-                action.Id,
-                AtomicArtPicaActions.ImbaId,
-                StringComparison.Ordinal)
-            && _getFavoriteStates.TryGetValue(
-                item.Id,
-                out Func<bool>? getIsFavorite)
-            ? _dependencies.Actions.GetImbaDisplayName(getIsFavorite())
-            : action.DisplayName;
+        return action.Id switch
+        {
+            AtomicArtPicaActions.AttachId => _dependencies.Actions.Attach.DisplayName,
+            AtomicArtPicaActions.ShowInGalleryId => _dependencies.Actions.ShowInGallery.DisplayName,
+            AtomicArtPicaActions.OpenDlss5Id => _dependencies.Actions.OpenDlss5.DisplayName,
+            AtomicArtPicaActions.ImbaId => _dependencies.Actions.GetImbaDisplayName(
+                _getFavoriteStates.TryGetValue(item.Id, out Func<bool>? getIsFavorite) && getIsFavorite()),
+            _ => action.DisplayName
+        };
     }
 
     public async Task DispatchBitmapAsync(

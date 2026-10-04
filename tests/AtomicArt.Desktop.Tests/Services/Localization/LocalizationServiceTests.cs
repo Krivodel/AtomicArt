@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
+using System.Text;
 
 using CommunityToolkit.Mvvm.Messaging;
 using FluentAssertions;
@@ -15,6 +15,10 @@ using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Tests.Common;
+using BuiltInLocalizationCatalog = Krivodeling.Localization.Avalonia.BuiltInLocalizationCatalog;
+using LocalizationConstants = Krivodeling.Localization.Avalonia.LocalizationConstants;
+using LocalizationLangPlugin = Krivodeling.Localization.Avalonia.LocalizationLangPlugin;
+using LocalizationTextResolver = Krivodeling.Localization.Avalonia.LocalizationTextResolver;
 
 namespace AtomicArt.Desktop.Tests.Services.Localization;
 
@@ -33,6 +37,30 @@ public sealed class LocalizationServiceTests : IDisposable
         _originalUiCulture = CultureInfo.CurrentUICulture;
         _originalDefaultCulture = CultureInfo.DefaultThreadCurrentCulture;
         _originalDefaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+    }
+
+    [Fact]
+    public async Task Select_WithPicaTranslation_SharesCultureAndCustomDictionaryWithViewer()
+    {
+        string root = DesktopTestDirectories.CreateCleanDirectory(
+            nameof(Select_WithPicaTranslation_SharesCultureAndCustomDictionaryWithViewer));
+        AtomicArtDataPathProvider paths = new(root);
+        paths.EnsureDirectoryExists(paths.LocalizationsDirectory);
+        await File.WriteAllTextAsync(Path.Combine(paths.LocalizationsDirectory, "Deutsch.json"),
+            """{"schemaVersion":1,"culture":"de-DE","strings":{"PicaViewer":{"NoImages":"Keine Bilder"}}}""");
+        using LocalizationService service = CreateService(paths);
+        await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
+
+        service.Select("Deutsch");
+
+        I18nManager.Instance.GetResource(Pica.Viewer.Resources.PicaViewerLocalizationKeys.NoImages)
+            .Should().Be("Keine Bilder");
+        I18nManager.Instance.GetResource(Pica.Viewer.Resources.PicaViewerLocalizationKeys.Copy)
+            .Should().Be("Copy");
+        I18nManager.Instance.Culture?.Name.Should().Be(service.CurrentCulture.Name);
+        string template = await File.ReadAllTextAsync(Path.Combine(paths.LocalizationsDirectory,
+            LocalizationConstants.TemplateFileName));
+        template.Should().Contain("PicaViewer");
     }
 
     [Fact]
@@ -137,7 +165,7 @@ public sealed class LocalizationServiceTests : IDisposable
             "Deutsch",
             "de-DE",
             """{"Common":{"Copy":"Kopieren","NewerOnly":"Neu"}}""");
-        RecordingLogger<LocalizationService> logger = new();
+        RecordingLogger<Krivodeling.Localization.Avalonia.LocalizationService> logger = new();
         using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider, logger);
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
 
@@ -197,7 +225,7 @@ public sealed class LocalizationServiceTests : IDisposable
         await File.WriteAllBytesAsync(
             Path.Combine(pathProvider.LocalizationsDirectory, "Oversized.json"),
             oversizedContent);
-        RecordingLogger<LocalizationService> logger = new();
+        RecordingLogger<Krivodeling.Localization.Avalonia.LocalizationService> logger = new();
         using LocalizationService service = LocalizationServiceTests.CreateService(pathProvider, logger);
 
         await service.RefreshAvailableLocalizationsAsync(CancellationToken.None);
@@ -367,7 +395,8 @@ public sealed class LocalizationServiceTests : IDisposable
     public void BuiltInLocalizationCatalog_WithDeclaredKeys_ContainsExactlyTheApplicationKeySet()
     {
         IReadOnlySet<string> declaredKeys = LocalizationServiceTests.GetDeclaredLocalizationKeys();
-        BuiltInLocalizationCatalog builtIns = BuiltInLocalizationCatalog.Current;
+        BuiltInLocalizationCatalog builtIns = BuiltInLocalizationCatalog.FromAssemblies(
+            typeof(LocalizationService).Assembly);
 
         builtIns.English.Strings.Keys.Should().BeEquivalentTo(declaredKeys);
         builtIns.Russian.Strings.Keys.Should().BeEquivalentTo(declaredKeys);
@@ -375,7 +404,8 @@ public sealed class LocalizationServiceTests : IDisposable
 
     public void Dispose()
     {
-        BuiltInLocalizationCatalog builtIns = BuiltInLocalizationCatalog.Current;
+        BuiltInLocalizationCatalog builtIns = BuiltInLocalizationCatalog.FromAssemblies(
+            typeof(LocalizationService).Assembly);
         LocalizationTextResolver textResolver = new(
             builtIns.English,
             builtIns.English);
@@ -443,12 +473,12 @@ public sealed class LocalizationServiceTests : IDisposable
 
     private static LocalizationService CreateService(
         AtomicArtDataPathProvider pathProvider,
-        RecordingLogger<LocalizationService>? logger = null)
+        RecordingLogger<Krivodeling.Localization.Avalonia.LocalizationService>? logger = null)
     {
         return new LocalizationService(
             pathProvider,
             TestApiConfiguration.CreateTrustedFileStreamFactory(),
-            logger ?? new RecordingLogger<LocalizationService>(),
+            logger ?? new RecordingLogger<Krivodeling.Localization.Avalonia.LocalizationService>(),
             new WeakReferenceMessenger());
     }
 

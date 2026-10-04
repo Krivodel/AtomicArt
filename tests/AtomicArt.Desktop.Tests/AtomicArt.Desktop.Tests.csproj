@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <Compile Include="..\..\src\AtomicArt.Desktop\GlobalUsings.cs" Link="GlobalUsings.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\AtomicArt.Desktop\AtomicArt.Desktop.csproj" />
     <ProjectReference Include="..\..\src\AtomicArt.Infrastructure\AtomicArt.Infrastructure.csproj" />
     <ProjectReference Include="..\AtomicArt.Avalonia.Tests.Common\AtomicArt.Avalonia.Tests.Common.csproj" />

@@ -14,6 +14,8 @@ internal sealed class TestLocalizationService :
     public CultureInfo CurrentCulture => CultureInfo.CurrentCulture;
     public Action? RefreshAction { get; set; }
 
+    public event EventHandler? Changed;
+
     private readonly List<string>? _calls;
     private readonly TestLocalizationTextProvider _textProvider = new();
 
@@ -34,6 +36,7 @@ internal sealed class TestLocalizationService :
     public void ReconcileCurrentOrSystemDefault()
     {
         _calls?.Add("localization.reconcile");
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void Select(string localizationId)
@@ -45,6 +48,7 @@ internal sealed class TestLocalizationService :
                 option.Id,
                 localizationId,
                 StringComparison.OrdinalIgnoreCase));
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public void SelectSavedOrEnglishFallback(string localizationId)
@@ -56,6 +60,7 @@ internal sealed class TestLocalizationService :
                 option.Id,
                 localizationId,
                 StringComparison.OrdinalIgnoreCase));
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public string Get(string key)
