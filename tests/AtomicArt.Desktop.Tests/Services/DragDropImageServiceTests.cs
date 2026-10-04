@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 
 using Avalonia.Input;
+using Avalonia.Platform.Storage;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -142,6 +144,103 @@ public sealed class DragDropImageServiceTests
                 "The virtual image should be available.");
         actualImage.FileName.Should().Be("virtual.png");
         actualImage.Content.Should().Equal(virtualContent);
+    }
+
+    [Fact]
+    public async Task ExtractImagesAsync_WithVirtualFileAndStoragePath_PrefersCapturedContents()
+    {
+        byte[] content = GenerationImageFileSignatures.Png.ToArray();
+        using ImageAttachmentInput virtualInput = ImageAttachmentInput.FromImage(
+            new AttachedImageDto("archive.png", GenerationImageContentTypes.Png, content));
+        VirtualFileDropInputSession session = new();
+        Mock<IStorageFile> fileMock = new(MockBehavior.Strict);
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.CreateFile(fileMock.Object));
+        DragDropImageService service = CreateService(new ImageHttpMessageHandler(content), session);
+        using IDisposable scope = session.Begin(new ImageAttachmentInput[] { virtualInput });
+
+        IReadOnlyList<ImageAttachmentInput> inputs = await service.ExtractImagesAsync(
+            dataTransfer, MaxInputBytes, CancellationToken.None);
+
+        inputs.Should().ContainSingle().Which.Should().BeSameAs(virtualInput);
+        session.TryTakeInputs(out _).Should().BeFalse();
+        fileMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ExtractImagesAsync_WhenArchiverDeletesTemporaryFile_ReturnsOriginalImage()
+    {
+        byte[] content = GenerationImageFileSignatures.Png.ToArray();
+        string filePath = Path.Combine(Path.GetTempPath(), $"AtomicArt-drop-{Guid.NewGuid():N}.png");
+        File.WriteAllBytes(filePath, content);
+        Mock<IStorageFile> fileMock = StorageFileTestData.CreateFile(filePath);
+        fileMock.SetupGet(file => file.Name).Returns("archive.png");
+        fileMock.Setup(file => file.GetBasicPropertiesAsync())
+            .ReturnsAsync(new StorageItemProperties((ulong)content.Length));
+        fileMock.Setup(file => file.OpenReadAsync())
+            .Returns(() => Task.FromResult<Stream>(File.OpenRead(filePath)));
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.CreateFile(fileMock.Object));
+        DragDropImageService service = CreateService(new ImageHttpMessageHandler(content));
+
+        try
+        {
+            IReadOnlyList<ImageAttachmentInput> inputs = await service.ExtractImagesAsync(
+                dataTransfer, MaxInputBytes, CancellationToken.None);
+            using ImageAttachmentInput input = inputs.Single();
+            File.Delete(filePath);
+            AttachedImageDto? image = await input.ReadAsync(CancellationToken.None);
+
+            File.Exists(filePath).Should().BeFalse();
+            image.Should().NotBeNull();
+            AttachedImageDto actualImage = image
+                ?? throw new InvalidOperationException("The dropped image should survive archive cleanup.");
+            actualImage.FileName.Should().Be("archive.png");
+            actualImage.ContentType.Should().Be(GenerationImageContentTypes.Png);
+            actualImage.Content.Should().Equal(content);
+            fileMock.Verify(file => file.OpenReadAsync(), Times.Never);
+            fileMock.Verify(file => file.GetBasicPropertiesAsync(), Times.Never);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task ExtractImagesAsync_WithMissingAndValidFiles_PreservesValidImage()
+    {
+        byte[] content = GenerationImageFileSignatures.Png.ToArray();
+        string filePath = Path.Combine(Path.GetTempPath(), $"AtomicArt-drop-{Guid.NewGuid():N}.png");
+        string missingPath = Path.ChangeExtension(filePath, ".missing.png");
+        File.WriteAllBytes(filePath, content);
+        Mock<IStorageFile> missingFile = StorageFileTestData.CreateFile(missingPath);
+        Mock<IStorageFile> validFile = StorageFileTestData.CreateFile(filePath);
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.CreateFile(missingFile.Object));
+        dataTransfer.Add(DataTransferItem.CreateFile(validFile.Object));
+        DragDropImageService service = CreateService(new ImageHttpMessageHandler(content));
+
+        try
+        {
+            IReadOnlyList<ImageAttachmentInput> inputs = await service.ExtractImagesAsync(
+                dataTransfer, MaxInputBytes, CancellationToken.None);
+            inputs.Should().HaveCount(2);
+            using ImageAttachmentInput missingInput = inputs[0];
+            using ImageAttachmentInput validInput = inputs[1];
+            Func<Task> readMissingImage = () => missingInput.ReadAsync(CancellationToken.None);
+            await readMissingImage.Should().ThrowAsync<FileNotFoundException>();
+            AttachedImageDto? image = await validInput.ReadAsync(CancellationToken.None);
+
+            image.Should().NotBeNull();
+            AttachedImageDto actualImage = image
+                ?? throw new InvalidOperationException("An unavailable entry must not discard the other image.");
+            actualImage.Content.Should().Equal(content);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
     }
 
     private static DragDropImageService CreateService(HttpMessageHandler handler)

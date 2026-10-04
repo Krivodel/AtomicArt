@@ -12,6 +12,7 @@ public sealed class AttachedImageFileReader
     private const string UnknownImageContentType = "application/octet-stream";
     private const string AttachedImageTooLargeMessage =
         "Attached image exceeds the safe input size limit.";
+    private const int FileStreamBufferSize = 81920;
 
     private readonly IAttachedImageSignatureValidator _signatureValidator;
     private readonly ILogger<AttachedImageFileReader> _logger;
@@ -91,6 +92,62 @@ public sealed class AttachedImageFileReader
             });
     }
 
+    internal ImageAttachmentInput CaptureInput(IStorageFile file, int maxInputBytes)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxInputBytes);
+
+        string? filePath = file.TryGetLocalPath();
+
+        if (filePath is null)
+        {
+            return CreateInput(file, maxInputBytes);
+        }
+
+        string fileName = file.Name;
+        FileStream? input = null;
+
+        try
+        {
+            input = OpenReadStream(filePath, FileShare.Read | FileShare.Delete);
+
+            if (input.Length > maxInputBytes)
+            {
+                input.Dispose();
+
+                return ImageAttachmentInput.FromError(
+                    fileName, new InvalidDataException(AttachedImageTooLargeMessage));
+            }
+
+            FileStream capturedInput = input;
+
+            return new ImageAttachmentInput(
+                fileName,
+                async ct => await ReadStreamAsync(fileName, capturedInput, maxInputBytes, ct)
+                    .ConfigureAwait(false),
+                capturedInput);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+            or ArgumentException or NotSupportedException)
+        {
+            input?.Dispose();
+            _logger.LogWarning(ex, "The dropped attachment could not acquire a read handle.");
+
+            return ImageAttachmentInput.FromError(fileName, ex);
+        }
+    }
+
+    private static FileStream OpenReadStream(string filePath, FileShare share)
+    {
+        return new FileStream(
+            filePath,
+            FileMode.Open,
+            FileAccess.Read,
+            share,
+            FileStreamBufferSize,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+    }
+
     private static async Task<bool> IsFileTooLargeAsync(IStorageFile file, int maxInputBytes)
     {
         StorageItemProperties properties = await file.GetBasicPropertiesAsync()
@@ -147,13 +204,7 @@ public sealed class AttachedImageFileReader
             throw new InvalidDataException(AttachedImageTooLargeMessage);
         }
 
-        await using FileStream input = new(
-            file.FullName,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 81920,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        await using FileStream input = OpenReadStream(file.FullName, FileShare.Read);
 
         return await ReadStreamAsync(file.Name, input, maxInputBytes, ct)
             .ConfigureAwait(false);

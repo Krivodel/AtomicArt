@@ -63,6 +63,14 @@ public sealed class DragDropImageService : IDragDropImageService
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxInputBytes);
         ct.ThrowIfCancellationRequested();
 
+        if (_virtualFileInputProvider.TryTakeInputs(
+                out IReadOnlyList<ImageAttachmentInput> virtualFileInputs))
+        {
+            LogExtractedInputs(virtualFileInputs.Count, "virtual files");
+
+            return Task.FromResult(virtualFileInputs);
+        }
+
         IEnumerable<IStorageItem>? storageItems = dataTransfer.TryGetFiles();
 
         if (storageItems is not null)
@@ -73,21 +81,13 @@ public sealed class DragDropImageService : IDragDropImageService
 
             if (files.Count > 0)
             {
-                IReadOnlyList<ImageAttachmentInput> fileInputs = _fileReader.CreateInputs(
-                    files,
-                    maxInputBytes);
+                IReadOnlyList<ImageAttachmentInput> fileInputs = files
+                    .Select(file => _fileReader.CaptureInput(file, maxInputBytes))
+                    .ToList();
                 LogExtractedInputs(fileInputs.Count, "storage files");
 
                 return Task.FromResult(fileInputs);
             }
-        }
-
-        if (_virtualFileInputProvider.TryTakeInputs(
-                out IReadOnlyList<ImageAttachmentInput> virtualFileInputs))
-        {
-            LogExtractedInputs(virtualFileInputs.Count, "virtual files");
-
-            return Task.FromResult(virtualFileInputs);
         }
 
         TransferredImageContent? encodedImage =

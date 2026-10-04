@@ -1,4 +1,6 @@
+using Avalonia.Platform.Storage;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -49,6 +51,75 @@ public sealed class AttachedImageFileReaderTests
         {
             File.Delete(filePath);
         }
+    }
+
+    [Fact]
+    public void CaptureInput_WhenDisposedWithoutReading_ReleasesFileHandle()
+    {
+        string filePath = CreateTemporaryFile(GenerationImageFileSignatures.Png.ToArray());
+
+        try
+        {
+            AttachedImageFileReader reader = new(new AttachedImageSignatureValidator());
+            Mock<IStorageFile> fileMock = StorageFileTestData.CreateFile(filePath);
+            using ImageAttachmentInput input = reader.CaptureInput(fileMock.Object, maxInputBytes: 1024);
+            Action openForWriting = () =>
+            {
+                using FileStream writer = File.Open(filePath, FileMode.Open, FileAccess.Write, FileShare.None);
+            };
+            openForWriting.Should().Throw<IOException>();
+
+            input.Dispose();
+
+            openForWriting.Should().NotThrow();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task CaptureInput_WithOversizedFile_DefersErrorAndReleasesFileHandle()
+    {
+        string filePath = CreateTemporaryFile(GenerationImageFileSignatures.Png.ToArray());
+
+        try
+        {
+            AttachedImageFileReader reader = new(new AttachedImageSignatureValidator());
+            Mock<IStorageFile> fileMock = StorageFileTestData.CreateFile(filePath);
+            using ImageAttachmentInput input = reader.CaptureInput(fileMock.Object, maxInputBytes: 1);
+            Func<Task> read = () => input.ReadAsync(CancellationToken.None);
+
+            await read.Should().ThrowAsync<InvalidDataException>();
+
+            using FileStream writer = File.Open(filePath, FileMode.Open, FileAccess.Write, FileShare.None);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task CaptureInput_WithStorageProviderFile_PreservesProviderReading()
+    {
+        byte[] content = GenerationImageFileSignatures.Png.ToArray();
+        Mock<IStorageFile> fileMock = new();
+        fileMock.SetupGet(file => file.Name).Returns("provider.png");
+        fileMock.SetupGet(file => file.Path).Returns(new Uri("content://images/provider.png"));
+        fileMock.Setup(file => file.GetBasicPropertiesAsync()).ReturnsAsync(new StorageItemProperties());
+        fileMock.Setup(file => file.OpenReadAsync()).ReturnsAsync(new MemoryStream(content));
+        AttachedImageFileReader reader = new(new AttachedImageSignatureValidator());
+        using ImageAttachmentInput input = reader.CaptureInput(fileMock.Object, maxInputBytes: 1024);
+
+        AttachedImageDto? image = await input.ReadAsync(CancellationToken.None);
+
+        image.Should().NotBeNull();
+        AttachedImageDto actualImage = image
+            ?? throw new InvalidOperationException("The storage provider image should be available.");
+        actualImage.Content.Should().Equal(content);
+        fileMock.Verify(file => file.OpenReadAsync(), Times.Once);
     }
 
     private static string CreateTemporaryFile(byte[] content)
