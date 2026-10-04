@@ -1,0 +1,49 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:suki="using:SukiUI.Controls">
+    <Styles.Resources>
+        <x:Double x:Key="MainWindowTitleBarHeight">58</x:Double>
+        <x:Double x:Key="MainWindowTitleButtonWidth">44</x:Double>
+    </Styles.Resources>
+
+    <Style Selector="suki|SukiWindow[IsTitleBarVisible=True] /template/ LayoutTransformControl#PART_TitleBar">
+        <Setter Property="Height"
+                Value="{StaticResource MainWindowTitleBarHeight}" />
+        <Setter Property="Margin"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+
+    <Style Selector="suki|SukiWindow[IsTitleBarVisible=True] /template/ LayoutTransformControl#PART_TitleBar > Panel > DockPanel">
+        <Setter Property="Margin"
+                Value="12,0,0,0" />
+    </Style>
+
+    <Style Selector="suki|SukiWindow[IsTitleBarVisible=True] /template/ LayoutTransformControl#PART_TitleBar > Panel > DockPanel > StackPanel">
+        <Setter Property="VerticalAlignment"
+                Value="Stretch" />
+        <Setter Property="Spacing"
+                Value="{StaticResource ZeroSize}" />
+    </Style>
+
+    <Style Selector="suki|SukiWindow[IsTitleBarVisible=True] /template/ LayoutTransformControl#PART_TitleBar Button, suki|SukiWindow[IsTitleBarVisible=True] Button.title-action">
+        <Setter Property="Width"
+                Value="{StaticResource MainWindowTitleButtonWidth}" />
+        <Setter Property="Height"
+                Value="{StaticResource MainWindowTitleBarHeight}" />
+        <Setter Property="Margin"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="CornerRadius"
+                Value="0" />
+        <Setter Property="VerticalContentAlignment"
+                Value="Center" />
+    </Style>
+
+    <Style Selector="suki|SukiWindow[IsTitleBarVisible=True] /template/ Button#PART_MinimizeButton > PathIcon">
+        <Setter Property="Margin"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+    </Style>
+</Styles>

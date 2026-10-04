@@ -70,10 +70,130 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     private static readonly TimeSpan ConfirmationDialogOpacityTransitionDuration =
         TimeSpan.FromMilliseconds(100d);
 
-    [Fact]
-    public void MainWindow_WhenShown_RendersDlss5TitleIconInNvidiaGreen()
+    [Theory]
+    [InlineData(WindowState.Normal, 670d)]
+    [InlineData(WindowState.Normal, 1040d)]
+    [InlineData(WindowState.Maximized, 670d)]
+    [InlineData(WindowState.Maximized, 1040d)]
+    public async Task MainWindow_WhenShown_UsesContinuousFullHeightTitleButtonHitAreas(
+        WindowState windowState,
+        double width)
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
+        {
+            const double ButtonWidth = 44d;
+            const double TitleBarHeight = 58d;
+            const double EdgeInset = 1d;
+            const int TitleButtonCount = 7;
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+            window.WindowState = windowState;
+            window.Width = width;
+
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            Control titleBar = window.GetVisualDescendants().OfType<Control>()
+                .Single(control => control.Name == TitleBarName);
+            Point titleBarOrigin = titleBar.TranslatePoint(default, window)
+                ?? throw new InvalidOperationException("The title bar must be attached to the window.");
+            Button[] buttons = titleBar.GetVisualDescendants().OfType<Button>()
+                .Where(button => button.IsEffectivelyVisible)
+                .OrderBy(button => button.TranslatePoint(default, window)?.X)
+                .ToArray();
+            buttons.Should().HaveCount(TitleButtonCount);
+            double previousRight = 0d;
+
+            foreach (Button button in buttons)
+            {
+                Point origin = button.TranslatePoint(default, window)
+                    ?? throw new InvalidOperationException("The title button must be attached to the window.");
+                button.Bounds.Size.Should().Be(new Size(ButtonWidth, TitleBarHeight));
+                origin.Y.Should().BeApproximately(titleBarOrigin.Y, PositionTolerance);
+
+                if (previousRight > 0d)
+                {
+                    origin.X.Should().BeApproximately(previousRight, PositionTolerance);
+                }
+
+                previousRight = origin.X + button.Bounds.Width;
+                Point[] hitPoints =
+                [
+                    new Point(ButtonWidth / 2d, EdgeInset),
+                    new Point(ButtonWidth / 2d, TitleBarHeight - EdgeInset),
+                    new Point(EdgeInset, TitleBarHeight / 2d),
+                    new Point(ButtonWidth - EdgeInset, TitleBarHeight / 2d)
+                ];
+
+                foreach (Point hitPoint in hitPoints)
+                {
+                    Point position = button.TranslatePoint(hitPoint, window)
+                        ?? throw new InvalidOperationException("The title button must be attached to the window.");
+                    Visual hit = window.InputHitTest(position).Should().BeAssignableTo<Visual>().Subject;
+                    hit.GetVisualAncestors().Prepend(hit).Should().Contain(button);
+                }
+            }
+
+            previousRight.Should().BeApproximately(window.ClientSize.Width, PositionTolerance);
+
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task TitleActions_WhenHovered_UseTheWindowControlFeedback()
+    {
+        await DispatchAsync(() =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+            window.Resources["SukiPrimaryColor25"] = Brushes.Blue;
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            window.UpdateLayout();
+            window.CaptureRenderedFrame();
+            Button pinButton = window.GetVisualDescendants().OfType<Button>()
+                .Single(button => button.Name == "PART_PinButton");
+            Point pinCenter = pinButton.TranslatePoint(
+                new Point(pinButton.Bounds.Width / 2d, pinButton.Bounds.Height / 2d), window)
+                ?? throw new InvalidOperationException("The pin button must be attached to the window.");
+            BrushTransition pinTransition = pinButton.Transitions.Should().ContainSingle().Which
+                .Should().BeOfType<BrushTransition>().Subject;
+            IBrush? defaultBackground = pinButton.Background;
+            pinButton.Transitions = null;
+
+            window.MouseMove(pinCenter);
+
+            pinButton.IsPointerOver.Should().BeTrue();
+            IBrush? hoverBackground = pinButton.Background;
+            hoverBackground.Should().NotBeNull().And.NotBe(defaultBackground);
+
+            foreach (Button button in window.RightWindowTitleBarControls.OfType<Button>())
+            {
+                Point center = button.TranslatePoint(
+                    new Point(button.Bounds.Width / 2d, button.Bounds.Height / 2d), window)
+                    ?? throw new InvalidOperationException("The title action must be attached to the window.");
+                BrushTransition transition = button.Transitions.Should().ContainSingle().Which
+                    .Should().BeOfType<BrushTransition>().Subject;
+                transition.Property.Should().Be(pinTransition.Property);
+                transition.Duration.Should().Be(pinTransition.Duration);
+                button.Transitions = null;
+
+                window.MouseMove(center);
+
+                button.IsPointerOver.Should().BeTrue();
+                button.Background.Should().Be(hoverBackground);
+                button.BorderThickness.Should().Be(pinButton.BorderThickness);
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task MainWindow_WhenShown_RendersDlss5TitleIconInNvidiaGreen()
+    {
+        await DispatchAsync(() =>
         {
             using MainWindowTestContext context = new();
             MainWindow window = context.Window;
@@ -96,6 +216,8 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             Point settingsPosition = settingsButton.TranslatePoint(default, window)
                 ?? throw new InvalidOperationException("Settings button position was not found.");
             dlssPosition.X.Should().BeLessThan(settingsPosition.X);
+
+            return Task.CompletedTask;
         });
     }
 

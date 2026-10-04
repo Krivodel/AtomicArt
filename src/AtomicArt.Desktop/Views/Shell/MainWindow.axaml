@@ -30,6 +30,10 @@
                  behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding AttachWindowImagesCommand}"
                  behaviors:ImageAttachmentBehavior.ErrorCommand="{Binding HandleExternalInputErrorCommand}"
                  behaviors:ImageAttachmentBehavior.MaxInputBytes="{Binding WindowImageInputByteLimit}">
+    <suki:SukiWindow.Styles>
+        <StyleInclude Source="/Resources/WindowTitleBarStyles.axaml" />
+    </suki:SukiWindow.Styles>
+
     <suki:SukiWindow.KeyBindings>
         <KeyBinding Gesture="Escape"
                     Command="{Binding HandleEscapeCommand}" />
@@ -45,11 +49,11 @@
     </suki:SukiWindow.LogoContent>
 
     <suki:SukiWindow.RightWindowTitleBarControls>
-        <Button Classes="Icon title-action"
+        <Button Classes="WindowControlsButton title-action"
                 Command="{Binding OpenSettingsCommand}">
             <PathIcon Data="{StaticResource AppSettingsIcon}" />
         </Button>
-        <Button Classes="Icon title-action"
+        <Button Classes="WindowControlsButton title-action"
                 Command="{Binding OpenDlss5Command}">
             <PathIcon Data="{x:Static dlss5:Dlss5FeatureDefinition.NvidiaIconGeometry}"
                       Foreground="{StaticResource NvidiaBrandBrush}" />
