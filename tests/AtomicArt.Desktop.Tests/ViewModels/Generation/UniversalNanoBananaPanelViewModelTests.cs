@@ -262,6 +262,30 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
+    public async Task GenerateCommand_WithNanoBanana21FourK_OmitsUnsupportedOptions()
+    {
+        CapturingGenerationRunDispatcher dispatcher = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(dispatcher: dispatcher);
+        viewModel.Prompt = "Prompt";
+        viewModel.Temperature = 1.7d;
+        viewModel.SelectedThinkingLevel = viewModel.ThinkingLevels.Single(level => level.Value == "high");
+        viewModel.SelectedModel = GetModel(viewModel, ApiModelMetadataTestCatalog.OpenRouterNanoBanana21ModelId);
+        viewModel.SelectedResolution = "4K";
+
+        await viewModel.GenerateCommand.ExecuteAsync(null);
+
+        GenerationRunRequest request = dispatcher.CapturedRequest
+            ?? throw new InvalidOperationException("Generation run request should be captured.");
+        request.Request.ModelId.Should().Be(ApiModelMetadataTestCatalog.OpenRouterNanoBanana21ModelId);
+        request.Request.Resolution.Should().Be("4K");
+        request.Request.IncludeTemperature.Should().BeFalse();
+        request.Request.ThinkingLevel.Should().BeNull();
+        viewModel.SupportsTemperature.Should().BeFalse();
+        viewModel.SupportsThinkingLevel.Should().BeFalse();
+        viewModel.ErrorMessage.Should().BeNull();
+    }
+
+    [Fact]
     public async Task GenerateCommand_WithHighThinkingLevel_PassesThinkingLevelToRequest()
     {
         CapturingGenerationRunDispatcher dispatcher = new();

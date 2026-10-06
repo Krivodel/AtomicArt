@@ -65,7 +65,7 @@ internal sealed class GoogleProviderGenerationStream : IProviderGenerationStream
 
         byte[] buffer = ArrayPool<byte>.Shared.Rent(_responseBufferSize);
         long totalBytes = 0L;
-        GoogleStreamingResponseAnalyzer analyzer = new(
+        using GoogleStreamingResponseAnalyzer analyzer = new(
             _responseParser,
             _failureClassifier,
             _maximumAnalyzedMetadataBytes,

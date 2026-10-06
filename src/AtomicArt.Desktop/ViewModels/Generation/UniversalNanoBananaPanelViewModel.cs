@@ -37,7 +37,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     public double DefaultTemperature => SelectedModel?.Temperature.Default ?? 0d;
     public double TemperatureStep => SelectedModel?.Temperature.Step ?? 1d;
     public string TemperatureText => _textFormatter.FormatTemperatureText(Temperature);
-    public bool SupportsTemperature => !IsGptImageModel(SelectedModel?.ProviderModelId);
+    public bool SupportsTemperature => (SelectedModel?.SupportsTemperature ?? true)
+        && !IsGptImageModel(SelectedModel?.ProviderModelId);
     public IReadOnlyList<GenerationOptionViewModel> QualityLevels { get; private set; } = [];
     public bool SupportsQuality => IsGptImageModel(SelectedModel?.ProviderModelId);
     public bool SupportsGenerationOptions => SupportsTemperature || SupportsQuality;

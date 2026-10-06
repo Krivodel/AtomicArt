@@ -8,9 +8,11 @@ public static class ApiModelMetadataTestCatalog
 {
     private const string NanoBanana2ModelIdValue = "nano-banana-2";
     private const string NanoBananaProModelIdValue = "nano-banana-pro";
+    private const string OpenRouterNanoBanana21ModelIdValue = "openrouter-nano-banana-2-1";
 
     public static string NanoBanana2ModelId => LoadNanoBanana2Metadata().Id;
     public static string NanoBananaProModelId => LoadNanoBananaProMetadata().Id;
+    public static string OpenRouterNanoBanana21ModelId => LoadOpenRouterNanoBanana21Metadata().Id;
     public static string NanoBanana2DisplayName => LoadNanoBanana2Metadata().DisplayName;
 
     public static GenerationModelCatalogDto LoadCatalog()
@@ -30,6 +32,11 @@ public static class ApiModelMetadataTestCatalog
     public static GenerationModelMetadataDto LoadNanoBananaProMetadata()
     {
         return LoadById(NanoBananaProModelIdValue);
+    }
+
+    public static GenerationModelMetadataDto LoadOpenRouterNanoBanana21Metadata()
+    {
+        return LoadById(OpenRouterNanoBanana21ModelIdValue);
     }
 
     public static string GetApiContentRoot()

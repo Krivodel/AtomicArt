@@ -13,6 +13,7 @@ public sealed class GenerationModelVisibilitySettingDefinition : IDisplaySetting
         "nano-banana-2-lite",
         "nano-banana-pro",
         "openrouter-nano-banana-2",
+        "openrouter-nano-banana-2-1",
         "openrouter-nano-banana-2-lite",
         "openrouter-nano-banana-pro",
         "openrouter-gpt-image-2",

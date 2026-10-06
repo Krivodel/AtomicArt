@@ -148,11 +148,7 @@ internal sealed class OpenRouterChatCompletionResponseTransformer : IDisposable
 
     private static bool IsSupportedContentType(string contentType)
     {
-        return contentType is GenerationImageContentTypes.Gif
-            or GenerationImageContentTypes.Heic
-            or GenerationImageContentTypes.Heif
-            or GenerationImageContentTypes.Jpeg
-            or GenerationImageContentTypes.Png
-            or GenerationImageContentTypes.Webp;
+        return GenerationImageFileFormats.All.Any(format =>
+            string.Equals(format.ContentType, contentType, StringComparison.Ordinal));
     }
 }

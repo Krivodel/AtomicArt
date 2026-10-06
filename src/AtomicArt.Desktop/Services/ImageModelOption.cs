@@ -19,7 +19,8 @@ public sealed record ImageModelOption(
     long MaxTotalAttachedImageBytes,
     IReadOnlyList<string> SupportedAttachmentContentTypes,
     GenerationModelPricingMetadataDto Pricing,
-    GenerationModelThinkingMetadataDto? Thinking = null)
+    GenerationModelThinkingMetadataDto? Thinking = null,
+    bool SupportsTemperature = true)
 {
     public IReadOnlyList<string> AspectRatios =>
         AspectRatioOptions.Select(option => option.Value).ToList();

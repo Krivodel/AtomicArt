@@ -14,6 +14,48 @@ namespace AtomicArt.Infrastructure.Tests.Generation.OpenRouter;
 public sealed class OpenRouterImageRequestContentTests
 {
     [Theory]
+    [InlineData("1K", "auto")]
+    [InlineData("2K", "1:8")]
+    [InlineData("4K", "8:1")]
+    public async Task ReadAsByteArrayAsync_WithNanoBanana21_PreservesImageOptionsAndReferences(
+        string resolution,
+        string aspectRatio)
+    {
+        byte[] attachmentBytes = [1, 2, 3, 4];
+        IGenerationAttachmentSource[] attachments = [new TestAttachmentSource(attachmentBytes)];
+        StreamingGenerationProviderContext context = OpenRouterGenerationContextTestFactory.Create(
+            ApiModelMetadataTestCatalog.OpenRouterNanoBanana21ModelId,
+            resolution,
+            aspectRatio,
+            attachments: attachments);
+        using OpenRouterImageRequestContent content = new(context);
+
+        byte[] serialized = await content.ReadAsByteArrayAsync();
+
+        using JsonDocument document = JsonDocument.Parse(serialized);
+        JsonElement root = document.RootElement;
+        root.GetProperty("model").GetString().Should().Be(GenerationProviderModelIds.NanoBanana21);
+        root.GetProperty("resolution").GetString().Should().Be(resolution);
+        root.GetProperty("n").GetInt32().Should().Be(1);
+        root.TryGetProperty("temperature", out _).Should().BeFalse();
+        root.TryGetProperty("reasoning_effort", out _).Should().BeFalse();
+        root.TryGetProperty("service_tier", out _).Should().BeFalse();
+        root.TryGetProperty("provider", out _).Should().BeFalse();
+        content.Headers.ContentLength.Should().Be(serialized.LongLength);
+        root.GetProperty("input_references")[0].GetProperty("image_url").GetProperty("url")
+            .GetString().Should().Be($"data:image/png;base64,{Convert.ToBase64String(attachmentBytes)}");
+
+        if (GenerationAspectRatios.IsAuto(aspectRatio))
+        {
+            root.TryGetProperty("aspect_ratio", out _).Should().BeFalse();
+        }
+        else
+        {
+            root.GetProperty("aspect_ratio").GetString().Should().Be(aspectRatio);
+        }
+    }
+
+    [Theory]
     [InlineData("openrouter-gpt-image-2", "openai/gpt-image-2")]
     [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst")]
     [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare")]
@@ -148,66 +190,16 @@ public sealed class OpenRouterImageRequestContentTests
         string aspectRatio,
         string? quality = null)
     {
-        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadCatalog()
-            .Models.Single(model => model.Id == modelId);
-        StreamingImageGenerationRequest request = new(
-            Guid.Parse("b06c4d8c-2d05-4fce-a005-2ec1e3da9b82"),
-            1,
-            modelId,
-            "A bright landscape",
-            aspectRatio,
-            resolution,
-            1d,
-            null,
-            CreateParameters(quality),
-            []);
-
-        return new StreamingGenerationProviderContext(
-            request,
-            GenerationProviderIds.OpenRouter,
-            providerModelId,
-            metadata.Pricing,
-            TestGenerationCredentials.ProviderCredential,
-            metadata.TransportLimits);
-    }
-
-    private static IReadOnlyDictionary<string, JsonElement> CreateParameters(string? quality)
-    {
-        Dictionary<string, JsonElement> parameters = new(StringComparer.Ordinal);
-
-        if (!string.IsNullOrWhiteSpace(quality))
+        return OpenRouterGenerationContextTestFactory.Create(modelId, resolution, aspectRatio, quality) with
         {
-            parameters[GenerationParameterNames.Quality] =
-                JsonSerializer.SerializeToElement(quality);
-        }
-
-        return parameters;
+            ProviderModelId = providerModelId
+        };
     }
 
     private static StreamingGenerationProviderContext CreateContext(
         params IGenerationAttachmentSource[] attachments)
     {
-        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadCatalog()
-            .Models.Single(model => model.Id == "openrouter-gpt-image-2");
-        StreamingImageGenerationRequest request = new(
-            Guid.Parse("b06c4d8c-2d05-4fce-a005-2ec1e3da9b82"),
-            1,
-            metadata.Id,
-            "A bright landscape",
-            "auto",
-            "1K",
-            1d,
-            null,
-            new Dictionary<string, JsonElement>(),
-            attachments);
-
-        return new StreamingGenerationProviderContext(
-            request,
-            GenerationProviderIds.OpenRouter,
-            metadata.ProviderModelId,
-            metadata.Pricing,
-            TestGenerationCredentials.ProviderCredential,
-            metadata.TransportLimits);
+        return OpenRouterGenerationContextTestFactory.Create("openrouter-gpt-image-2", attachments: attachments);
     }
 
     private sealed class TestAttachmentSource : IGenerationAttachmentSource

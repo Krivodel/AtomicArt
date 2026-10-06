@@ -14,6 +14,37 @@ namespace AtomicArt.Api.Tests.ModelMetadata;
 public sealed class JsonModelMetadataStartupLoaderTests
 {
     [Fact]
+    public void Load_WithRealMetadata_ConfiguresOpenRouterNanoBanana21()
+    {
+        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
+
+        GenerationModelMetadataDto metadata = catalog.Models.Single(model =>
+            model.Id == ApiModelMetadataTestCatalog.OpenRouterNanoBanana21ModelId);
+
+        metadata.DisplayName.Should().Be("Nano Banana 2.1");
+        metadata.Provider.Should().Be(GenerationProviderIds.OpenRouter);
+        metadata.ProviderModelId.Should().Be("google/gemini-nano-banana-2.1");
+        metadata.ContextWindowTokens.Should().Be(65536);
+        metadata.MaxOutputTokens.Should().Be(32768);
+        metadata.MaxPromptLength.Should().Be(65536);
+        metadata.Resolutions.Should().Equal("1K", "2K", "4K");
+        metadata.Attachments.MaxCount.Should().Be(14);
+        metadata.AspectRatios.Should().Equal(ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata().AspectRatios);
+        metadata.Thinking.Should().BeNull();
+        metadata.SupportsTemperature.Should().BeFalse();
+        metadata.Pricing.InputTokenUsdPerMillion.Should().Be(1.50m);
+        metadata.Pricing.TextOutputTokenUsdPerMillion.Should().Be(7.50m);
+        metadata.Pricing.ImageOutputTokenUsdPerMillion.Should().Be(30m);
+        metadata.Pricing.CachedInputTokenPriceMultiplier.Should().Be(1m);
+        metadata.Pricing.OutputImageTokensByResolution.Should().BeEquivalentTo(new Dictionary<string, int>
+        {
+            ["1K"] = 1120,
+            ["2K"] = 1680,
+            ["4K"] = 2520
+        });
+    }
+
+    [Fact]
     public void Load_WithRealMetadata_HasThinkingForEverySupportedNanoBananaVariant()
     {
         GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();

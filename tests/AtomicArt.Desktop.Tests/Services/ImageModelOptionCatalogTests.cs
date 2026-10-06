@@ -1,14 +1,45 @@
+using System.Text.Json;
+
 using FluentAssertions;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Desktop.Tests.Services;
 
 public sealed class ImageModelOptionCatalogTests
 {
+    [Fact]
+    public void Initialize_WithRealMetadata_MakesNanoBanana21SelectableAndVisibilityConfigurable()
+    {
+        ImageModelOptionCatalog catalog = new();
+        GenerationModelCatalogDto dto = ApiModelMetadataTestCatalog.LoadCatalog();
+        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadOpenRouterNanoBanana21Metadata();
+        GenerationModelVisibilityService visibilityService = new();
+
+        catalog.Initialize(dto);
+
+        ImageModelOption option = catalog.GetModels().Single(model => model.Id == metadata.Id);
+        option.ProviderModelId.Should().Be(metadata.ProviderModelId);
+        option.Resolutions.Should().Equal(metadata.Resolutions);
+        option.Thinking.Should().BeEquivalentTo(metadata.Thinking);
+        option.SupportsTemperature.Should().BeFalse();
+        GenerationModelVisibilitySettingDefinition.SupportedModelIds.Should().Contain(metadata.Id);
+        visibilityService.IsVisible(metadata.Id).Should().BeTrue();
+
+        visibilityService.SetVisibleModelIds(Array.Empty<string>());
+
+        visibilityService.IsVisible(metadata.Id).Should().BeFalse();
+
+        visibilityService.ApplySerializedValue(JsonSerializer.Serialize(new[] { metadata.Id }));
+
+        visibilityService.IsVisible(metadata.Id).Should().BeTrue();
+        visibilityService.GetVisibleModelIds().Should().ContainSingle().Which.Should().Be(metadata.Id);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

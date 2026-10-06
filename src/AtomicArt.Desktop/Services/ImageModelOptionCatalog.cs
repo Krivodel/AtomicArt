@@ -148,7 +148,8 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
             model.Attachments.MaxTotalBytes,
             CreateStringSnapshot(model.Attachments.SupportedContentTypes),
             model.Pricing,
-            CreateThinkingSnapshot(modelId, model.Thinking));
+            CreateThinkingSnapshot(modelId, model.Thinking),
+            model.SupportsTemperature);
     }
 
     private static string CreateRequiredSafeText(string? value, string propertyName)

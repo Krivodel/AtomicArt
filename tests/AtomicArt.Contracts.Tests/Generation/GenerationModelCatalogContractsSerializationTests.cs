@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using FluentAssertions;
 using Xunit;
@@ -10,6 +11,36 @@ namespace AtomicArt.Contracts.Tests.Generation;
 public sealed class GenerationModelCatalogContractsSerializationTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    [Fact]
+    public void Deserialize_WithoutTemperatureCapability_PreservesLegacySupport()
+    {
+        GenerationModelMetadataDto metadata = CreateCatalog().Models.Single();
+        JsonObject json = JsonSerializer.SerializeToNode(metadata, JsonOptions)?.AsObject()
+            ?? throw new InvalidOperationException("Model metadata JSON is required.");
+        json.Remove("supportsTemperature");
+
+        GenerationModelMetadataDto? deserialized = json.Deserialize<GenerationModelMetadataDto>(JsonOptions);
+
+        deserialized.Should().NotBeNull();
+        deserialized?.SupportsTemperature.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SerializeAndDeserialize_WithTemperatureUnsupported_PreservesCapability()
+    {
+        GenerationModelMetadataDto metadata = CreateCatalog().Models.Single() with
+        {
+            SupportsTemperature = false
+        };
+
+        string json = JsonSerializer.Serialize(metadata, JsonOptions);
+        GenerationModelMetadataDto? deserialized = JsonSerializer.Deserialize<GenerationModelMetadataDto>(
+            json,
+            JsonOptions);
+
+        deserialized.Should().BeEquivalentTo(metadata);
+    }
 
     [Fact]
     public void SerializeAndDeserialize_WithPricingMetadata_PreservesContractShape()

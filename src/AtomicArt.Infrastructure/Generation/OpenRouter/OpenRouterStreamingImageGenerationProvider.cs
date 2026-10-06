@@ -38,7 +38,7 @@ internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStre
 
         string? flexProviderTag = OpenRouterFlexModelPolicy
             .GetChatCompletionProviderTag(context.ProviderModelId);
-        bool usesChatCompletions = !IsDedicatedImageModel(context.ProviderModelId);
+        bool usesChatCompletions = !OpenRouterImageModelPolicy.UsesImageApi(context.ProviderModelId);
         HttpContent content = usesChatCompletions
             ? new OpenRouterChatCompletionRequestContent(context, flexProviderTag)
             : new OpenRouterImageRequestContent(context);
@@ -70,7 +70,8 @@ internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStre
                 response,
                 maximumResponseBytes,
                 _options.ResponseBufferSize,
-                usesChatCompletions);
+                usesChatCompletions,
+                context.TransportLimits);
         }
         catch
         {
@@ -79,20 +80,14 @@ internal sealed class OpenRouterStreamingImageGenerationProvider : IProviderStre
         }
     }
 
-    private static bool IsDedicatedImageModel(string providerModelId)
-    {
-        return GenerationProviderModelIds.IsGptImageModel(providerModelId);
-    }
-
     private Task<OpenRouterImageResponse> CreateResponseAsync(
         HttpContent content,
         bool usesChatCompletions,
-        string? providerCredential,
+        string providerCredential,
         CancellationToken ct)
     {
         return usesChatCompletions
-            ? _client.CreateChatCompletionAsync(content, providerCredential!, ct)
-            : _client.CreateImageAsync(content, providerCredential!, ct);
+            ? _client.CreateChatCompletionAsync(content, providerCredential, ct)
+            : _client.CreateImageAsync(content, providerCredential, ct);
     }
-
 }

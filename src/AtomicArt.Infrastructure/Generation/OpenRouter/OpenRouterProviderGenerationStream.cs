@@ -11,16 +11,21 @@ internal sealed class OpenRouterProviderGenerationStream : IProviderGenerationSt
     public string ContentType { get; }
     public ProviderGenerationSummary? Summary { get; private set; }
 
+    private const int DefaultMaximumMetadataBytes = 65536;
+    private const int DefaultMaximumStructureDepth = 64;
+
     private readonly OpenRouterImageResponse _response;
     private readonly long _maximumProviderResponseBytes;
     private readonly int _responseBufferSize;
     private readonly bool _usesChatCompletions;
+    private readonly GenerationModelTransportLimitsDto? _transportLimits;
 
     public OpenRouterProviderGenerationStream(
         OpenRouterImageResponse response,
         long maximumProviderResponseBytes,
         int responseBufferSize,
-        bool usesChatCompletions = false)
+        bool usesChatCompletions = false,
+        GenerationModelTransportLimitsDto? transportLimits = null)
     {
         _response = response ?? throw new ArgumentNullException(nameof(response));
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumProviderResponseBytes, 1L);
@@ -28,6 +33,7 @@ internal sealed class OpenRouterProviderGenerationStream : IProviderGenerationSt
         _maximumProviderResponseBytes = maximumProviderResponseBytes;
         _responseBufferSize = responseBufferSize;
         _usesChatCompletions = usesChatCompletions;
+        _transportLimits = transportLimits;
         ContentType = response.Response.Content.Headers.ContentType?.ToString() ?? "application/json";
     }
 
@@ -40,6 +46,11 @@ internal sealed class OpenRouterProviderGenerationStream : IProviderGenerationSt
         OpenRouterImageUsageReader usageReader = new();
         OpenRouterChatCompletionResponseTransformer? chatTransformer =
             _usesChatCompletions ? new OpenRouterChatCompletionResponseTransformer() : null;
+        using OpenRouterImageResponseMetadataReader? imageMetadataReader = _usesChatCompletions
+            ? null
+            : new OpenRouterImageResponseMetadataReader(
+                _transportLimits?.MaxStatisticsBytes ?? DefaultMaximumMetadataBytes,
+                _transportLimits?.MaxStructureDepth ?? DefaultMaximumStructureDepth);
         long totalBytes = 0L;
         long effectiveMaximumBytes = Math.Min(maximumBytes, _maximumProviderResponseBytes);
 
@@ -67,6 +78,7 @@ internal sealed class OpenRouterProviderGenerationStream : IProviderGenerationSt
 
                 ReadOnlyMemory<byte> responseBytes = buffer.AsMemory(0, bytesRead);
                 usageReader.Append(responseBytes.Span);
+                imageMetadataReader?.Append(responseBytes.Span);
 
                 if (chatTransformer is null)
                 {
@@ -80,7 +92,8 @@ internal sealed class OpenRouterProviderGenerationStream : IProviderGenerationSt
             }
 
             string contentType = chatTransformer is null
-                ? GenerationImageContentTypes.Png
+                ? imageMetadataReader?.ReadContentType()
+                    ?? throw new InvalidOperationException("Image response metadata reader is missing.")
                 : await chatTransformer.CompleteAsync(destination, ct).ConfigureAwait(false);
             Summary = new ProviderGenerationSummary(
                 "completed",

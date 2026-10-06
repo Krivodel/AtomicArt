@@ -17,4 +17,5 @@ public sealed record GenerationModelMetadataDto(
     GenerationModelPricingMetadataDto Pricing,
     GenerationModelThinkingMetadataDto? Thinking = null,
     IReadOnlyList<GenerationModelParameterMetadataDto>? Parameters = null,
-    GenerationModelTransportLimitsDto? TransportLimits = null);
+    GenerationModelTransportLimitsDto? TransportLimits = null,
+    bool SupportsTemperature = true);

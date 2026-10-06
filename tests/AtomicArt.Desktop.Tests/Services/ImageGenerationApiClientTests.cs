@@ -27,6 +27,51 @@ public sealed class ImageGenerationApiClientTests
     private static readonly Guid LogicalGenerationId =
         Guid.Parse("11111111-1111-1111-1111-111111111111");
 
+    [Theory]
+    [InlineData(SKEncodedImageFormat.Jpeg, GenerationImageContentTypes.Jpeg, ".jpg")]
+    [InlineData(SKEncodedImageFormat.Webp, GenerationImageContentTypes.Webp, ".webp")]
+    public async Task CreateGenerationAsync_WithOpenRouterImageApiFormat_SavesOriginalImageWithMatchingExtension(
+        SKEncodedImageFormat format,
+        string contentType,
+        string extension)
+    {
+        using TemporaryDirectory directory = new(
+            typeof(ImageGenerationApiClientTests),
+            nameof(CreateGenerationAsync_WithOpenRouterImageApiFormat_SavesOriginalImageWithMatchingExtension));
+        AtomicArtDataPathProvider pathProvider = new(directory.DirectoryPath);
+        GenerationStreamingResultStore resultStore = new(
+            pathProvider,
+            GenerationImageFormatRegistryTestFactory.Create(),
+            new GenerationImageFileNamePolicy(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory());
+        byte[] imageBytes = CreateEncodedImage(1, 1, format);
+        string responseJson = JsonSerializer.Serialize(new
+        {
+            data = new[] { new { b64_json = Convert.ToBase64String(imageBytes), media_type = contentType } }
+        });
+        Mock<HttpMessageHandler> handler = new();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(CreateSuccessfulStreamingResponse(responseJson, contentType));
+        using HttpClient httpClient = new(handler.Object);
+        JsonBase64ProviderResponseImageDecoder decoder = new(TestApiConfiguration.CreateGenerationOptionsWrapper());
+        ImageGenerationApiClient apiClient = CreateApiClient(httpClient, resultStore, decoder);
+
+        GenerationBatchDto batch = await apiClient.CreateGenerationAsync(
+            CreateRequest(attachedImageContent: GenerationImageTestData.ValidPngBytes),
+            LogicalGenerationId,
+            1,
+            TestGenerationCredentials.ProviderCredential,
+            CancellationToken.None);
+
+        string imagePath = batch.Items.Should().ContainSingle().Which.ImagePath
+            ?? throw new InvalidOperationException("Generated image path is missing.");
+        Path.GetExtension(imagePath).Should().Be(extension);
+        (await File.ReadAllBytesAsync(imagePath)).Should().Equal(imageBytes);
+        Directory.GetFiles(pathProvider.ArtDirectory).Should().Equal(imagePath);
+    }
+
     [Fact]
     public async Task CreateGenerationAsync_WithEscapedOpenRouterImage_SavesOriginalImage()
     {
@@ -263,7 +308,9 @@ public sealed class ImageGenerationApiClientTests
                 TestApiConfiguration.CreateGenerationOptionsWrapper()));
     }
 
-    private static HttpResponseMessage CreateSuccessfulStreamingResponse(string providerResponseJson)
+    private static HttpResponseMessage CreateSuccessfulStreamingResponse(
+        string providerResponseJson,
+        string imageContentType = GenerationImageContentTypes.Png)
     {
         MultipartContent content = new("mixed", "test-generation-response");
         StringContent providerContent = new(providerResponseJson, Encoding.UTF8, "application/json");
@@ -283,7 +330,7 @@ public sealed class ImageGenerationApiClientTests
             GenerationItemStatus.Generated,
             "completed",
             1,
-            new string[] { GenerationImageContentTypes.Png },
+            new string[] { imageContentType },
             null,
             null,
             new DateTime(2026, 10, 1, 6, 53, 0, DateTimeKind.Utc),
@@ -331,13 +378,16 @@ public sealed class ImageGenerationApiClientTests
             attachedImages: attachedImages);
     }
 
-    private static byte[] CreateEncodedImage(int width, int height)
+    private static byte[] CreateEncodedImage(
+        int width,
+        int height,
+        SKEncodedImageFormat format = SKEncodedImageFormat.Png)
     {
         using SKBitmap bitmap = new(width, height);
         using SKCanvas canvas = new(bitmap);
         canvas.Clear(SKColors.White);
         using SKImage image = SKImage.FromBitmap(bitmap);
-        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using SKData data = image.Encode(format, 100);
         return data.ToArray();
     }
 }
