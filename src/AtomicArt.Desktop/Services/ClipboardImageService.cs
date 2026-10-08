@@ -105,8 +105,13 @@ public sealed class ClipboardImageService :
 
         if (file is not null)
         {
-            _logger.LogInformation("Clipboard image will be read from a storage item.");
-            return _fileReader.CreateInput(file, maxInputBytes);
+            ImageAttachmentInput? fileInput = _fileReader.TryCaptureInput(file, maxInputBytes);
+
+            if (fileInput is not null)
+            {
+                _logger.LogInformation("Clipboard image will be read from a storage item.");
+                return fileInput;
+            }
         }
 
         TransferredImageContent? encodedImage = await ImageDataTransferContentReader

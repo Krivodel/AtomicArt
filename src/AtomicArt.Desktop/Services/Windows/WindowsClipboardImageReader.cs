@@ -41,15 +41,18 @@ internal sealed class WindowsClipboardImageReader : IPlatformClipboardImageReade
             if (WindowsNativeClipboard.OpenClipboard(nint.Zero))
             {
                 byte[]? pngContent;
-                string? filePath;
+                ImageAttachmentInput? fileInput;
                 byte[]? dibContent;
                 try
                 {
                     pngContent = TryReadPng(pngFormatIds, maxInputBytes);
-                    filePath = pngContent is null
+                    string? filePath = pngContent is null
                         ? TryReadFilePath()
                         : null;
-                    dibContent = pngContent is null && filePath is null
+                    fileInput = filePath is null
+                        ? null
+                        : _fileReader.TryCaptureInput(filePath, maxInputBytes);
+                    dibContent = pngContent is null && fileInput is null
                         ? TryReadDib(maxInputBytes)
                         : null;
                 }
@@ -63,9 +66,9 @@ internal sealed class WindowsClipboardImageReader : IPlatformClipboardImageReade
                     return CreatePngInput(pngContent);
                 }
 
-                if (filePath is not null)
+                if (fileInput is not null)
                 {
-                    return _fileReader.CreateInput(filePath, maxInputBytes);
+                    return fileInput;
                 }
 
                 if (dibContent is null)

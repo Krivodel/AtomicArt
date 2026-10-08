@@ -7,6 +7,7 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Tests.Common;
 using Pica.Viewer.Services;
 
 namespace AtomicArt.Desktop.Tests.Services;
@@ -51,17 +52,141 @@ public sealed class ClipboardImageServiceTests
     [Fact]
     public async Task TryGetImageAsync_WithFileAndPngFormats_ReturnsFileInput()
     {
-        Mock<IStorageFile> fileMock = new();
-        fileMock.SetupGet(file => file.Name).Returns(FileName);
+        using TemporaryDirectory directory = new(
+            typeof(ClipboardImageServiceTests),
+            nameof(TryGetImageAsync_WithFileAndPngFormats_ReturnsFileInput));
+        string filePath = Path.Combine(directory.DirectoryPath, FileName);
+        await File.WriteAllBytesAsync(filePath, JpegContent);
+        Mock<IStorageFile> fileMock = StorageFileTestData.CreateFile(filePath);
         DataTransfer dataTransfer = new();
         dataTransfer.Add(DataTransferItem.CreateFile(fileMock.Object));
         dataTransfer.Add(CreatePngTransferItem());
 
-        ImageAttachmentInput actualInput = await GetRequiredImageInputAsync(
+        using ImageAttachmentInput actualInput = await GetRequiredImageInputAsync(
             dataTransfer,
             "Clipboard file input should be created.");
+        AttachedImageDto? image = await actualInput.ReadAsync(CancellationToken.None);
 
         actualInput.FileName.Should().Be(FileName);
+        image.Should().NotBeNull();
+        image?.Content.Should().Equal(JpegContent);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TryGetImageAsync_WithUnavailableFileAndPngFormat_ReturnsClipboardPixels(
+        bool fileWasDeleted)
+    {
+        using TemporaryDirectory directory = new(
+            typeof(ClipboardImageServiceTests),
+            nameof(TryGetImageAsync_WithUnavailableFileAndPngFormat_ReturnsClipboardPixels));
+        string filePath = Path.Combine(directory.DirectoryPath, FileName);
+        await File.WriteAllBytesAsync(filePath, PngContent);
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.CreateFile(StorageFileTestData.CreateFile(filePath).Object));
+        dataTransfer.Add(CreatePngTransferItem());
+
+        if (fileWasDeleted)
+        {
+            File.Delete(filePath);
+        }
+        else
+        {
+            await File.WriteAllBytesAsync(filePath, Array.Empty<byte>());
+        }
+
+        using ImageAttachmentInput actualInput = await GetRequiredImageInputAsync(
+            dataTransfer,
+            "Clipboard pixels should survive removal of the copied file.");
+
+        actualInput.FileName.Should().Be("clipboard.png");
+        AttachedImageDto? image = await actualInput.ReadAsync(CancellationToken.None);
+        image.Should().NotBeNull();
+        image?.Content.Should().Equal(PngContent);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TryGetImageAsync_WithUnavailableFileAndNoAvaloniaImage_UsesPlatformPixels(
+        bool fileWasDeleted)
+    {
+        using TemporaryDirectory directory = new(
+            typeof(ClipboardImageServiceTests),
+            nameof(TryGetImageAsync_WithUnavailableFileAndNoAvaloniaImage_UsesPlatformPixels));
+        string filePath = Path.Combine(directory.DirectoryPath, FileName);
+        await File.WriteAllBytesAsync(filePath, PngContent);
+        AttachedImageDto fallbackImage = new(
+            "fallback.png",
+            GenerationImageContentTypes.Png,
+            PngContent);
+        StubPlatformClipboardImageReader fallbackReader = new(
+            ImageAttachmentInput.FromImage(fallbackImage));
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.CreateFile(StorageFileTestData.CreateFile(filePath).Object));
+        ClipboardImageService service = CreateService(dataTransfer, fallbackReader);
+
+        if (fileWasDeleted)
+        {
+            File.Delete(filePath);
+        }
+        else
+        {
+            await File.WriteAllBytesAsync(filePath, Array.Empty<byte>());
+        }
+
+        using ImageAttachmentInput? input = await service.TryGetImageAsync(
+            MaxInputBytes,
+            CancellationToken.None);
+
+        fallbackReader.CallCount.Should().Be(1);
+        AttachedImageDto? actualImage = input is null
+            ? null
+            : await input.ReadAsync(CancellationToken.None);
+        actualImage.Should().BeEquivalentTo(fallbackImage);
+    }
+
+    [Fact]
+    public async Task TryGetImageAsync_WhenFileIsDeletedBeforeDeferredRead_PreservesOriginalContent()
+    {
+        using TemporaryDirectory directory = new(
+            typeof(ClipboardImageServiceTests),
+            nameof(TryGetImageAsync_WhenFileIsDeletedBeforeDeferredRead_PreservesOriginalContent));
+        string filePath = Path.Combine(directory.DirectoryPath, FileName);
+        await File.WriteAllBytesAsync(filePath, JpegContent);
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.CreateFile(StorageFileTestData.CreateFile(filePath).Object));
+        dataTransfer.Add(CreatePngTransferItem());
+
+        using ImageAttachmentInput input = await GetRequiredImageInputAsync(
+            dataTransfer,
+            "Clipboard file input should be captured.");
+        File.Delete(filePath);
+        AttachedImageDto? image = await input.ReadAsync(CancellationToken.None);
+
+        File.Exists(filePath).Should().BeFalse();
+        image.Should().NotBeNull();
+        image?.Content.Should().Equal(JpegContent);
+    }
+
+    [Fact]
+    public async Task TryGetImageAsync_WithOversizedFileAndPngFormat_PreservesInputLimit()
+    {
+        using TemporaryDirectory directory = new(
+            typeof(ClipboardImageServiceTests),
+            nameof(TryGetImageAsync_WithOversizedFileAndPngFormat_PreservesInputLimit));
+        string filePath = Path.Combine(directory.DirectoryPath, FileName);
+        await File.WriteAllBytesAsync(filePath, new byte[MaxInputBytes + 1]);
+        DataTransfer dataTransfer = new();
+        dataTransfer.Add(DataTransferItem.CreateFile(StorageFileTestData.CreateFile(filePath).Object));
+        dataTransfer.Add(CreatePngTransferItem());
+        using ImageAttachmentInput input = await GetRequiredImageInputAsync(
+            dataTransfer,
+            "An oversized clipboard file should retain its validation error.");
+        Func<Task> read = () => input.ReadAsync(CancellationToken.None);
+
+        await read.Should().ThrowAsync<InvalidDataException>();
     }
 
     [Fact]

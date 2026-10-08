@@ -109,32 +109,42 @@ public sealed class AttachedImageFileReader
 
         try
         {
-            input = OpenReadStream(filePath, FileShare.Read | FileShare.Delete);
-
-            if (input.Length > maxInputBytes)
-            {
-                input.Dispose();
-
-                return ImageAttachmentInput.FromError(
-                    fileName, new InvalidDataException(AttachedImageTooLargeMessage));
-            }
-
-            FileStream capturedInput = input;
-
-            return new ImageAttachmentInput(
-                fileName,
-                async ct => await ReadStreamAsync(fileName, capturedInput, maxInputBytes, ct)
-                    .ConfigureAwait(false),
-                capturedInput);
+            input = OpenCapturedReadStream(filePath);
+            return CreateCapturedInput(fileName, input, maxInputBytes);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
             or ArgumentException or NotSupportedException)
         {
             input?.Dispose();
-            _logger.LogWarning(ex, "The dropped attachment could not acquire a read handle.");
-
-            return ImageAttachmentInput.FromError(fileName, ex);
+            return CreateCaptureError(fileName, ex);
         }
+    }
+
+    internal ImageAttachmentInput? TryCaptureInput(IStorageFile file, int maxInputBytes)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxInputBytes);
+
+        string? filePath = file.TryGetLocalPath();
+
+        return filePath is null
+            ? CreateInput(file, maxInputBytes)
+            : TryCaptureInput(filePath, file.Name, maxInputBytes);
+    }
+
+    internal ImageAttachmentInput? TryCaptureInput(string filePath, int maxInputBytes)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxInputBytes);
+
+        string fullPath = Path.GetFullPath(filePath);
+
+        return TryCaptureInput(fullPath, Path.GetFileName(fullPath), maxInputBytes);
+    }
+
+    private static FileStream OpenCapturedReadStream(string filePath)
+    {
+        return OpenReadStream(filePath, FileShare.Read | FileShare.Delete);
     }
 
     private static FileStream OpenReadStream(string filePath, FileShare share)
@@ -165,6 +175,66 @@ public sealed class AttachedImageFileReader
         }
 
         return false;
+    }
+
+    private ImageAttachmentInput? TryCaptureInput(
+        string filePath,
+        string fileName,
+        int maxInputBytes)
+    {
+        FileStream? input = null;
+
+        try
+        {
+            input = OpenCapturedReadStream(filePath);
+
+            if (input.Length == 0)
+            {
+                input.Dispose();
+                return null;
+            }
+
+            return CreateCapturedInput(fileName, input, maxInputBytes);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            input?.Dispose();
+            _logger.LogDebug(ex, "The clipboard attachment file is no longer available.");
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+            or ArgumentException or NotSupportedException)
+        {
+            input?.Dispose();
+            return CreateCaptureError(fileName, ex);
+        }
+    }
+
+    private ImageAttachmentInput CreateCapturedInput(
+        string fileName,
+        FileStream input,
+        int maxInputBytes)
+    {
+        if (input.Length > maxInputBytes)
+        {
+            input.Dispose();
+
+            return ImageAttachmentInput.FromError(
+                fileName, new InvalidDataException(AttachedImageTooLargeMessage));
+        }
+
+        return new ImageAttachmentInput(
+            fileName,
+            async ct => await ReadStreamAsync(fileName, input, maxInputBytes, ct)
+                .ConfigureAwait(false),
+            input);
+    }
+
+    private ImageAttachmentInput CreateCaptureError(string fileName, Exception error)
+    {
+        _logger.LogWarning(error, "The attachment could not acquire a read handle.");
+
+        return ImageAttachmentInput.FromError(fileName, error);
     }
 
     private async Task<AttachedImageDto?> ReadFileAsync(
