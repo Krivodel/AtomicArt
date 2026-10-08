@@ -49,6 +49,7 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
         PicaViewerRequest preparedRequest = PicaViewerSessionTests.GetPreparedRequest(session);
         preparedRequest.Items.Should().ContainSingle();
         preparedRequest.Items[0].FilePath.Should().Be(TrustedImagePath);
+        preparedRequest.Items[0].IsTemporary.Should().BeFalse();
         preparedRequest.Items[0].PreviewFilePath.Should().Be(TrustedThumbnailPath);
         preparedRequest.Actions.Should().NotContain(action =>
             string.Equals(action.Id, AtomicArtPicaActions.ImbaId, StringComparison.Ordinal));
@@ -78,6 +79,7 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
             PicaViewerRequest preparedRequest = PicaViewerSessionTests.GetPreparedRequest(session);
             preparedRequest.Items.Should().ContainSingle();
             preparedRequest.Items[0].FileName.Should().Be("reference.png");
+            preparedRequest.Items[0].IsTemporary.Should().BeTrue();
             preparedRequest.Actions.Should().Contain(action =>
                 string.Equals(action.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal));
             preparedRequest.Actions.Should().Contain(action =>
@@ -191,6 +193,7 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
 
                 PicaViewerRequest preparedRequest = PicaViewerSessionTests.GetPreparedRequest(session);
                 preparedRequest.Items.Single().FilePath.Should().Be(imagePath);
+                preparedRequest.Items.Single().IsTemporary.Should().BeTrue();
                 preparedRequest.Actions.Should().NotContain(action =>
                     string.Equals(action.Id, AtomicArtPicaActions.ShowInGalleryId, StringComparison.Ordinal));
                 preparedRequest.Actions.Should().NotContain(action =>

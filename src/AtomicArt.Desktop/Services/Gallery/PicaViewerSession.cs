@@ -463,7 +463,10 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             itemId,
             trustedPath,
             Path.GetFileName(trustedPath),
-            trustedThumbnailPath);
+            trustedThumbnailPath)
+        {
+            IsTemporary = source.DeleteImageWhenClosed
+        };
     }
 
     private async Task<PicaImageItem> CreateAttachedItemAsync(
@@ -476,7 +479,10 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         string filePath = Path.Combine(_sessionDirectory, itemId.ToString("N") + extension);
         await File.WriteAllBytesAsync(filePath, image.Content, ct).ConfigureAwait(false);
 
-        return new PicaImageItem(itemId, filePath, Path.GetFileName(image.FileName));
+        return new PicaImageItem(itemId, filePath, Path.GetFileName(image.FileName))
+        {
+            IsTemporary = true
+        };
     }
 
     private bool CanDispatchAttach(PicaActionDefinition action)
