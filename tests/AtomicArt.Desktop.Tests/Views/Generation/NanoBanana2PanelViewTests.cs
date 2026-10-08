@@ -832,6 +832,60 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         });
     }
 
+    [Theory]
+    [InlineData("openrouter-gpt-image-2")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst")]
+    [InlineData("openrouter-gpt-image-2-5-flare")]
+    public async Task GenerationOptions_WhenSwitchingBetweenNanoBanana21AndGptImage_ReflectsSelectedModel(
+        string gptModelId)
+    {
+        await DispatchAsync(() =>
+        {
+            using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+            ImageModelOption nanoBananaModel = viewModel.AvailableModels.Single(model =>
+                model.Id == ApiModelMetadataTestCatalog.OpenRouterNanoBanana21ModelId);
+            ImageModelOption gptModel = viewModel.AvailableModels.Single(model =>
+                model.Id == gptModelId);
+            viewModel.SelectedModel = nanoBananaModel;
+            NanoBanana2PanelView view = CreateView(viewModel);
+            Button settingsButton = view.FindControl<Button>("TemperatureButton")
+                ?? throw new InvalidOperationException("The generation options button should be available.");
+            Popup settingsPopup = view.FindControl<Popup>("TemperaturePopup")
+                ?? throw new InvalidOperationException("The generation options popup should be available.");
+            ComboBox qualityComboBox = GetTemperaturePopupContent(settingsPopup)
+                .GetLogicalDescendants()
+                .OfType<ComboBox>()
+                .Single(comboBox => ReferenceEquals(comboBox.ItemsSource, viewModel.QualityLevels));
+            Control qualityRow = qualityComboBox.Parent as Control
+                ?? throw new InvalidOperationException("The quality row should be available.");
+            settingsButton.IsVisible.Should().BeFalse();
+            qualityRow.IsVisible.Should().BeFalse();
+
+            viewModel.SelectedModel = gptModel;
+
+            settingsButton.IsVisible.Should().BeTrue();
+            qualityRow.IsVisible.Should().BeTrue();
+            qualityComboBox.Items.Should().HaveCount(viewModel.QualityLevels.Count);
+            qualityComboBox.SelectedItem.Should().BeSameAs(viewModel.SelectedQualityOption);
+
+            viewModel.SelectedModel = nanoBananaModel;
+
+            settingsButton.IsVisible.Should().BeFalse();
+            qualityRow.IsVisible.Should().BeFalse();
+            qualityComboBox.Items.Should().BeEmpty();
+            ComboBox aspectRatioComboBox = view.FindControl<ComboBox>("AspectRatioComboBox")
+                ?? throw new InvalidOperationException("The aspect ratio dropdown should be available.");
+            ComboBox resolutionComboBox = view.FindControl<ComboBox>("ResolutionComboBox")
+                ?? throw new InvalidOperationException("The resolution dropdown should be available.");
+            aspectRatioComboBox.Items.Should().HaveCount(nanoBananaModel.AspectRatios.Count);
+            aspectRatioComboBox.SelectedItem.Should().NotBeNull();
+            resolutionComboBox.Items.Should().HaveCount(nanoBananaModel.Resolutions.Count);
+            resolutionComboBox.SelectedItem.Should().Be(viewModel.SelectedResolution);
+
+            return Task.CompletedTask;
+        });
+    }
+
     [Fact]
     public void QualityDropDown_WhenGptImage2IsSelected_ShowsAutoByDefault()
     {

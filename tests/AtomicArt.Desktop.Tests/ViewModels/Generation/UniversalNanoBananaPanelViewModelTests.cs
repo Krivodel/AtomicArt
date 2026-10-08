@@ -1288,6 +1288,56 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Theory]
+    [InlineData(null, "openrouter-gpt-image-2", true, true)]
+    [InlineData(null, "openrouter-gpt-image-2-5-sunburst", true, true)]
+    [InlineData(null, "openrouter-gpt-image-2-5-flare", true, true)]
+    [InlineData("openrouter-nano-banana-2-1", "openrouter-gpt-image-2", true, true)]
+    [InlineData("openrouter-nano-banana-2-1", "openrouter-gpt-image-2-5-sunburst", true, true)]
+    [InlineData("openrouter-nano-banana-2-1", "openrouter-gpt-image-2-5-flare", true, true)]
+    [InlineData("openrouter-gpt-image-2", "openrouter-nano-banana-2-1", false, false)]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "openrouter-nano-banana-2-1", false, false)]
+    [InlineData("openrouter-gpt-image-2-5-flare", "openrouter-nano-banana-2-1", false, false)]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "nano-banana-pro", false, true)]
+    public void SelectedModel_WhenGenerationOptionsChange_NotifiesWithCurrentModelCapabilities(
+        string? previousModelId,
+        string modelId,
+        bool expectedSupportsQuality,
+        bool expectedSupportsGenerationOptions)
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        viewModel.SelectedModel = previousModelId is null
+            ? null
+            : GetModel(viewModel, previousModelId);
+        List<bool> qualityNotifications = [];
+        List<bool> generationOptionsNotifications = [];
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (string.Equals(
+                    args.PropertyName,
+                    nameof(UniversalNanoBananaPanelViewModel.SupportsQuality),
+                    StringComparison.Ordinal))
+            {
+                qualityNotifications.Add(viewModel.SupportsQuality);
+            }
+
+            if (string.Equals(
+                    args.PropertyName,
+                    nameof(UniversalNanoBananaPanelViewModel.SupportsGenerationOptions),
+                    StringComparison.Ordinal))
+            {
+                generationOptionsNotifications.Add(viewModel.SupportsGenerationOptions);
+            }
+        };
+
+        viewModel.SelectedModel = GetModel(viewModel, modelId);
+
+        qualityNotifications.Should().NotBeEmpty()
+            .And.OnlyContain(value => value == expectedSupportsQuality);
+        generationOptionsNotifications.Should().NotBeEmpty()
+            .And.OnlyContain(value => value == expectedSupportsGenerationOptions);
+    }
+
+    [Theory]
     [InlineData("Xhigh")]
     [InlineData("Max")]
     public async Task RestoreStateAsync_WhenNanoBananaWasSelected_PreservesRememberedGptImageQuality(

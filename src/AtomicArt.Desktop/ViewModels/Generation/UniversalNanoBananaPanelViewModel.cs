@@ -910,7 +910,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         int previousGenerationCount = GenerationCount;
 
         UpdateAspectRatioOptions(value);
-        NotifySelectedModelMetadataChanged();
 
         bool wasPanelStateSaveSuppressed = _suppressPanelStateSave;
 
@@ -925,6 +924,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             }
 
             SynchronizeSelectedQualityOption();
+            NotifySelectedModelMetadataChanged();
 
             ApplyCompatibleSelectionValues(
                 value,
