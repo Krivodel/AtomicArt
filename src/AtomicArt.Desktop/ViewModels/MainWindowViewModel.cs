@@ -36,6 +36,7 @@ public sealed partial class MainWindowViewModel :
     public SettingsViewModel Settings => _settings;
     public ApplicationUpdateViewModel ApplicationUpdate { get; }
     public Dlss5SessionViewModel Dlss5 { get; }
+    public OpenRouterBalanceViewModel OpenRouterBalance { get; }
     public int WindowImageInputByteLimit => Dlss5.IsOpen
         ? Dlss5FeatureDefinition.MaxSourceImageBytes
         : ActiveGenerationPanel.AttachmentInputByteLimit;
@@ -76,6 +77,7 @@ public sealed partial class MainWindowViewModel :
         IAppStateBootstrapper appStateBootstrapper,
         ApplicationUpdateViewModel applicationUpdate,
         Dlss5SessionViewModel dlss5,
+        OpenRouterBalanceViewModel openRouterBalance,
         IMessenger messenger,
         IViewModelErrorHandler errorHandler,
         ILocalizationTextProvider textProvider)
@@ -91,6 +93,7 @@ public sealed partial class MainWindowViewModel :
         ArgumentNullException.ThrowIfNull(appStateBootstrapper);
         ArgumentNullException.ThrowIfNull(applicationUpdate);
         ArgumentNullException.ThrowIfNull(dlss5);
+        ArgumentNullException.ThrowIfNull(openRouterBalance);
         ArgumentNullException.ThrowIfNull(messenger);
         ArgumentNullException.ThrowIfNull(errorHandler);
         ArgumentNullException.ThrowIfNull(textProvider);
@@ -124,6 +127,7 @@ public sealed partial class MainWindowViewModel :
         _textProvider = textProvider;
         ApplicationUpdate = applicationUpdate;
         Dlss5 = dlss5;
+        OpenRouterBalance = openRouterBalance;
         Dlss5.PropertyChanged += OnAttachmentTargetChanged;
         if (ActiveGenerationPanel is INotifyPropertyChanged observablePanel)
         {
@@ -192,6 +196,7 @@ public sealed partial class MainWindowViewModel :
         _settings.Dispose();
         _uiScaleService.ScaleChanged -= OnUiScaleChanged;
         ApplicationUpdate.Dispose();
+        OpenRouterBalance.Dispose();
     }
 
     [RelayCommand]

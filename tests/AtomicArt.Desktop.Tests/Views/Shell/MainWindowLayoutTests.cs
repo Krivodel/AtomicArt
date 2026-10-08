@@ -23,6 +23,7 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Localization;
+using AtomicArt.Desktop.Services.OpenRouter;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
@@ -69,6 +70,69 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         TimeSpan.FromMilliseconds(200d);
     private static readonly TimeSpan ConfirmationDialogOpacityTransitionDuration =
         TimeSpan.FromMilliseconds(100d);
+
+    [Fact]
+    public async Task MainWindow_WithAccountBalance_ShowsTextBeforeAllTitleButtons()
+    {
+        await DispatchAsync(async () =>
+        {
+            Mock<IOpenRouterBalanceApiClient> balanceClient = new();
+            balanceClient.Setup(client => client.GetBalanceAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1234m);
+            Mock<ISecretStore> store = new();
+            store.Setup(service => service.GetSecretAsync(OpenRouterManagementKeySettingDefinition.SecretNameValue,
+                It.IsAny<CancellationToken>())).ReturnsAsync("management-key");
+            using MainWindowTestContext context = new(services =>
+            {
+                services.AddSingleton(balanceClient.Object);
+                services.AddSingleton(store.Object);
+            });
+            MainWindow window = context.Window;
+            MainWindowViewModel viewModel = window.DataContext.Should().BeOfType<MainWindowViewModel>().Subject;
+            await viewModel.OpenRouterBalance.RefreshAsync(CancellationToken.None);
+
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            TextBlock text = window.GetVisualDescendants().OfType<TextBlock>()
+                .Single(control => control.Classes.Contains("account-balance"));
+            text.IsVisible.Should().BeTrue();
+            text.Text.Should().Be(context.TextProvider.Format(ShellLocalizationKeys.OpenRouterBalanceFormat, "1234"));
+            double balanceRight = (text.TranslatePoint(default, window)
+                ?? throw new InvalidOperationException("Balance text is not attached.")).X + text.Bounds.Width;
+            Control titleBar = window.GetVisualDescendants().OfType<Control>()
+                .Single(control => control.Name == TitleBarName);
+            foreach (Button button in titleBar.GetVisualDescendants().OfType<Button>()
+                .Where(button => button.IsEffectivelyVisible))
+            {
+                double buttonLeft = (button.TranslatePoint(default, window)
+                    ?? throw new InvalidOperationException("Title button is not attached.")).X;
+                balanceRight.Should().BeLessThanOrEqualTo(buttonLeft);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task MainWindow_WithoutManagementKey_HidesAccountBalance()
+    {
+        await DispatchAsync(async () =>
+        {
+            Mock<ISecretStore> store = new();
+            store.Setup(service => service.GetSecretAsync(OpenRouterManagementKeySettingDefinition.SecretNameValue,
+                It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
+            using MainWindowTestContext context = new(services => services.AddSingleton(store.Object));
+            MainWindow window = context.Window;
+            MainWindowViewModel viewModel = window.DataContext.Should().BeOfType<MainWindowViewModel>().Subject;
+
+            await viewModel.OpenRouterBalance.RefreshAsync(CancellationToken.None);
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            TextBlock text = window.GetVisualDescendants().OfType<TextBlock>()
+                .Single(control => control.Classes.Contains("account-balance"));
+            text.IsVisible.Should().BeFalse();
+        });
+    }
 
     [Theory]
     [InlineData(WindowState.Normal, 670d)]

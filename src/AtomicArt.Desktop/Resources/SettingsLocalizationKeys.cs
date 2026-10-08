@@ -36,6 +36,11 @@ public static class SettingsLocalizationKeys
         public const string Label = "Settings.OpenRouterApiKey.Label";
     }
 
+    public static class OpenRouterManagementKey
+    {
+        public const string Label = "Settings.OpenRouterManagementKey.Label";
+    }
+
     public static class GenerationModels
     {
         public const string Label = "Settings.GenerationModels.Label";

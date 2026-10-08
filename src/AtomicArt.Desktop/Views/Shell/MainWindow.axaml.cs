@@ -60,6 +60,7 @@ public partial class MainWindow : SukiWindow
             OnSettingsOverlayPresenterPropertyChanged;
         UpdateWindowsFullscreenDetectionHint();
         Loaded += OnLoaded;
+        Opened += OnOpenedAsync;
     }
 
     public MainWindow(
@@ -112,6 +113,13 @@ public partial class MainWindow : SukiWindow
 
     protected override void OnClosed(EventArgs eventArgs)
     {
+        Opened -= OnOpenedAsync;
+        PropertyChanged -= OnWindowPropertyChanged;
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.OpenRouterBalance.Dispose();
+        }
+
         SettingsOverlayPresenter.PropertyChanged -=
             OnSettingsOverlayPresenterPropertyChanged;
         RemoveHandler(KeyDownEvent, OnConfirmationDismissKeyDown);
@@ -280,6 +288,15 @@ public partial class MainWindow : SukiWindow
         }
     }
 
+    private void UpdateBalanceWindowActivity()
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.OpenRouterBalance.SetWindowActive(
+                IsActive && IsVisible && (WindowState != WindowState.Minimized));
+        }
+    }
+
     private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs eventArgs)
     {
         _ = sender;
@@ -287,6 +304,24 @@ public partial class MainWindow : SukiWindow
         if (eventArgs.Property == WindowStateProperty)
         {
             UpdateWindowsFullscreenDetectionHint();
+        }
+
+        if ((eventArgs.Property == IsActiveProperty)
+            || (eventArgs.Property == IsVisibleProperty)
+            || (eventArgs.Property == WindowStateProperty))
+        {
+            UpdateBalanceWindowActivity();
+        }
+    }
+
+    private async void OnOpenedAsync(object? sender, EventArgs eventArgs)
+    {
+        Opened -= OnOpenedAsync;
+        UpdateBalanceWindowActivity();
+
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            await viewModel.OpenRouterBalance.StartMonitoringCommand.ExecuteAsync(null);
         }
     }
 }

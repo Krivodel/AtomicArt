@@ -328,6 +328,24 @@ public sealed class DependencyInjectionTests
     }
 
     [Fact]
+    public void AddDesktopServices_WithManagementKey_PlacesSecretSettingAfterGenerationKey()
+    {
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
+        IReadOnlyList<ISettingsDefinition> settings = serviceProvider
+            .GetRequiredService<ISettingsDefinitionCatalog>().GetSettings();
+
+        ISettingsDefinition managementKey = settings
+            .SkipWhile(setting => setting is not OpenRouterApiKeySettingDefinition)
+            .Skip(1)
+            .First();
+
+        managementKey.Should().BeOfType<OpenRouterManagementKeySettingDefinition>();
+        managementKey.Should().BeAssignableTo<ISecretSettingDefinition>();
+        managementKey.Should().NotBeAssignableTo<IProviderCredentialSettingDefinition>();
+        serviceProvider.GetRequiredService<ISecretStore>().Should().BeOfType<NotifyingSecretStore>();
+    }
+
+    [Fact]
     public void AddDesktopServices_WithPromptTextSizeSetting_RegistersRuntimeAndEditor()
     {
         using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();

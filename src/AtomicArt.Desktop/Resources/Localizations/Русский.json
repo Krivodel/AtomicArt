@@ -21,7 +21,9 @@
     },
     "Shell": {
       "ShowWindow": "Показать окно",
-      "Exit": "Выход"
+      "Exit": "Выход",
+      "OpenRouterBalanceFormat": "Баланс: ${0}",
+      "OpenRouterBalanceUnavailable": "Баланс: —"
     },
     "Generation": {
       "Prompt": {
@@ -156,6 +158,9 @@
       },
       "OpenRouterApiKey": {
         "Label": "OpenRouter API-ключ"
+      },
+      "OpenRouterManagementKey": {
+        "Label": "OpenRouter management key"
       },
       "GenerationModels": {
         "Label": "Отображаемые модели"

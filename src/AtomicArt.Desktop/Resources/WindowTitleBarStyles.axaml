@@ -6,6 +6,11 @@
         <x:Double x:Key="MainWindowTitleButtonWidth">44</x:Double>
     </Styles.Resources>
 
+    <Style Selector="TextBlock.account-balance">
+        <Setter Property="Margin"
+                Value="12,0" />
+    </Style>
+
     <Style Selector="suki|SukiWindow[IsTitleBarVisible=True] /template/ LayoutTransformControl#PART_TitleBar">
         <Setter Property="Height"
                 Value="{StaticResource MainWindowTitleBarHeight}" />

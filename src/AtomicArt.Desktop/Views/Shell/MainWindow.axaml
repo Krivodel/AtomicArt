@@ -58,6 +58,10 @@
             <PathIcon Data="{x:Static dlss5:Dlss5FeatureDefinition.NvidiaIconGeometry}"
                       Foreground="{StaticResource NvidiaBrandBrush}" />
         </Button>
+        <TextBlock VerticalAlignment="Center"
+                   Classes="account-balance"
+                   IsVisible="{Binding OpenRouterBalance.HasManagementKey}"
+                   Text="{Binding OpenRouterBalance.BalanceText}" />
     </suki:SukiWindow.RightWindowTitleBarControls>
 
     <suki:SukiWindow.Hosts>

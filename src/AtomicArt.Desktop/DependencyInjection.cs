@@ -19,6 +19,7 @@ using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Logging;
+using AtomicArt.Desktop.Services.OpenRouter;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
@@ -79,6 +80,7 @@ public static class DependencyInjection
     private static void AddDesktopServicesCore(this IServiceCollection services)
     {
         services.TryAddSingleton<IMessenger, WeakReferenceMessenger>();
+        services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<AtomicArtDataPathProvider>();
         services.AddSingleton<IAtomicArtDataPathProvider>(
             provider => provider.GetRequiredService<AtomicArtDataPathProvider>());
@@ -158,6 +160,13 @@ public static class DependencyInjection
         services.AddTransient<ApplicationUpdateToastPresenter>();
         services.AddTransient<Dlss5OperationToastPresenter>();
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<OpenRouterBalanceViewModel>();
+        services.AddHttpClient<IOpenRouterBalanceApiClient, OpenRouterBalanceApiClient>(
+            OpenRouterBalanceApiClient.Configure)
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AllowAutoRedirect = false
+            });
         services.AddSingleton<Dlss5SessionViewModel>();
         services.AddTransient<ApplicationUpdateViewModel>();
         services.AddTransient<SettingsViewModel>();
@@ -236,7 +245,8 @@ public static class DependencyInjection
                 "API configuration must include positive problem-details limits.")
             .ValidateOnStart();
         services.AddSingleton<IApiEndpointService, ApiEndpointService>();
-        services.AddSingleton<ISecretStore, ProtectedDesktopSecretStore>();
+        services.AddSingleton<ProtectedDesktopSecretStore>();
+        services.AddSingleton<ISecretStore, NotifyingSecretStore>();
         services.AddSingleton<IAttachedImageSignatureValidator, AttachedImageSignatureValidator>();
         services.AddSingleton<AttachedImageFileReader>();
         services.AddSingleton<IPlatformClipboardImageReader>(
