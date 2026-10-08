@@ -61,10 +61,50 @@ public sealed class StreamingGenerationRequestValidatorTests
             context.ModelDefinition.Metadata.Temperature.Default);
     }
 
-    private static TestContext CreateContext()
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "xhigh", true)]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "max", true)]
+    [InlineData("openrouter-gpt-image-2-5-flare", "xhigh", true)]
+    [InlineData("openrouter-gpt-image-2-5-flare", "max", true)]
+    [InlineData("openrouter-gpt-image-2", "high", true)]
+    [InlineData("openrouter-gpt-image-2", "xhigh", false)]
+    [InlineData("openrouter-gpt-image-2", "max", false)]
+    public async Task ValidateAsync_WithGptImageQuality_EnforcesModelSupportedLevels(
+        string modelId,
+        string quality,
+        bool isSupported)
     {
-        GenerationModelMetadataDto metadata =
-            ApiModelMetadataTestCatalog.LoadNanoBanana2Metadata();
+        TestContext context = CreateContext(modelId);
+        Dictionary<string, JsonElement> parameters = new(StringComparer.Ordinal)
+        {
+            [GenerationParameterNames.AspectRatio] = JsonSerializer.SerializeToElement("16:9"),
+            [GenerationParameterNames.Resolution] = JsonSerializer.SerializeToElement("4K"),
+            [GenerationParameterNames.Quality] = JsonSerializer.SerializeToElement(quality)
+        };
+        GenerationRequestMetadataDto metadata = CreateMetadata(parameters, modelId);
+
+        Result<StreamingImageGenerationRequest> result = await context.Validator.ValidateAsync(
+            metadata,
+            Array.Empty<IGenerationAttachmentSource>(),
+            context.ModelDefinition,
+            CancellationToken.None);
+
+        result.IsSuccess.Should().Be(isSupported);
+
+        if (isSupported)
+        {
+            result.Value?.Parameters[GenerationParameterNames.Quality].GetString().Should().Be(quality);
+        }
+        else
+        {
+            result.ErrorCode.Should().Be(GenerationProtocolErrorCodes.InvalidParameters);
+        }
+    }
+
+    private static TestContext CreateContext(string? modelId = null)
+    {
+        GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadCatalog().Models
+            .Single(model => model.Id == (modelId ?? ApiModelMetadataTestCatalog.NanoBanana2ModelId));
         GenerationModelRules rules = new(
             new IGenerationModelRules[]
             {
@@ -100,12 +140,13 @@ public sealed class StreamingGenerationRequestValidatorTests
     }
 
     private static GenerationRequestMetadataDto CreateMetadata(
-        IReadOnlyDictionary<string, JsonElement> parameters)
+        IReadOnlyDictionary<string, JsonElement> parameters,
+        string? modelId = null)
     {
         return new GenerationRequestMetadataDto(
             LogicalGenerationId,
             1,
-            ApiModelMetadataTestCatalog.NanoBanana2ModelId,
+            modelId ?? ApiModelMetadataTestCatalog.NanoBanana2ModelId,
             "Create an image",
             parameters,
             Array.Empty<GenerationAttachmentMetadataDto>());

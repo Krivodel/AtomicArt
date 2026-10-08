@@ -90,6 +90,35 @@ public sealed class ImageModelOptionCatalogTests
     }
 
     [Fact]
+    public void Initialize_WithParameterMetadata_PreservesSnapshotAfterSourceIsDisposed()
+    {
+        ImageModelOptionCatalog catalog = new();
+        GenerationModelCatalogDto dto = CreateCatalog();
+        using (JsonDocument document = JsonDocument.Parse(
+            """{"default":"auto","values":["auto","xhigh","max"]}"""))
+        {
+            GenerationModelParameterMetadataDto parameter = new(
+                GenerationParameterNames.Quality,
+                "string",
+                false,
+                document.RootElement.GetProperty("default"),
+                AllowedValues: document.RootElement.GetProperty("values").EnumerateArray().ToArray());
+            GenerationModelMetadataDto model = dto.Models.Single() with
+            {
+                Parameters = new GenerationModelParameterMetadataDto[] { parameter }
+            };
+
+            catalog.Initialize(dto with { Models = new GenerationModelMetadataDto[] { model } });
+        }
+
+        ImageModelOption option = catalog.GetModels().Single();
+        GenerationModelParameterMetadataDto snapshot = option.Parameters?.Single()
+            ?? throw new InvalidOperationException("Parameter metadata should be preserved.");
+        snapshot.DefaultValue?.GetString().Should().Be("auto");
+        snapshot.AllowedValues?.Select(value => value.GetString()).Should().Equal("auto", "xhigh", "max");
+    }
+
+    [Fact]
     public void CatalogChanged_IsRaisedWhenCatalogIsClearedAndInitialized()
     {
         ImageModelOptionCatalog catalog = new();

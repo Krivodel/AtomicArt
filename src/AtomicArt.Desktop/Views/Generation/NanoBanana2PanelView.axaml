@@ -133,6 +133,7 @@
                                         <ComboBox Grid.Column="1"
                                                   MinWidth="{StaticResource GenerationTemperatureSliderWidth}"
                                                   HorizontalAlignment="Stretch"
+                                                  MaxDropDownHeight="300"
                                                   ItemsSource="{Binding QualityLevels}"
                                                   SelectedItem="{Binding SelectedQualityOption, Mode=TwoWay}">
                                             <ComboBox.ItemTemplate>

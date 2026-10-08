@@ -77,19 +77,27 @@ public sealed class OpenRouterImageRequestContentTests
         root.TryGetProperty("aspect_ratio", out _).Should().BeFalse();
     }
 
-    [Fact]
-    public async Task ReadAsStringAsync_WithGptImageModelQuality_SendsQuality()
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", "openai/gpt-image-2", "high")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst", "xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst", "max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare", "xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare", "max")]
+    public async Task ReadAsStringAsync_WithGptImageModelQuality_SendsQuality(
+        string modelId,
+        string providerModelId,
+        string quality)
     {
         using OpenRouterImageRequestContent content = new(CreateContext(
-            "openrouter-gpt-image-2",
-            "openai/gpt-image-2",
+            modelId,
+            providerModelId,
             "1K",
             "1:1",
-            "high"));
+            quality));
 
         using JsonDocument document = JsonDocument.Parse(await content.ReadAsStringAsync());
 
-        document.RootElement.GetProperty("quality").GetString().Should().Be("high");
+        document.RootElement.GetProperty("quality").GetString().Should().Be(quality);
     }
 
     [Fact]

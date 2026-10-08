@@ -32,9 +32,7 @@ public static class GenerationUiLocalizationKeys
     public static class Quality
     {
         public const string Label = "Generation.Quality.Label";
-        public const string Low = "Generation.Quality.Low";
-        public const string Medium = "Generation.Quality.Medium";
-        public const string High = "Generation.Quality.High";
+        public const string OptionPrefix = "Generation.Quality.";
     }
 
     public static class Errors

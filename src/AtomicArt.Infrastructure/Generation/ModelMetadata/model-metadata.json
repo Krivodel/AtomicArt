@@ -397,7 +397,7 @@
       "parameters": [
         { "name": "aspectRatio", "type": "string", "required": true, "allowedValues": ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"] },
         { "name": "resolution", "type": "string", "required": true, "allowedValues": ["1K", "2K", "4K"] },
-        { "name": "quality", "type": "string", "required": false, "defaultValue": "auto", "allowedValues": ["auto", "low", "medium", "high"] }
+        { "name": "quality", "type": "string", "required": false, "defaultValue": "auto", "allowedValues": ["auto", "low", "medium", "high", "xhigh", "max"] }
       ],
       "pricing": {
         "currencyCode": "USD",
@@ -430,7 +430,7 @@
       "parameters": [
         { "name": "aspectRatio", "type": "string", "required": true, "allowedValues": ["auto", "1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"] },
         { "name": "resolution", "type": "string", "required": true, "allowedValues": ["1K", "2K", "4K"] },
-        { "name": "quality", "type": "string", "required": false, "defaultValue": "auto", "allowedValues": ["auto", "low", "medium", "high"] }
+        { "name": "quality", "type": "string", "required": false, "defaultValue": "auto", "allowedValues": ["auto", "low", "medium", "high", "xhigh", "max"] }
       ],
       "pricing": {
         "currencyCode": "USD",

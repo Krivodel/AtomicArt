@@ -149,7 +149,8 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
             CreateStringSnapshot(model.Attachments.SupportedContentTypes),
             model.Pricing,
             CreateThinkingSnapshot(modelId, model.Thinking),
-            model.SupportsTemperature);
+            model.SupportsTemperature,
+            CreateParameterSnapshot(model.Parameters));
     }
 
     private static string CreateRequiredSafeText(string? value, string propertyName)
@@ -223,6 +224,21 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
         }
 
         return snapshot;
+    }
+
+    private static IReadOnlyList<GenerationModelParameterMetadataDto> CreateParameterSnapshot(
+        IReadOnlyList<GenerationModelParameterMetadataDto>? parameters)
+    {
+        if (parameters is null)
+        {
+            return Array.Empty<GenerationModelParameterMetadataDto>();
+        }
+
+        return parameters.Select(parameter => parameter with
+        {
+            DefaultValue = parameter.DefaultValue?.Clone(),
+            AllowedValues = parameter.AllowedValues?.Select(value => value.Clone()).ToArray()
+        }).ToArray();
     }
 
     private static GenerationModelTemperatureMetadataDto CreateTemperatureSnapshot(

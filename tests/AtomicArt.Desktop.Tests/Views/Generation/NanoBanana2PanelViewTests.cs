@@ -802,14 +802,21 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         });
     }
 
-    [Fact]
-    public void QualityDropDown_WhenSelectionChanges_UpdatesViewModel()
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", "Medium")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Max")]
+    public void QualityDropDown_WhenSelectionChanges_UpdatesViewModel(
+        string modelId,
+        string quality)
     {
         Dispatch(() =>
         {
             using ShownPanelContext context = new();
             context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
-                model.Id == "openrouter-gpt-image-2");
+                model.Id == modelId);
             Popup settingsPopup = OpenTemperaturePopup(context.View);
             Border settingsPanel = GetTemperaturePopupContent(settingsPopup);
             ComboBox qualityComboBox = settingsPanel
@@ -819,9 +826,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                     comboBox.ItemsSource,
                     context.ViewModel.QualityLevels));
             qualityComboBox.SelectedItem = context.ViewModel.QualityLevels
-                .Single(level => level.Value == "Medium");
+                .Single(level => level.Value == quality);
 
-            context.ViewModel.SelectedQuality.Should().Be("Medium");
+            context.ViewModel.SelectedQuality.Should().Be(quality);
         });
     }
 

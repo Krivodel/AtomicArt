@@ -1207,30 +1207,47 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         viewModel.GenerationCount.Should().Be(1);
     }
 
-    [Fact]
-    public void SelectedModel_WhenSwitchedAwayFromGptImage2AndBack_RestoresQuality()
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", "Medium")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Max")]
+    public void SelectedModel_WhenSwitchedAwayFromGptImageModelAndBack_RestoresQuality(
+        string modelId,
+        string quality)
     {
         RecordingGenerationPanelStateService stateService = new();
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             generationPanelStateService: stateService);
-        ImageModelOption gptImage2 = GetModel(viewModel, "openrouter-gpt-image-2");
+        ImageModelOption gptImageModel = GetModel(viewModel, modelId);
         ImageModelOption nanoBananaPro = GetModel(
             viewModel,
             ApiModelMetadataTestCatalog.NanoBananaProModelId);
 
-        viewModel.SelectedModel = gptImage2;
-        viewModel.SelectedQuality = "Medium";
+        viewModel.SelectedModel = gptImageModel;
+        viewModel.SelectedQuality = quality;
         viewModel.SelectedModel = nanoBananaPro;
 
-        stateService.SavedStates.Last().Quality.Should().Be("medium");
+        stateService.SavedStates.Last().Quality.Should().Be(quality.ToLowerInvariant());
+        viewModel.SupportsQuality.Should().BeFalse();
+        viewModel.SelectedQualityOption.Should().BeNull();
 
-        viewModel.SelectedModel = gptImage2;
+        viewModel.SelectedModel = gptImageModel;
 
-        viewModel.SelectedQuality.Should().Be("Medium");
+        viewModel.SelectedQuality.Should().Be(quality);
+        viewModel.SelectedQualityOption?.Value.Should().Be(quality);
     }
 
-    [Fact]
-    public async Task CommitPendingStateAsync_AfterGptImage2QualityChanged_PersistsQualityForNextStart()
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", "Medium")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Max")]
+    public async Task CommitPendingStateAsync_AfterGptImageQualityChanged_PersistsQualityForNextStart(
+        string modelId,
+        string quality)
     {
         RecordingGenerationPanelStateService stateService = new()
         {
@@ -1238,18 +1255,101 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         };
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
             generationPanelStateService: stateService);
-        ImageModelOption gptImage2 = GetModel(viewModel, "openrouter-gpt-image-2");
+        ImageModelOption gptImageModel = GetModel(viewModel, modelId);
 
-        viewModel.SelectedModel = gptImage2;
-        viewModel.SelectedQuality = "Medium";
+        viewModel.SelectedModel = gptImageModel;
+        viewModel.SelectedQuality = quality;
         await viewModel.CommitPendingStateAsync(CancellationToken.None);
 
         using UniversalNanoBananaPanelViewModel restartedViewModel = CreateViewModel(
             generationPanelStateService: stateService);
         await restartedViewModel.RestoreStateAsync(CancellationToken.None);
 
-        restartedViewModel.SelectedModel?.Id.Should().Be(gptImage2.Id);
-        restartedViewModel.SelectedQuality.Should().Be("Medium");
+        restartedViewModel.SelectedModel?.Id.Should().Be(gptImageModel.Id);
+        restartedViewModel.SelectedQuality.Should().Be(quality);
+        restartedViewModel.SelectedQualityOption?.Value.Should().Be(quality);
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", "Auto,Low,Medium,High")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Auto,Low,Medium,High,Xhigh,Max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Auto,Low,Medium,High,Xhigh,Max")]
+    public void SelectedModel_WithGptImageModel_ExposesSupportedQualityLevels(
+        string modelId,
+        string expectedLevels)
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+
+        viewModel.SelectedModel = GetModel(viewModel, modelId);
+
+        viewModel.SupportsQuality.Should().BeTrue();
+        viewModel.QualityLevels.Select(level => level.Value).Should().Equal(expectedLevels.Split(','));
+        viewModel.SelectedQualityOption?.Value.Should().Be("Auto");
+    }
+
+    [Theory]
+    [InlineData("Xhigh")]
+    [InlineData("Max")]
+    public async Task RestoreStateAsync_WhenNanoBananaWasSelected_PreservesRememberedGptImageQuality(
+        string quality)
+    {
+        RecordingGenerationPanelStateService stateService = new()
+        {
+            PersistsSavedState = true
+        };
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            generationPanelStateService: stateService);
+        viewModel.SelectedModel = GetModel(viewModel, "openrouter-gpt-image-2-5-sunburst");
+        viewModel.SelectedQuality = quality;
+        viewModel.SelectedModel = GetModel(viewModel, ApiModelMetadataTestCatalog.OpenRouterNanoBanana21ModelId);
+        await viewModel.CommitPendingStateAsync(CancellationToken.None);
+        using UniversalNanoBananaPanelViewModel restartedViewModel = CreateViewModel(
+            generationPanelStateService: stateService);
+
+        await restartedViewModel.RestoreStateAsync(CancellationToken.None);
+        restartedViewModel.SelectedModel = GetModel(restartedViewModel, "openrouter-gpt-image-2-5-flare");
+
+        restartedViewModel.SelectedQuality.Should().Be(quality);
+        restartedViewModel.SelectedQualityOption?.Value.Should().Be(quality);
+    }
+
+    [Theory]
+    [InlineData("Xhigh")]
+    [InlineData("Max")]
+    public void SelectedModel_WhenSwitchingToGptImage2WithUnsupportedQuality_ResetsToDefault(
+        string quality)
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        viewModel.SelectedModel = GetModel(viewModel, "openrouter-gpt-image-2-5-sunburst");
+        viewModel.SelectedQuality = quality;
+
+        viewModel.SelectedModel = GetModel(viewModel, "openrouter-gpt-image-2");
+
+        viewModel.SelectedQuality.Should().Be("Auto");
+        viewModel.SelectedQualityOption?.Value.Should().Be("Auto");
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Xhigh")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Max")]
+    public async Task GenerateCommand_WithGptImage25Quality_PassesSelectedQualityToRequest(
+        string modelId,
+        string quality)
+    {
+        CapturingGenerationRunDispatcher dispatcher = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(dispatcher: dispatcher);
+        viewModel.SelectedModel = GetModel(viewModel, modelId);
+        viewModel.SelectedQualityOption = viewModel.QualityLevels.Single(level => level.Value == quality);
+        viewModel.Prompt = "Create a landscape";
+
+        await viewModel.GenerateCommand.ExecuteAsync(null);
+
+        GenerationRunRequest request = dispatcher.CapturedRequest
+            ?? throw new InvalidOperationException("Generation run request should be captured.");
+        request.Request.ModelId.Should().Be(modelId);
+        request.Request.Quality.Should().Be(quality.ToLowerInvariant());
     }
 
     [Fact]

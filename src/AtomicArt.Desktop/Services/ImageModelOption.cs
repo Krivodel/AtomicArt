@@ -20,7 +20,8 @@ public sealed record ImageModelOption(
     IReadOnlyList<string> SupportedAttachmentContentTypes,
     GenerationModelPricingMetadataDto Pricing,
     GenerationModelThinkingMetadataDto? Thinking = null,
-    bool SupportsTemperature = true)
+    bool SupportsTemperature = true,
+    IReadOnlyList<GenerationModelParameterMetadataDto>? Parameters = null)
 {
     public IReadOnlyList<string> AspectRatios =>
         AspectRatioOptions.Select(option => option.Value).ToList();
