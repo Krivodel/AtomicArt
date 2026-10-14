@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using FluentAssertions;
 using Xunit;
@@ -770,10 +771,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 .GetLogicalDescendants()
                 .OfType<Slider>()
                 .Single();
-            Button resetButton = content
-                .GetLogicalDescendants()
-                .OfType<Button>()
-                .Single(button => button.Command == context.ViewModel.ResetTemperatureCommand);
+            Button resetButton = GetOptionResetButton(context.View, context.ViewModel.ResetTemperatureCommand);
 
             slider.Minimum.Should().Be(context.ViewModel.MinimumTemperature);
             slider.Maximum.Should().Be(context.ViewModel.MaximumTemperature);
@@ -832,9 +830,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                     .Should()
                     .BeAssignableTo<IReadOnlyList<GenerationModelThinkingLevelMetadataDto>>()
                     .Subject;
-                Button thinkingResetButton = content.GetLogicalDescendants()
-                    .OfType<Button>()
-                    .Single(button => button.Command == viewModel.ResetThinkingLevelCommand);
+                Button thinkingResetButton = GetOptionResetButton(view, viewModel.ResetThinkingLevelCommand);
                 Grid thinkingControls = thinkingComboBox.Parent.Should()
                     .BeOfType<Grid>()
                     .Subject;
@@ -965,10 +961,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 ToggleTemperaturePopup(temperatureButton);
 
                 Border panel = GetTemperaturePopupContent(popup);
-                Button temperatureResetButton = panel
-                    .GetLogicalDescendants()
-                    .OfType<Button>()
-                    .Single(button => button.Command == viewModel.ResetTemperatureCommand);
+                Button temperatureResetButton = GetOptionResetButton(view, viewModel.ResetTemperatureCommand);
                 ComboBox thinkingComboBox = panel
                     .GetLogicalDescendants()
                     .OfType<ComboBox>()
@@ -1197,6 +1190,115 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
+    public async Task GenerationOptions_WhenRendered_HasOnlyLeftResetIcons()
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new();
+            Popup popup = OpenTemperaturePopup(context.View);
+            Border panel = GetTemperaturePopupContent(popup);
+            Button[] resetButtons = panel.GetLogicalDescendants().OfType<Button>().ToArray();
+
+            resetButtons.Should().HaveCount(3);
+            resetButtons.Should().AllSatisfy(button =>
+            {
+                Grid.GetColumn(button).Should().Be(0);
+                button.Content.Should().BeOfType<PathIcon>();
+                button.Classes.Should().Contain("generation-option-reset");
+                ToolTip.GetTip(button).Should().BeNull();
+            });
+        });
+    }
+
+    [Theory]
+    [InlineData(640d)]
+    [InlineData(1600d)]
+    public async Task GenerationOptionIcons_WhenClicked_ResetOnlyTheirParameter(double panelWidth)
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(panelWidth, ExpandedPanelHeight);
+            UniversalNanoBananaPanelViewModel viewModel = context.ViewModel;
+            GenerationModelThinkingLevelMetadataDto? defaultThinking = viewModel.SelectedThinkingLevel;
+            viewModel.Temperature = viewModel.MaximumTemperature;
+            viewModel.SelectedThinkingLevel = viewModel.ThinkingLevels.First(level => !ReferenceEquals(level, defaultThinking));
+            GenerationModelThinkingLevelMetadataDto? changedThinking = viewModel.SelectedThinkingLevel;
+            ShowGenerationOptions(context);
+
+            ClickOptionResetButton(GetOptionResetButton(context.View, viewModel.ResetTemperatureCommand));
+
+            viewModel.Temperature.Should().Be(viewModel.DefaultTemperature);
+            viewModel.SelectedThinkingLevel.Should().BeSameAs(changedThinking);
+            viewModel.Temperature = viewModel.MinimumTemperature;
+
+            ClickOptionResetButton(GetOptionResetButton(context.View, viewModel.ResetThinkingLevelCommand));
+
+            viewModel.SelectedThinkingLevel.Should().BeSameAs(defaultThinking);
+            viewModel.Temperature.Should().Be(viewModel.MinimumTemperature);
+            viewModel.SelectedModel = viewModel.AvailableModels.Single(model =>
+                model.Id == "openrouter-gpt-image-2-5-sunburst");
+            viewModel.SelectedQuality = "Max";
+            ShowGenerationOptions(context);
+
+            ClickOptionResetButton(GetOptionResetButton(context.View, viewModel.ResetQualityCommand));
+
+            viewModel.SelectedQuality.Should().Be("Auto");
+            viewModel.SelectedQualityOption?.Value.Should().Be("Auto");
+        });
+    }
+
+    [Theory]
+    [InlineData(640d)]
+    [InlineData(1600d)]
+    public async Task GenerationOptionIcons_WhenHovered_AnimateForegroundToRedAndBack(double panelWidth)
+    {
+        await DispatchAsync(async () =>
+        {
+            using ShownPanelContext context = new(panelWidth, ExpandedPanelHeight);
+            ShowGenerationOptions(context);
+            Popup popup = GetTemperaturePopup(context.View);
+
+            if (popup.IsOpen)
+            {
+                Transitions transitions = GetTemperaturePopupContent(popup).Transitions
+                    ?? throw new InvalidOperationException("The options popup animation was not configured.");
+                TimeSpan openDuration = transitions.OfType<DoubleTransition>().Single().Duration;
+                await Task.Delay(openDuration + openDuration);
+                context.Window.CaptureRenderedFrame();
+            }
+
+            Button button = GetOptionResetButton(context.View, context.ViewModel.ResetTemperatureCommand);
+            TopLevel root = TopLevel.GetTopLevel(button)
+                ?? throw new InvalidOperationException("The reset icon was not attached to a window.");
+            PathIcon icon = button.Content.Should().BeOfType<PathIcon>().Subject;
+            Color normalColor = button.Foreground.Should().BeAssignableTo<ISolidColorBrush>().Which.Color;
+            Color hoverColor = GetColorResource(button, "SukiDangerColor");
+            BrushTransition transition = button.Transitions.Should().ContainSingle().Which
+                .Should().BeOfType<BrushTransition>().Subject;
+            transition.Property.Should().Be(Button.ForegroundProperty);
+            Point center = GetCenterPoint(button, root);
+
+            root.MouseMove(center);
+            root.CaptureRenderedFrame();
+            await Task.Delay(transition.Duration / 3d);
+            root.CaptureRenderedFrame();
+
+            Color intermediateColor = icon.Foreground.Should().BeAssignableTo<ISolidColorBrush>().Which.Color;
+            intermediateColor.Should().NotBe(normalColor).And.NotBe(hoverColor);
+            await Task.Delay(transition.Duration);
+            root.CaptureRenderedFrame();
+
+            icon.Foreground.Should().BeAssignableTo<ISolidColorBrush>().Which.Color.Should().Be(hoverColor);
+            root.MouseMove(new Point(root.Bounds.Width - 1d, root.Bounds.Height - 1d));
+            root.CaptureRenderedFrame();
+            await Task.Delay(transition.Duration + transition.Duration);
+            root.CaptureRenderedFrame();
+
+            icon.Foreground.Should().BeAssignableTo<ISolidColorBrush>().Which.Color.Should().Be(normalColor);
+        });
+    }
+
+    [Fact]
     public async Task QualityDropDown_WhenGptImage2IsSelected_ShowsAutoByDefault()
     {
         await DispatchAsync(() =>
@@ -1343,6 +1445,37 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         window.CaptureRenderedFrame();
     }
 
+    private static void ShowGenerationOptions(ShownPanelContext context)
+    {
+        RenderOptionsLayout(context);
+
+        if (!GetInlineOptionsHost(context.View).IsVisible && !GetTemperaturePopup(context.View).IsOpen)
+        {
+            OpenTemperaturePopup(context.View);
+        }
+
+        UpdateOptionsLayout(context.Window);
+    }
+
+    private static Button GetOptionResetButton(NanoBanana2PanelView view, IRelayCommand command)
+    {
+        StackPanel options = view.FindControl<StackPanel>("GenerationOptionsPanel")
+            ?? throw new InvalidOperationException("The generation options panel was not found.");
+
+        return options.GetLogicalDescendants().OfType<Button>()
+            .Single(button => ReferenceEquals(button.Command, command));
+    }
+
+    private static void ClickOptionResetButton(Button button)
+    {
+        TopLevel root = TopLevel.GetTopLevel(button)
+            ?? throw new InvalidOperationException("The reset icon was not attached to a window.");
+        Point center = GetCenterPoint(button, root);
+
+        root.MouseDown(center, MouseButton.Left);
+        root.MouseUp(center, MouseButton.Left);
+    }
+
     private static void UpdateOptionsLayout(Window window)
     {
         window.CaptureRenderedFrame();
@@ -1377,16 +1510,15 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
     private static Point GetCenterPoint(Control control, Visual target)
     {
-        Point? origin = control.TranslatePoint(new Point(0d, 0d), target);
+        Point? center = control.TranslatePoint(
+            new Point(control.Bounds.Width / 2d, control.Bounds.Height / 2d), target);
 
-        if (origin is null)
+        if (center is null)
         {
             throw new InvalidOperationException("Control position was not found.");
         }
 
-        return origin.Value + new Vector(
-            control.Bounds.Width / 2d,
-            control.Bounds.Height / 2d);
+        return center.Value;
     }
 
     private static double GetRightGap(Control control, Visual target)

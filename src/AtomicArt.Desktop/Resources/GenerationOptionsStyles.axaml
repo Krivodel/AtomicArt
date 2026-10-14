@@ -1,4 +1,67 @@
-<Styles xmlns="https://github.com/avaloniaui">
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <ControlTheme x:Key="GenerationOptionResetButtonTheme"
+                      TargetType="Button">
+            <Setter Property="Width"
+                    Value="{StaticResource GenerationOptionIconSize}" />
+            <Setter Property="Height"
+                    Value="{StaticResource GenerationOptionIconSize}" />
+            <Setter Property="MinWidth"
+                    Value="{StaticResource ZeroSize}" />
+            <Setter Property="MinHeight"
+                    Value="{StaticResource ZeroSize}" />
+            <Setter Property="Margin"
+                    Value="0,0,10,0" />
+            <Setter Property="Padding"
+                    Value="{StaticResource ZeroThickness}" />
+            <Setter Property="VerticalAlignment"
+                    Value="Center" />
+            <Setter Property="Background"
+                    Value="Transparent" />
+            <Setter Property="BorderThickness"
+                    Value="{StaticResource ZeroThickness}" />
+            <Setter Property="Foreground"
+                    Value="{DynamicResource SukiText}" />
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Center" />
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Foreground"
+                                     Duration="{StaticResource GenerationOptionResetHoverDuration}" />
+                </Transitions>
+            </Setter>
+            <Setter Property="Template">
+                <ControlTemplate x:DataType="Button">
+                    <ContentPresenter x:Name="PART_ContentPresenter"
+                                      Background="{TemplateBinding Background}"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover">
+                <Setter Property="Foreground"
+                        Value="{DynamicResource SukiDangerColor}" />
+            </Style>
+        </ControlTheme>
+    </Styles.Resources>
+
+    <Style Selector="Button.generation-option-reset">
+        <Setter Property="Cursor"
+                Value="Arrow" />
+    </Style>
+
+    <Style Selector="Button.generation-option-reset PathIcon">
+        <Setter Property="Width"
+                Value="{StaticResource GenerationOptionIconSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource GenerationOptionIconSize}" />
+    </Style>
+
     <Style Selector="StackPanel.generation-advanced-options ComboBox">
         <Setter Property="MinWidth"
                 Value="{StaticResource GenerationTemperatureSliderWidth}" />
@@ -16,11 +79,6 @@
                 Value="2" />
         <Setter Property="Margin"
                 Value="0,0,0,4" />
-    </Style>
-
-    <Style Selector="StackPanel.generation-advanced-options Button.generation-temperature-reset">
-        <Setter Property="Grid.Row"
-                Value="1" />
     </Style>
 
     <Style Selector="StackPanel.generation-advanced-options.inline">
@@ -47,10 +105,5 @@
                 Value="0,0,8,0" />
         <Setter Property="VerticalAlignment"
                 Value="Center" />
-    </Style>
-
-    <Style Selector="StackPanel.generation-advanced-options.inline Button.generation-temperature-reset">
-        <Setter Property="Grid.Row"
-                Value="0" />
     </Style>
 </Styles>

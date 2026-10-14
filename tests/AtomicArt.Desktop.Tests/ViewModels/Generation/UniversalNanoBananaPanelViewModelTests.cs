@@ -1535,6 +1535,58 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             .Which.ThinkingLevel.Should().Be(thinking.Default);
     }
 
+    [Theory]
+    [InlineData("auto", "Auto")]
+    [InlineData("high", "High")]
+    public void ResetQualityCommand_WithChangedQuality_RestoresModelDefaultAndSavesOnlyQuality(
+        string defaultQuality,
+        string expectedQuality)
+    {
+        RecordingGenerationPanelStateService stateService = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            generationPanelStateService: stateService);
+        ImageModelOption model = GetModel(viewModel, "openrouter-gpt-image-2-5-sunburst");
+        IReadOnlyList<GenerationModelParameterMetadataDto> parameters = model.Parameters
+            ?? throw new InvalidOperationException("The test model requires quality metadata.");
+        viewModel.SelectedModel = model with
+        {
+            Parameters = parameters.Select(parameter => parameter.Name == GenerationParameterNames.Quality
+                ? parameter with { DefaultValue = JsonSerializer.SerializeToElement(defaultQuality) }
+                : parameter).ToArray()
+        };
+        viewModel.SelectedQuality = "Max";
+        string aspectRatio = viewModel.SelectedAspectRatio;
+        string resolution = viewModel.SelectedResolution;
+        int generationCount = viewModel.GenerationCount;
+        stateService.SavedStates.Clear();
+
+        viewModel.ResetQualityCommand.Execute(null);
+
+        viewModel.SelectedQuality.Should().Be(expectedQuality);
+        viewModel.SelectedQualityOption?.Value.Should().Be(expectedQuality);
+        viewModel.SelectedAspectRatio.Should().Be(aspectRatio);
+        viewModel.SelectedResolution.Should().Be(resolution);
+        viewModel.GenerationCount.Should().Be(generationCount);
+        stateService.SavedStates.Should().ContainSingle().Which.Quality.Should().Be(defaultQuality);
+    }
+
+    [Fact]
+    public void ResetQualityCommand_WhenModelDoesNotSupportQuality_PreservesRememberedValue()
+    {
+        RecordingGenerationPanelStateService stateService = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            generationPanelStateService: stateService);
+        viewModel.SelectedModel = GetModel(viewModel, "openrouter-gpt-image-2-5-sunburst");
+        viewModel.SelectedQuality = "Max";
+        viewModel.SelectedModel = GetModel(viewModel, ApiModelMetadataTestCatalog.OpenRouterNanoBanana21ModelId);
+        stateService.SavedStates.Clear();
+
+        viewModel.ResetQualityCommand.Execute(null);
+
+        viewModel.SelectedQuality.Should().Be("Max");
+        stateService.SavedStates.Should().BeEmpty();
+    }
+
     [Fact]
     public void ResetTemperatureCommand_WithChangedTemperature_RestoresDefaultAndSavesPanelState()
     {

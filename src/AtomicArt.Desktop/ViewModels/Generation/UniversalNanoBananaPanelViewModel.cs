@@ -612,6 +612,17 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     }
 
     [RelayCommand]
+    private void ResetQuality()
+    {
+        if (!SupportsQuality)
+        {
+            return;
+        }
+
+        SelectedQuality = ResolveQuality(null);
+    }
+
+    [RelayCommand]
     private void ResetThinkingLevel()
     {
         if (SelectedModel?.Thinking is null)

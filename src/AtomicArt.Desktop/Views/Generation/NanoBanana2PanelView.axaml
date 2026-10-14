@@ -107,17 +107,17 @@
                                 <StackPanel x:Name="GenerationOptionsPanel"
                                             Classes="generation-advanced-options"
                                             Spacing="12">
-                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                                    <Grid ColumnDefinitions="Auto,Auto,*"
                                           RowDefinitions="Auto,Auto"
                                           IsVisible="{Binding SupportsTemperature}">
-                                        <PathIcon Grid.Row="0"
-                                                  Grid.RowSpan="2"
-                                                  Grid.Column="0"
-                                                  Width="{StaticResource GenerationOptionIconSize}"
-                                                  Height="{StaticResource GenerationOptionIconSize}"
-                                                  Margin="0,0,10,0"
-                                                  VerticalAlignment="Center"
-                                                  Data="{StaticResource AppTemperatureIcon}" />
+                                        <Button Grid.Row="0"
+                                                Grid.RowSpan="2"
+                                                Grid.Column="0"
+                                                Classes="generation-option-reset"
+                                                Theme="{StaticResource GenerationOptionResetButtonTheme}"
+                                                Command="{Binding ResetTemperatureCommand}">
+                                            <PathIcon Data="{StaticResource AppTemperatureIcon}" />
+                                        </Button>
                                         <TextBlock Grid.Row="0"
                                                    HorizontalAlignment="Center"
                                                    Classes="panel-label generation-temperature-value"
@@ -131,21 +131,15 @@
                                                 SmallChange="{Binding TemperatureStep}"
                                                 TickFrequency="{Binding TemperatureStep}"
                                                 Value="{Binding Temperature, Mode=TwoWay}" />
-                                        <Button Grid.Column="3"
-                                                Margin="8,0,0,0"
-                                                Classes="Icon generation-option generation-temperature-reset"
-                                                Command="{Binding ResetTemperatureCommand}">
-                                            <PathIcon Data="{StaticResource AppResetIcon}" />
-                                        </Button>
                                     </Grid>
                                     <Grid ColumnDefinitions="Auto,*"
                                           IsVisible="{Binding SupportsQuality}">
-                                        <PathIcon Grid.Column="0"
-                                                  Width="{StaticResource GenerationOptionIconSize}"
-                                                  Height="{StaticResource GenerationOptionIconSize}"
-                                                  Margin="0,0,10,0"
-                                                  VerticalAlignment="Center"
-                                                  Data="{StaticResource AppQualityIcon}" />
+                                        <Button Grid.Column="0"
+                                                Classes="generation-option-reset"
+                                                Theme="{StaticResource GenerationOptionResetButtonTheme}"
+                                                Command="{Binding ResetQualityCommand}">
+                                            <PathIcon Data="{StaticResource AppQualityIcon}" />
+                                        </Button>
                                         <ComboBox Grid.Column="1"
                                                   HorizontalAlignment="Stretch"
                                                   MaxDropDownHeight="300"
@@ -159,14 +153,14 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                    <Grid ColumnDefinitions="Auto,*"
                                           IsVisible="{Binding SupportsThinkingLevel}">
-                                        <PathIcon Grid.Column="0"
-                                                  Width="{StaticResource GenerationOptionIconSize}"
-                                                  Height="{StaticResource GenerationOptionIconSize}"
-                                                  Margin="0,0,10,0"
-                                                  VerticalAlignment="Center"
-                                                  Data="{StaticResource AppBrainIcon}" />
+                                        <Button Grid.Column="0"
+                                                Classes="generation-option-reset"
+                                                Theme="{StaticResource GenerationOptionResetButtonTheme}"
+                                                Command="{Binding ResetThinkingLevelCommand}">
+                                            <PathIcon Data="{StaticResource AppBrainIcon}" />
+                                        </Button>
                                         <ComboBox x:Name="ThinkingLevelComboBox"
                                                   Grid.Column="1"
                                                   HorizontalAlignment="Stretch"
@@ -178,12 +172,6 @@
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
-                                        <Button Grid.Column="2"
-                                                Margin="8,0,0,0"
-                                                Classes="Icon generation-option"
-                                                Command="{Binding ResetThinkingLevelCommand}">
-                                            <PathIcon Data="{StaticResource AppResetIcon}" />
-                                        </Button>
                                     </Grid>
                                 </StackPanel>
                             </Border>
