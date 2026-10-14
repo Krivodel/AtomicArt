@@ -140,14 +140,16 @@
                                     </Grid>
                                     <Grid ColumnDefinitions="Auto,*"
                                           IsVisible="{Binding SupportsQuality}">
-                                        <TextBlock Grid.Column="0"
-                                                   Margin="0,0,10,0"
-                                                   VerticalAlignment="Center"
-                                                   Classes="panel-label"
-                                                   Text="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Quality.Label}}" />
+                                        <PathIcon Grid.Column="0"
+                                                  Width="{StaticResource GenerationOptionIconSize}"
+                                                  Height="{StaticResource GenerationOptionIconSize}"
+                                                  Margin="0,0,10,0"
+                                                  VerticalAlignment="Center"
+                                                  Data="{StaticResource AppQualityIcon}" />
                                         <ComboBox Grid.Column="1"
                                                   HorizontalAlignment="Stretch"
                                                   MaxDropDownHeight="300"
+                                                  AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Quality.Label}}"
                                                   ItemsSource="{Binding QualityLevels}"
                                                   SelectedItem="{Binding SelectedQualityOption, Mode=TwoWay}">
                                             <ComboBox.ItemTemplate>
