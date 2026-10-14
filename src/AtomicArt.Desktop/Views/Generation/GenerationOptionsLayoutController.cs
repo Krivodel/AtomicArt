@@ -9,6 +9,7 @@ using Avalonia.LogicalTree;
 using Avalonia.Threading;
 
 using AtomicArt.Desktop.Services.UiAnimation;
+using AtomicArt.Desktop.ViewModels.Generation;
 
 namespace AtomicArt.Desktop.Views.Generation;
 
@@ -31,6 +32,8 @@ internal sealed class GenerationOptionsLayoutController
     private readonly IUiFrameScheduler? _frameSchedulerOverride;
     private AvaloniaUiFrameScheduler? _ownedFrameScheduler;
     private UiAnimationScheduler? _animationScheduler;
+    private TopLevel? _topLevel;
+    private DispatcherOperation? _layoutCommitOperation;
     private INotifyPropertyChanged? _viewModel;
     private bool _isAttached;
     private bool _isUpdateScheduled;
@@ -75,6 +78,7 @@ internal sealed class GenerationOptionsLayoutController
         }
 
         _isAttached = true;
+        _topLevel = topLevel;
 
         if (_frameSchedulerOverride is not null)
         {
@@ -88,6 +92,7 @@ internal sealed class GenerationOptionsLayoutController
 
         _parameterRow.SizeChanged += OnParameterRowSizeChanged;
         _parameterRow.DataContextChanged += OnDataContextChanged;
+        topLevel.LayoutUpdated += OnLayoutUpdated;
         UpdateDataContext();
     }
 
@@ -96,6 +101,16 @@ internal sealed class GenerationOptionsLayoutController
         _isAttached = false;
         _parameterRow.SizeChanged -= OnParameterRowSizeChanged;
         _parameterRow.DataContextChanged -= OnDataContextChanged;
+
+        if (_topLevel is not null)
+        {
+            _topLevel.LayoutUpdated -= OnLayoutUpdated;
+            _topLevel = null;
+        }
+
+        _isUpdateScheduled = false;
+        _layoutCommitOperation?.Abort();
+        _layoutCommitOperation = null;
         UnsubscribeViewModel();
         CompleteTransition();
         _ownedFrameScheduler?.Dispose();
@@ -125,6 +140,7 @@ internal sealed class GenerationOptionsLayoutController
     private void UpdateDataContext()
     {
         UnsubscribeViewModel();
+        _hasLayout = false;
         _optionsPanel.DataContext = _parameterRow.DataContext;
         _viewModel = _parameterRow.DataContext as INotifyPropertyChanged;
 
@@ -153,7 +169,7 @@ internal sealed class GenerationOptionsLayoutController
         }
 
         _isUpdateScheduled = true;
-        _parameterRow.Dispatcher.Post(UpdateLayout, DispatcherPriority.Loaded);
+        _parameterRow.InvalidateMeasure();
     }
 
     private void UpdateLayout()
@@ -265,7 +281,16 @@ internal sealed class GenerationOptionsLayoutController
             ApplyProgress(_progress);
         }
 
-        _hasLayout = true;
+        if (!_hasLayout && _layoutCommitOperation is null)
+        {
+            _layoutCommitOperation = _parameterRow.Dispatcher.InvokeAsync(CommitLayout, DispatcherPriority.Loaded);
+        }
+    }
+
+    private void CommitLayout()
+    {
+        _layoutCommitOperation = null;
+        _hasLayout = _isAttached;
     }
 
     private void ApplyProgress(double progress)
@@ -307,8 +332,22 @@ internal sealed class GenerationOptionsLayoutController
         UpdateDataContext();
     }
 
+    private void OnLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (_isUpdateScheduled)
+        {
+            UpdateLayout();
+        }
+    }
+
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (string.IsNullOrEmpty(e.PropertyName)
+            || e.PropertyName == nameof(UniversalNanoBananaPanelViewModel.SelectedModel))
+        {
+            _hasLayout = false;
+        }
+
         ScheduleUpdate();
     }
 }

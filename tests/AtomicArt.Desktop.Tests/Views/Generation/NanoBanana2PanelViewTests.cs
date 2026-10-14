@@ -316,13 +316,17 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         });
     }
 
-    [Fact]
-    public async Task GenerationOptions_WhenModelChangesDuringExpansion_KeepsSelectedQualityAfterCompletion()
+    [Theory]
+    [InlineData(640d, 1600d)]
+    [InlineData(1600d, 640d)]
+    public async Task GenerationOptions_WhenModelChangesDuringResize_SettlesImmediatelyAndKeepsSelectedQuality(
+        double initialWidth,
+        double targetWidth)
     {
         await DispatchAsync(() =>
         {
-            using ShownPanelContext context = new(ExpandedPanelWidth, ExpandedPanelHeight);
-            context.Window.Width = 1600d;
+            using ShownPanelContext context = new(initialWidth, ExpandedPanelHeight);
+            context.Window.Width = targetWidth;
             UpdateOptionsLayout(context.Window);
             context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
             context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(90d));
@@ -332,11 +336,99 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             context.ViewModel.SelectedQualityOption = context.ViewModel.QualityLevels.Last();
             GenerationOptionViewModel? selectedQuality = context.ViewModel.SelectedQualityOption;
             UpdateOptionsLayout(context.Window);
+
+            bool expanded = targetWidth > initialWidth;
+            GetInlineOptionsHost(context.View).IsHitTestVisible.Should().Be(expanded);
+            GetInlineOptionsHost(context.View).Opacity.Should().Be(expanded ? 1d : 0d);
+            GetTemperatureButton(context.View).IsVisible.Should().Be(!expanded);
             context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(200d));
 
-            GetInlineOptionsHost(context.View).IsHitTestVisible.Should().BeTrue();
-            GetTemperatureButton(context.View).IsVisible.Should().BeFalse();
+            GetInlineOptionsHost(context.View).IsHitTestVisible.Should().Be(expanded);
+            GetTemperatureButton(context.View).IsVisible.Should().Be(!expanded);
             context.ViewModel.SelectedQualityOption.Should().BeSameAs(selectedQuality);
+            context.FrameScheduler.HasQueuedFrame.Should().BeFalse();
+        });
+    }
+
+    [Theory]
+    [InlineData(640d)]
+    [InlineData(800d)]
+    [InlineData(900d)]
+    [InlineData(1000d)]
+    [InlineData(1100d)]
+    [InlineData(1600d)]
+    public async Task GenerationOptions_WhenModelChanges_SettlesWithoutRequestingAnimationFrames(double panelWidth)
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(panelWidth, ExpandedPanelHeight);
+            RenderOptionsLayout(context);
+            ImageModelOption originalModel = context.ViewModel.SelectedModel
+                ?? throw new InvalidOperationException("The initial model was not selected.");
+            ImageModelOption qualityModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == "openrouter-gpt-image-2-5-sunburst");
+            int frameCount = context.FrameScheduler.RequestedFrameCount;
+            ImageModelOption[] models = [qualityModel, originalModel];
+
+            foreach (ImageModelOption model in models)
+            {
+                context.ViewModel.SelectedModel = model;
+                UpdateOptionsLayout(context.Window);
+
+                ContentControl inlineHost = GetInlineOptionsHost(context.View);
+                Button settingsButton = GetTemperatureButton(context.View);
+                context.FrameScheduler.RequestedFrameCount.Should().Be(frameCount);
+                context.FrameScheduler.HasQueuedFrame.Should().BeFalse();
+                inlineHost.Opacity.Should().Be(inlineHost.IsVisible ? 1d : 0d);
+                inlineHost.IsHitTestVisible.Should().Be(inlineHost.IsVisible);
+                settingsButton.IsVisible.Should().Be(!inlineHost.IsVisible);
+
+                if (panelWidth == 640d || panelWidth == 1600d)
+                {
+                    inlineHost.IsVisible.Should().Be(panelWidth == 1600d);
+                }
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(640d, false, false)]
+    [InlineData(1000d, true, false)]
+    [InlineData(1600d, true, true)]
+    public async Task GenerationOptions_WhenModelSelectorChanges_UsesFinalPresentationInFirstLayoutPass(
+        double panelWidth,
+        bool qualityInline,
+        bool temperatureInline)
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(panelWidth, ExpandedPanelHeight);
+            RenderOptionsLayout(context);
+            ImageModelOption originalModel = context.ViewModel.SelectedModel
+                ?? throw new InvalidOperationException("The initial model was not selected.");
+            ImageModelOption qualityModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == "openrouter-gpt-image-2-5-sunburst");
+            Grid row = context.View.FindControl<Grid>("GenerationParametersRow")
+                ?? throw new InvalidOperationException("The generation parameters row was not found.");
+            ComboBox modelSelector = row.Children.OfType<ComboBox>().First();
+            ContentControl inlineHost = GetInlineOptionsHost(context.View);
+            Button settingsButton = GetTemperatureButton(context.View);
+
+            modelSelector.SelectedItem = qualityModel;
+            context.Window.UpdateLayout();
+
+            inlineHost.IsVisible.Should().Be(qualityInline);
+            inlineHost.Opacity.Should().Be(qualityInline ? 1d : 0d);
+            inlineHost.IsHitTestVisible.Should().Be(qualityInline);
+            settingsButton.IsVisible.Should().Be(!qualityInline);
+
+            modelSelector.SelectedItem = originalModel;
+            context.Window.UpdateLayout();
+
+            inlineHost.IsVisible.Should().Be(temperatureInline);
+            inlineHost.Opacity.Should().Be(temperatureInline ? 1d : 0d);
+            inlineHost.IsHitTestVisible.Should().Be(temperatureInline);
+            settingsButton.IsVisible.Should().Be(!temperatureInline);
             context.FrameScheduler.HasQueuedFrame.Should().BeFalse();
         });
     }
