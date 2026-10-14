@@ -15,6 +15,7 @@ using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.Views.Dlss5;
 using AtomicArt.Desktop.Views.Updates;
@@ -37,6 +38,7 @@ public partial class MainWindow : SukiWindow
     private IConfirmationDialogPresenter? _confirmationDialogPresenter;
     private ApplicationUpdateToastPresenter? _updateToastPresenter;
     private Dlss5OperationToastPresenter? _dlss5ToastPresenter;
+    private GenerationPanelLayoutTracker? _generationPanelLayoutTracker;
     private bool _isGenerationPanelMinimumHeightInitialized;
 
     public MainWindow()
@@ -72,7 +74,8 @@ public partial class MainWindow : SukiWindow
         IConfirmationDialogPresenter confirmationDialogPresenter,
         ISukiDialogManager dialogManager,
         ApplicationUpdateToastPresenter updateToastPresenter,
-        Dlss5OperationToastPresenter dlss5ToastPresenter) : this()
+        Dlss5OperationToastPresenter dlss5ToastPresenter,
+        GenerationPanelLayoutTracker generationPanelLayoutTracker) : this()
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         ArgumentNullException.ThrowIfNull(trayService);
@@ -83,11 +86,13 @@ public partial class MainWindow : SukiWindow
         ArgumentNullException.ThrowIfNull(dialogManager);
         ArgumentNullException.ThrowIfNull(updateToastPresenter);
         ArgumentNullException.ThrowIfNull(dlss5ToastPresenter);
+        ArgumentNullException.ThrowIfNull(generationPanelLayoutTracker);
 
         _trayService = trayService;
         _confirmationDialogPresenter = confirmationDialogPresenter;
         _updateToastPresenter = updateToastPresenter;
         _dlss5ToastPresenter = dlss5ToastPresenter;
+        _generationPanelLayoutTracker = generationPanelLayoutTracker;
         DataContext = viewModel;
         ConfirmationDialogHost.Manager = dialogManager;
         UpdateToastHost.Manager = updateToastPresenter.Manager;
@@ -113,6 +118,9 @@ public partial class MainWindow : SukiWindow
 
     protected override void OnClosed(EventArgs eventArgs)
     {
+        Loaded -= OnLoaded;
+        _generationPanelLayoutTracker?.Dispose();
+        _generationPanelLayoutTracker = null;
         Opened -= OnOpenedAsync;
         PropertyChanged -= OnWindowPropertyChanged;
         if (DataContext is MainWindowViewModel viewModel)
@@ -248,7 +256,7 @@ public partial class MainWindow : SukiWindow
         contextFlyout.ShowAt(GenerationPanelContent, true);
     }
 
-    private void OnLoaded(object? sender, RoutedEventArgs eventArgs)
+    private async void OnLoaded(object? sender, RoutedEventArgs eventArgs)
     {
         _ = sender;
         _ = eventArgs;
@@ -257,6 +265,11 @@ public partial class MainWindow : SukiWindow
         if (_isGenerationPanelMinimumHeightInitialized)
         {
             Loaded -= OnLoaded;
+
+            if (_generationPanelLayoutTracker is not null)
+            {
+                await _generationPanelLayoutTracker.AttachAsync(GenerationPanelHost, GenerationPanelRowDefinition);
+            }
         }
     }
 

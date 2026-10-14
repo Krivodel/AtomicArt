@@ -94,7 +94,8 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"
                                        MinHeight="0" />
-                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto"
+                                       MaxHeight="{Binding #ShellContentGrid.Bounds.Height}" />
                     </Grid.RowDefinitions>
 
                     <Border Grid.Row="0"

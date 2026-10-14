@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 using Avalonia;
 using Avalonia.Animation;
@@ -25,7 +26,9 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.OpenRouter;
+using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Updates;
+using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
@@ -835,6 +838,112 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         });
     }
 
+    [Theory]
+    [InlineData(HorizontalAlignment.Left)]
+    [InlineData(HorizontalAlignment.Right)]
+    public async Task GenerationPanel_WhenResizedAndReopened_RestoresBothDimensions(HorizontalAlignment alignment)
+    {
+        await DispatchAsync(async () =>
+        {
+            RecordingStateWriteScheduler scheduler = new();
+            GenerationPanelLayoutState saved;
+            using (MainWindowTestContext context = new(layoutScheduler: scheduler))
+            {
+                MainWindow window = context.Window;
+                window.Width = 1600d;
+                window.Height = 1000d;
+                window.Show();
+                window.CaptureRenderedFrame();
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                CenteredWidthResizeGrip widthGrip = GetWidthResizeGrip(window, alignment);
+                GridSplitter heightGrip = window.FindControl<GridSplitter>(GenerationPanelResizeGripName)
+                    ?? throw new InvalidOperationException("The generation panel height grip was not found.");
+                Grid container = window.FindControl<Grid>(ShellContentGridName)
+                    ?? throw new InvalidOperationException("The generation panel container was not found.");
+                Border panel = window.FindControl<Border>(GenerationPanelHostName)
+                    ?? throw new InvalidOperationException("The generation panel was not found.");
+                Point widthStart = widthGrip.TranslatePoint(
+                    new Point(widthGrip.Bounds.Width / 2d, widthGrip.Bounds.Height / 2d), window)
+                    ?? throw new InvalidOperationException("The width grip was not attached.");
+                Vector widthDelta = new(alignment == HorizontalAlignment.Left ? -100d : 100d, 0d);
+
+                window.MouseDown(widthStart, MouseButton.Left);
+                window.MouseMove(widthStart + widthDelta);
+                window.CaptureRenderedFrame();
+                window.MouseUp(widthStart + widthDelta, MouseButton.Left);
+                Point heightStart = heightGrip.TranslatePoint(
+                    new Point(heightGrip.Bounds.Width / 2d, heightGrip.Bounds.Height / 2d), window)
+                    ?? throw new InvalidOperationException("The height grip was not attached.");
+                Vector heightDelta = new(0d, -120d);
+                window.MouseDown(heightStart, MouseButton.Left);
+                window.MouseMove(heightStart + heightDelta);
+                window.CaptureRenderedFrame();
+                window.MouseUp(heightStart + heightDelta, MouseButton.Left);
+
+                saved = scheduler.SavedState.Should().BeOfType<GenerationPanelLayoutState>().Subject;
+                saved.Width.Should().Be(panel.MaxWidth).And.BeGreaterThan(
+                    GetDoubleResource(panel, GenerationPanelWidthResourceKey));
+                saved.Height.Should().Be(container.RowDefinitions[GenerationPanelRowIndex].Height.Value)
+                    .And.BeGreaterThan(container.RowDefinitions[GenerationPanelRowIndex].MinHeight);
+            }
+
+            using MainWindowTestContext restoredContext = new(layoutState: saved);
+            MainWindow restoredWindow = restoredContext.Window;
+            restoredWindow.Width = 1600d;
+            restoredWindow.Height = 1000d;
+            restoredWindow.Show();
+            restoredWindow.CaptureRenderedFrame();
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            restoredWindow.CaptureRenderedFrame();
+
+            Border restoredPanel = restoredWindow.FindControl<Border>(GenerationPanelHostName)
+                ?? throw new InvalidOperationException("The generation panel was not found.");
+            Grid restoredContainer = restoredWindow.FindControl<Grid>(ShellContentGridName)
+                ?? throw new InvalidOperationException("The generation panel container was not found.");
+            restoredPanel.MaxWidth.Should().Be(saved.Width);
+            restoredPanel.Bounds.Width.Should().BeApproximately(saved.Width.GetValueOrDefault(), PositionTolerance);
+            restoredContainer.RowDefinitions[GenerationPanelRowIndex].ActualHeight.Should()
+                .BeApproximately(saved.Height.GetValueOrDefault(), HeightTolerance);
+        });
+    }
+
+    [Fact]
+    public async Task GenerationPanel_WithSavedSizeLargerThanWindow_ClampsLayoutAndPreservesPreference()
+    {
+        await DispatchAsync(async () =>
+        {
+            GenerationPanelLayoutState saved = new() { Width = 1200d, Height = 900d };
+            RecordingStateWriteScheduler scheduler = new();
+            using MainWindowTestContext context = new(layoutState: saved, layoutScheduler: scheduler);
+            MainWindow window = context.Window;
+            window.Width = window.MinWidth;
+            window.Height = window.MinHeight;
+            window.Show();
+            window.CaptureRenderedFrame();
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            window.CaptureRenderedFrame();
+            Border panel = window.FindControl<Border>(GenerationPanelHostName)
+                ?? throw new InvalidOperationException("The generation panel was not found.");
+            Grid container = window.FindControl<Grid>(ShellContentGridName)
+                ?? throw new InvalidOperationException("The generation panel container was not found.");
+            RowDefinition row = container.RowDefinitions[GenerationPanelRowIndex];
+
+            panel.MaxWidth.Should().Be(saved.Width);
+            row.Height.Value.Should().Be(saved.Height);
+            panel.Bounds.Width.Should().BeLessThan(saved.Width.GetValueOrDefault());
+            row.ActualHeight.Should().BeLessThanOrEqualTo(container.Bounds.Height);
+            scheduler.CallCount.Should().Be(0);
+
+            window.Width = 1600d;
+            window.Height = 1400d;
+            window.CaptureRenderedFrame();
+
+            panel.Bounds.Width.Should().BeApproximately(saved.Width.GetValueOrDefault(), PositionTolerance);
+            row.ActualHeight.Should().BeApproximately(saved.Height.GetValueOrDefault(), HeightTolerance);
+            scheduler.CallCount.Should().Be(0);
+        });
+    }
+
     [Fact]
     public async Task GenerationPanel_WhenScaledWindowNarrows_ShrinksFromPreferredWidthAndRemainsContained()
     {
@@ -1095,9 +1204,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             messageArguments);
     }
 
-    private static void RegisterViewTemplates(IServiceProvider serviceProvider)
+    private static void RegisterViewTemplates(MainWindow window, IServiceProvider serviceProvider)
     {
-        Avalonia.Application.Current?.DataTemplates.Add(
+        window.DataTemplates.Add(
             new ViewModelViewTemplate(
             [
                 new ViewTemplateRegistration(
@@ -1120,19 +1229,31 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
 
         private readonly ServiceProvider _serviceProvider;
 
-        public MainWindowTestContext(Action<ServiceCollection>? configureServices = null)
+        public MainWindowTestContext(
+            Action<ServiceCollection>? configureServices = null,
+            GenerationPanelLayoutState? layoutState = null,
+            RecordingStateWriteScheduler? layoutScheduler = null)
         {
             ServiceCollection services = new();
             services.AddSingleton(TestApiConfiguration.Create());
             services.AddDesktopServices();
+            Mock<IAppStateStore> stateStore = new();
+            stateStore.Setup(store => store.LoadAsync<GenerationPanelLayoutState>(
+                    It.IsAny<IStateSection>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(layoutState ?? new GenerationPanelLayoutState());
+            services.AddTransient<GenerationPanelLayoutTracker>(provider => new GenerationPanelLayoutTracker(
+                stateStore.Object,
+                layoutScheduler ?? new RecordingStateWriteScheduler(),
+                provider.GetRequiredService<GenerationPanelLayoutStateSection>(),
+                provider.GetRequiredService<ILogger<GenerationPanelLayoutTracker>>()));
             configureServices?.Invoke(services);
 
             _serviceProvider = services.BuildServiceProvider();
-            MainWindowLayoutTests.RegisterViewTemplates(_serviceProvider);
             DialogService = _serviceProvider.GetRequiredService<IDialogService>();
             TextProvider =
                 _serviceProvider.GetRequiredService<ILocalizationTextProvider>();
             Window = _serviceProvider.GetRequiredService<MainWindow>();
+            MainWindowLayoutTests.RegisterViewTemplates(Window, _serviceProvider);
         }
 
         public void Dispose()

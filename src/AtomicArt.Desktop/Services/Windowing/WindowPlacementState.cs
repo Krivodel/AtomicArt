@@ -11,8 +11,8 @@ public sealed class WindowPlacementState
     internal WindowPlacementState CreateNormalized()
     {
         bool hasValidPosition = X is not null && Y is not null;
-        bool hasValidSize = IsValidDimension(Width)
-            && IsValidDimension(Height);
+        bool hasValidSize = LayoutDimension.Normalize(Width) is not null
+            && LayoutDimension.Normalize(Height) is not null;
 
         return new WindowPlacementState
         {
@@ -22,12 +22,5 @@ public sealed class WindowPlacementState
             Height = hasValidSize ? Height : null,
             IsMaximized = IsMaximized
         };
-    }
-
-    private static bool IsValidDimension(double? value)
-    {
-        return value is not null
-            && double.IsFinite(value.Value)
-            && value.Value > 0d;
     }
 }

@@ -220,6 +220,7 @@ public static class DependencyInjection
     private static IServiceCollection AddPlatformServices(this IServiceCollection services)
     {
         services.AddSingleton<WindowPlacementTracker>();
+        services.AddTransient<GenerationPanelLayoutTracker>();
         services.AddSharedSingletonAliases<WindowStateService>(
             typeof(IWindowStateService),
             typeof(IWindowAttachmentService),
