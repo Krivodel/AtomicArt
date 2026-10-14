@@ -107,7 +107,8 @@
                                 <StackPanel x:Name="GenerationOptionsPanel"
                                             Classes="generation-advanced-options"
                                             Spacing="12">
-                                    <Grid ColumnDefinitions="Auto,Auto,*"
+                                    <Grid VerticalAlignment="Center"
+                                          ColumnDefinitions="Auto,Auto,*"
                                           RowDefinitions="Auto,Auto"
                                           IsVisible="{Binding SupportsTemperature}">
                                         <Button Grid.Row="0"

@@ -108,6 +108,31 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
+    public async Task GenerationOptions_WhenInline_AlignsTemperatureControlsWithParameterRow()
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(1600d, ExpandedPanelHeight);
+            RenderOptionsLayout(context);
+            Slider slider = context.View.FindControl<Slider>("TemperatureSlider")
+                ?? throw new InvalidOperationException("The temperature slider was not found.");
+            Grid group = slider.Parent.Should().BeOfType<Grid>().Subject;
+            TextBlock value = group.Children.OfType<TextBlock>().Single();
+            Button icon = GetOptionResetButton(context.View, context.ViewModel.ResetTemperatureCommand);
+            Thumb thumb = slider.GetVisualDescendants().OfType<Thumb>()
+                .Single(control => control.IsEffectivelyVisible);
+            double expectedCenter = GetCenterPoint(GetComboBox(context.View, "ResolutionComboBox"), context.View).Y;
+            Control[] controls = [icon, value, slider, thumb];
+
+            foreach (Control control in controls)
+            {
+                GetCenterPoint(control, context.View).Y.Should().BeApproximately(expectedCenter, 0.5d,
+                    "the temperature {0} must align with the parameter row", control.GetType().Name);
+            }
+        });
+    }
+
+    [Fact]
     public async Task GenerationOptions_WhenResizingBackDuringExpansion_ReversesWithoutRestartingPresentation()
     {
         await DispatchAsync(() =>
