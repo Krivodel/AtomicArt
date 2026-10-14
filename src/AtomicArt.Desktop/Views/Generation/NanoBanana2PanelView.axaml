@@ -4,6 +4,7 @@
              xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
              xmlns:contracts="using:AtomicArt.Contracts.Generation"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+             xmlns:converters="using:Avalonia.Data.Converters"
              xmlns:generation="using:AtomicArt.Desktop.ViewModels.Generation"
              xmlns:models="using:AtomicArt.Desktop.Services"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
@@ -12,7 +13,8 @@
              x:DataType="generation:UniversalNanoBananaPanelViewModel">
     <Grid x:Name="PanelRoot">
         <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
-            <Grid Grid.Row="0"
+            <Grid x:Name="GenerationParametersRow"
+                  Grid.Row="0"
                   ColumnDefinitions="Auto,Auto,Auto,Auto,*">
                 <ComboBox Grid.Column="0"
                           MinWidth="{StaticResource GenerationModelComboMinWidth}"
@@ -52,15 +54,36 @@
                           ItemsSource="{Binding Resolutions}"
                           SelectedItem="{Binding SelectedResolution}" />
 
-                <Button x:Name="TemperatureButton"
-                        Grid.Column="3"
-                        Margin="4,0,0,0"
-                        Classes="Icon generation-option"
-                        Click="OnTemperatureButtonClick"
-                        IsVisible="{Binding SupportsGenerationOptions}"
-                        IsEnabled="{Binding HasLoadedCatalog}">
-                    <PathIcon Data="{StaticResource AppSettingsIcon}" />
-                </Button>
+                <Grid x:Name="GenerationOptionsSlot"
+                      Grid.Column="3"
+                      Margin="{StaticResource GenerationAdvancedOptionsMargin}"
+                      ClipToBounds="True">
+                    <Border x:Name="GenerationSettingsButtonHost"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center">
+                        <Button x:Name="TemperatureButton"
+                                Classes="Icon generation-option"
+                                Click="OnTemperatureButtonClick"
+                                IsEnabled="{Binding HasLoadedCatalog}">
+                            <Button.IsVisible>
+                                <MultiBinding Converter="{x:Static converters:BoolConverters.And}">
+                                    <Binding Path="SupportsGenerationOptions" />
+                                    <Binding ElementName="InlineGenerationOptionsHost"
+                                             Path="!IsHitTestVisible" />
+                                </MultiBinding>
+                            </Button.IsVisible>
+                            <PathIcon Data="{StaticResource AppSettingsIcon}" />
+                        </Button>
+                    </Border>
+
+                    <ContentControl x:Name="InlineGenerationOptionsHost"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    IsVisible="False"
+                                    ClipToBounds="True"
+                                    HorizontalContentAlignment="Left"
+                                    IsHitTestVisible="False" />
+                </Grid>
 
                 <Popup x:Name="TemperaturePopup"
                        Grid.Column="3"
@@ -81,49 +104,41 @@
                                     BoxShadow="{DynamicResource SukiPopupShadow}"
                                     CornerRadius="{StaticResource OverlayCornerRadius}"
                                     Opacity="0">
-                                <Grid ColumnDefinitions="Auto,*,Auto"
-                                      RowDefinitions="Auto,Auto,Auto,Auto">
-                                    <PathIcon Grid.Row="0"
-                                              Grid.RowSpan="2"
-                                              Grid.Column="0"
-                                              Width="{StaticResource GenerationOptionIconSize}"
-                                              Height="{StaticResource GenerationOptionIconSize}"
-                                              Margin="0,0,10,0"
-                                              VerticalAlignment="Center"
-                                              IsVisible="{Binding SupportsTemperature}"
-                                              Data="{StaticResource AppTemperatureIcon}" />
-                                    <TextBlock Grid.Row="0"
-                                               Grid.Column="1"
-                                               Margin="0,0,0,4"
-                                               HorizontalAlignment="Center"
-                                               Classes="panel-label"
-                                               IsVisible="{Binding SupportsTemperature}"
-                                               Text="{Binding TemperatureText}" />
-                                    <Slider x:Name="TemperatureSlider"
-                                            Grid.Row="1"
-                                            Grid.Column="1"
-                                            Width="{StaticResource GenerationTemperatureSliderWidth}"
-                                            IsSnapToTickEnabled="True"
-                                            LargeChange="{Binding TemperatureStep}"
-                                            Maximum="{Binding MaximumTemperature}"
-                                            Minimum="{Binding MinimumTemperature}"
-                                            SmallChange="{Binding TemperatureStep}"
-                                            TickFrequency="{Binding TemperatureStep}"
-                                            IsVisible="{Binding SupportsTemperature}"
-                                            Value="{Binding Temperature, Mode=TwoWay}" />
-                                    <Button Grid.Row="1"
-                                            Grid.Column="2"
-                                            Margin="8,0,0,0"
-                                            Classes="Icon generation-option"
-                                            IsVisible="{Binding SupportsTemperature}"
-                                            Command="{Binding ResetTemperatureCommand}">
-                                        <PathIcon Data="{StaticResource AppResetIcon}" />
-                                    </Button>
-                                    <Grid Grid.Row="2"
-                                          Grid.Column="0"
-                                          Grid.ColumnSpan="3"
-                                          Margin="0,12,0,0"
-                                          ColumnDefinitions="Auto,*"
+                                <StackPanel x:Name="GenerationOptionsPanel"
+                                            Classes="generation-advanced-options"
+                                            Spacing="12">
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+                                          RowDefinitions="Auto,Auto"
+                                          IsVisible="{Binding SupportsTemperature}">
+                                        <PathIcon Grid.Row="0"
+                                                  Grid.RowSpan="2"
+                                                  Grid.Column="0"
+                                                  Width="{StaticResource GenerationOptionIconSize}"
+                                                  Height="{StaticResource GenerationOptionIconSize}"
+                                                  Margin="0,0,10,0"
+                                                  VerticalAlignment="Center"
+                                                  Data="{StaticResource AppTemperatureIcon}" />
+                                        <TextBlock Grid.Row="0"
+                                                   HorizontalAlignment="Center"
+                                                   Classes="panel-label generation-temperature-value"
+                                                   Text="{Binding TemperatureText}" />
+                                        <Slider x:Name="TemperatureSlider"
+                                                Grid.Column="2"
+                                                IsSnapToTickEnabled="True"
+                                                LargeChange="{Binding TemperatureStep}"
+                                                Maximum="{Binding MaximumTemperature}"
+                                                Minimum="{Binding MinimumTemperature}"
+                                                SmallChange="{Binding TemperatureStep}"
+                                                TickFrequency="{Binding TemperatureStep}"
+                                                Value="{Binding Temperature, Mode=TwoWay}" />
+                                        <Button Grid.Column="3"
+                                                Margin="8,0,0,0"
+                                                Classes="Icon generation-option generation-temperature-reset"
+                                                Command="{Binding ResetTemperatureCommand}">
+                                            <PathIcon Data="{StaticResource AppResetIcon}" />
+                                        </Button>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto,*"
                                           IsVisible="{Binding SupportsQuality}">
                                         <TextBlock Grid.Column="0"
                                                    Margin="0,0,10,0"
@@ -131,7 +146,6 @@
                                                    Classes="panel-label"
                                                    Text="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Quality.Label}}" />
                                         <ComboBox Grid.Column="1"
-                                                  MinWidth="{StaticResource GenerationTemperatureSliderWidth}"
                                                   HorizontalAlignment="Stretch"
                                                   MaxDropDownHeight="300"
                                                   ItemsSource="{Binding QualityLevels}"
@@ -143,11 +157,7 @@
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
                                     </Grid>
-                                    <Grid Grid.Row="3"
-                                          Grid.Column="0"
-                                          Grid.ColumnSpan="3"
-                                          Margin="0,12,0,0"
-                                          ColumnDefinitions="Auto,*,Auto"
+                                    <Grid ColumnDefinitions="Auto,*,Auto"
                                           IsVisible="{Binding SupportsThinkingLevel}">
                                         <PathIcon Grid.Column="0"
                                                   Width="{StaticResource GenerationOptionIconSize}"
@@ -157,7 +167,6 @@
                                                   Data="{StaticResource AppBrainIcon}" />
                                         <ComboBox x:Name="ThinkingLevelComboBox"
                                                   Grid.Column="1"
-                                                  MinWidth="{StaticResource GenerationTemperatureSliderWidth}"
                                                   HorizontalAlignment="Stretch"
                                                   ItemsSource="{Binding ThinkingLevels}"
                                                   SelectedItem="{Binding SelectedThinkingLevel}">
@@ -174,7 +183,7 @@
                                             <PathIcon Data="{StaticResource AppResetIcon}" />
                                         </Button>
                                     </Grid>
-                                </Grid>
+                                </StackPanel>
                             </Border>
                         </FlyoutPresenter>
                     </ThemeVariantScope>

@@ -49,6 +49,303 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         "GenerationOptionComboMinWidth";
     private const string PromptHeightResourceKey = "PromptHeight";
 
+    [Fact]
+    public async Task GenerationOptions_WithDefaultFrameScheduler_WhenPanelWidens_StartsAnimatedTransition()
+    {
+        await DispatchAsync(() =>
+        {
+            NanoBanana2PanelView view = CreateView(CreateViewModel());
+
+            Show(view, ExpandedPanelWidth, ExpandedPanelHeight, window =>
+            {
+                window.Width = 1600d;
+                UpdateOptionsLayout(window);
+
+                ContentControl inlineHost = GetInlineOptionsHost(view);
+                inlineHost.IsVisible.Should().BeTrue();
+                inlineHost.Opacity.Should().BeLessThan(1d);
+                inlineHost.IsHitTestVisible.Should().BeFalse();
+                GetTemperatureButton(view).IsVisible.Should().BeTrue();
+            });
+        });
+    }
+
+    [Fact]
+    public async Task GenerationOptions_WhenPanelWidensAndNarrows_MovesSameControlsAndPreservesValues()
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(ExpandedPanelWidth, ExpandedPanelHeight);
+            StackPanel options = context.View.FindControl<StackPanel>("GenerationOptionsPanel")
+                ?? throw new InvalidOperationException("The generation options panel was not found.");
+            ContentControl inlineHost = context.View.FindControl<ContentControl>("InlineGenerationOptionsHost")
+                ?? throw new InvalidOperationException("The inline generation options host was not found.");
+            Button settingsButton = GetTemperatureButton(context.View);
+            Popup popup = OpenTemperaturePopup(context.View);
+            Border flyoutPanel = GetTemperaturePopupContent(popup);
+            context.ViewModel.Temperature = context.ViewModel.MinimumTemperature;
+
+            context.Window.Width = 1600d;
+            RenderOptionsLayout(context);
+
+            settingsButton.IsVisible.Should().BeFalse();
+            popup.IsOpen.Should().BeFalse();
+            inlineHost.Content.Should().BeSameAs(options);
+            options.Orientation.Should().Be(Avalonia.Layout.Orientation.Horizontal);
+            options.Bounds.Height.Should().BeLessThanOrEqualTo(GetComboBox(context.View, "GenerationCountComboBox").Bounds.Height);
+            context.ViewModel.Temperature.Should().Be(context.ViewModel.MinimumTemperature);
+
+            context.Window.Width = ExpandedPanelWidth;
+            RenderOptionsLayout(context);
+
+            settingsButton.IsVisible.Should().BeTrue();
+            inlineHost.IsVisible.Should().BeFalse();
+            flyoutPanel.Child.Should().BeSameAs(options);
+            options.Orientation.Should().Be(Avalonia.Layout.Orientation.Vertical);
+            context.ViewModel.Temperature.Should().Be(context.ViewModel.MinimumTemperature);
+        });
+    }
+
+    [Fact]
+    public async Task GenerationOptions_WhenResizingBackDuringExpansion_ReversesWithoutRestartingPresentation()
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(ExpandedPanelWidth, ExpandedPanelHeight);
+            ContentControl inlineHost = GetInlineOptionsHost(context.View);
+            Button settingsButton = GetTemperatureButton(context.View);
+            context.ViewModel.Temperature = context.ViewModel.MinimumTemperature;
+            context.Window.Width = 1600d;
+            UpdateOptionsLayout(context.Window);
+            context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(90d));
+            double opacityBeforeReversal = inlineHost.Opacity;
+            StackPanel options = inlineHost.Content.Should().BeOfType<StackPanel>().Subject;
+            double widthBeforeReversal = options.Bounds.Width;
+
+            context.Window.Width = ExpandedPanelWidth;
+            UpdateOptionsLayout(context.Window);
+
+            opacityBeforeReversal.Should().BeInRange(0.01d, 0.99d);
+            inlineHost.Opacity.Should().Be(opacityBeforeReversal);
+            options.Bounds.Width.Should().Be(widthBeforeReversal);
+            inlineHost.IsHitTestVisible.Should().BeFalse();
+            settingsButton.IsHitTestVisible.Should().BeTrue();
+
+            context.Window.Width = 1600d;
+            UpdateOptionsLayout(context.Window);
+
+            inlineHost.Opacity.Should().Be(opacityBeforeReversal);
+            settingsButton.IsHitTestVisible.Should().BeFalse();
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(100d));
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(300d));
+
+            inlineHost.IsHitTestVisible.Should().BeTrue();
+            inlineHost.Opacity.Should().Be(1d);
+            settingsButton.IsVisible.Should().BeFalse();
+            context.FrameScheduler.HasQueuedFrame.Should().BeFalse();
+            context.ViewModel.Temperature.Should().Be(context.ViewModel.MinimumTemperature);
+        });
+    }
+
+    [Theory]
+    [InlineData(640d, 1600d)]
+    [InlineData(1600d, 640d)]
+    public async Task GenerationOptions_DuringCrossfade_KeepsControlGeometryAndEnabledAppearanceStable(
+        double initialWidth,
+        double targetWidth)
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(initialWidth, ExpandedPanelHeight);
+            context.Window.Width = targetWidth;
+            UpdateOptionsLayout(context.Window);
+            ContentControl inlineHost = GetInlineOptionsHost(context.View);
+            StackPanel options = inlineHost.Content.Should().BeOfType<StackPanel>().Subject;
+            Button settingsButton = GetTemperatureButton(context.View);
+            ComboBox countSelector = GetComboBox(context.View, "GenerationCountComboBox");
+            Border settingsHost = context.View.FindControl<Border>("GenerationSettingsButtonHost")
+                ?? throw new InvalidOperationException("The generation settings button host was not found.");
+            double optionsWidth = options.Bounds.Width;
+            double optionsHeight = options.Bounds.Height;
+            Rect countBounds = countSelector.Bounds;
+            context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(90d));
+            UpdateOptionsLayout(context.Window);
+
+            inlineHost.Opacity.Should().BeApproximately(0.5d, 0.001d);
+            settingsHost.Opacity.Should().BeApproximately(0.5d, 0.001d);
+            settingsButton.Opacity.Should().Be(1d);
+            settingsHost.Transitions.Should().BeNullOrEmpty();
+            inlineHost.Transitions.Should().BeNullOrEmpty();
+            inlineHost.IsEnabled.Should().BeTrue();
+            settingsButton.IsEnabled.Should().BeTrue();
+            options.Bounds.Width.Should().Be(optionsWidth);
+            options.Bounds.Height.Should().Be(optionsHeight);
+            countSelector.Bounds.Should().Be(countBounds);
+            KeyboardNavigation.GetTabNavigation(inlineHost).Should().Be(KeyboardNavigationMode.None);
+
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(180d));
+            UpdateOptionsLayout(context.Window);
+
+            countSelector.Bounds.Should().Be(countBounds);
+            inlineHost.IsHitTestVisible.Should().Be(targetWidth > initialWidth);
+            context.FrameScheduler.HasQueuedFrame.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task GenerationOptions_WhenCollapsingFocusedSelector_ClosesDropdownAndReturnsFocusToSettings()
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(1600d, ExpandedPanelHeight);
+            ComboBox thinkingSelector = GetComboBox(context.View, "ThinkingLevelComboBox");
+            thinkingSelector.Focus();
+            thinkingSelector.IsDropDownOpen = true;
+
+            context.Window.Width = ExpandedPanelWidth;
+            UpdateOptionsLayout(context.Window);
+
+            thinkingSelector.IsDropDownOpen.Should().BeFalse();
+            GetTemperatureButton(context.View).IsFocused.Should().BeTrue();
+            GetInlineOptionsHost(context.View).IsHitTestVisible.Should().BeFalse();
+        });
+    }
+
+    [Theory]
+    [InlineData(640d, 1600d)]
+    [InlineData(1600d, 640d)]
+    public async Task GenerationOptions_WhenMinimizedDuringTransition_SettlesAndDoesNotResumeStaleAnimation(
+        double initialWidth,
+        double targetWidth)
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(initialWidth, ExpandedPanelHeight);
+            context.Window.Width = targetWidth;
+            UpdateOptionsLayout(context.Window);
+            context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(90d));
+
+            context.Window.WindowState = WindowState.Minimized;
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(200d));
+            context.Window.WindowState = WindowState.Normal;
+            UpdateOptionsLayout(context.Window);
+
+            bool expanded = targetWidth > initialWidth;
+            ContentControl inlineHost = GetInlineOptionsHost(context.View);
+            inlineHost.IsVisible.Should().Be(expanded);
+            inlineHost.IsHitTestVisible.Should().Be(expanded);
+            inlineHost.Opacity.Should().Be(expanded ? 1d : 0d);
+            GetTemperatureButton(context.View).IsVisible.Should().Be(!expanded);
+            context.FrameScheduler.HasQueuedFrame.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task GenerationOptions_WhenSettingsClickedDuringCollapse_OpensPopulatedPopupAndFinishesTransition()
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(1600d, ExpandedPanelHeight);
+            ContentControl inlineHost = GetInlineOptionsHost(context.View);
+            object? options = inlineHost.Content;
+            context.Window.Width = ExpandedPanelWidth;
+            UpdateOptionsLayout(context.Window);
+            context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+
+            Popup popup = OpenTemperaturePopup(context.View);
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(200d));
+
+            popup.IsOpen.Should().BeTrue();
+            GetTemperaturePopupContent(popup).Child.Should().BeSameAs(options);
+            inlineHost.IsVisible.Should().BeFalse();
+            context.FrameScheduler.HasQueuedFrame.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task GenerationOptions_WhenDetachedDuringExpansion_CancelsAndReattachesWithoutStaleFrames()
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(ExpandedPanelWidth, ExpandedPanelHeight);
+            context.Window.Width = 1600d;
+            UpdateOptionsLayout(context.Window);
+            context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(90d));
+
+            context.Window.Content = null;
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(200d));
+            context.Window.Width = ExpandedPanelWidth;
+            context.Window.Content = context.View;
+            UpdateOptionsLayout(context.Window);
+
+            GetInlineOptionsHost(context.View).IsVisible.Should().BeFalse();
+            GetTemperatureButton(context.View).IsVisible.Should().BeTrue();
+            GetTemperatureButton(context.View).Opacity.Should().Be(1d);
+            context.FrameScheduler.HasQueuedFrame.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task GenerationOptions_WhenModelChangesDuringExpansion_KeepsSelectedQualityAfterCompletion()
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(ExpandedPanelWidth, ExpandedPanelHeight);
+            context.Window.Width = 1600d;
+            UpdateOptionsLayout(context.Window);
+            context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(90d));
+
+            context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == "openrouter-gpt-image-2-5-sunburst");
+            context.ViewModel.SelectedQualityOption = context.ViewModel.QualityLevels.Last();
+            GenerationOptionViewModel? selectedQuality = context.ViewModel.SelectedQualityOption;
+            UpdateOptionsLayout(context.Window);
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(200d));
+
+            GetInlineOptionsHost(context.View).IsHitTestVisible.Should().BeTrue();
+            GetTemperatureButton(context.View).IsVisible.Should().BeFalse();
+            context.ViewModel.SelectedQualityOption.Should().BeSameAs(selectedQuality);
+            context.FrameScheduler.HasQueuedFrame.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task GenerationOptions_WhenWidePanelChangesModel_UpdatesInlineParametersAndRetainsQuality()
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(1600d, ExpandedPanelHeight);
+            ImageModelOption gptModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == "openrouter-gpt-image-2-5-sunburst");
+
+            context.ViewModel.SelectedModel = gptModel;
+            RenderOptionsLayout(context);
+
+            ContentControl inlineHost = context.View.FindControl<ContentControl>("InlineGenerationOptionsHost")
+                ?? throw new InvalidOperationException("The inline generation options host was not found.");
+            StackPanel options = inlineHost.Content.Should().BeOfType<StackPanel>().Subject;
+            ComboBox qualitySelector = options.GetLogicalDescendants().OfType<ComboBox>()
+                .Single(comboBox => ReferenceEquals(comboBox.ItemsSource, context.ViewModel.QualityLevels));
+            GetTemperatureButton(context.View).IsVisible.Should().BeFalse();
+            qualitySelector.IsEffectivelyVisible.Should().BeTrue();
+            qualitySelector.SelectedItem = context.ViewModel.QualityLevels.Last();
+            GenerationOptionViewModel selectedQuality = context.ViewModel.SelectedQualityOption
+                ?? throw new InvalidOperationException("The selected quality was not set.");
+
+            context.Window.Width = ExpandedPanelWidth;
+            RenderOptionsLayout(context);
+
+            context.ViewModel.SelectedQualityOption.Should().BeSameAs(selectedQuality);
+            GetTemperatureButton(context.View).IsVisible.Should().BeTrue();
+        });
+    }
+
     [Theory]
     [InlineData(null, false)]
     [InlineData("", false)]
@@ -229,9 +526,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void PromptTextBox_WhenPanelIsTallerThanMinimum_FillsAvailableHeight()
+    public async Task PromptTextBox_WhenPanelIsTallerThanMinimum_FillsAvailableHeight()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new(ExpandedPanelWidth, ExpandedPanelHeight);
             TextBox promptTextBox = context.View
@@ -246,11 +543,14 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void GenerationCountComboBox_WhenPanelNarrows_ShrinksFromPreferredWidthAndKeepsRightAlignment()
+    public async Task GenerationCountComboBox_WhenPanelNarrows_ShrinksFromPreferredWidthAndKeepsRightAlignment()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new(WidePanelWidth, ExpandedPanelHeight);
+            Grid parameterRow = context.View.FindControl<Grid>("GenerationParametersRow")
+                ?? throw new InvalidOperationException("The generation parameter row was not found.");
+
             ComboBox generationCountComboBox = GetComboBox(
                 context.View,
                 "GenerationCountComboBox");
@@ -258,16 +558,22 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 context.View,
                 GenerationOptionComboMinWidthResourceKey);
             double preferredRightGap = GetRightGap(generationCountComboBox, context.View);
+            double initialWidth = generationCountComboBox.Bounds.Width;
 
-            generationCountComboBox.Bounds.Width.Should().Be(preferredWidth);
+            initialWidth.Should().BePositive().And.BeLessThanOrEqualTo(preferredWidth);
             preferredRightGap.Should().BeApproximately(
                 generationCountComboBox.Margin.Right,
                 0.01d);
 
-            context.Window.Width = 500d;
+            context.Window.Width = parameterRow.ColumnDefinitions
+                .Take(Grid.GetColumn(generationCountComboBox))
+                .Sum(column => column.ActualWidth)
+                + initialWidth / 2d
+                + generationCountComboBox.Margin.Left
+                + generationCountComboBox.Margin.Right;
             context.Window.CaptureRenderedFrame();
 
-            generationCountComboBox.Bounds.Width.Should().BeLessThan(preferredWidth);
+            generationCountComboBox.Bounds.Width.Should().BeLessThan(initialWidth);
             GetRightGap(generationCountComboBox, context.View)
                 .Should()
                 .BeApproximately(preferredRightGap, 0.01d);
@@ -275,9 +581,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void Panel_WhenShownBeforeStateRestore_DoesNotLoadModelCatalog()
+    public async Task Panel_WhenShownBeforeStateRestore_DoesNotLoadModelCatalog()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             FixedGenerationModelCatalogApiClient catalogApiClient = new(
                 ApiModelMetadataTestCatalog.LoadCatalog());
@@ -301,9 +607,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void PromptTextBox_WhenShown_HasHalfSpeedWheelScrolling()
+    public async Task PromptTextBox_WhenShown_HasHalfSpeedWheelScrolling()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             ScrollViewer promptScrollViewer = context.View
@@ -322,9 +628,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void PromptTextBox_WithDefaultSetting_PreservesThemeTextSize()
+    public async Task PromptTextBox_WithDefaultSetting_PreservesThemeTextSize()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             TextBox promptTextBox = context.View
@@ -349,9 +655,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void PromptTextBox_WhenControlWheelMovesUp_IncreasesBoundTextSize()
+    public async Task PromptTextBox_WhenControlWheelMovesUp_IncreasesBoundTextSize()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             TextBox promptTextBox = context.View
@@ -372,9 +678,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void PromptPlaceholder_WhenControlWheelMovesUp_MatchesPromptTextSize()
+    public async Task PromptPlaceholder_WhenControlWheelMovesUp_MatchesPromptTextSize()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             TextBox promptTextBox = context.View
@@ -401,9 +707,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void PromptTextBox_WhenWheelMovesWithoutControl_KeepsBoundTextSize()
+    public async Task PromptTextBox_WhenWheelMovesWithoutControl_KeepsBoundTextSize()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             TextBox promptTextBox = context.View
@@ -424,9 +730,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void AttachImageButton_WhenPanelIsShown_CentersVectorIcon()
+    public async Task AttachImageButton_WhenPanelIsShown_CentersVectorIcon()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             Button button = context.View
@@ -440,17 +746,18 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             Matrix transform = icon.TransformToVisual(button)
                 ?? throw new InvalidOperationException("Attachment icon transform was not found.");
             Rect iconBounds = new Rect(icon.Bounds.Size).TransformToAABB(transform);
+            double pixelTolerance = 1d / context.Window.RenderScaling;
 
             icon.Data.Should().BeSameAs(addGeometry);
-            iconBounds.Center.X.Should().BeApproximately(button.Bounds.Width / 2d, 0.01d);
-            iconBounds.Center.Y.Should().BeApproximately(button.Bounds.Height / 2d, 0.01d);
+            iconBounds.Center.X.Should().BeApproximately(button.Bounds.Width / 2d, pixelTolerance);
+            iconBounds.Center.Y.Should().BeApproximately(button.Bounds.Height / 2d, pixelTolerance);
         });
     }
 
     [Fact]
-    public void TemperatureButton_WhenPanelIsShown_ContainsCatalogConfiguredSliderAndResetButton()
+    public async Task TemperatureButton_WhenPanelIsShown_ContainsCatalogConfiguredSliderAndResetButton()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             Button temperatureButton = GetTemperatureButton(context.View);
@@ -479,9 +786,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void SettingsFlyout_WhenPanelIsShown_UsesIconsAndCatalogThinkingLevels()
+    public async Task SettingsFlyout_WhenPanelIsShown_UsesIconsAndCatalogThinkingLevels()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             NanoBanana2PanelView view = CreateView(
                 out UniversalNanoBananaPanelViewModel viewModel);
@@ -498,12 +805,13 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 Popup popup = GetTemperaturePopup(view);
 
                 popup.IsOpen = true;
+                window.CaptureRenderedFrame();
 
                 Border content = GetTemperaturePopupContent(popup);
                 ThemeVariantScope themeScope = popup.Child.Should()
                     .BeOfType<ThemeVariantScope>()
                     .Subject;
-                IBrush textBrush = GetBrushResource(content, "SukiText");
+                Color textColor = GetColorResource(content, "SukiText");
                 Slider slider = content.GetLogicalDescendants().OfType<Slider>().Single();
                 TextBlock temperatureValue = content.GetLogicalDescendants()
                     .OfType<TextBlock>()
@@ -533,8 +841,10 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
                 temperatureValue.Bounds.Top.Should().BeLessThan(slider.Bounds.Top);
                 themeScope.ActualThemeVariant.Should().Be(ThemeVariant.Dark);
-                temperatureValue.Foreground.Should().BeSameAs(textBrush);
-                temperatureIcon.Foreground.Should().BeSameAs(textBrush);
+                temperatureValue.Foreground.Should().BeAssignableTo<ISolidColorBrush>()
+                    .Which.Color.Should().Be(textColor);
+                temperatureIcon.Foreground.Should().BeAssignableTo<ISolidColorBrush>()
+                    .Which.Color.Should().Be(textColor);
                 content.GetLogicalDescendants().OfType<TextBlock>()
                     .Select(textBlock => textBlock.Text)
                     .OfType<string>()
@@ -543,7 +853,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 thinkingLevels.Select(level => level.LocalizationKey).Should().Equal(
                     GenerationLocalizationKeys.ThinkingLow,
                     GenerationLocalizationKeys.ThinkingHigh);
-                slider.Cursor.Should().Be(new Cursor(StandardCursorType.Hand));
+                slider.Cursor?.ToString().Should().Be(nameof(StandardCursorType.Hand));
                 thinkingControls.IsVisible.Should().BeTrue();
                 thinkingResetButton.Command.Should().BeSameAs(viewModel.ResetThinkingLevelCommand);
 
@@ -564,28 +874,28 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void TemperatureButton_WhenPanelIsShown_MatchesOptionHeightAndUsesLargerIcon()
+    public async Task TemperatureButton_WhenPanelIsShown_UsesConfiguredSquareSizeAndLargerIcon()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             Button temperatureButton = GetTemperatureButton(context.View);
-            ComboBox resolutionComboBox = GetComboBox(context.View, "ResolutionComboBox");
+            double configuredSize = GetDoubleResource(context.View, "GenerationOptionButtonSize");
             PathIcon temperatureIcon = temperatureButton
                 .GetVisualDescendants()
                 .OfType<PathIcon>()
                 .Single();
 
-            temperatureButton.Bounds.Height.Should().Be(resolutionComboBox.Bounds.Height);
+            temperatureButton.Bounds.Height.Should().Be(configuredSize);
             temperatureButton.Bounds.Width.Should().Be(temperatureButton.Bounds.Height);
             temperatureIcon.Bounds.Width.Should().BeGreaterThan(16d);
         });
     }
 
     [Fact]
-    public void TemperatureControls_WhenPanelIsShown_HaveNoToolTips()
+    public async Task TemperatureControls_WhenPanelIsShown_HaveNoToolTips()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             Button temperatureButton = GetTemperatureButton(context.View);
@@ -603,9 +913,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void PopupThemeResources_WhenLoaded_AreOpaqueBlue()
+    public async Task PopupThemeResources_WhenLoaded_AreOpaqueBlue()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             NanoBanana2PanelView view = new();
             Window window = Show(view);
@@ -633,10 +943,10 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     [Theory]
     [InlineData(0.6d)]
     [InlineData(1.5d)]
-    public void TemperaturePopup_WhenPanelIsScaled_InheritsTransformWithoutClipping(
+    public async Task TemperaturePopup_WhenPanelIsScaled_InheritsTransformWithoutClipping(
         double uiScale)
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             NanoBanana2PanelView view = CreateView(
                 out UniversalNanoBananaPanelViewModel viewModel);
@@ -808,11 +1118,11 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     [InlineData("openrouter-gpt-image-2-5-sunburst", "Max")]
     [InlineData("openrouter-gpt-image-2-5-flare", "Xhigh")]
     [InlineData("openrouter-gpt-image-2-5-flare", "Max")]
-    public void QualityDropDown_WhenSelectionChanges_UpdatesViewModel(
+    public async Task QualityDropDown_WhenSelectionChanges_UpdatesViewModel(
         string modelId,
         string quality)
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
@@ -887,9 +1197,9 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void QualityDropDown_WhenGptImage2IsSelected_ShowsAutoByDefault()
+    public async Task QualityDropDown_WhenGptImage2IsSelected_ShowsAutoByDefault()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
@@ -1017,6 +1327,33 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         catalog.Initialize(ApiModelMetadataTestCatalog.LoadCatalog());
 
         return catalog;
+    }
+
+    private static void RenderOptionsLayout(ShownPanelContext context)
+    {
+        Window window = context.Window;
+        UpdateOptionsLayout(window);
+
+        if (context.FrameScheduler.HasQueuedFrame)
+        {
+            context.FrameScheduler.RunNextFrame(TimeSpan.Zero);
+            context.FrameScheduler.RunNextFrame(TimeSpan.FromSeconds(1d));
+        }
+
+        window.CaptureRenderedFrame();
+    }
+
+    private static void UpdateOptionsLayout(Window window)
+    {
+        window.CaptureRenderedFrame();
+        Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+        window.CaptureRenderedFrame();
+    }
+
+    private static ContentControl GetInlineOptionsHost(NanoBanana2PanelView view)
+    {
+        return view.FindControl<ContentControl>("InlineGenerationOptionsHost")
+            ?? throw new InvalidOperationException("The inline generation options host was not found.");
     }
 
     private static ComboBox GetComboBox(NanoBanana2PanelView view, string name)
@@ -1149,7 +1486,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
     private static Color GetColorResource(Control control, string resourceKey)
     {
-        if (control.TryFindResource(resourceKey, out object? value)
+        if (control.TryFindResource(resourceKey, control.ActualThemeVariant, out object? value)
             && (value is Color color))
         {
             return color;
@@ -1158,28 +1495,20 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         throw new InvalidOperationException($"Color resource '{resourceKey}' was not found.");
     }
 
-    private static IBrush GetBrushResource(Control control, string resourceKey)
-    {
-        if (control.TryFindResource(resourceKey, out object? value)
-            && (value is IBrush brush))
-        {
-            return brush;
-        }
-
-        throw new InvalidOperationException($"Brush resource '{resourceKey}' was not found.");
-    }
-
     private sealed class ShownPanelContext : IDisposable
     {
         public NanoBanana2PanelView View { get; }
         public UniversalNanoBananaPanelViewModel ViewModel { get; }
         public Window Window { get; }
+        public TestUiFrameScheduler FrameScheduler { get; } = new();
 
         public ShownPanelContext(double? width = null, double? height = null)
         {
-            UniversalNanoBananaPanelViewModel viewModel;
-            View = CreateView(out viewModel);
-            ViewModel = viewModel;
+            ViewModel = CreateViewModel();
+            View = new NanoBanana2PanelView(FrameScheduler)
+            {
+                DataContext = ViewModel
+            };
             Window = width is double panelWidth && height is double panelHeight
                 ? Show(View, panelWidth, panelHeight)
                 : Show(View);

@@ -17,7 +17,7 @@
     <x:Double x:Key="ModalOverlayBlurRadius">120</x:Double>
     <x:Double x:Key="ModalOverlayTintOpacity">0.6</x:Double>
     <x:Double x:Key="GenerationPanelWidth">640</x:Double>
-    <x:Double x:Key="GenerationPanelResizeGripHeight">20</x:Double>
+    <x:Double x:Key="GenerationPanelResizeGripSize">20</x:Double>
     <x:Double x:Key="GenerationModelComboMinWidth">160</x:Double>
     <x:Double x:Key="GenerationOptionComboMinWidth">110</x:Double>
     <x:Double x:Key="GenerationOptionButtonSize">40</x:Double>
@@ -78,6 +78,7 @@
     <CornerRadius x:Key="MetadataStatusCornerRadius">999</CornerRadius>
     <Thickness x:Key="GenerationPanelMargin">20,0,20,20</Thickness>
     <Thickness x:Key="GenerationPanelPadding">18</Thickness>
+    <Thickness x:Key="GenerationAdvancedOptionsMargin">4,0,0,0</Thickness>
     <Thickness x:Key="GenerationPanelInnerSpacing">0,10,0,0</Thickness>
     <Thickness x:Key="AttachmentListMargin">12,0,0,0</Thickness>
     <Thickness x:Key="AttachmentPreviewMargin">0,0,8,0</Thickness>

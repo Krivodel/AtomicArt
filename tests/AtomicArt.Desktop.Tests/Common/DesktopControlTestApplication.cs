@@ -14,9 +14,7 @@ internal sealed class DesktopControlTestApplication : Avalonia.Application
     ];
     private static readonly string[] StylePaths =
     [
-        "avares://AtomicArt/Resources/ComboBoxStyles.axaml",
-        "avares://AtomicArt/Resources/TextStyles.axaml",
-        "avares://AtomicArt/Resources/ButtonStyles.axaml",
+        "avares://AtomicArt/Resources/SharedControlStyles.axaml",
         "avares://AtomicArt/Resources/Dlss5Styles.axaml",
         "avares://AtomicArt/Controls/Themes/Generic.axaml",
         "avares://AtomicArt/Resources/ScrollViewerStyles.axaml",

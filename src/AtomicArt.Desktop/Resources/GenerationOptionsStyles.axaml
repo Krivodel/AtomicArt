@@ -1,0 +1,56 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <Style Selector="StackPanel.generation-advanced-options ComboBox">
+        <Setter Property="MinWidth"
+                Value="{StaticResource GenerationTemperatureSliderWidth}" />
+    </Style>
+
+    <Style Selector="StackPanel.generation-advanced-options Slider">
+        <Setter Property="Grid.Row"
+                Value="1" />
+        <Setter Property="Width"
+                Value="{StaticResource GenerationTemperatureSliderWidth}" />
+    </Style>
+
+    <Style Selector="StackPanel.generation-advanced-options TextBlock.generation-temperature-value">
+        <Setter Property="Grid.Column"
+                Value="2" />
+        <Setter Property="Margin"
+                Value="0,0,0,4" />
+    </Style>
+
+    <Style Selector="StackPanel.generation-advanced-options Button.generation-temperature-reset">
+        <Setter Property="Grid.Row"
+                Value="1" />
+    </Style>
+
+    <Style Selector="StackPanel.generation-advanced-options.inline">
+        <Setter Property="Orientation"
+                Value="Horizontal" />
+    </Style>
+
+    <Style Selector="StackPanel.generation-advanced-options.inline ComboBox">
+        <Setter Property="MinWidth"
+                Value="{StaticResource GenerationOptionComboMinWidth}" />
+    </Style>
+
+    <Style Selector="StackPanel.generation-advanced-options.inline Slider">
+        <Setter Property="Grid.Row"
+                Value="0" />
+        <Setter Property="Width"
+                Value="{StaticResource GenerationOptionComboMinWidth}" />
+    </Style>
+
+    <Style Selector="StackPanel.generation-advanced-options.inline TextBlock.generation-temperature-value">
+        <Setter Property="Grid.Column"
+                Value="1" />
+        <Setter Property="Margin"
+                Value="0,0,8,0" />
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+    </Style>
+
+    <Style Selector="StackPanel.generation-advanced-options.inline Button.generation-temperature-reset">
+        <Setter Property="Grid.Row"
+                Value="0" />
+    </Style>
+</Styles>

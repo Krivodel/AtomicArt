@@ -2,4 +2,5 @@
     <StyleInclude Source="/Resources/ComboBoxStyles.axaml" />
     <StyleInclude Source="/Resources/TextStyles.axaml" />
     <StyleInclude Source="/Resources/ButtonStyles.axaml" />
+    <StyleInclude Source="/Resources/GenerationOptionsStyles.axaml" />
 </Styles>

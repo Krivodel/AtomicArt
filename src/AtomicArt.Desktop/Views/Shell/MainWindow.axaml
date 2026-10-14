@@ -149,13 +149,29 @@
                             <galleryViews:GallerySelectionOverlayView ZIndex="30"
                                                                       IsActive="{Binding IsSelectionMode}"
                                                                       DataContext="{Binding Gallery}" />
+
+                            <uiControls:CenteredWidthResizeGrip x:Name="GenerationPanelLeftWidthResizeGrip"
+                                                                HorizontalAlignment="Left"
+                                                                Classes="generation-panel-width-grip"
+                                                                IsVisible="{Binding !Gallery.IsSelectionMode}"
+                                                                MinimumTargetWidth="{StaticResource GenerationPanelWidth}"
+                                                                ResizeContainer="{Binding #ShellContentGrid}"
+                                                                Target="{Binding #GenerationPanelHost}" />
+
+                            <uiControls:CenteredWidthResizeGrip x:Name="GenerationPanelWidthResizeGrip"
+                                                                HorizontalAlignment="Right"
+                                                                Classes="generation-panel-width-grip"
+                                                                IsVisible="{Binding !Gallery.IsSelectionMode}"
+                                                                MinimumTargetWidth="{StaticResource GenerationPanelWidth}"
+                                                                ResizeContainer="{Binding #ShellContentGrid}"
+                                                                Target="{Binding #GenerationPanelHost}" />
                         </Grid>
                     </Border>
 
                     <GridSplitter x:Name="GenerationPanelResizeGrip"
                                   Grid.Row="1"
                                   ZIndex="1"
-                                  Height="{StaticResource GenerationPanelResizeGripHeight}"
+                                  Height="{StaticResource GenerationPanelResizeGripSize}"
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Top"
                                   Background="Transparent"

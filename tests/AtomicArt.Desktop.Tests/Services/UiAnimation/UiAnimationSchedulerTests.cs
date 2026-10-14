@@ -90,6 +90,26 @@ public sealed class UiAnimationSchedulerTests
     }
 
     [Fact]
+    public void AnimateValueAsync_WhenRetargetedBeforeQueuedFrame_ReusesPendingFrame()
+    {
+        TestUiFrameScheduler frameScheduler = new();
+        UiAnimationScheduler scheduler = new(frameScheduler);
+        Border target = new();
+        double value = 0d;
+        scheduler.AnimateValueAsync(target, 0d, 1d, 100, 0, Identity, next => value = next);
+        scheduler.Cancel(target);
+
+        scheduler.AnimateValueAsync(target, 0d, 2d, 100, 0, Identity, next => value = next);
+        frameScheduler.RunNextFrame(TimeSpan.Zero);
+        frameScheduler.RunNextFrame(TimeSpan.FromMilliseconds(100d));
+
+        value.Should().Be(2d);
+        frameScheduler.HasQueuedFrame.Should().BeFalse();
+        frameScheduler.RequestedFrameCount.Should().Be(2);
+        scheduler.HasActiveAnimations.Should().BeFalse();
+    }
+
+    [Fact]
     public void AnimateValueAsync_HalfwayThroughAnimation_InterpolatesScalarValue()
     {
         TestUiFrameScheduler frameScheduler = new();

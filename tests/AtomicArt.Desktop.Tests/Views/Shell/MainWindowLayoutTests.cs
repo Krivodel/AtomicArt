@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -55,6 +56,8 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     private const string ConfirmationDialogHostName = "ConfirmationDialogHost";
     private const string GenerationPanelHostName = "GenerationPanelHost";
     private const string GenerationPanelResizeGripName = "GenerationPanelResizeGrip";
+    private const string LeftWidthResizeGripName = "GenerationPanelLeftWidthResizeGrip";
+    private const string RightWidthResizeGripName = "GenerationPanelWidthResizeGrip";
     private const string GenerationPanelWidthResourceKey = "GenerationPanelWidth";
     private const string ShellContentGridName = "ShellContentGrid";
     private const string TitleBarName = "PART_TitleBar";
@@ -321,9 +324,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void MainWindow_WhenShown_ConfiguresGenerationPanelResizeGrip()
+    public async Task MainWindow_WhenShown_ConfiguresGenerationPanelResizeGrip()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using MainWindowTestContext context = new();
             MainWindow window = context.Window;
@@ -350,13 +353,33 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             rowDefinitions[GenerationPanelRowIndex].MinHeight.Should().BeApproximately(
                 rowDefinitions[GenerationPanelRowIndex].ActualHeight,
                 HeightTolerance);
+
+            Border panel = window.FindControl<Border>(GenerationPanelHostName)
+                ?? throw new InvalidOperationException("The generation panel was not found.");
+            CenteredWidthResizeGrip[] widthGrips = window.GetVisualDescendants()
+                .OfType<CenteredWidthResizeGrip>().ToArray();
+            widthGrips.Should().HaveCount(2);
+            widthGrips.Select(grip => grip.HorizontalAlignment).Should()
+                .BeEquivalentTo(new HorizontalAlignment[] { HorizontalAlignment.Left, HorizontalAlignment.Right });
+
+            foreach (CenteredWidthResizeGrip grip in widthGrips)
+            {
+                grip.Target.Should().BeSameAs(panel);
+                grip.ResizeContainer.Should().BeSameAs(shellContentGrid);
+                grip.MinimumTargetWidth.Should().Be(GetDoubleResource(window, GenerationPanelWidthResourceKey));
+                grip.Width.Should().Be(resizeGrip.Height);
+                grip.VerticalAlignment.Should().Be(VerticalAlignment.Stretch);
+                grip.ResizeDirection.Should().Be(GridResizeDirection.Columns);
+                grip.ShowsPreview.Should().BeFalse();
+                grip.Cursor?.ToString().Should().Be(nameof(StandardCursorType.SizeWestEast));
+            }
         });
     }
 
     [Fact]
-    public void Dlss5BackCommand_WhenPanelIsOpen_HidesPanelWithoutStoppingEngine()
+    public async Task Dlss5BackCommand_WhenPanelIsOpen_HidesPanelWithoutStoppingEngine()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             Mock<IDlss5NativeEngine> nativeEngine = new();
             using MainWindowTestContext context = new(services =>
@@ -377,9 +400,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void Dlss5CloseCommand_WhenPanelIsOpen_StopsEngineAndRenderingAnimation()
+    public async Task Dlss5CloseCommand_WhenPanelIsOpen_StopsEngineAndRenderingAnimation()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             Mock<IDlss5NativeEngine> nativeEngine = new();
             using MainWindowTestContext context = new(services =>
@@ -414,9 +437,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void MainWindow_WhenGenerationPanelPaddingIsRightClicked_OpensResetMenu()
+    public async Task MainWindow_WhenGenerationPanelPaddingIsRightClicked_OpensResetMenu()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using MainWindowTestContext context = new();
             MainWindow window = context.Window;
@@ -462,9 +485,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void MainWindow_WhenGenerationControlIsRightClicked_OpensResetMenuOnce()
+    public async Task MainWindow_WhenGenerationControlIsRightClicked_OpensResetMenuOnce()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using MainWindowTestContext context = new();
             MainWindow window = context.Window;
@@ -568,9 +591,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void MainWindow_WhenShown_KeepsConfirmationHostBelowTitleBar()
+    public async Task MainWindow_WhenShown_KeepsConfirmationHostBelowTitleBar()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using MainWindowTestContext context = new();
             MainWindow window = context.Window;
@@ -601,9 +624,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void MainWindow_WhenShown_ConfiguresFasterConfirmationDialogTransitions()
+    public async Task MainWindow_WhenShown_ConfiguresFasterConfirmationDialogTransitions()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using MainWindowTestContext context = new();
             MainWindow window = context.Window;
@@ -736,9 +759,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void MainWindow_WhenShown_ProvidesPanelBoundaryForAttachmentDrag()
+    public async Task MainWindow_WhenShown_ProvidesPanelBoundaryForAttachmentDrag()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             using MainWindowTestContext context = new();
             MainWindow window = context.Window;
@@ -813,9 +836,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void GenerationPanel_WhenScaledWindowNarrows_ShrinksFromPreferredWidthAndRemainsContained()
+    public async Task GenerationPanel_WhenScaledWindowNarrows_ShrinksFromPreferredWidthAndRemainsContained()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             RecordingUiScaleService uiScaleService = new(UiScale);
             using MainWindowTestContext context = new(services =>
@@ -852,10 +875,123 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         });
     }
 
-    [Fact]
-    public void MainWindow_WhenErrorIsShown_DisplaysSharedModalOverlay()
+    [Theory]
+    [InlineData(HorizontalAlignment.Left, 0.6d)]
+    [InlineData(HorizontalAlignment.Left, 1d)]
+    [InlineData(HorizontalAlignment.Left, 1.5d)]
+    [InlineData(HorizontalAlignment.Right, 0.6d)]
+    [InlineData(HorizontalAlignment.Right, 1d)]
+    [InlineData(HorizontalAlignment.Right, 1.5d)]
+    public async Task GenerationPanel_WhenWidthGripIsDragged_FollowsPointerAndRemainsCentered(
+        HorizontalAlignment alignment,
+        double uiScale)
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
+        {
+            RecordingUiScaleService uiScaleService = new(uiScale);
+            using MainWindowTestContext context = new(services =>
+            {
+                services.AddSingleton<IUiScaleService>(uiScaleService);
+            });
+            MainWindow window = context.Window;
+            window.Width = 1600d;
+            window.Show();
+            window.CaptureRenderedFrame();
+            Border panel = window.FindControl<Border>(GenerationPanelHostName)
+                ?? throw new InvalidOperationException("The generation panel was not found.");
+            CenteredWidthResizeGrip grip = GetWidthResizeGrip(window, alignment);
+            Grid container = window.FindControl<Grid>(ShellContentGridName)
+                ?? throw new InvalidOperationException("The generation panel container was not found.");
+            Point start = grip.TranslatePoint(new Point(grip.Bounds.Width / 2d, grip.Bounds.Height / 2d), window)
+                ?? throw new InvalidOperationException("The generation panel width grip position was not found.");
+            double originalWidth = panel.Bounds.Width;
+            double direction = alignment == HorizontalAlignment.Left ? -1d : 1d;
+
+            window.MouseDown(start, MouseButton.Left);
+            window.MouseMove(start + new Vector(direction * 100d, 0d));
+            window.CaptureRenderedFrame();
+            window.MouseMove(start + new Vector(direction * 150d, 0d));
+            window.CaptureRenderedFrame();
+            window.MouseUp(start + new Vector(direction * 150d, 0d), MouseButton.Left);
+
+            panel.MaxWidth.Should().BeApproximately(originalWidth + 300d / uiScale, PositionTolerance);
+            double pixelTolerance = 1d / (window.RenderScaling * uiScale);
+            panel.Bounds.Center.X.Should().BeApproximately(container.Bounds.Width / 2d, pixelTolerance);
+        });
+    }
+
+    [Theory]
+    [InlineData(HorizontalAlignment.Left)]
+    [InlineData(HorizontalAlignment.Right)]
+    public async Task GenerationPanel_WhenWidthGripCrossesOptionsThreshold_AnimatesWithWindowFrameScheduler(
+        HorizontalAlignment alignment)
+    {
+        await DispatchAsync(async () =>
+        {
+            ImageModelOptionCatalog modelCatalog = new();
+            modelCatalog.Initialize(ApiModelMetadataTestCatalog.LoadCatalog());
+            using MainWindowTestContext context = new(services =>
+            {
+                services.AddSingleton<IImageModelOptionCatalog>(modelCatalog);
+                services.AddSingleton<IUiScaleService>(new RecordingUiScaleService(1d));
+            });
+            MainWindow window = context.Window;
+            window.Width = 1800d;
+            window.Show();
+            window.CaptureRenderedFrame();
+            NanoBanana2PanelView view = window.GetVisualDescendants().OfType<NanoBanana2PanelView>().Single();
+            UniversalNanoBananaPanelViewModel viewModel = view.DataContext.Should()
+                .BeOfType<UniversalNanoBananaPanelViewModel>().Subject;
+            viewModel.SelectedModel = viewModel.AvailableModels.Single(model =>
+                model.Id == "openrouter-gpt-image-2-5-sunburst");
+            window.CaptureRenderedFrame();
+            Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+            ContentControl inlineHost = view.FindControl<ContentControl>("InlineGenerationOptionsHost")
+                ?? throw new InvalidOperationException("The inline options host was not found.");
+            CenteredWidthResizeGrip grip = GetWidthResizeGrip(window, alignment);
+            double edgeDirection = alignment == HorizontalAlignment.Left ? -1d : 1d;
+            inlineHost.IsVisible.Should().BeFalse();
+
+            for (int direction = 1; direction >= -1; direction -= 2)
+            {
+                Point start = grip.TranslatePoint(new Point(grip.Bounds.Width / 2d, grip.Bounds.Height / 2d), window)
+                    ?? throw new InvalidOperationException("The panel width grip was not attached.");
+                Point end = start + new Vector(direction * edgeDirection * 300d, 0d);
+                window.MouseDown(start, MouseButton.Left);
+                window.MouseMove(end);
+                window.CaptureRenderedFrame();
+                Dispatcher.UIThread.RunJobs(DispatcherPriority.Background);
+                window.MouseUp(end, MouseButton.Left);
+                inlineHost.IsVisible.Should().BeTrue($"the options should be transitioning in direction {direction}");
+                inlineHost.IsHitTestVisible.Should().BeFalse();
+                bool sawIntermediateFrame = false;
+
+                for (int frame = 0; frame < 60; frame++)
+                {
+                    window.CaptureRenderedFrame();
+                    sawIntermediateFrame = sawIntermediateFrame
+                        || (inlineHost.Opacity > 0d && inlineHost.Opacity < 1d);
+
+                    if (direction > 0 ? inlineHost.IsHitTestVisible : !inlineHost.IsVisible)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(TimeSpan.FromMilliseconds(16d));
+                }
+
+                sawIntermediateFrame.Should().BeTrue();
+                inlineHost.IsVisible.Should().Be(direction > 0);
+                inlineHost.IsHitTestVisible.Should().Be(direction > 0);
+                window.GetVisualDescendants().OfType<NanoBanana2PanelView>().Single().Should().BeSameAs(view);
+            }
+        });
+    }
+
+    [Fact]
+    public async Task MainWindow_WhenErrorIsShown_DisplaysSharedModalOverlay()
+    {
+        await DispatchAsync(() =>
         {
             using MainWindowTestContext context = new();
             MainWindow window = context.Window;
@@ -913,6 +1049,14 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
 
         await viewModel.ApplicationUpdate.StartMonitoringCommand.ExecuteAsync(null);
         window.CaptureRenderedFrame();
+    }
+
+    private static CenteredWidthResizeGrip GetWidthResizeGrip(MainWindow window, HorizontalAlignment alignment)
+    {
+        string gripName = alignment == HorizontalAlignment.Left ? LeftWidthResizeGripName : RightWidthResizeGripName;
+
+        return window.FindControl<CenteredWidthResizeGrip>(gripName)
+            ?? throw new InvalidOperationException($"The generation panel width grip '{gripName}' was not found.");
     }
 
     private static double GetDoubleResource(Control control, string resourceKey)

@@ -51,11 +51,6 @@ internal sealed class UiAnimationScheduler
             _animations.RemoveAt(i);
             animation.Completion.TrySetResult();
         }
-
-        if (_animations.Count == 0)
-        {
-            _isRunning = false;
-        }
     }
 
     public void Cancel(Control control)
@@ -72,11 +67,6 @@ internal sealed class UiAnimationScheduler
 
             _animations.RemoveAt(i);
             animation.Completion.TrySetResult();
-        }
-
-        if (_animations.Count == 0)
-        {
-            _isRunning = false;
         }
     }
 

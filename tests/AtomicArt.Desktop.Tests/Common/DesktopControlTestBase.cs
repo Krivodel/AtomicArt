@@ -36,6 +36,18 @@ public abstract class DesktopControlTestBase
             action);
     }
 
+    private protected static async Task DispatchAsync(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        await DispatchAsync(() =>
+        {
+            action();
+
+            return Task.CompletedTask;
+        });
+    }
+
     private protected static Window Show(Control control)
     {
         return DesktopControlTestBase.Show(control, 640d, 640d);

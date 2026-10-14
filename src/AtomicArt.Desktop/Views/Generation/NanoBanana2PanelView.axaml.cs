@@ -84,6 +84,7 @@ public partial class NanoBanana2PanelView : UserControl
     private readonly DispatcherTimer _aspectRatioHintAutoCycleTimer;
     private readonly DispatcherTimer _temperaturePopupCloseTimer;
     private readonly TopLevelPresentationObserver _presentationObserver;
+    private readonly GenerationOptionsLayoutController _optionsLayoutController;
     private readonly ScaleTransform _aspectRatioHintScale = new()
     {
         ScaleX = AspectRatioHintHiddenScale,
@@ -121,10 +122,26 @@ public partial class NanoBanana2PanelView : UserControl
     private Point? _lastAspectRatioPointerScrollViewerPosition;
 
     public NanoBanana2PanelView()
+        : this(null)
+    {
+    }
+
+    internal NanoBanana2PanelView(IUiFrameScheduler? optionsFrameScheduler)
     {
         InitializeComponent();
         InitializeAspectRatioHintTransform();
         InitializeTemperatureFlyout();
+        _optionsLayoutController = new GenerationOptionsLayoutController(
+            GenerationParametersRow,
+            GenerationOptionsSlot,
+            InlineGenerationOptionsHost,
+            GenerationSettingsButtonHost,
+            TemperatureButton,
+            TemperaturePopup,
+            TemperatureFlyoutPanel,
+            GenerationOptionsPanel,
+            StopTemperatureFlyoutAnimation,
+            optionsFrameScheduler);
         _presentationObserver = new TopLevelPresentationObserver(
             OnWindowPresentationChanged);
         _catalogLoadingTimer = new DispatcherTimer
@@ -150,6 +167,12 @@ public partial class NanoBanana2PanelView : UserControl
         base.OnAttachedToVisualTree(e);
 
         _presentationObserver.Attach(this);
+
+        if (TopLevel.GetTopLevel(this) is TopLevel topLevel)
+        {
+            _optionsLayoutController.Attach(topLevel);
+        }
+
         OnWindowPresentationChanged(_presentationObserver.IsPresented);
 
         if (DataContext is UniversalNanoBananaPanelViewModel viewModel)
@@ -161,6 +184,7 @@ public partial class NanoBanana2PanelView : UserControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _presentationObserver.Detach();
+        _optionsLayoutController.Detach();
         UnsubscribeViewModelEvents();
         StopCatalogLoadingAnimation();
         StopAspectRatioHintAnimation();
@@ -199,6 +223,7 @@ public partial class NanoBanana2PanelView : UserControl
             return;
         }
 
+        _optionsLayoutController.PreparePopup();
         CancelTemperatureFlyoutClose();
         SetTemperatureFlyoutHiddenState();
         TemperaturePopup.IsOpen = true;
@@ -948,6 +973,8 @@ public partial class NanoBanana2PanelView : UserControl
 
     private void OnWindowPresentationChanged(bool isPresented)
     {
+        _optionsLayoutController.SetPresented(isPresented);
+
         if (!isPresented)
         {
             _catalogLoadingTimer.Stop();
