@@ -78,6 +78,11 @@ public sealed class OpenRouterImageRequestContentTests
     }
 
     [Theory]
+    [InlineData("openrouter-gpt-image-2", "openai/gpt-image-2", "auto")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst", "auto")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare", "auto")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst", "high")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare", "high")]
     [InlineData("openrouter-gpt-image-2", "openai/gpt-image-2", "high")]
     [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst", "xhigh")]
     [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst", "max")]

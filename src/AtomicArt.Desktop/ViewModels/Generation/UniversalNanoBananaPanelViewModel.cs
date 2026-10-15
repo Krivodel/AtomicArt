@@ -97,7 +97,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private const string SelectedModelNotInitializedMessage =
         "Selected model is not initialized.";
-    private const string DefaultQuality = "Auto";
+    private const string AutomaticQuality = "Auto";
+
+    private bool HidesAutomaticQuality => string.Equals(
+            SelectedModel?.Provider, GenerationProviderIds.OpenRouter, StringComparison.Ordinal)
+        && IsGptImageModel(SelectedModel?.ProviderModelId);
     private GenerationModelParameterMetadataDto? QualityParameter =>
         SelectedModel?.Parameters?.FirstOrDefault(parameter => string.Equals(
             parameter.Name,
@@ -111,6 +115,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private bool CanPickImage => !IsLoading
                                  && HasLoadedCatalog
                                  && !IsAttachmentLimitReached;
+
+    private static readonly string[] DescendingQualityLevels = ["Max", "Xhigh", "High", "Medium", "Low"];
 
     private readonly IGenerationModelCatalogApiClient _generationModelCatalogApiClient;
     private readonly IImageModelOptionCatalog _imageModelOptionCatalog;
@@ -156,7 +162,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     [ObservableProperty]
     private double _temperature;
     [ObservableProperty]
-    private string _selectedQuality = DefaultQuality;
+    private string _selectedQuality = AutomaticQuality;
     [ObservableProperty]
     private GenerationOptionViewModel? _selectedQualityOption;
     [ObservableProperty]
@@ -808,7 +814,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         if (string.IsNullOrWhiteSpace(quality))
         {
-            return DefaultQuality;
+            return AutomaticQuality;
         }
 
         string value = quality.Trim().ToLowerInvariant();
@@ -822,13 +828,18 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             return FormatQualityValue(quality);
         }
 
-        string defaultValue = QualityParameter?.DefaultValue is { ValueKind: JsonValueKind.String } value
-            ? FormatQualityValue(value.GetString())
-            : QualityLevels[0].Value;
+        string[] supportedValues = QualityLevels.Select(level => level.Value).ToArray();
+        string preferredDefault = HidesAutomaticQuality
+            ? DescendingQualityLevels.FirstOrDefault(supportedValues.Contains) ?? supportedValues[^1]
+            : QualityParameter?.DefaultValue is { ValueKind: JsonValueKind.String } value
+                ? FormatQualityValue(value.GetString())
+                : supportedValues[0];
+        string defaultValue = GenerationPanelOptionCompatibility.ResolveString(
+            preferredDefault, supportedValues, supportedValues[0]).Value;
 
         return GenerationPanelOptionCompatibility.ResolveString(
             quality,
-            QualityLevels.Select(level => level.Value).ToArray(),
+            supportedValues,
             defaultValue)
             .Value;
     }
@@ -839,9 +850,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             .Where(value => value.ValueKind == JsonValueKind.String
                 && !string.IsNullOrWhiteSpace(value.GetString()))
             .Select(value => FormatQualityValue(value.GetString()))
+            .Where(value => !HidesAutomaticQuality || !string.Equals(value, AutomaticQuality, StringComparison.Ordinal))
             .Select(value => new GenerationOptionViewModel(
                 value,
-                string.Equals(value, DefaultQuality, StringComparison.Ordinal)
+                string.Equals(value, AutomaticQuality, StringComparison.Ordinal)
                     ? GenerationLocalizationKeys.OptionsAuto
                     : $"{GenerationUiLocalizationKeys.Quality.OptionPrefix}{value}",
                 _textProvider))
@@ -1419,7 +1431,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             SelectedResolution = string.Empty;
             _hasTemperatureValue = false;
             Temperature = 0d;
-            SelectedQuality = DefaultQuality;
+            SelectedQuality = AutomaticQuality;
             SynchronizeSelectedQualityOption();
             _rememberedThinkingLevelValue = null;
             SelectedThinkingLevel = null;

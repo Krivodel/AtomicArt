@@ -62,6 +62,11 @@ public sealed class StreamingGenerationRequestValidatorTests
     }
 
     [Theory]
+    [InlineData("openrouter-gpt-image-2", "auto", true)]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "auto", true)]
+    [InlineData("openrouter-gpt-image-2-5-flare", "auto", true)]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "high", true)]
+    [InlineData("openrouter-gpt-image-2-5-flare", "high", true)]
     [InlineData("openrouter-gpt-image-2-5-sunburst", "xhigh", true)]
     [InlineData("openrouter-gpt-image-2-5-sunburst", "max", true)]
     [InlineData("openrouter-gpt-image-2-5-flare", "xhigh", true)]

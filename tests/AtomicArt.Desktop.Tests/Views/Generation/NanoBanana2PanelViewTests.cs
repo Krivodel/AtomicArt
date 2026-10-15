@@ -1354,13 +1354,13 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             viewModel.Temperature.Should().Be(viewModel.MinimumTemperature);
             viewModel.SelectedModel = viewModel.AvailableModels.Single(model =>
                 model.Id == "openrouter-gpt-image-2-5-sunburst");
-            viewModel.SelectedQuality = "Max";
+            viewModel.SelectedQuality = "Low";
             ShowGenerationOptions(context);
 
             ClickOptionResetButton(GetOptionResetButton(context.View, viewModel.ResetQualityCommand));
 
-            viewModel.SelectedQuality.Should().Be("Auto");
-            viewModel.SelectedQualityOption?.Value.Should().Be("Auto");
+            viewModel.SelectedQuality.Should().Be("Max");
+            viewModel.SelectedQualityOption?.Value.Should().Be("Max");
         });
     }
 
@@ -1415,14 +1415,18 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         });
     }
 
-    [Fact]
-    public async Task QualityDropDown_WhenGptImage2IsSelected_ShowsAutoByDefault()
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", "High")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Max")]
+    public async Task QualityDropDown_WhenGptModelIsSelected_ShowsMaximumWithoutAutomaticOption(
+        string modelId, string expectedQuality)
     {
         await DispatchAsync(() =>
         {
             using ShownPanelContext context = new();
             context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
-                model.Id == "openrouter-gpt-image-2");
+                model.Id == modelId);
             Popup settingsPopup = OpenTemperaturePopup(context.View);
             Border settingsPanel = GetTemperaturePopupContent(settingsPopup);
             ComboBox qualityComboBox = settingsPanel
@@ -1432,8 +1436,10 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                     comboBox.ItemsSource,
                     context.ViewModel.QualityLevels));
 
-            context.ViewModel.SelectedQuality.Should().Be("Auto");
-            qualityComboBox.SelectedItem.Should().BeSameAs(context.ViewModel.QualityLevels[0]);
+            context.ViewModel.SelectedQuality.Should().Be(expectedQuality);
+            qualityComboBox.SelectedItem.Should().BeSameAs(context.ViewModel.SelectedQualityOption);
+            qualityComboBox.Items.OfType<GenerationOptionViewModel>()
+                .Should().NotContain(option => option.Value == "Auto");
         });
     }
 

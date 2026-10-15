@@ -1271,12 +1271,13 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Theory]
-    [InlineData("openrouter-gpt-image-2", "Auto,Low,Medium,High")]
-    [InlineData("openrouter-gpt-image-2-5-sunburst", "Auto,Low,Medium,High,Xhigh,Max")]
-    [InlineData("openrouter-gpt-image-2-5-flare", "Auto,Low,Medium,High,Xhigh,Max")]
+    [InlineData("openrouter-gpt-image-2", "Low,Medium,High", "High")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "Low,Medium,High,Xhigh,Max", "Max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "Low,Medium,High,Xhigh,Max", "Max")]
     public void SelectedModel_WithGptImageModel_ExposesSupportedQualityLevels(
         string modelId,
-        string expectedLevels)
+        string expectedLevels,
+        string expectedDefault)
     {
         using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
 
@@ -1284,6 +1285,91 @@ public sealed class UniversalNanoBananaPanelViewModelTests
 
         viewModel.SupportsQuality.Should().BeTrue();
         viewModel.QualityLevels.Select(level => level.Value).Should().Equal(expectedLevels.Split(','));
+        viewModel.SelectedQualityOption?.Value.Should().Be(expectedDefault);
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", "auto", "High")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "auto", "Max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "auto", "Max")]
+    [InlineData("openrouter-gpt-image-2", null, "High")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", null, "Max")]
+    [InlineData("openrouter-gpt-image-2-5-flare", null, "Max")]
+    [InlineData("openrouter-gpt-image-2", "medium", "Medium")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "medium", "Medium")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "medium", "Medium")]
+    [InlineData("openrouter-gpt-image-2", "high", "High")]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "high", "High")]
+    [InlineData("openrouter-gpt-image-2-5-flare", "high", "High")]
+    public async Task RestoreStateAsync_WithGptQuality_PersistsAndGeneratesWithExplicitSupportedQuality(
+        string modelId, string? savedQuality, string expectedQuality)
+    {
+        RecordingGenerationPanelStateService stateService = new()
+        {
+            StateToLoad = new GenerationPanelState
+            {
+                PanelId = GenerationPanelIds.NanoBanana,
+                SelectedModelId = modelId,
+                Quality = savedQuality,
+                Prompt = "Create a landscape"
+            }
+        };
+        CapturingGenerationRunDispatcher dispatcher = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            generationPanelStateService: stateService, dispatcher: dispatcher);
+
+        await viewModel.RestoreStateAsync(CancellationToken.None);
+        await viewModel.CommitPendingStateAsync(CancellationToken.None);
+        await viewModel.GenerateCommand.ExecuteAsync(null);
+
+        viewModel.SelectedQuality.Should().Be(expectedQuality);
+        viewModel.SelectedQualityOption?.Value.Should().Be(expectedQuality);
+        stateService.SavedStates.Last().Quality.Should().Be(expectedQuality.ToLowerInvariant());
+        GenerationRunRequest request = dispatcher.CapturedRequest
+            ?? throw new InvalidOperationException("Generation run request should be captured.");
+        request.Request.ModelId.Should().Be(modelId);
+        request.Request.Quality.Should().Be(expectedQuality.ToLowerInvariant());
+    }
+
+    [Theory]
+    [InlineData("auto,medium,low", "Medium")]
+    [InlineData("auto,xhigh,high,low", "Xhigh")]
+    [InlineData("auto,high,max,medium", "Max")]
+    public void SelectedModel_WithUnorderedQualityLevels_SelectsHighestSupportedQuality(
+        string allowedQualities, string expectedQuality)
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        ImageModelOption model = GetModel(viewModel, "openrouter-gpt-image-2");
+        IReadOnlyList<GenerationModelParameterMetadataDto> parameters = model.Parameters
+            ?? throw new InvalidOperationException("The test model requires quality metadata.");
+
+        viewModel.SelectedModel = model with
+        {
+            Parameters = parameters.Select(parameter => parameter.Name == GenerationParameterNames.Quality
+                ? parameter with
+                {
+                    AllowedValues = allowedQualities.Split(',').Select(quality =>
+                        JsonSerializer.SerializeToElement(quality)).ToArray()
+                }
+                : parameter).ToArray()
+        };
+
+        viewModel.QualityLevels.Select(level => level.Value).Should().NotContain("Auto");
+        viewModel.SelectedQualityOption?.Value.Should().Be(expectedQuality);
+    }
+
+    [Theory]
+    [InlineData(GenerationProviderIds.Google, GenerationProviderModelIds.GptImage2)]
+    [InlineData(GenerationProviderIds.OpenRouter, "other/image-model")]
+    public void SelectedModel_WithQualityOutsideOpenRouterGptScope_PreservesAutomaticOption(
+        string provider, string providerModelId)
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        ImageModelOption model = GetModel(viewModel, "openrouter-gpt-image-2");
+
+        viewModel.SelectedModel = model with { Provider = provider, ProviderModelId = providerModelId };
+
+        viewModel.QualityLevels.Select(level => level.Value).Should().Contain("Auto");
         viewModel.SelectedQualityOption?.Value.Should().Be("Auto");
     }
 
@@ -1375,8 +1461,8 @@ public sealed class UniversalNanoBananaPanelViewModelTests
 
         viewModel.SelectedModel = GetModel(viewModel, "openrouter-gpt-image-2");
 
-        viewModel.SelectedQuality.Should().Be("Auto");
-        viewModel.SelectedQualityOption?.Value.Should().Be("Auto");
+        viewModel.SelectedQuality.Should().Be("High");
+        viewModel.SelectedQualityOption?.Value.Should().Be("High");
     }
 
     [Theory]
@@ -1536,11 +1622,11 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Theory]
-    [InlineData("auto", "Auto")]
-    [InlineData("high", "High")]
-    public void ResetQualityCommand_WithChangedQuality_RestoresModelDefaultAndSavesOnlyQuality(
-        string defaultQuality,
-        string expectedQuality)
+    [InlineData("auto")]
+    [InlineData("high")]
+    [InlineData("medium")]
+    public void ResetQualityCommand_WithChangedQuality_RestoresMaximumAndSavesOnlyQuality(
+        string defaultQuality)
     {
         RecordingGenerationPanelStateService stateService = new();
         using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
@@ -1554,7 +1640,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
                 ? parameter with { DefaultValue = JsonSerializer.SerializeToElement(defaultQuality) }
                 : parameter).ToArray()
         };
-        viewModel.SelectedQuality = "Max";
+        viewModel.SelectedQuality = "Low";
         string aspectRatio = viewModel.SelectedAspectRatio;
         string resolution = viewModel.SelectedResolution;
         int generationCount = viewModel.GenerationCount;
@@ -1562,12 +1648,12 @@ public sealed class UniversalNanoBananaPanelViewModelTests
 
         viewModel.ResetQualityCommand.Execute(null);
 
-        viewModel.SelectedQuality.Should().Be(expectedQuality);
-        viewModel.SelectedQualityOption?.Value.Should().Be(expectedQuality);
+        viewModel.SelectedQuality.Should().Be("Max");
+        viewModel.SelectedQualityOption?.Value.Should().Be("Max");
         viewModel.SelectedAspectRatio.Should().Be(aspectRatio);
         viewModel.SelectedResolution.Should().Be(resolution);
         viewModel.GenerationCount.Should().Be(generationCount);
-        stateService.SavedStates.Should().ContainSingle().Which.Quality.Should().Be(defaultQuality);
+        stateService.SavedStates.Should().ContainSingle().Which.Quality.Should().Be("max");
     }
 
     [Fact]
