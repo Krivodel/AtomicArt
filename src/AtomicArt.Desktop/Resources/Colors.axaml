@@ -11,6 +11,11 @@
     <Color x:Key="GalleryFavoriteInfoBackgroundColor">#3B315D</Color>
     <Color x:Key="GalleryFavoriteAccentColor">#F59E0B</Color>
     <Color x:Key="GalleryDeleteIconColor">#FF3333</Color>
+    <Color x:Key="GptQualityLowColor">#FF0000</Color>
+    <Color x:Key="GptQualityMediumColor">#FF8040</Color>
+    <Color x:Key="GptQualityHighColor">#00FF40</Color>
+    <Color x:Key="GptQualityXhighColor">#56F8C7</Color>
+    <Color x:Key="GptQualityMaxColor">#ECB0FF</Color>
     <Color x:Key="Dlss5OffLabelColor">#7A8290</Color>
     <Color x:Key="NvidiaBrandColor">#76B900</Color>
     <Color x:Key="Dlss5ProgressCellColor">#315137</Color>

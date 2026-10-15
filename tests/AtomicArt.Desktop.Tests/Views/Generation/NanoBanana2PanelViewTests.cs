@@ -1443,6 +1443,74 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         });
     }
 
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", 640d)]
+    [InlineData("openrouter-gpt-image-2", 1600d)]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", 640d)]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", 1600d)]
+    [InlineData("openrouter-gpt-image-2-5-flare", 640d)]
+    [InlineData("openrouter-gpt-image-2-5-flare", 1600d)]
+    public async Task QualityDropDown_WhenGptQualityChanges_ColorsSelectedValueAndItems(
+        string modelId, double panelWidth)
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new(panelWidth);
+            context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == modelId);
+            ShowGenerationOptions(context);
+            StackPanel optionsPanel = context.View.FindControl<StackPanel>("GenerationOptionsPanel")
+                ?? throw new InvalidOperationException("The generation options panel was not found.");
+            ComboBox qualityComboBox = optionsPanel.GetLogicalDescendants().OfType<ComboBox>()
+                .Single(comboBox => ReferenceEquals(comboBox.ItemsSource, context.ViewModel.QualityLevels));
+            Dictionary<string, string> expectedColors = new()
+            {
+                ["Low"] = "#FF0000",
+                ["Medium"] = "#FF8040",
+                ["High"] = "#00FF40",
+                ["Xhigh"] = "#56F8C7",
+                ["Max"] = "#ECB0FF"
+            };
+
+            foreach (GenerationOptionViewModel option in context.ViewModel.QualityLevels)
+            {
+                qualityComboBox.SelectedItem = option;
+                UpdateOptionsLayout(context.Window);
+
+                TextBlock selectedText = qualityComboBox.GetVisualDescendants().OfType<TextBlock>()
+                    .Single(text => text.Classes.Contains("quality-option"));
+                selectedText.Foreground.Should().BeAssignableTo<ISolidColorBrush>()
+                    .Which.Color.Should().Be(Color.Parse(expectedColors[option.Value]));
+            }
+
+            qualityComboBox.IsDropDownOpen = true;
+            UpdateOptionsLayout(context.Window);
+            Popup dropDown = qualityComboBox.GetVisualDescendants().OfType<Popup>()
+                .Single(popup => popup.Name == "PART_Popup");
+            Control dropDownContent = dropDown.Child
+                ?? throw new InvalidOperationException("The quality dropdown content was not found.");
+            TextBlock[] itemTexts = dropDownContent.GetVisualDescendants().OfType<TextBlock>()
+                .Where(text => text.Classes.Contains("quality-option"))
+                .ToArray();
+
+            itemTexts.Should().HaveCount(context.ViewModel.QualityLevels.Count);
+            foreach (TextBlock itemText in itemTexts)
+            {
+                GenerationOptionViewModel option = itemText.DataContext
+                    .Should().BeOfType<GenerationOptionViewModel>().Subject;
+                itemText.Foreground.Should().BeAssignableTo<ISolidColorBrush>()
+                    .Which.Color.Should().Be(Color.Parse(expectedColors[option.Value]));
+            }
+
+            qualityComboBox.IsDropDownOpen = false;
+            context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == ApiModelMetadataTestCatalog.NanoBanana2ModelId);
+            ShowGenerationOptions(context);
+
+            qualityComboBox.Classes.Should().NotContain("gpt-quality");
+        });
+    }
+
     [Fact]
     public async Task SettingsPopup_WhenOutsideIsClicked_ClosesAfterAnimation()
     {

@@ -144,12 +144,15 @@
                                         <ComboBox Grid.Column="1"
                                                   HorizontalAlignment="Stretch"
                                                   MaxDropDownHeight="300"
+                                                  Classes.gpt-quality="{Binding UsesGptImageQuality}"
                                                   AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Quality.Label}}"
                                                   ItemsSource="{Binding QualityLevels}"
                                                   SelectedItem="{Binding SelectedQualityOption, Mode=TwoWay}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="generation:GenerationOptionViewModel">
-                                                    <TextBlock Text="{Binding DisplayName}" />
+                                                    <TextBlock Classes="quality-option"
+                                                               Tag="{Binding Value}"
+                                                               Text="{Binding DisplayName}" />
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>

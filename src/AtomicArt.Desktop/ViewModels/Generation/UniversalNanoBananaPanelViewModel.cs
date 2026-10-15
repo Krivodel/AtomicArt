@@ -42,6 +42,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         && !IsGptImageModel(SelectedModel?.ProviderModelId);
     public IReadOnlyList<GenerationOptionViewModel> QualityLevels { get; private set; } = [];
     public bool SupportsQuality => QualityLevels.Count > 0;
+    public bool UsesGptImageQuality => string.Equals(
+            SelectedModel?.Provider, GenerationProviderIds.OpenRouter, StringComparison.Ordinal)
+        && IsGptImageModel(SelectedModel?.ProviderModelId);
     public bool SupportsGenerationOptions => SupportsTemperature || SupportsQuality;
     public IReadOnlyList<GenerationModelThinkingLevelMetadataDto> ThinkingLevels =>
         SelectedModel?.Thinking?.Levels ?? [];
@@ -99,9 +102,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         "Selected model is not initialized.";
     private const string AutomaticQuality = "Auto";
 
-    private bool HidesAutomaticQuality => string.Equals(
-            SelectedModel?.Provider, GenerationProviderIds.OpenRouter, StringComparison.Ordinal)
-        && IsGptImageModel(SelectedModel?.ProviderModelId);
     private GenerationModelParameterMetadataDto? QualityParameter =>
         SelectedModel?.Parameters?.FirstOrDefault(parameter => string.Equals(
             parameter.Name,
@@ -829,7 +829,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
 
         string[] supportedValues = QualityLevels.Select(level => level.Value).ToArray();
-        string preferredDefault = HidesAutomaticQuality
+        string preferredDefault = UsesGptImageQuality
             ? DescendingQualityLevels.FirstOrDefault(supportedValues.Contains) ?? supportedValues[^1]
             : QualityParameter?.DefaultValue is { ValueKind: JsonValueKind.String } value
                 ? FormatQualityValue(value.GetString())
@@ -850,7 +850,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             .Where(value => value.ValueKind == JsonValueKind.String
                 && !string.IsNullOrWhiteSpace(value.GetString()))
             .Select(value => FormatQualityValue(value.GetString()))
-            .Where(value => !HidesAutomaticQuality || !string.Equals(value, AutomaticQuality, StringComparison.Ordinal))
+            .Where(value => !UsesGptImageQuality || !string.Equals(value, AutomaticQuality, StringComparison.Ordinal))
             .Select(value => new GenerationOptionViewModel(
                 value,
                 string.Equals(value, AutomaticQuality, StringComparison.Ordinal)
@@ -1491,6 +1491,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         OnPropertyChanged(nameof(ThinkingLevels));
         OnPropertyChanged(nameof(SupportsThinkingLevel));
         OnPropertyChanged(nameof(SupportsQuality));
+        OnPropertyChanged(nameof(UsesGptImageQuality));
         OnPropertyChanged(nameof(SupportsGenerationOptions));
         OnPropertyChanged(nameof(AttachmentCounterText));
         OnPropertyChanged(nameof(MaxAttachedImageBytes));

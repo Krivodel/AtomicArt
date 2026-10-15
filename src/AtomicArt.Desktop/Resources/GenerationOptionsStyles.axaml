@@ -55,6 +55,31 @@
                 Value="Arrow" />
     </Style>
 
+    <Style Selector="ComboBox.gpt-quality TextBlock.quality-option[Tag=Low]">
+        <Setter Property="Foreground"
+                Value="{StaticResource GptQualityLowBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.gpt-quality TextBlock.quality-option[Tag=Medium]">
+        <Setter Property="Foreground"
+                Value="{StaticResource GptQualityMediumBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.gpt-quality TextBlock.quality-option[Tag=High]">
+        <Setter Property="Foreground"
+                Value="{StaticResource GptQualityHighBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.gpt-quality TextBlock.quality-option[Tag=Xhigh]">
+        <Setter Property="Foreground"
+                Value="{StaticResource GptQualityXhighBrush}" />
+    </Style>
+
+    <Style Selector="ComboBox.gpt-quality TextBlock.quality-option[Tag=Max]">
+        <Setter Property="Foreground"
+                Value="{StaticResource GptQualityMaxBrush}" />
+    </Style>
+
     <Style Selector="Button.generation-option-reset PathIcon">
         <Setter Property="Width"
                 Value="{StaticResource GenerationOptionIconSize}" />

@@ -21,6 +21,16 @@
                      Color="{StaticResource GalleryFavoriteInfoBackgroundColor}" />
     <SolidColorBrush x:Key="GalleryFavoriteAccentBrush"
                      Color="{StaticResource GalleryFavoriteAccentColor}" />
+    <SolidColorBrush x:Key="GptQualityLowBrush"
+                     Color="{StaticResource GptQualityLowColor}" />
+    <SolidColorBrush x:Key="GptQualityMediumBrush"
+                     Color="{StaticResource GptQualityMediumColor}" />
+    <SolidColorBrush x:Key="GptQualityHighBrush"
+                     Color="{StaticResource GptQualityHighColor}" />
+    <SolidColorBrush x:Key="GptQualityXhighBrush"
+                     Color="{StaticResource GptQualityXhighColor}" />
+    <SolidColorBrush x:Key="GptQualityMaxBrush"
+                     Color="{StaticResource GptQualityMaxColor}" />
     <SolidColorBrush x:Key="GalleryUnselectedCardDimBrush"
                      Color="{StaticResource GallerySelectionTintColor}"
                      Opacity="{StaticResource GalleryUnselectedCardDimOpacity}" />
