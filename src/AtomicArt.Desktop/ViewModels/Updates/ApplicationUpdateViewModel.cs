@@ -35,6 +35,7 @@ public sealed partial class ApplicationUpdateViewModel :
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
     private readonly IViewModelErrorHandler _errorHandler;
     private readonly ILocalizationTextProvider _textProvider;
+    private readonly TimeProvider _timeProvider;
     private readonly CancellationTokenSource _disposeCancellationSource = new();
     private readonly TimeSpan _updateCheckInterval;
     private ApplicationUpdate? _availableUpdate;
@@ -80,7 +81,8 @@ public sealed partial class ApplicationUpdateViewModel :
         IMessenger messenger,
         IViewModelErrorHandler errorHandler,
         ILocalizationTextProvider textProvider,
-        IOptions<ApplicationUpdateOptions> options)
+        IOptions<ApplicationUpdateOptions> options,
+        TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -97,6 +99,7 @@ public sealed partial class ApplicationUpdateViewModel :
             ?? throw new ArgumentNullException(nameof(errorHandler));
         _textProvider = textProvider
             ?? throw new ArgumentNullException(nameof(textProvider));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _updateCheckInterval = TimeSpan.FromMinutes(
             options.Value.CheckIntervalMinutes);
         IsGenerationActive = _generationActivityTracker.IsActive;
@@ -248,6 +251,11 @@ public sealed partial class ApplicationUpdateViewModel :
 
         ApplicationUpdate? update = await _updateService.CheckForUpdateAsync(ct);
 
+        if (string.Equals(_errorLocalizationKey, UpdateLocalizationKeys.Errors.CheckFailed, StringComparison.Ordinal))
+        {
+            ClearErrorMessage();
+        }
+
         if (update is null
             || string.Equals(update.Version, _dismissedVersion, StringComparison.Ordinal))
         {
@@ -265,7 +273,7 @@ public sealed partial class ApplicationUpdateViewModel :
         {
             try
             {
-                await Task.Delay(_updateCheckInterval, ct);
+                await Task.Delay(_updateCheckInterval, _timeProvider, ct);
                 await CheckForUpdateAsync(ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)

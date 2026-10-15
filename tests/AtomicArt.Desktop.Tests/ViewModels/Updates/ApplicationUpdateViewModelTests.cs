@@ -107,6 +107,70 @@ public sealed class ApplicationUpdateViewModelTests
         context.ViewModel.LocalizationRevision.Should().Be(initialRevision + 1);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Monitoring_AfterFailedCheckThenSuccessfulRetry_ClearsCheckError(bool updateAvailable)
+    {
+        using ApplicationUpdateTestContext context = new();
+        context.UpdateServiceMock
+            .SetupSequence(service => service.CheckForUpdateAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("Update source is unavailable."))
+            .ReturnsAsync(updateAvailable ? new ApplicationUpdate(UpdateVersion) : null);
+        await StartMonitoringAsync(context.ViewModel);
+        context.ViewModel.ErrorMessage.Should().Be(
+            TestLocalizationTextProvider.Default.Get(UpdateLocalizationKeys.Errors.CheckFailed));
+
+        await context.TickAsync();
+        context.Messenger.Send(new LocalizationChangedMessage());
+
+        context.ViewModel.ErrorMessage.Should().BeNull();
+        context.ViewModel.HasErrorMessage.Should().BeFalse();
+        context.ViewModel.IsNotificationOpen.Should().Be(updateAvailable);
+        context.ViewModel.State.Should().Be(updateAvailable
+            ? ApplicationUpdateState.Available
+            : ApplicationUpdateState.Hidden);
+    }
+
+    [Fact]
+    public async Task Monitoring_AfterRepeatedCheckFailure_PreservesCheckError()
+    {
+        using ApplicationUpdateTestContext context = new();
+        context.UpdateServiceMock
+            .Setup(service => service.CheckForUpdateAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("Update source is unavailable."));
+        await StartMonitoringAsync(context.ViewModel);
+
+        await context.TickAsync();
+
+        context.ViewModel.ErrorMessage.Should().Be(
+            TestLocalizationTextProvider.Default.Get(UpdateLocalizationKeys.Errors.CheckFailed));
+        context.ViewModel.HasErrorMessage.Should().BeTrue();
+        context.ViewModel.IsNotificationOpen.Should().BeFalse();
+        context.UpdateServiceMock.Verify(service => service.CheckForUpdateAsync(
+            It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task Monitoring_AfterInstallFailureThenSuccessfulCheck_PreservesInstallError()
+    {
+        using ApplicationUpdateTestContext context = new();
+        context.UpdateServiceMock.Setup(service => service.DownloadUpdateAsync(
+                It.IsAny<ApplicationUpdate>(), It.IsAny<IProgress<int>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new IOException("Update download failed."));
+        await StartMonitoringAsync(context.ViewModel);
+        await context.ViewModel.UpdateCommand.ExecuteAsync(null);
+
+        await context.TickAsync();
+        context.Messenger.Send(new LocalizationChangedMessage());
+
+        context.ViewModel.ErrorMessage.Should().Be(
+            TestLocalizationTextProvider.Default.Get(UpdateLocalizationKeys.Errors.InstallFailed));
+        context.ViewModel.HasErrorMessage.Should().BeTrue();
+        context.ViewModel.State.Should().Be(ApplicationUpdateState.Available);
+        context.ViewModel.UpdateCommand.CanExecute(null).Should().BeTrue();
+    }
+
     private static Task StartMonitoringAsync(ApplicationUpdateViewModel viewModel)
     {
         return viewModel.StartMonitoringCommand.ExecuteAsync(null);
@@ -120,8 +184,20 @@ public sealed class ApplicationUpdateViewModelTests
         public IMessenger Messenger { get; }
         public ApplicationUpdateViewModel ViewModel { get; }
 
+        private readonly Mock<TimeProvider> _clock = new();
+        private Action? _tick;
+        private TaskCompletionSource? _nextDelayScheduled;
+
         public ApplicationUpdateTestContext()
         {
+            _clock.Setup(clock => clock.CreateTimer(It.IsAny<TimerCallback>(), It.IsAny<object?>(),
+                    It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()))
+                .Callback<TimerCallback, object?, TimeSpan, TimeSpan>((callback, state, _, _) =>
+                {
+                    _tick = () => callback(state);
+                    _nextDelayScheduled?.TrySetResult();
+                })
+                .Returns(() => new Mock<ITimer>().Object);
             UpdateServiceMock = new Mock<IApplicationUpdateService>();
             UpdateServiceMock
                 .SetupGet(service => service.CanCheckForUpdates)
@@ -140,7 +216,8 @@ public sealed class ApplicationUpdateViewModelTests
                 Messenger,
                 new TestViewModelErrorHandler(),
                 TestLocalizationTextProvider.Default,
-                TestApiConfiguration.CreateApplicationUpdateOptionsWrapper());
+                TestApiConfiguration.CreateApplicationUpdateOptionsWrapper(),
+                _clock.Object);
         }
 
         public void StartGeneration()
@@ -148,6 +225,14 @@ public sealed class ApplicationUpdateViewModelTests
             ActivityTracker.Start(
                 CorrelationId,
                 GenerationActivityPhase.GenerationRequest);
+        }
+
+        public async Task TickAsync()
+        {
+            Action tick = _tick ?? throw new InvalidOperationException("Update monitoring was not started.");
+            _nextDelayScheduled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            tick();
+            await _nextDelayScheduled.Task.WaitAsync(TimeSpan.FromSeconds(5));
         }
 
         public void Dispose()
