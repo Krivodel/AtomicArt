@@ -9,9 +9,7 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
-using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Gallery;
-using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
@@ -24,7 +22,7 @@ public sealed class ImageViewerServiceTests
     public async Task OpenAsync_WithNoImages_DoesNotCreateWindow()
     {
         Mock<IImageViewerWindowFactory> windowFactoryMock = new();
-        ImageViewerService service = ImageViewerServiceTests.CreateService(windowFactoryMock);
+        using ImageViewerService service = ImageViewerServiceTests.CreateService(windowFactoryMock);
         GalleryImageViewerRequest request = new(
             new GalleryStaticImageViewerItemsSource(
                 new List<GalleryImageViewerItem>()),
@@ -68,7 +66,7 @@ public sealed class ImageViewerServiceTests
                     request.Items.Single());
             })
             .ThrowsAsync(factoryFailure);
-        ImageViewerService service = ImageViewerServiceTests.CreateService(windowFactoryMock);
+        using ImageViewerService service = ImageViewerServiceTests.CreateService(windowFactoryMock);
         AsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachCommand = new(
             _ => Task.CompletedTask);
         AsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?> inputCommand = new(
@@ -104,28 +102,15 @@ public sealed class ImageViewerServiceTests
     private static ImageViewerService CreateService(
         Mock<IImageViewerWindowFactory> windowFactoryMock)
     {
-        Mock<IClipboardImageWriter> clipboardImageWriterMock = new();
-        Mock<ITrustedImageFileService> trustedImageFileServiceMock = new();
-        Mock<IGenerationImageFormatRegistry> formatRegistryMock = new();
-        Mock<IUiThreadDispatcher> uiThreadDispatcherMock = new();
-        Mock<IWindowStateService> windowStateServiceMock = new();
-        Mock<IAnimatedGalleryOperations> galleryOperationsMock = new();
-        Mock<IDlss5SourceOpener> dlss5SourceOpenerMock = new();
-        PicaViewerSessionDependencies sessionDependencies = new(
-            clipboardImageWriterMock.Object,
-            trustedImageFileServiceMock.Object,
-            formatRegistryMock.Object,
-            uiThreadDispatcherMock.Object,
-            windowStateServiceMock.Object,
-            galleryOperationsMock.Object,
-            new AtomicArtPicaActions(TestLocalizationTextProvider.Default),
-            dlss5SourceOpenerMock.Object,
-            NullLoggerFactory.Instance);
-        PicaViewerSessionFactory sessionFactory = new(sessionDependencies);
+        PicaViewerSessionTestDependencies dependencies = new();
+        PicaViewerSessionFactory sessionFactory = new(dependencies.CreateDependencies());
         return new ImageViewerService(
             windowFactoryMock.Object,
             sessionFactory,
             new DataRootAccessCoordinator(),
+            new ImageViewerWindowLimitService(new SettingsDefinitionCatalog(
+                new ISettingsDefinition[] { new ImageViewerWindowLimitSettingDefinition() },
+                Array.Empty<IUiScaleOptionDefinition>())),
             NullLogger<ImageViewerService>.Instance);
     }
 }

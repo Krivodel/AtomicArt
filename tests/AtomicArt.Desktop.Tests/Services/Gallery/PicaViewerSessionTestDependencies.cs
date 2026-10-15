@@ -23,17 +23,22 @@ internal sealed class PicaViewerSessionTestDependencies
     internal PicaViewerSession CreateSession(
         IGenerationImageFormatRegistry? formatRegistry = null)
     {
-        PicaViewerSessionDependencies dependencies = new(
+        return new PicaViewerSession(CreateDependencies(formatRegistry));
+    }
+
+    internal PicaViewerSessionDependencies CreateDependencies(
+        IGenerationImageFormatRegistry? formatRegistry = null,
+        IUiThreadDispatcher? uiThreadDispatcher = null)
+    {
+        return new PicaViewerSessionDependencies(
             ClipboardImageWriter.Object,
             TrustedImageFileService.Object,
             formatRegistry ?? FormatRegistry.Object,
-            UiThreadDispatcher.Object,
+            uiThreadDispatcher ?? UiThreadDispatcher.Object,
             WindowStateService.Object,
             GalleryOperations.Object,
             new AtomicArtPicaActions(TestLocalizationTextProvider.Default),
             Dlss5SourceOpener.Object,
             NullLoggerFactory.Instance);
-
-        return new PicaViewerSession(dependencies);
     }
 }

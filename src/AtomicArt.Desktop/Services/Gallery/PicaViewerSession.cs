@@ -35,6 +35,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
     private IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? _attachImageInputsCommand;
     private ImageViewerWindow? _window;
+    private TaskCompletionSource? _windowCloseCompletion;
     private bool _isDisposed;
 
     public PicaViewerSession(PicaViewerSessionDependencies dependencies)
@@ -138,6 +139,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         }
 
         _window = window;
+        _windowCloseCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _window.Closed += OnWindowClosed;
     }
 
@@ -386,11 +388,11 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
     {
         ct.ThrowIfCancellationRequested();
 
-        if (_window is not null)
+        if (_windowCloseCompletion is not null)
         {
-            _window.Closed -= OnWindowClosed;
-            _window.Close();
-            _window = null;
+            await _dependencies.UiThreadDispatcher.InvokeAsync(() => _window?.Close(), ct).ConfigureAwait(false);
+            await _windowCloseCompletion.Task.WaitAsync(ct).ConfigureAwait(false);
+            return;
         }
 
         await _dependencies.ClipboardImageWriter.FlushAsync(ct).ConfigureAwait(false);
@@ -690,10 +692,31 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
     private async void OnWindowClosed(object? sender, EventArgs eventArgs)
     {
-        _ = sender;
-        _ = eventArgs;
+        ImageViewerWindow? window = _window;
 
-        await _dependencies.ClipboardImageWriter.FlushAsync(CancellationToken.None);
-        await DisposeAsync();
+        if (window is not null)
+        {
+            window.Closed -= OnWindowClosed;
+            _window = null;
+        }
+
+        try
+        {
+            if (window is not null)
+            {
+                await window.CloseCleanupCompletion;
+            }
+
+            await _dependencies.ClipboardImageWriter.FlushAsync(CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            _dependencies.Logger.LogWarning(exception, "Failed to complete embedded Pica viewer cleanup.");
+        }
+        finally
+        {
+            await DisposeAsync();
+            _windowCloseCompletion?.TrySetResult();
+        }
     }
 }

@@ -146,6 +146,7 @@ public static class DependencyInjection
         services.AddViewTemplate<ApiBaseAddressSettingViewModel, ApiBaseAddressSettingView>();
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
         services.AddViewTemplate<NumericSettingViewModel, NumericSettingView>();
+        services.AddViewTemplate<ImageViewerWindowLimitSettingViewModel, ImageViewerWindowLimitSettingView>();
         services.AddViewTemplate<BooleanSettingViewModel, BooleanSettingView>();
         services.AddViewTemplate<
             GenerationModelVisibilitySettingViewModel,
@@ -291,6 +292,7 @@ public static class DependencyInjection
         services.AddSingleton<AtomicArtPicaActions>();
         services.AddSingleton<PicaViewerSessionDependencies>();
         services.AddSingleton<PicaViewerSessionFactory>();
+        services.AddSingleton<ImageViewerWindowLimitService>();
         services.AddSharedSingletonAliases<ImageViewerService>(
             typeof(IImageViewerService),
             typeof(IDataRootViewerPreparationService));

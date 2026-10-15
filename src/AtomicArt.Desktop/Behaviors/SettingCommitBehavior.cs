@@ -16,7 +16,7 @@ public static class SettingCommitBehavior
 
     static SettingCommitBehavior()
     {
-        CommandProperty.Changed.AddClassHandler<TextBox>(OnCommandChanged);
+        CommandProperty.Changed.AddClassHandler<Control>(OnCommandChanged);
     }
 
     public static ICommand? GetCommand(Control control)
@@ -29,26 +29,26 @@ public static class SettingCommitBehavior
         AttachedPropertyValueAccessor.Set(control, CommandProperty, value);
     }
 
-    private static void OnCommandChanged(TextBox textBox, AvaloniaPropertyChangedEventArgs args)
+    private static void OnCommandChanged(Control control, AvaloniaPropertyChangedEventArgs args)
     {
-        textBox.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
-        textBox.RemoveHandler(InputElement.LostFocusEvent, OnLostFocus);
+        control.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
+        control.RemoveHandler(InputElement.LostFocusEvent, OnLostFocus);
 
         if (args.NewValue is not null)
         {
-            textBox.AddHandler(
+            control.AddHandler(
                 InputElement.KeyDownEvent,
                 OnKeyDown,
                 RoutingStrategies.Tunnel);
-            textBox.AddHandler(InputElement.LostFocusEvent, OnLostFocus);
+            control.AddHandler(InputElement.LostFocusEvent, OnLostFocus);
         }
     }
 
     private static void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is TextBox textBox
+        if (sender is Control control
             && e.Key == Key.Enter
-            && TryExecute(textBox))
+            && TryExecute(control))
         {
             e.Handled = true;
         }
@@ -56,15 +56,15 @@ public static class SettingCommitBehavior
 
     private static void OnLostFocus(object? sender, RoutedEventArgs e)
     {
-        if (sender is TextBox textBox)
+        if (sender is Control control)
         {
-            TryExecute(textBox);
+            TryExecute(control);
         }
     }
 
-    private static bool TryExecute(TextBox textBox)
+    private static bool TryExecute(Control control)
     {
-        ICommand? command = GetCommand(textBox);
+        ICommand? command = GetCommand(control);
 
         if (command?.CanExecute(null) != true)
         {

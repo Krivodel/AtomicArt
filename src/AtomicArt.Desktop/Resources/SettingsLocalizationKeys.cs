@@ -55,6 +55,11 @@ public static class SettingsLocalizationKeys
             "Settings.Appearance.ConfirmDeletionLabel";
     }
 
+    public static class ImageViewer
+    {
+        public const string WindowLimitLabel = "Settings.ImageViewer.WindowLimitLabel";
+    }
+
     public static class GpuCache
     {
         public const string Label = "Settings.GpuCache.Label";

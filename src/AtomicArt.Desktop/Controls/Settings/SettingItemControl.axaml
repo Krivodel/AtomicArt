@@ -1,12 +1,21 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:Avalonia.Data.Converters"
              xmlns:settings="using:AtomicArt.Desktop.Controls.Settings"
              x:Class="AtomicArt.Desktop.Controls.Settings.SettingItemControl"
              x:Name="Root"
              x:DataType="settings:SettingItemControl">
     <Grid RowDefinitions="Auto,Auto,Auto">
-        <TextBlock Classes="settings-label"
-                   Text="{Binding #Root.DisplayName}" />
+        <Grid ColumnDefinitions="Auto,Auto">
+            <TextBlock VerticalAlignment="Center"
+                       Classes="settings-label"
+                       Text="{Binding #Root.DisplayName}" />
+            <ContentControl Grid.Column="1"
+                            Margin="{StaticResource SettingsHeaderAccessoryMargin}"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding #Root.HeaderAccessory, Converter={x:Static converters:ObjectConverters.IsNotNull}}"
+                            Content="{Binding #Root.HeaderAccessory}" />
+        </Grid>
         <ContentControl Grid.Row="1"
                         Margin="{StaticResource SettingsEditorMargin}"
                         HorizontalContentAlignment="Stretch"

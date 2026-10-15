@@ -12,6 +12,7 @@ using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
@@ -285,6 +286,7 @@ public sealed class DependencyInjectionTests
             typeof(ApiBaseAddressSettingViewModel),
             typeof(SecretSettingViewModel),
             typeof(NumericSettingViewModel),
+            typeof(ImageViewerWindowLimitSettingViewModel),
             typeof(BooleanSettingViewModel),
             typeof(GenerationModelVisibilitySettingViewModel),
             typeof(LanguageSettingViewModel),
@@ -343,6 +345,29 @@ public sealed class DependencyInjectionTests
         managementKey.Should().BeAssignableTo<ISecretSettingDefinition>();
         managementKey.Should().NotBeAssignableTo<IProviderCredentialSettingDefinition>();
         serviceProvider.GetRequiredService<ISecretStore>().Should().BeOfType<NotifyingSecretStore>();
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithViewerWindowLimit_RegistersRuntimeAndSettingsEditor()
+    {
+        using ServiceProvider provider = DependencyInjectionTests.CreateServiceProvider();
+        ImageViewerWindowLimitSettingDefinition definition = provider.GetRequiredService<ISettingsDefinitionCatalog>()
+            .GetRequired<ImageViewerWindowLimitSettingDefinition>();
+        ImageViewerWindowLimitService limit = provider.GetRequiredService<ImageViewerWindowLimitService>();
+
+        IReadOnlyList<ISettingItemViewModel> settings = provider.GetRequiredService<ISettingsItemViewModelProvider>()
+            .CreateSettings();
+        ISettingItemViewModel setting = settings.Single(item => item.Key == definition.Key);
+
+        ImageViewerWindowLimitSettingViewModel editor = setting.Should().BeOfType<ImageViewerWindowLimitSettingViewModel>().Subject;
+        setting.Section.Should().Be(SettingsSections.Appearance);
+        editor.Count.Should().Be(3);
+        editor.IsLimitEnabled.Should().BeTrue();
+        editor.IsInputEnabled.Should().BeTrue();
+        limit.Limit.Should().Be(3);
+        settings.Where(item => item.Section == SettingsSections.Appearance).OrderBy(item => item.Order)
+            .Select(item => item.Key).SkipWhile(key => key != PromptTextSizeSettingDefinition.KeyValue)
+            .Take(2).Should().Equal(PromptTextSizeSettingDefinition.KeyValue, definition.Key);
     }
 
     [Fact]

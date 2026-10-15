@@ -170,6 +170,9 @@
         "PromptTextSizeLabel": "Размер текста промпта",
         "ConfirmDeletionLabel": "Подтверждать удаление"
       },
+      "ImageViewer": {
+      "WindowLimitLabel": "Лимит открытых картинок"
+      },
       "GpuCache": {
         "Label": "GPU-кэш",
         "RestartNotice": "Кэш применится после перезапуска.",

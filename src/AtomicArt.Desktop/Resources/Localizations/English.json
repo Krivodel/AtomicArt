@@ -170,6 +170,9 @@
         "PromptTextSizeLabel": "Prompt text size",
         "ConfirmDeletionLabel": "Confirm deletion"
       },
+      "ImageViewer": {
+      "WindowLimitLabel": "Open image limit"
+      },
       "GpuCache": {
         "Label": "GPU cache",
         "RestartNotice": "The cache setting will apply after restart.",

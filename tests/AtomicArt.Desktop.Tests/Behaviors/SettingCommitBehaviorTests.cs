@@ -14,9 +14,9 @@ namespace AtomicArt.Desktop.Tests.Behaviors;
 public sealed class SettingCommitBehaviorTests : AnimatedGalleryControlTestBase
 {
     [Fact]
-    public void Command_WhenEnterIsPressed_Executes()
+    public async Task Command_WhenEnterIsPressed_Executes()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             int executionCount = 0;
             TextBox textBox = new();
@@ -45,9 +45,9 @@ public sealed class SettingCommitBehaviorTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void Command_WhenTextBoxLosesFocus_Executes()
+    public async Task Command_WhenTextBoxLosesFocus_Executes()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             int executionCount = 0;
             TextBox textBox = new();

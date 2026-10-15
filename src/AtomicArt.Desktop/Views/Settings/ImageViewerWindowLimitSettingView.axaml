@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
+             xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
+             x:Class="AtomicArt.Desktop.Views.Settings.ImageViewerWindowLimitSettingView"
+             x:DataType="settings:ImageViewerWindowLimitSettingViewModel">
+    <controls:SettingItemControl>
+        <controls:SettingItemControl.HeaderAccessory>
+            <CheckBox VerticalAlignment="Center"
+                      IsEnabled="{Binding !IsLoading}"
+                      AutomationProperties.Name="{Binding DisplayName}"
+                      IsChecked="{Binding IsLimitEnabled, Mode=TwoWay}" />
+        </controls:SettingItemControl.HeaderAccessory>
+        <controls:SettingItemControl.Editor>
+            <NumericUpDown Margin="{StaticResource InputOuterInset}"
+                           Padding="{StaticResource ZeroThickness}"
+                           HorizontalAlignment="Stretch"
+                           IsEnabled="{Binding IsInputEnabled}"
+                           AllowSpin="False"
+                           FormatString="0"
+                           Maximum="{Binding Maximum}"
+                           Minimum="{Binding Minimum}"
+                           ParsingNumberStyle="Integer"
+                           ShowButtonSpinner="False"
+                           behaviors:SettingCommitBehavior.Command="{Binding ApplyCommand}"
+                           behaviors:UnsignedIntegerInputBehavior.IsEnabled="True"
+                           Value="{Binding Count, Mode=TwoWay}" />
+        </controls:SettingItemControl.Editor>
+    </controls:SettingItemControl>
+</UserControl>
