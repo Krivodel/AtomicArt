@@ -104,7 +104,6 @@
     <Thickness x:Key="SettingsGroupPadding">16</Thickness>
     <Thickness x:Key="SettingsEditorMargin">0,8,0,0</Thickness>
     <Thickness x:Key="InputOuterInset">5</Thickness>
-    <Thickness x:Key="SettingsHeaderAccessoryMargin">8,0,0,0</Thickness>
     <Thickness x:Key="SettingsActionButtonMargin">12,0,0,0</Thickness>
     <Thickness x:Key="SettingsDescriptionMargin">0,8,0,0</Thickness>
     <Thickness x:Key="SettingsErrorMargin">0,8,0,0</Thickness>

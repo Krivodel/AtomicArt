@@ -18,10 +18,10 @@ public partial class SettingItemControl : UserControl
         get => GetValue(EditorProperty);
         set => SetValue(EditorProperty, value);
     }
-    public Control? HeaderAccessory
+    public Control? Header
     {
-        get => GetValue(HeaderAccessoryProperty);
-        set => SetValue(HeaderAccessoryProperty, value);
+        get => GetValue(HeaderProperty);
+        set => SetValue(HeaderProperty, value);
     }
     public string? ErrorMessage
     {
@@ -38,8 +38,8 @@ public partial class SettingItemControl : UserControl
         AvaloniaProperty.Register<SettingItemControl, string?>(nameof(DisplayName));
     public static readonly StyledProperty<Control?> EditorProperty =
         AvaloniaProperty.Register<SettingItemControl, Control?>(nameof(Editor));
-    public static readonly StyledProperty<Control?> HeaderAccessoryProperty =
-        AvaloniaProperty.Register<SettingItemControl, Control?>(nameof(HeaderAccessory));
+    public static readonly StyledProperty<Control?> HeaderProperty =
+        AvaloniaProperty.Register<SettingItemControl, Control?>(nameof(Header));
     public static readonly StyledProperty<string?> ErrorMessageProperty =
         AvaloniaProperty.Register<SettingItemControl, string?>(nameof(ErrorMessage));
     public static readonly StyledProperty<bool> HasErrorMessageProperty =

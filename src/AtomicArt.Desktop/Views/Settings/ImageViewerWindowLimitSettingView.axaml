@@ -6,12 +6,13 @@
              x:Class="AtomicArt.Desktop.Views.Settings.ImageViewerWindowLimitSettingView"
              x:DataType="settings:ImageViewerWindowLimitSettingViewModel">
     <controls:SettingItemControl>
-        <controls:SettingItemControl.HeaderAccessory>
+        <controls:SettingItemControl.Header>
             <CheckBox VerticalAlignment="Center"
+                      Classes="settings-label"
                       IsEnabled="{Binding !IsLoading}"
-                      AutomationProperties.Name="{Binding DisplayName}"
+                      Content="{Binding DisplayName}"
                       IsChecked="{Binding IsLimitEnabled, Mode=TwoWay}" />
-        </controls:SettingItemControl.HeaderAccessory>
+        </controls:SettingItemControl.Header>
         <controls:SettingItemControl.Editor>
             <NumericUpDown Margin="{StaticResource InputOuterInset}"
                            Padding="{StaticResource ZeroThickness}"

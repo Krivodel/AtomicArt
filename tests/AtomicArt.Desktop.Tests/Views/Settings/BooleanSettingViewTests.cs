@@ -1,36 +1,57 @@
 using Avalonia.Controls;
+using Avalonia.VisualTree;
 
 using FluentAssertions;
+using Moq;
 using Xunit;
 
+using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Tests.Common;
+using AtomicArt.Desktop.Tests.ViewModels;
+using AtomicArt.Desktop.ViewModels.Settings;
 using AtomicArt.Desktop.Views.Settings;
 
 namespace AtomicArt.Desktop.Tests.Views.Settings;
 
 public sealed class BooleanSettingViewTests : DesktopControlTestBase
 {
-    [Fact]
-    public void Layout_WhenCreated_PlacesLabelAndCheckBoxInSameRow()
+    [Theory]
+    [InlineData("label")]
+    [InlineData("indicator")]
+    [InlineData("space")]
+    public async Task Click_OnAnyPartOfSetting_AppliesAndSavesOnce(string target)
     {
-        Dispatch(() =>
+        await DispatchAsync(async () =>
         {
-            BooleanSettingView view = new();
-            Grid grid = view.Content
-                .Should()
-                .BeOfType<Grid>()
-                .Subject;
-            TextBlock label = grid.Children
-                .OfType<TextBlock>()
-                .Single(textBlock => textBlock.Classes.Contains("settings-label"));
-            CheckBox checkBox = grid.Children
-                .OfType<CheckBox>()
-                .Single();
+            ConfirmDeletionSettingDefinition definition = new();
+            Mock<IBooleanSettingValueSource> source = new();
+            source.SetupGet(value => value.CurrentValue).Returns(true);
+            Mock<ISettingsStateService> settings = new();
+            settings.Setup(service => service.SaveValueAsync(definition, "False", It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+            using BooleanSettingViewModel editor = new(
+                definition, source.Object, settings.Object, new BooleanSettingValueConverter(),
+                new TestViewModelErrorHandler(), TestLocalizationTextProvider.Default);
+            BooleanSettingView view = new() { DataContext = editor };
+            Window window = Show(view);
 
-            Grid.GetRow(label).Should().Be(0);
-            Grid.GetRow(checkBox).Should().Be(0);
-            Grid.GetColumn(label).Should().Be(0);
-            Grid.GetColumn(checkBox).Should().Be(1);
+            try
+            {
+                CheckBox checkBox = view.GetVisualDescendants().OfType<CheckBox>().Single();
+
+                CheckBoxTestInput.Click(window, checkBox, target);
+                await (editor.ApplyCommand.ExecutionTask ?? Task.CompletedTask);
+
+                checkBox.Content.Should().Be(editor.DisplayName);
+                editor.IsChecked.Should().BeFalse();
+                settings.Verify(service => service.SaveValueAsync(
+                    definition, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            }
+            finally
+            {
+                window.Close();
+            }
         });
     }
 }

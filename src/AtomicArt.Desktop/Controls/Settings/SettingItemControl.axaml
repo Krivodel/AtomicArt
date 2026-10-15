@@ -6,16 +6,13 @@
              x:Name="Root"
              x:DataType="settings:SettingItemControl">
     <Grid RowDefinitions="Auto,Auto,Auto">
-        <Grid ColumnDefinitions="Auto,Auto">
-            <TextBlock VerticalAlignment="Center"
-                       Classes="settings-label"
-                       Text="{Binding #Root.DisplayName}" />
-            <ContentControl Grid.Column="1"
-                            Margin="{StaticResource SettingsHeaderAccessoryMargin}"
-                            VerticalAlignment="Center"
-                            IsVisible="{Binding #Root.HeaderAccessory, Converter={x:Static converters:ObjectConverters.IsNotNull}}"
-                            Content="{Binding #Root.HeaderAccessory}" />
-        </Grid>
+        <TextBlock VerticalAlignment="Center"
+                   Classes="settings-label"
+                   IsVisible="{Binding #Root.Header, Converter={x:Static converters:ObjectConverters.IsNull}}"
+                   Text="{Binding #Root.DisplayName}" />
+        <ContentControl HorizontalContentAlignment="Stretch"
+                        IsVisible="{Binding #Root.Header, Converter={x:Static converters:ObjectConverters.IsNotNull}}"
+                        Content="{Binding #Root.Header}" />
         <ContentControl Grid.Row="1"
                         Margin="{StaticResource SettingsEditorMargin}"
                         HorizontalContentAlignment="Stretch"

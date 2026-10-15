@@ -1,0 +1,17 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <Style Selector="CheckBox">
+        <Setter Property="HorizontalAlignment"
+                Value="Stretch" />
+    </Style>
+
+    <Style Selector="CheckBox /template/ Grid">
+        <Setter Property="Background"
+                Value="Transparent" />
+    </Style>
+
+    <Style Selector="CheckBox.settings-label">
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+    </Style>
+
+</Styles>

@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -46,8 +47,8 @@ public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestB
             {
                 CheckBox checkbox = view.GetVisualDescendants().OfType<CheckBox>().Single();
                 NumericUpDown input = view.GetVisualDescendants().OfType<NumericUpDown>().Single();
-                TextBlock title = view.GetVisualDescendants().OfType<TextBlock>()
-                    .Single(block => block.Classes.Contains("settings-label"));
+                ContentPresenter title = checkbox.GetVisualDescendants().OfType<ContentPresenter>()
+                    .Single(presenter => presenter.Name == "PART_ContentPresenter");
                 checkbox.IsChecked.Should().BeTrue();
                 input.IsEffectivelyEnabled.Should().BeTrue();
                 input.Value.Should().Be(3);
@@ -58,9 +59,11 @@ public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestB
                     .Single(card => card.Name == "border");
                 numericBackground.Bounds.Width.Should().BeApproximately(comparisonBackground.Bounds.Width, 1d);
                 numericBackground.Bounds.Height.Should().BeApproximately(comparisonBackground.Bounds.Height, 1d);
-                Point? checkboxPosition = checkbox.TranslatePoint(default, title);
+                GlassCard indicator = checkbox.GetVisualDescendants().OfType<GlassCard>()
+                    .Single(card => card.Name == "border");
+                Point? checkboxPosition = indicator.TranslatePoint(default, title);
                 checkboxPosition.Should().NotBeNull();
-                checkboxPosition?.X.Should().BeGreaterThan(title.Bounds.Width);
+                checkboxPosition?.X.Should().BeLessThan(-indicator.Bounds.Width);
 
                 TextBox textBox = input.GetVisualDescendants().OfType<TextBox>().Single();
                 textBox.Focus().Should().BeTrue();
@@ -83,7 +86,7 @@ public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestB
                 await (editor.ApplyCommand.ExecutionTask ?? Task.CompletedTask);
                 context.Limit.Limit.Should().Be(12);
 
-                checkbox.SetCurrentValue(CheckBox.IsCheckedProperty, false);
+                CheckBoxTestInput.Click(window, checkbox, "label");
                 await (editor.ApplyCommand.ExecutionTask ?? Task.CompletedTask);
                 window.CaptureRenderedFrame();
                 input.IsEffectivelyEnabled.Should().BeFalse();
@@ -91,7 +94,7 @@ public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestB
                 input.Value.Should().Be(12);
                 context.Limit.Limit.Should().Be(0);
 
-                checkbox.SetCurrentValue(CheckBox.IsCheckedProperty, true);
+                CheckBoxTestInput.Click(window, checkbox, "space");
                 await (editor.ApplyCommand.ExecutionTask ?? Task.CompletedTask);
                 input.IsEffectivelyEnabled.Should().BeTrue();
                 input.Value.Should().Be(12);
