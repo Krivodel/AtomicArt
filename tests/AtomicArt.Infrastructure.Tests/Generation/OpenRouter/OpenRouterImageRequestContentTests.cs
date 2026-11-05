@@ -37,6 +37,7 @@ public sealed class OpenRouterImageRequestContentTests
         root.GetProperty("model").GetString().Should().Be(GenerationProviderModelIds.NanoBanana21);
         root.GetProperty("resolution").GetString().Should().Be(resolution);
         root.GetProperty("n").GetInt32().Should().Be(1);
+        root.TryGetProperty("output_format", out _).Should().BeFalse();
         root.TryGetProperty("temperature", out _).Should().BeFalse();
         root.TryGetProperty("reasoning_effort", out _).Should().BeFalse();
         root.TryGetProperty("service_tier", out _).Should().BeFalse();
@@ -73,6 +74,7 @@ public sealed class OpenRouterImageRequestContentTests
         JsonElement root = document.RootElement;
 
         root.GetProperty("size").GetString().Should().Be("2560x1440");
+        root.TryGetProperty("output_format", out _).Should().BeFalse();
         root.TryGetProperty("resolution", out _).Should().BeFalse();
         root.TryGetProperty("aspect_ratio", out _).Should().BeFalse();
     }

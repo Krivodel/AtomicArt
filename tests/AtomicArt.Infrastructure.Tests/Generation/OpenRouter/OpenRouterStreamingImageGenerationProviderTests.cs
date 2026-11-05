@@ -75,6 +75,7 @@ public sealed class OpenRouterStreamingImageGenerationProviderTests
         using JsonDocument request = JsonDocument.Parse(testContext.RequestBody);
         request.RootElement.GetProperty("resolution").GetString().Should().Be("4K");
         request.RootElement.GetProperty("aspect_ratio").GetString().Should().Be("16:9");
+        request.RootElement.TryGetProperty("output_format", out _).Should().BeFalse();
         request.RootElement.TryGetProperty("image_config", out _).Should().BeFalse();
         Encoding.UTF8.GetString(destination.ToArray()).Should().Be(ImageResponseJson);
     }

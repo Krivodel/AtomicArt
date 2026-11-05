@@ -82,7 +82,7 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
         builder.Append(JsonSerializer.Serialize(context.ProviderModelId));
         builder.Append(",\"prompt\":");
         builder.Append(JsonSerializer.Serialize(context.Request.Prompt));
-        builder.Append(",\"n\":1,\"output_format\":\"png\"");
+        builder.Append(",\"n\":1");
 
         bool isGptImageModel = GenerationProviderModelIds.IsGptImageModel(
             context.ProviderModelId);
