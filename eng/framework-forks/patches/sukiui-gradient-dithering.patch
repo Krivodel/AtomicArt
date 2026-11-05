@@ -1,16 +1,17 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From 09062a5ef8d8a92828d6fff739f3fb47c5f832a8 Mon Sep 17 00:00:00 2001
 From: AtomicArt <noreply@atomicart.local>
-Date: Thu, 16 Jul 2026 20:57:17 +0300
-Subject: [PATCH] Enable dithering for Suki backgrounds
+Date: Fri, 6 Nov 2026 01:37:49 +0300
+Subject: [PATCH] Enable Suki background dithering and preserve assembly
+ identity
 
 ---
  Directory.Packages.props                         | 4 ++--
- SukiUI/SukiUI.csproj                             | 5 +++--
+ SukiUI/SukiUI.csproj                             | 8 ++++++--
  SukiUI/Utilities/Effects/EffectBackgroundDraw.cs | 6 +++---
- 3 files changed, 8 insertions(+), 7 deletions(-)
+ 3 files changed, 11 insertions(+), 7 deletions(-)
 
 diff --git a/Directory.Packages.props b/Directory.Packages.props
-index 857967d8..63b92d72 100644
+index ac2a97b..03bf16e 100644
 --- a/Directory.Packages.props
 +++ b/Directory.Packages.props
 @@ -7,7 +7,7 @@
@@ -30,23 +31,26 @@ index 857967d8..63b92d72 100644
 \ No newline at end of file
 +</Project>
 diff --git a/SukiUI/SukiUI.csproj b/SukiUI/SukiUI.csproj
-index 9b9d2e99..a5fe9c70 100644
+index 9b9d2e9..85ac599 100644
 --- a/SukiUI/SukiUI.csproj
 +++ b/SukiUI/SukiUI.csproj
-@@ -3,8 +3,9 @@
+@@ -3,8 +3,12 @@
    <PropertyGroup>
      <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
      <IsTrimmable>true</IsTrimmable>
 -    <TargetFramework>net8.0</TargetFramework>
 -    <GenerateDocumentationFile>True</GenerateDocumentationFile>
 +    <TargetFramework>net8.0</TargetFramework>
++    <VersionPrefix>7.0.2</VersionPrefix>
++    <AssemblyVersion>7.0.2.0</AssemblyVersion>
++    <FileVersion>7.0.2.0</FileVersion>
 +    <PackageVersion Condition="'$(AtomicArtPackageVersion)' != ''">$(AtomicArtPackageVersion)</PackageVersion>
 +    <GenerateDocumentationFile>True</GenerateDocumentationFile>
      <RootNamespace>SukiUI</RootNamespace>
      <UserSecretsId>712f85e4-12d3-41b0-a417-5714a113666f</UserSecretsId>
      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 diff --git a/SukiUI/Utilities/Effects/EffectBackgroundDraw.cs b/SukiUI/Utilities/Effects/EffectBackgroundDraw.cs
-index a9cc73e5..2e1a9339 100644
+index 5c35b53..22e6efd 100644
 --- a/SukiUI/Utilities/Effects/EffectBackgroundDraw.cs
 +++ b/SukiUI/Utilities/Effects/EffectBackgroundDraw.cs
 @@ -46,14 +46,14 @@ namespace SukiUI.Utilities.Effects

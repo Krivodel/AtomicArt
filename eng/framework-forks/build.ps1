@@ -11,6 +11,8 @@ $avaloniaRoot = Join-Path $forkRootPath 'Avalonia'
 $sukiRoot = Join-Path $forkRootPath 'SukiUI'
 $packageOutput = Join-Path $repositoryRoot '.nuget\local-packages'
 $nugetConfig = Join-Path $repositoryRoot 'NuGet.Config'
+[xml]$packageVersions = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'Directory.Packages.props')
+$sukiPackageVersion = [string]$packageVersions.Project.PropertyGroup.SukiUiVersion
 
 if (-not (Test-Path -LiteralPath (Join-Path $avaloniaRoot '.git'))) {
     throw "Avalonia fork was not found: $avaloniaRoot"
@@ -43,7 +45,7 @@ try {
 
     dotnet build (Join-Path $sukiRoot 'SukiUI\SukiUI.csproj') `
         -c Release `
-        -p:AtomicArtPackageVersion=7.0.2.1-atomicart.3 `
+        -p:AtomicArtPackageVersion=$sukiPackageVersion `
         -p:PackageOutputPath=$packageOutput `
         --configfile $nugetConfig
 

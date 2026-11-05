@@ -1,8 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <SukiUiVersion>7.0.2-nightly20260625</SukiUiVersion>
-    <SukiUiVersion Condition="'$(MSBuildProjectName)' == 'AtomicArt.Desktop'">7.0.2.1-atomicart.3</SukiUiVersion>
+    <SukiUiVersion>7.0.2.1-atomicart.4</SukiUiVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Avalonia" Version="12.0.5" />
