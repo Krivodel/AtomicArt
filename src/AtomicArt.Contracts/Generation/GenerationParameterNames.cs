@@ -7,4 +7,5 @@ public static class GenerationParameterNames
     public const string Resolution = "resolution";
     public const string ThinkingLevel = "thinkingLevel";
     public const string Quality = "quality";
+    public const string Complexity = "complexity";
 }

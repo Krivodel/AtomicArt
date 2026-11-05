@@ -166,6 +166,7 @@ public sealed class GenerationPanelStateService : IGenerationPanelStateService
                 selectedModel.Temperature)
                 .Value,
             Quality = state.Quality,
+            Complexity = state.Complexity,
             ThinkingLevel = GenerationPanelOptionCompatibility.ResolveRememberedThinkingLevel(
                 state.ThinkingLevel,
                 selectedModel,

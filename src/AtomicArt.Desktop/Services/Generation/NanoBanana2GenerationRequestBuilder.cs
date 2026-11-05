@@ -14,7 +14,8 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
         IReadOnlyList<AttachedImageDto> attachedImages,
         string? thinkingLevel = null,
         string? quality = null,
-        bool includeTemperature = true)
+        bool includeTemperature = true,
+        string? complexity = null)
     {
         ValidateRequestParameters(
             selectedModel,
@@ -37,7 +38,8 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
             attachedImages,
             validatedThinkingLevel,
             quality,
-            includeTemperature);
+            includeTemperature,
+            complexity);
     }
 
     internal ImageGenerationRequestDto CreateValidatedRequest(NanoBanana2GenerationParameters parameters)
@@ -54,7 +56,8 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
             parameters.AttachedImages,
             parameters.ThinkingLevel,
             parameters.Quality,
-            parameters.IncludeTemperature);
+            parameters.IncludeTemperature,
+            parameters.Complexity);
     }
 
     public GenerationStartSnapshot CreateStartSnapshot(
@@ -84,7 +87,8 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
         IReadOnlyList<AttachedImageDto> attachedImages,
         string? thinkingLevel,
         string? quality,
-        bool includeTemperature)
+        bool includeTemperature,
+        string? complexity)
     {
         ArgumentNullException.ThrowIfNull(selectedModel);
         ArgumentNullException.ThrowIfNull(prompt);
@@ -102,7 +106,8 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
             attachedImages,
             thinkingLevel,
             quality,
-            includeTemperature);
+            includeTemperature,
+            complexity);
     }
 
     private static void ValidateRequestParameters(

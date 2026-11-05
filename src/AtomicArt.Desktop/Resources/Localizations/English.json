@@ -51,6 +51,12 @@
         "Xhigh": "Extra high",
         "Max": "Maximum"
       },
+      "Complexity": {
+        "Label": "Complexity",
+        "Low": "Low",
+        "Medium": "Medium",
+        "High": "High"
+      },
       "Errors": {
         "ApiUnavailable": "The server is unavailable.",
         "Failed": "Could not generate the image.",

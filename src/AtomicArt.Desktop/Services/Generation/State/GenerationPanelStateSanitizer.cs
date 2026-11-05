@@ -14,6 +14,7 @@ internal static class GenerationPanelStateSanitizer
             Resolution = state.Resolution ?? string.Empty,
             Temperature = state.Temperature,
             Quality = state.Quality,
+            Complexity = state.Complexity,
             ThinkingLevel = state.ThinkingLevel,
             GenerationCount = state.GenerationCount,
             Prompt = state.Prompt ?? string.Empty,

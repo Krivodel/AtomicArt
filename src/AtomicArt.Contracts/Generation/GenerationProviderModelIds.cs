@@ -5,6 +5,8 @@ public static class GenerationProviderModelIds
     public const string GptImage2 = "openai/gpt-image-2";
     public const string GptImage25Sunburst = "openai/gpt-image-2.5-sunburst";
     public const string GptImage25Flare = "openai/gpt-image-2.5-flare";
+    public const string GptImage26Sunburst = "openai/gpt-image-2.6-sunburst";
+    public const string GptImage26Flare = "openai/gpt-image-2.6-flare";
     public const string NanoBanana21 = "google/gemini-nano-banana-2.1";
 
     public static bool IsGptImageModel(string? providerModelId)
@@ -17,6 +19,14 @@ public static class GenerationProviderModelIds
             || string.Equals(
                 providerModelId,
                 GptImage25Flare,
+                StringComparison.Ordinal)
+            || string.Equals(
+                providerModelId,
+                GptImage26Sunburst,
+                StringComparison.Ordinal)
+            || string.Equals(
+                providerModelId,
+                GptImage26Flare,
                 StringComparison.Ordinal);
     }
 }

@@ -60,6 +60,8 @@ public sealed class OpenRouterImageRequestContentTests
     [InlineData("openrouter-gpt-image-2", "openai/gpt-image-2")]
     [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst")]
     [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare")]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", GenerationProviderModelIds.GptImage26Sunburst)]
+    [InlineData("openrouter-gpt-image-2-6-flare", GenerationProviderModelIds.GptImage26Flare)]
     public async Task ReadAsStringAsync_WithGptImageModel_UsesSizeWithSelectedPixelBudget(
         string modelId,
         string providerModelId)
@@ -90,6 +92,10 @@ public sealed class OpenRouterImageRequestContentTests
     [InlineData("openrouter-gpt-image-2-5-sunburst", "openai/gpt-image-2.5-sunburst", "max")]
     [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare", "xhigh")]
     [InlineData("openrouter-gpt-image-2-5-flare", "openai/gpt-image-2.5-flare", "max")]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", GenerationProviderModelIds.GptImage26Sunburst, "xhigh")]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", GenerationProviderModelIds.GptImage26Sunburst, "max")]
+    [InlineData("openrouter-gpt-image-2-6-flare", GenerationProviderModelIds.GptImage26Flare, "xhigh")]
+    [InlineData("openrouter-gpt-image-2-6-flare", GenerationProviderModelIds.GptImage26Flare, "max")]
     public async Task ReadAsStringAsync_WithGptImageModelQuality_SendsQuality(
         string modelId,
         string providerModelId,
@@ -107,12 +113,17 @@ public sealed class OpenRouterImageRequestContentTests
         document.RootElement.GetProperty("quality").GetString().Should().Be(quality);
     }
 
-    [Fact]
-    public async Task ReadAsStringAsync_WithGptImageModelAndAutomaticAspectRatio_Uses16By9FallbackWithoutAspectRatio()
+    [Theory]
+    [InlineData("openrouter-gpt-image-2", GenerationProviderModelIds.GptImage2)]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", GenerationProviderModelIds.GptImage26Sunburst)]
+    [InlineData("openrouter-gpt-image-2-6-flare", GenerationProviderModelIds.GptImage26Flare)]
+    public async Task ReadAsStringAsync_WithGptImageModelAndAutomaticAspectRatio_Uses16By9FallbackWithoutAspectRatio(
+        string modelId,
+        string providerModelId)
     {
         using OpenRouterImageRequestContent content = new(CreateContext(
-            "openrouter-gpt-image-2",
-            "openai/gpt-image-2",
+            modelId,
+            providerModelId,
             "4K",
             "auto"));
 
@@ -122,6 +133,40 @@ public sealed class OpenRouterImageRequestContentTests
         root.GetProperty("size").GetString().Should().Be("3840x2160");
         root.TryGetProperty("aspect_ratio", out _).Should().BeFalse();
         root.TryGetProperty("resolution", out _).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "low", null)]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "medium", null)]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "high", null)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "low", null)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "medium", null)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "high", null)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "high", "openai")]
+    public async Task ReadAsByteArrayAsync_WithComplexity_WritesProviderOptionAndExactLength(
+        string modelId,
+        string complexity,
+        string? flexProviderTag)
+    {
+        StreamingGenerationProviderContext context = OpenRouterGenerationContextTestFactory.Create(
+            modelId,
+            complexity: complexity);
+        using OpenRouterImageRequestContent content = new(context, flexProviderTag);
+
+        byte[] serialized = await content.ReadAsByteArrayAsync();
+
+        using JsonDocument document = JsonDocument.Parse(serialized);
+        JsonElement root = document.RootElement;
+        root.GetProperty("provider").GetProperty("options").GetProperty("openai")
+            .GetProperty(GenerationParameterNames.Complexity).GetString().Should().Be(complexity);
+        root.TryGetProperty(GenerationParameterNames.Complexity, out _).Should().BeFalse();
+        content.Headers.ContentLength.Should().Be(serialized.LongLength);
+
+        if (flexProviderTag is not null)
+        {
+            root.GetProperty("provider").GetProperty("only")[0].GetString().Should().Be(flexProviderTag);
+            root.GetProperty("provider").GetProperty("allow_fallbacks").GetBoolean().Should().BeFalse();
+        }
     }
 
     [Fact]

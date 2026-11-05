@@ -316,6 +316,12 @@ public sealed class ImageGenerationApiClient
                 JsonSerializer.SerializeToElement(request.Quality);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Complexity))
+        {
+            parameters[GenerationParameterNames.Complexity] =
+                JsonSerializer.SerializeToElement(request.Complexity);
+        }
+
         List<GenerationAttachmentMetadataDto> attachmentMetadata =
             request.AttachedImages
                 .Select(CreateAttachmentMetadata)

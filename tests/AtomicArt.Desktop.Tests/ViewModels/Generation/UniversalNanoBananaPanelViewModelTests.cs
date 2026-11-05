@@ -1274,6 +1274,8 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [InlineData("openrouter-gpt-image-2", "Low,Medium,High", "High")]
     [InlineData("openrouter-gpt-image-2-5-sunburst", "Low,Medium,High,Xhigh,Max", "Max")]
     [InlineData("openrouter-gpt-image-2-5-flare", "Low,Medium,High,Xhigh,Max", "Max")]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "Low,Medium,High,Xhigh,Max", "Max")]
+    [InlineData("openrouter-gpt-image-2-6-flare", "Low,Medium,High,Xhigh,Max", "Max")]
     public void SelectedModel_WithGptImageModel_ExposesSupportedQualityLevels(
         string modelId,
         string expectedLevels,
@@ -1329,6 +1331,104 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             ?? throw new InvalidOperationException("Generation run request should be captured.");
         request.Request.ModelId.Should().Be(modelId);
         request.Request.Quality.Should().Be(expectedQuality.ToLowerInvariant());
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", null, "Medium")]
+    [InlineData("openrouter-gpt-image-2-6-flare", null, "Medium")]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "low", "Low")]
+    [InlineData("openrouter-gpt-image-2-6-flare", "high", "High")]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "invalid", "Medium")]
+    public async Task RestoreStateAsync_WithComplexity_PersistsAndGeneratesWithSupportedValue(
+        string modelId,
+        string? savedComplexity,
+        string expectedComplexity)
+    {
+        RecordingGenerationPanelStateService stateService = new()
+        {
+            StateToLoad = new GenerationPanelState
+            {
+                PanelId = GenerationPanelIds.NanoBanana,
+                SelectedModelId = modelId,
+                Complexity = savedComplexity,
+                Prompt = "Create a landscape"
+            }
+        };
+        CapturingGenerationRunDispatcher dispatcher = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            generationPanelStateService: stateService,
+            dispatcher: dispatcher);
+
+        await viewModel.RestoreStateAsync(CancellationToken.None);
+        await viewModel.CommitPendingStateAsync(CancellationToken.None);
+        await viewModel.GenerateCommand.ExecuteAsync(null);
+
+        viewModel.ComplexityLevels.Select(level => level.Value).Should().Equal("Low", "Medium", "High");
+        viewModel.SelectedComplexityOption?.Value.Should().Be(expectedComplexity);
+        stateService.SavedStates.Last().Complexity.Should().Be(expectedComplexity.ToLowerInvariant());
+        dispatcher.CapturedRequest?.Request.Complexity.Should().Be(expectedComplexity.ToLowerInvariant());
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-6-sunburst")]
+    [InlineData("openrouter-gpt-image-2-6-flare")]
+    public async Task SelectedModel_WhenSwitchedAwayAndBack_PreservesComplexityAndOmitsUnsupportedParameter(
+        string modelId)
+    {
+        CapturingGenerationRunDispatcher dispatcher = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(dispatcher: dispatcher);
+        ImageModelOption model = GetModel(viewModel, modelId);
+        viewModel.SelectedModel = model;
+        viewModel.SelectedComplexityOption = viewModel.ComplexityLevels.Single(level => level.Value == "High");
+        viewModel.Prompt = "Create a landscape";
+
+        viewModel.SelectedModel = GetModel(viewModel, "openrouter-gpt-image-2-5-sunburst");
+        await viewModel.GenerateCommand.ExecuteAsync(null);
+
+        viewModel.SupportsComplexity.Should().BeFalse();
+        viewModel.SelectedComplexityOption.Should().BeNull();
+        dispatcher.CapturedRequest.Should().NotBeNull();
+        dispatcher.CapturedRequest?.Request.Complexity.Should().BeNull();
+
+        viewModel.SelectedModel = model;
+
+        viewModel.SelectedComplexityOption?.Value.Should().Be("High");
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-6-sunburst")]
+    [InlineData("openrouter-gpt-image-2-6-flare")]
+    public async Task CommitPendingStateAsync_WithComplexity_RestoresValueOnNextStart(string modelId)
+    {
+        RecordingGenerationPanelStateService stateService = new()
+        {
+            PersistsSavedState = true
+        };
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            generationPanelStateService: stateService);
+        viewModel.SelectedModel = GetModel(viewModel, modelId);
+        viewModel.SelectedComplexity = "High";
+
+        await viewModel.CommitPendingStateAsync(CancellationToken.None);
+        using UniversalNanoBananaPanelViewModel restartedViewModel = CreateViewModel(
+            generationPanelStateService: stateService);
+        await restartedViewModel.RestoreStateAsync(CancellationToken.None);
+
+        restartedViewModel.SelectedModel?.Id.Should().Be(modelId);
+        restartedViewModel.SelectedComplexityOption?.Value.Should().Be("High");
+    }
+
+    [Fact]
+    public void ResetComplexityCommand_WithChangedComplexity_RestoresMetadataDefault()
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        viewModel.SelectedModel = GetModel(viewModel, "openrouter-gpt-image-2-6-sunburst");
+        viewModel.SelectedComplexity = "High";
+
+        viewModel.ResetComplexityCommand.Execute(null);
+
+        viewModel.SelectedComplexity.Should().Be("Medium");
+        viewModel.SelectedComplexityOption?.Value.Should().Be("Medium");
     }
 
     [Theory]

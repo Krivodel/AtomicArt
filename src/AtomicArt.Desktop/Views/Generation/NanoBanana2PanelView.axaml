@@ -141,7 +141,8 @@
                                                 Command="{Binding ResetQualityCommand}">
                                             <PathIcon Data="{StaticResource AppQualityIcon}" />
                                         </Button>
-                                        <ComboBox Grid.Column="1"
+                                        <ComboBox x:Name="QualityComboBox"
+                                                  Grid.Column="1"
                                                   HorizontalAlignment="Stretch"
                                                   MaxDropDownHeight="300"
                                                   Classes.gpt-quality="{Binding UsesGptImageQuality}"
@@ -153,6 +154,28 @@
                                                     <TextBlock Classes="quality-option"
                                                                Tag="{Binding Value}"
                                                                Text="{Binding DisplayName}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto,*"
+                                          IsVisible="{Binding SupportsComplexity}">
+                                        <Button Grid.Column="0"
+                                                Classes="generation-option-reset"
+                                                Theme="{StaticResource GenerationOptionResetButtonTheme}"
+                                                AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Complexity.Label}}"
+                                                Command="{Binding ResetComplexityCommand}">
+                                            <PathIcon Data="{StaticResource AppBrainIcon}" />
+                                        </Button>
+                                        <ComboBox x:Name="ComplexityComboBox"
+                                                  Grid.Column="1"
+                                                  HorizontalAlignment="Stretch"
+                                                  AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Complexity.Label}}"
+                                                  ItemsSource="{Binding ComplexityLevels}"
+                                                  SelectedItem="{Binding SelectedComplexityOption, Mode=TwoWay}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="generation:GenerationOptionViewModel">
+                                                    <TextBlock Text="{Binding DisplayName}" />
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>

@@ -14,7 +14,8 @@ internal static class OpenRouterGenerationContextTestFactory
         string resolution = "1K",
         string aspectRatio = GenerationAspectRatios.Auto,
         string? quality = null,
-        IReadOnlyList<IGenerationAttachmentSource>? attachments = null)
+        IReadOnlyList<IGenerationAttachmentSource>? attachments = null,
+        string? complexity = null)
     {
         GenerationModelMetadataDto metadata = ApiModelMetadataTestCatalog.LoadCatalog()
             .Models.Single(model => model.Id == modelId);
@@ -23,6 +24,11 @@ internal static class OpenRouterGenerationContextTestFactory
         if (!string.IsNullOrWhiteSpace(quality))
         {
             parameters[GenerationParameterNames.Quality] = JsonSerializer.SerializeToElement(quality);
+        }
+
+        if (!string.IsNullOrWhiteSpace(complexity))
+        {
+            parameters[GenerationParameterNames.Complexity] = JsonSerializer.SerializeToElement(complexity);
         }
 
         StreamingImageGenerationRequest request = new(

@@ -13,6 +13,84 @@ namespace AtomicArt.Api.Tests.ModelMetadata;
 
 public sealed class JsonModelMetadataStartupLoaderTests
 {
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", GenerationProviderModelIds.GptImage26Sunburst)]
+    [InlineData("openrouter-gpt-image-2-6-flare", GenerationProviderModelIds.GptImage26Flare)]
+    public void Load_WithRealMetadata_ConfiguresGptImage26(string modelId, string providerModelId)
+    {
+        GenerationModelCatalogDto catalog = ApiModelMetadataStartupTestCatalog.LoadCatalog();
+
+        GenerationModelMetadataDto metadata = catalog.Models.Single(model => model.Id == modelId);
+
+        metadata.Provider.Should().Be(GenerationProviderIds.OpenRouter);
+        metadata.ProviderModelId.Should().Be(providerModelId);
+        metadata.PanelId.Should().Be(GenerationPanelIds.NanoBanana);
+        metadata.Resolutions.Should().Equal("1K", "2K", "4K");
+        metadata.Attachments.MaxCount.Should().Be(16);
+        GenerationModelParameterMetadataDto complexity = metadata.Parameters?.Single(parameter =>
+            parameter.Name == GenerationParameterNames.Complexity)
+            ?? throw new InvalidOperationException("Complexity metadata is missing.");
+        complexity.DefaultValue?.GetString().Should().Be("medium");
+        complexity.AllowedValues?.Select(value => value.GetString()).Should().Equal("low", "medium", "high");
+    }
+
+    [Fact]
+    public void Load_WithParameterMapProfiles_MergesFieldsAndAddsParameters()
+    {
+        (JsonObject catalogJson, JsonObject modelJson) = CreateValidModelJson();
+        modelJson.Remove("parameters");
+        modelJson["profiles"] = new JsonArray("base", "extended");
+        catalogJson["profiles"] = JsonNode.Parse(
+            """
+            {
+              "base": {
+                "parameters": {
+                  "quality": { "type": "string", "defaultValue": "low", "allowedValues": ["low"] }
+                }
+              },
+              "extended": {
+                "parameters": {
+                  "quality": { "allowedValues": ["low", "high"] },
+                  "complexity": { "type": "string", "defaultValue": "medium", "allowedValues": ["medium"] }
+                }
+              }
+            }
+            """);
+        string path = CreateTempFile(catalogJson.ToJsonString());
+
+        try
+        {
+            GenerationModelCatalogDto catalog = Load(path);
+
+            IReadOnlyList<GenerationModelParameterMetadataDto> parameters = catalog.Models.Single().Parameters
+                ?? throw new InvalidOperationException("Parameter metadata is missing.");
+            parameters.Select(parameter => parameter.Name).Should().Equal("quality", "complexity");
+            parameters[0].Type.Should().Be("string");
+            parameters[0].DefaultValue?.GetString().Should().Be("low");
+            parameters[0].AllowedValues?.Select(value => value.GetString()).Should().Equal("low", "high");
+            parameters[1].DefaultValue?.GetString().Should().Be("medium");
+        }
+        finally
+        {
+            DeleteFileDirectory(path);
+        }
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("42")]
+    public void Load_WithInvalidParameterMapEntry_ThrowsInvalidOperationException(string parameterJson)
+    {
+        (JsonObject catalogJson, JsonObject modelJson) = CreateValidModelJson();
+        modelJson["parameters"] = new JsonObject
+        {
+            [GenerationParameterNames.Complexity] = JsonNode.Parse(parameterJson)
+        };
+
+        AssertLoadFails(catalogJson.ToJsonString(), "*invalid metadata*complexity*");
+    }
+
     [Fact]
     public void Load_WithRealMetadata_ConfiguresOpenRouterNanoBanana21()
     {

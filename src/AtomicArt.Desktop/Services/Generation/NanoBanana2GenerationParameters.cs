@@ -13,4 +13,5 @@ public sealed record NanoBanana2GenerationParameters(
     IReadOnlyList<AttachedImageDto> AttachedImages,
     string? ThinkingLevel = null,
     string? Quality = null,
-    bool IncludeTemperature = true);
+    bool IncludeTemperature = true,
+    string? Complexity = null);

@@ -51,6 +51,7 @@ public static class GenerationModelCatalogMetadataLoader
             }
 
             JsonObject expandedCatalog = ExpandProfiles(catalogObject, sourceName);
+            ExpandParameterMaps(expandedCatalog, sourceName);
 
             return expandedCatalog.Deserialize<GenerationModelCatalogDto>(SerializerOptions);
         }
@@ -140,6 +141,40 @@ public static class GenerationModelCatalogMetadataLoader
             }
 
             target[property.Key] = property.Value?.DeepClone();
+        }
+    }
+
+    private static void ExpandParameterMaps(JsonObject catalog, string sourceName)
+    {
+        if (catalog["models"] is not JsonArray models)
+        {
+            return;
+        }
+
+        foreach (JsonNode? model in models)
+        {
+            if (model is not JsonObject modelObject
+                || modelObject["parameters"] is not JsonObject parameterMap)
+            {
+                continue;
+            }
+
+            JsonArray parameters = new();
+
+            foreach (KeyValuePair<string, JsonNode?> parameter in parameterMap)
+            {
+                if (parameter.Value is not JsonObject parameterDefinition)
+                {
+                    throw new InvalidOperationException(
+                        $"Model metadata source '{sourceName}' contains invalid metadata for parameter '{parameter.Key}'.");
+                }
+
+                JsonObject definition = parameterDefinition.DeepClone().AsObject();
+                definition["name"] = parameter.Key;
+                parameters.Add(definition);
+            }
+
+            modelObject["parameters"] = parameters;
         }
     }
 

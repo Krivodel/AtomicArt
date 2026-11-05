@@ -74,6 +74,10 @@ public sealed class StreamingGenerationRequestValidatorTests
     [InlineData("openrouter-gpt-image-2", "high", true)]
     [InlineData("openrouter-gpt-image-2", "xhigh", false)]
     [InlineData("openrouter-gpt-image-2", "max", false)]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "xhigh", true)]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "max", true)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "xhigh", true)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "max", true)]
     public async Task ValidateAsync_WithGptImageQuality_EnforcesModelSupportedLevels(
         string modelId,
         string quality,
@@ -99,6 +103,55 @@ public sealed class StreamingGenerationRequestValidatorTests
         if (isSupported)
         {
             result.Value?.Parameters[GenerationParameterNames.Quality].GetString().Should().Be(quality);
+        }
+        else
+        {
+            result.ErrorCode.Should().Be(GenerationProtocolErrorCodes.InvalidParameters);
+        }
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "low", true)]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "medium", true)]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "high", true)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "low", true)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "medium", true)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "high", true)]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", null, true)]
+    [InlineData("openrouter-gpt-image-2-6-flare", null, true)]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "max", false)]
+    [InlineData("openrouter-gpt-image-2-6-flare", "auto", false)]
+    [InlineData("openrouter-gpt-image-2-5-sunburst", "medium", false)]
+    [InlineData("openrouter-gpt-image-2-5-flare", "medium", false)]
+    [InlineData("openrouter-gpt-image-2", "medium", false)]
+    public async Task ValidateAsync_WithComplexity_EnforcesModelSupportedLevels(
+        string modelId,
+        string? complexity,
+        bool isSupported)
+    {
+        TestContext context = CreateContext(modelId);
+        Dictionary<string, JsonElement> parameters = new(StringComparer.Ordinal)
+        {
+            [GenerationParameterNames.AspectRatio] = JsonSerializer.SerializeToElement("16:9"),
+            [GenerationParameterNames.Resolution] = JsonSerializer.SerializeToElement("4K")
+        };
+
+        if (complexity is not null)
+        {
+            parameters[GenerationParameterNames.Complexity] = JsonSerializer.SerializeToElement(complexity);
+        }
+
+        Result<StreamingImageGenerationRequest> result = await context.Validator.ValidateAsync(
+            CreateMetadata(parameters, modelId),
+            Array.Empty<IGenerationAttachmentSource>(),
+            context.ModelDefinition,
+            CancellationToken.None);
+
+        result.IsSuccess.Should().Be(isSupported);
+
+        if (isSupported)
+        {
+            result.Value?.Parameters[GenerationParameterNames.Complexity].GetString().Should().Be(complexity ?? "medium");
         }
         else
         {

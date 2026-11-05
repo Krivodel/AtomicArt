@@ -87,6 +87,8 @@ public sealed class OpenRouterStreamingImageGenerationProviderTests
     [InlineData("openrouter-gpt-image-2", "/api/v1/images")]
     [InlineData("openrouter-gpt-image-2-5-sunburst", "/api/v1/images")]
     [InlineData("openrouter-gpt-image-2-5-flare", "/api/v1/images")]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "/api/v1/images")]
+    [InlineData("openrouter-gpt-image-2-6-flare", "/api/v1/images")]
     public async Task CreateStreamAsync_WithExistingModel_PreservesApiRoute(
         string modelId,
         string expectedPath)

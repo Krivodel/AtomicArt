@@ -115,12 +115,40 @@ internal sealed class OpenRouterImageRequestContent : HttpContent
             builder.Append(quality.GetRawText());
         }
 
-        if (!string.IsNullOrWhiteSpace(flexProviderTag))
+        bool hasFlexProvider = !string.IsNullOrWhiteSpace(flexProviderTag);
+        bool hasComplexity = context.Request.Parameters.TryGetValue(
+            GenerationParameterNames.Complexity,
+            out JsonElement complexity);
+
+        if (hasFlexProvider)
         {
             builder.Append(",\"service_tier\":\"flex\"");
-            builder.Append(",\"provider\":{\"only\":[");
-            builder.Append(JsonSerializer.Serialize(flexProviderTag));
-            builder.Append("],\"allow_fallbacks\":false}");
+        }
+
+        if (hasFlexProvider || hasComplexity)
+        {
+            builder.Append(",\"provider\":{");
+
+            if (hasFlexProvider)
+            {
+                builder.Append("\"only\":[");
+                builder.Append(JsonSerializer.Serialize(flexProviderTag));
+                builder.Append("],\"allow_fallbacks\":false");
+            }
+
+            if (hasComplexity)
+            {
+                if (hasFlexProvider)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append("\"options\":{\"openai\":{\"complexity\":");
+                builder.Append(complexity.GetRawText());
+                builder.Append("}}");
+            }
+
+            builder.Append('}');
         }
 
         builder.Append(",\"input_references\":[");

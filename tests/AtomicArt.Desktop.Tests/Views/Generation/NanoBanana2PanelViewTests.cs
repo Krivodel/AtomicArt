@@ -1228,6 +1228,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     [InlineData("openrouter-gpt-image-2-5-sunburst", "Max")]
     [InlineData("openrouter-gpt-image-2-5-flare", "Xhigh")]
     [InlineData("openrouter-gpt-image-2-5-flare", "Max")]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "Max")]
+    [InlineData("openrouter-gpt-image-2-6-flare", "Max")]
     public async Task QualityDropDown_WhenSelectionChanges_UpdatesViewModel(
         string modelId,
         string quality)
@@ -1249,6 +1251,35 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 .Single(level => level.Value == quality);
 
             context.ViewModel.SelectedQuality.Should().Be(quality);
+        });
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-6-sunburst")]
+    [InlineData("openrouter-gpt-image-2-6-flare")]
+    public async Task ComplexityDropDown_WhenModelChanges_UpdatesSelectionAndVisibility(string modelId)
+    {
+        await DispatchAsync(() =>
+        {
+            using ShownPanelContext context = new();
+            context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model => model.Id == modelId);
+            Popup settingsPopup = OpenTemperaturePopup(context.View);
+            ComboBox selector = GetTemperaturePopupContent(settingsPopup)
+                .GetLogicalDescendants().OfType<ComboBox>()
+                .Single(comboBox => ReferenceEquals(comboBox.ItemsSource, context.ViewModel.ComplexityLevels));
+            Control row = selector.Parent as Control
+                ?? throw new InvalidOperationException("The complexity row is missing.");
+
+            row.IsVisible.Should().BeTrue();
+            selector.SelectedItem = context.ViewModel.ComplexityLevels.Single(level => level.Value == "High");
+
+            context.ViewModel.SelectedComplexity.Should().Be("High");
+
+            context.ViewModel.SelectedModel = context.ViewModel.AvailableModels.Single(model =>
+                model.Id == "openrouter-gpt-image-2-5-sunburst");
+
+            row.IsVisible.Should().BeFalse();
+            selector.Items.Should().BeEmpty();
         });
     }
 
@@ -1275,7 +1306,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             ComboBox qualityComboBox = GetTemperaturePopupContent(settingsPopup)
                 .GetLogicalDescendants()
                 .OfType<ComboBox>()
-                .Single(comboBox => ReferenceEquals(comboBox.ItemsSource, viewModel.QualityLevels));
+                .Single(comboBox => string.Equals(comboBox.Name, "QualityComboBox", StringComparison.Ordinal));
             Control qualityRow = qualityComboBox.Parent as Control
                 ?? throw new InvalidOperationException("The quality row should be available.");
             settingsButton.IsVisible.Should().BeFalse();
@@ -1316,7 +1347,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             Border panel = GetTemperaturePopupContent(popup);
             Button[] resetButtons = panel.GetLogicalDescendants().OfType<Button>().ToArray();
 
-            resetButtons.Should().HaveCount(3);
+            resetButtons.Should().HaveCount(4);
             resetButtons.Should().AllSatisfy(button =>
             {
                 Grid.GetColumn(button).Should().Be(0);

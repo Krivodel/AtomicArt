@@ -283,6 +283,27 @@ public sealed class ImageGenerationApiClientTests
         handler.RequestBody.Should().Contain("\"pixelHeight\":800");
     }
 
+    [Fact]
+    public async Task CreateGenerationAsync_WithComplexity_SendsValueInMetadata()
+    {
+        const string ProblemDetails = """{"status":400,"code":"GENERATION_INVALID_MULTIPART_REQUEST","retryable":false}""";
+        CapturingHttpMessageHandler handler = new(ProblemDetails, HttpStatusCode.BadRequest);
+        using HttpClient httpClient = new(handler);
+        ImageGenerationApiClient apiClient = CreateApiClient(httpClient);
+        ImageGenerationRequestDto request = CreateRequest(attachedImageContent: GenerationImageTestData.ValidPngBytes)
+            with { Complexity = "high" };
+
+        Func<Task> act = () => apiClient.CreateGenerationAsync(
+            request,
+            LogicalGenerationId,
+            1,
+            TestGenerationCredentials.ProviderCredential,
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<GenerationAttemptException>();
+        handler.RequestBody.Should().Contain("\"complexity\":\"high\"");
+    }
+
     private static ImageGenerationApiClient CreateApiClient(
         HttpClient httpClient,
         IGenerationStreamingResultStore? resultStore = null,
