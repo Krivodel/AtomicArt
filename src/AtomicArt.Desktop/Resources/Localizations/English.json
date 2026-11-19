@@ -171,7 +171,7 @@
       },
       "ApiBaseAddress": {
         "Label": "Address",
-        "Placeholder": "http://localhost:5000/",
+        "Placeholder": "http://localhost:5000",
         "Invalid": "Enter an absolute HTTP or HTTPS address."
       },
       "GoogleApiKey": {

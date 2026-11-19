@@ -19,18 +19,25 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Settings;
 
 public sealed class ApiBaseAddressSettingViewModelTests : DesktopControlTestBase
 {
-    [Fact]
-    public async Task SaveCommand_WithValidAddress_AppliesAndSavesNormalizedValue()
+    [Theory]
+    [InlineData("https://second.atomicart.test", "https://second.atomicart.test", "https://second.atomicart.test/")]
+    [InlineData(" https://second.atomicart.test/root ", "https://second.atomicart.test/root", "https://second.atomicart.test/root/")]
+    [InlineData("https://second.atomicart.test/root//", "https://second.atomicart.test/root//", "https://second.atomicart.test/root//")]
+    public async Task SaveCommand_WithValidAddress_DisplaysShortValueAndKeepsRequestBase(
+        string input,
+        string displayValue,
+        string requestBase)
     {
         using ApiBaseAddressSettingTestContext context = new();
-        context.ViewModel.Value = " https://second.atomicart.test/root ";
+        context.ViewModel.Value = input;
 
         await context.ViewModel.SaveCommand.ExecuteAsync(null);
 
-        context.ViewModel.Value.Should().Be("https://second.atomicart.test/root/");
-        context.EndpointService.BaseAddress.ToString().Should().Be(context.ViewModel.Value);
-        context.SettingsStateService.AppliedValue.Should().Be(context.ViewModel.Value);
-        context.SettingsStateService.SavedValue.Should().Be(context.ViewModel.Value);
+        context.ViewModel.Value.Should().Be(displayValue);
+        context.EndpointService.BaseAddress.ToString().Should().Be(requestBase);
+        context.SettingsStateService.AppliedValue.Should().Be(requestBase);
+        context.SettingsStateService.SavedValue.Should().Be(requestBase);
+        context.ViewModel.SaveCommand.CanExecute(null).Should().BeFalse();
         context.ViewModel.HasErrorMessage.Should().BeFalse();
     }
 
@@ -107,12 +114,13 @@ public sealed class ApiBaseAddressSettingViewModelTests : DesktopControlTestBase
                 TextBox textBox = view.GetVisualDescendants().OfType<TextBox>().Single();
                 textBox.IsEffectivelyEnabled.Should().BeTrue();
                 textBox.Focus().Should().BeTrue();
-                textBox.Text = "https://second.atomicart.test/";
+                textBox.Text = "https://second.atomicart.test";
 
                 window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
                 await (context.ViewModel.SaveCommand.ExecutionTask
                     ?? throw new InvalidOperationException("Address save was not started."));
 
+                textBox.Text.Should().Be("https://second.atomicart.test");
                 context.EndpointService.BaseAddress.ToString().Should().Be("https://second.atomicart.test/");
                 context.SettingsStateService.SavedValue.Should().Be("https://second.atomicart.test/");
                 context.ViewModel.IsCatalogLoading.Should().BeTrue();
@@ -135,7 +143,7 @@ public sealed class ApiBaseAddressSettingViewModelTests : DesktopControlTestBase
         context.EndpointService.SetBaseAddress(restoredAddress
             ?? throw new InvalidOperationException("Restored address is required."));
 
-        context.ViewModel.Value.Should().Be("https://restored.atomicart.test/");
+        context.ViewModel.Value.Should().Be("https://restored.atomicart.test");
     }
 
     [Fact]
@@ -145,6 +153,7 @@ public sealed class ApiBaseAddressSettingViewModelTests : DesktopControlTestBase
 
         bool canExecute = context.ViewModel.SaveCommand.CanExecute(null);
 
+        context.ViewModel.Value.Should().Be("https://atomicart.test");
         canExecute.Should().BeFalse();
     }
 

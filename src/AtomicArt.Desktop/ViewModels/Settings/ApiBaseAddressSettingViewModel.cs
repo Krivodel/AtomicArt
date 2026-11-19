@@ -58,7 +58,7 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
         _modelCatalog = modelCatalog;
         _uiThreadDispatcher = uiThreadDispatcher;
         _settingsStateService = settingsStateService;
-        _value = apiEndpointService.BaseAddress.ToString();
+        _value = FormatDisplayValue(apiEndpointService.BaseAddress);
         _committedValue = _value;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
         _modelCatalog.LoadingChanged += OnCatalogLoadingChanged;
@@ -142,8 +142,7 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
                 string normalizedValue = baseAddress.ToString();
                 _settingsStateService.ApplyValue(_definition, normalizedValue);
                 await _settingsStateService.SaveValueAsync(_definition, normalizedValue, ct);
-                Value = normalizedValue;
-                _committedValue = normalizedValue;
+                SetCommittedAddress(baseAddress);
             },
             ct,
             nameof(SaveAsync));
@@ -159,17 +158,24 @@ public sealed partial class ApiBaseAddressSettingViewModel : SettingItemViewMode
     {
         await ViewModelUiDispatch.RunAsync(
             _uiThreadDispatcher,
-            SynchronizeValue,
+            () => SetCommittedAddress(_apiEndpointService.BaseAddress),
             _disposeCancellationSource.Token,
             ErrorHandler,
             nameof(SynchronizeValueAsync));
     }
 
-    private void SynchronizeValue()
+    private static string FormatDisplayValue(ApiBaseAddress baseAddress)
     {
-        string value = _apiEndpointService.BaseAddress.ToString();
-        _committedValue = value;
-        Value = value;
+        string normalizedValue = baseAddress.ToString();
+        return normalizedValue.EndsWith("//", StringComparison.Ordinal)
+            ? normalizedValue
+            : normalizedValue[..^1];
+    }
+
+    private void SetCommittedAddress(ApiBaseAddress baseAddress)
+    {
+        _committedValue = FormatDisplayValue(baseAddress);
+        Value = _committedValue;
         SaveCommand.NotifyCanExecuteChanged();
     }
 
