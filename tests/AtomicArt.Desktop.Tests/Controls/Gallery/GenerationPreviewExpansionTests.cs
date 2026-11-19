@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using FluentAssertions;
@@ -23,6 +25,79 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
         TimeSpan.FromMilliseconds(200d);
     private static readonly TimeSpan CardActionTransitionCompletionWait =
         TimeSpan.FromMilliseconds(400d);
+    private static readonly TimeSpan PreviewAnimationTimeout = TimeSpan.FromSeconds(1d);
+
+    [Fact]
+    public async Task PreviewExitAsync_DuringExpansion_ShrinksAroundTheSameCenter()
+    {
+        await DispatchAsync(async () =>
+        {
+            GenerationItemViewModel item = CreateItem();
+            item.ImagePath = "image.png";
+            GenerationPreviewControl preview = new() { DataContext = item };
+            Canvas viewport = new() { Background = Brushes.Transparent, Children = { preview } };
+            Canvas.SetLeft(preview, 300d);
+            Canvas.SetTop(preview, 300d);
+            preview.ExpansionHost = new StandaloneGenerationPreviewExpansionHost(viewport);
+            using WriteableBitmap bitmap = CreatePreviewBitmap();
+            Window window = Show(viewport, 1000d, 800d);
+
+            try
+            {
+                Grid previewHost = preview.FindControl<Grid>("PreviewExpansionHost")!;
+                preview.FindControl<Image>("PreviewImage")!.Source = bitmap;
+                window.CaptureRenderedFrame();
+                double collapsedWidth = previewHost.Bounds.Width;
+                Point center = GetPreviewCenter();
+
+                window.MouseMove(center, RawInputModifiers.Shift);
+                Stopwatch elapsed = Stopwatch.StartNew();
+                await CaptureFramesUntilAsync(() => previewHost.Bounds.Width > collapsedWidth);
+
+                previewHost.Bounds.Width.Should().BeGreaterThan(collapsedWidth).And.BeLessThan(748d);
+
+                window.MouseMove(new Point(32d, 32d), RawInputModifiers.Shift);
+                elapsed.Restart();
+                await CaptureFramesUntilAsync(() =>
+                {
+                    Point animatedCenter = GetPreviewCenter();
+                    animatedCenter.X.Should().BeApproximately(center.X, 1d);
+                    animatedCenter.Y.Should().BeApproximately(center.Y, 1d);
+
+                    return !preview.Classes.Contains(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+                });
+
+                previewHost.Bounds.Width.Should().Be(collapsedWidth);
+                preview.Classes.Should().NotContain(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+
+                preview.PreviewSize = 260d;
+                window.CaptureRenderedFrame();
+
+                previewHost.Bounds.Size.Should().Be(new Size(260d, 260d));
+
+                Point GetPreviewCenter()
+                {
+                    return previewHost.TranslatePoint(new Rect(previewHost.Bounds.Size).Center, viewport)
+                        ?? throw new InvalidOperationException("The preview is not in the viewport.");
+                }
+
+                async Task CaptureFramesUntilAsync(Func<bool> condition)
+                {
+                    window.CaptureRenderedFrame();
+
+                    while (!condition() && elapsed.Elapsed < PreviewAnimationTimeout)
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(8d));
+                        window.CaptureRenderedFrame();
+                    }
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
 
     [Fact]
     public void ModifierHoverAndScroll_WithGeneratedImage_KeepsPreviewAttachedToCard()

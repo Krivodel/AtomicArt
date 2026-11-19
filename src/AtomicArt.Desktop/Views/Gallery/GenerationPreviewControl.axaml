@@ -13,8 +13,8 @@
           Height="{Binding #Root.PreviewSize}"
           ClipToBounds="False">
         <Grid x:Name="PreviewExpansionHost"
-              Width="{Binding #Root.PreviewSize}"
-              Height="{Binding #Root.PreviewSize}"
+              Width="{Binding #Root.PreviewSize, Priority=Style}"
+              Height="{Binding #Root.PreviewSize, Priority=Style}"
               HorizontalAlignment="Left"
               VerticalAlignment="Top"
               IsHitTestVisible="False"

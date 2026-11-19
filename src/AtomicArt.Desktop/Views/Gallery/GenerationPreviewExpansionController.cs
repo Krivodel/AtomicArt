@@ -271,7 +271,8 @@ internal sealed class GenerationPreviewExpansionController
         _overflowOwner?.Classes.Remove(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
         _activeSizeTransitions?.Dispose();
         _activeSizeTransitions = null;
-        SetExpansionSize(new Size(_owner.PreviewSize, _owner.PreviewSize));
+        _previewExpansionHost.ClearValue(Control.WidthProperty);
+        _previewExpansionHost.ClearValue(Control.HeightProperty);
         _previewTranslation.X = 0d;
         _previewTranslation.Y = 0d;
         _previewShadow.Opacity = 0d;
@@ -280,8 +281,8 @@ internal sealed class GenerationPreviewExpansionController
 
     private void SetExpansionSize(Size size)
     {
-        _previewExpansionHost.SetCurrentValue(Control.WidthProperty, size.Width);
-        _previewExpansionHost.SetCurrentValue(Control.HeightProperty, size.Height);
+        _previewExpansionHost.Width = size.Width;
+        _previewExpansionHost.Height = size.Height;
     }
 
     private void RestoreOverflow()
