@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 
 using CommunityToolkit.Mvvm.Messaging;
 using Pica.Viewer;
+using Pica.Viewer.Services;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
@@ -292,6 +293,11 @@ public static class DependencyInjection
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
         services.AddSingleton<IFileRevealService, FileRevealService>();
         services.AddPicaViewer();
+        if (OperatingSystem.IsWindows())
+        {
+            services.AddWindowsFileRevealPlatform();
+        }
+
         services.AddSingleton<AtomicArtPicaActions>();
         services.AddSingleton<PicaViewerSessionDependencies>();
         services.AddSingleton<PicaViewerSessionFactory>();
@@ -301,6 +307,20 @@ public static class DependencyInjection
             typeof(IDataRootViewerPreparationService));
 
         return services;
+    }
+
+    private static void AddWindowsFileRevealPlatform(this IServiceCollection services)
+    {
+        ServiceDescriptor explorerPlatform = services.Last(descriptor =>
+            !descriptor.IsKeyedService && descriptor.ServiceType == typeof(IFileRevealPlatform));
+        Type implementationType = explorerPlatform.ImplementationType
+            ?? throw new InvalidOperationException("The Pica file reveal platform must have an implementation type.");
+        Type key = typeof(WindowsShellFileRevealPlatform);
+
+        services.Remove(explorerPlatform);
+        services.AddKeyedSingleton(typeof(IFileRevealPlatform), key, implementationType);
+        services.AddSingleton<IFileRevealPlatform>(provider => new WindowsShellFileRevealPlatform(
+            provider.GetRequiredKeyedService<IFileRevealPlatform>(key)));
     }
 
     private static IServiceCollection AddDialogServices(this IServiceCollection services)

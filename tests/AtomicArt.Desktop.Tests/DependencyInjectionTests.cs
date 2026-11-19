@@ -21,6 +21,7 @@ using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Windowing;
+using AtomicArt.Desktop.Services.Windows;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels;
@@ -44,6 +45,20 @@ public sealed class DependencyInjectionTests
         MainWindowViewModel viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
 
         viewModel.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddDesktopServices_OnWindows_RegistersShellFileRevealPlatform()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
+
+        serviceProvider.GetServices<IFileRevealPlatform>().Should().ContainSingle()
+            .Which.Should().BeOfType<WindowsShellFileRevealPlatform>();
     }
 
     [Fact]
