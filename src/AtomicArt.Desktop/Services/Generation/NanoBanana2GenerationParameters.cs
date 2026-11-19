@@ -1,4 +1,5 @@
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
@@ -14,4 +15,5 @@ public sealed record NanoBanana2GenerationParameters(
     string? ThinkingLevel = null,
     string? Quality = null,
     bool IncludeTemperature = true,
-    string? Complexity = null);
+    string? Complexity = null,
+    LocalCodexTurnOptions? CodexTurnOptions = null);

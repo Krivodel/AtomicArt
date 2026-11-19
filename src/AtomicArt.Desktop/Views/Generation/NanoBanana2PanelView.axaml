@@ -7,6 +7,7 @@
              xmlns:converters="using:Avalonia.Data.Converters"
              xmlns:generation="using:AtomicArt.Desktop.ViewModels.Generation"
              xmlns:models="using:AtomicArt.Desktop.Services"
+             xmlns:codex="using:AtomicArt.Desktop.Services.Generation.LocalCodex"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:system="clr-namespace:System;assembly=System.Runtime"
              x:Class="AtomicArt.Desktop.Views.Generation.NanoBanana2PanelView"
@@ -47,15 +48,52 @@
                     </ComboBox.ItemTemplate>
                 </ComboBox>
 
+                <StackPanel Grid.Column="2"
+                            IsVisible="{Binding IsLocalCodexSelected}"
+                            Orientation="Horizontal"
+                            Spacing="8">
+                    <ComboBox MinWidth="{StaticResource GenerationOptionComboMinWidth}"
+                              AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Thinking.TextModel}}"
+                              PlaceholderText="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Thinking.TextModel}}"
+                              ItemsSource="{Binding CodexTextModels}"
+                              SelectedItem="{Binding SelectedCodexTextModel}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="codex:LocalCodexTextModel">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <controls:GenerationOptionSelector x:Name="CodexReasoningSelector"
+                                                       ResetButtonName="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Thinking.Label}}"
+                                                       ResetIcon="{StaticResource AppBrainIcon}"
+                                                       ResetCommand="{Binding ResetThinkingLevelCommand}">
+                        <controls:GenerationOptionSelector.Selector>
+                            <ComboBox MinWidth="{StaticResource GenerationOptionComboMinWidth}"
+                                      AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Thinking.Label}}"
+                                      PlaceholderText="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Thinking.Label}}"
+                                      ItemsSource="{Binding CodexReasoningEfforts}"
+                                      SelectedItem="{Binding SelectedCodexReasoningEffort}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="generation:GenerationOptionViewModel">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </controls:GenerationOptionSelector.Selector>
+                    </controls:GenerationOptionSelector>
+                </StackPanel>
+
                 <ComboBox x:Name="ResolutionComboBox"
                           Grid.Column="2"
                           MinWidth="{StaticResource GenerationOptionComboMinWidth}"
                           IsEnabled="{Binding HasLoadedCatalog}"
+                          IsVisible="{Binding !IsLocalCodexSelected}"
                           ItemsSource="{Binding Resolutions}"
                           SelectedItem="{Binding SelectedResolution}" />
 
                 <Grid x:Name="GenerationOptionsSlot"
                       Grid.Column="3"
+                      IsVisible="{Binding !IsLocalCodexSelected}"
                       Margin="{StaticResource GenerationAdvancedOptionsMargin}"
                       ClipToBounds="True">
                     <Border x:Name="GenerationSettingsButtonHost"
@@ -133,73 +171,61 @@
                                                 TickFrequency="{Binding TemperatureStep}"
                                                 Value="{Binding Temperature, Mode=TwoWay}" />
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*"
-                                          IsVisible="{Binding SupportsQuality}">
-                                        <Button Grid.Column="0"
-                                                Classes="generation-option-reset"
-                                                Theme="{StaticResource GenerationOptionResetButtonTheme}"
-                                                Command="{Binding ResetQualityCommand}">
-                                            <PathIcon Data="{StaticResource AppQualityIcon}" />
-                                        </Button>
-                                        <ComboBox x:Name="QualityComboBox"
-                                                  Grid.Column="1"
-                                                  HorizontalAlignment="Stretch"
-                                                  MaxDropDownHeight="300"
-                                                  Classes.gpt-quality="{Binding UsesGptImageQuality}"
-                                                  AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Quality.Label}}"
-                                                  ItemsSource="{Binding QualityLevels}"
-                                                  SelectedItem="{Binding SelectedQualityOption, Mode=TwoWay}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate x:DataType="generation:GenerationOptionViewModel">
-                                                    <TextBlock Classes="quality-option"
-                                                               Tag="{Binding Value}"
-                                                               Text="{Binding DisplayName}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                    </Grid>
-                                    <Grid ColumnDefinitions="Auto,*"
-                                          IsVisible="{Binding SupportsComplexity}">
-                                        <Button Grid.Column="0"
-                                                Classes="generation-option-reset"
-                                                Theme="{StaticResource GenerationOptionResetButtonTheme}"
-                                                AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Complexity.Label}}"
-                                                Command="{Binding ResetComplexityCommand}">
-                                            <PathIcon Data="{StaticResource AppBrainIcon}" />
-                                        </Button>
-                                        <ComboBox x:Name="ComplexityComboBox"
-                                                  Grid.Column="1"
-                                                  HorizontalAlignment="Stretch"
-                                                  AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Complexity.Label}}"
-                                                  ItemsSource="{Binding ComplexityLevels}"
-                                                  SelectedItem="{Binding SelectedComplexityOption, Mode=TwoWay}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate x:DataType="generation:GenerationOptionViewModel">
-                                                    <TextBlock Text="{Binding DisplayName}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                    </Grid>
-                                    <Grid ColumnDefinitions="Auto,*"
-                                          IsVisible="{Binding SupportsThinkingLevel}">
-                                        <Button Grid.Column="0"
-                                                Classes="generation-option-reset"
-                                                Theme="{StaticResource GenerationOptionResetButtonTheme}"
-                                                Command="{Binding ResetThinkingLevelCommand}">
-                                            <PathIcon Data="{StaticResource AppBrainIcon}" />
-                                        </Button>
-                                        <ComboBox x:Name="ThinkingLevelComboBox"
-                                                  Grid.Column="1"
-                                                  HorizontalAlignment="Stretch"
-                                                  ItemsSource="{Binding ThinkingLevels}"
-                                                  SelectedItem="{Binding SelectedThinkingLevel}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate x:DataType="contracts:GenerationModelThinkingLevelMetadataDto">
-                                                    <TextBlock Text="{i18n:I18n {Binding LocalizationKey}}" />
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                    </Grid>
+                                    <controls:GenerationOptionSelector IsVisible="{Binding SupportsQuality}"
+                                                                       ResetIcon="{StaticResource AppQualityIcon}"
+                                                                       ResetCommand="{Binding ResetQualityCommand}">
+                                        <controls:GenerationOptionSelector.Selector>
+                                            <ComboBox x:Name="QualityComboBox"
+                                                      HorizontalAlignment="Stretch"
+                                                      MaxDropDownHeight="300"
+                                                      Classes.gpt-quality="{Binding UsesGptImageQuality}"
+                                                      AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Quality.Label}}"
+                                                      ItemsSource="{Binding QualityLevels}"
+                                                      SelectedItem="{Binding SelectedQualityOption, Mode=TwoWay}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="generation:GenerationOptionViewModel">
+                                                        <TextBlock Classes="quality-option"
+                                                                   Tag="{Binding Value}"
+                                                                   Text="{Binding DisplayName}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </controls:GenerationOptionSelector.Selector>
+                                    </controls:GenerationOptionSelector>
+                                    <controls:GenerationOptionSelector IsVisible="{Binding SupportsComplexity}"
+                                                                       ResetButtonName="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Complexity.Label}}"
+                                                                       ResetIcon="{StaticResource AppBrainIcon}"
+                                                                       ResetCommand="{Binding ResetComplexityCommand}">
+                                        <controls:GenerationOptionSelector.Selector>
+                                            <ComboBox x:Name="ComplexityComboBox"
+                                                      HorizontalAlignment="Stretch"
+                                                      AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Complexity.Label}}"
+                                                      ItemsSource="{Binding ComplexityLevels}"
+                                                      SelectedItem="{Binding SelectedComplexityOption, Mode=TwoWay}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="generation:GenerationOptionViewModel">
+                                                        <TextBlock Text="{Binding DisplayName}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </controls:GenerationOptionSelector.Selector>
+                                    </controls:GenerationOptionSelector>
+                                    <controls:GenerationOptionSelector IsVisible="{Binding SupportsThinkingLevel}"
+                                                                       ResetIcon="{StaticResource AppBrainIcon}"
+                                                                       ResetCommand="{Binding ResetThinkingLevelCommand}">
+                                        <controls:GenerationOptionSelector.Selector>
+                                            <ComboBox x:Name="ThinkingLevelComboBox"
+                                                      HorizontalAlignment="Stretch"
+                                                      ItemsSource="{Binding ThinkingLevels}"
+                                                      SelectedItem="{Binding SelectedThinkingLevel}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="contracts:GenerationModelThinkingLevelMetadataDto">
+                                                        <TextBlock Text="{i18n:I18n {Binding LocalizationKey}}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </controls:GenerationOptionSelector.Selector>
+                                    </controls:GenerationOptionSelector>
                                 </StackPanel>
                             </Border>
                         </FlyoutPresenter>

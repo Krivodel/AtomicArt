@@ -1,4 +1,7 @@
+using System.Text.Json;
+
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
@@ -81,11 +84,24 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
                     parameter.Value,
                     parameters.SelectedModel),
                 StringComparer.Ordinal);
-        GenerationRequestSettings settings = new(savedParameters);
+        bool isLocalCodex = LocalCodexImageModel.Matches(request.ModelId);
+        LocalCodexTurnOptions? codexOptions = isLocalCodex ? parameters.CodexTurnOptions : null;
+
+        if (codexOptions?.ReasoningEffort is { } effort)
+        {
+            savedParameters[GenerationParameterNames.ThinkingLevel] = GenerationParameterText.Describe(
+                GenerationParameterNames.ThinkingLevel,
+                JsonSerializer.SerializeToElement(effort),
+                parameters.SelectedModel);
+        }
+
+        GenerationRequestSettings settings = new(savedParameters, codexOptions?.ModelId);
 
         return new GenerationStartSnapshot(
             request.ModelId,
-            parameters.ModelDisplayName,
+            isLocalCodex
+                ? LocalCodexImageModel.FormatDisplayName(codexOptions?.ModelDisplayName)
+                : parameters.ModelDisplayName,
             request.Prompt,
             request.AspectRatio,
             request.Resolution,

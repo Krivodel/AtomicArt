@@ -17,9 +17,11 @@ using Xunit;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Behaviors;
+using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Tests.Common;
@@ -34,6 +36,7 @@ using AtomicArt.Desktop.Tests.ViewModels.Generation;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Generation;
 using static AtomicArt.Desktop.Tests.ViewModels.Generation.UniversalNanoBananaPanelViewModelTestHelper;
+using BuiltInLocalizationCatalog = Krivodeling.Localization.Avalonia.BuiltInLocalizationCatalog;
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
 
 namespace AtomicArt.Desktop.Tests.Views.Generation;
@@ -948,9 +951,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                     .BeAssignableTo<IReadOnlyList<GenerationModelThinkingLevelMetadataDto>>()
                     .Subject;
                 Button thinkingResetButton = GetOptionResetButton(view, viewModel.ResetThinkingLevelCommand);
-                Grid thinkingControls = thinkingComboBox.Parent.Should()
-                    .BeOfType<Grid>()
-                    .Subject;
+                GenerationOptionSelector thinkingControls = GetOptionSelector(thinkingComboBox);
 
                 temperatureValue.Bounds.Top.Should().BeLessThan(slider.Bounds.Top);
                 themeScope.ActualThemeVariant.Should().Be(ThemeVariant.Dark);
@@ -1086,9 +1087,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                         comboBox.Name,
                         "ThinkingLevelComboBox",
                         StringComparison.Ordinal));
-                Grid thinkingControls = thinkingComboBox.Parent.Should()
-                    .BeOfType<Grid>()
-                    .Subject;
+                GenerationOptionSelector thinkingControls = GetOptionSelector(thinkingComboBox);
 
                 PopupAssertions.AssertInheritsScale(popup, panel, uiScale);
                 temperatureResetButton.IsEffectivelyVisible.Should().BeTrue();
@@ -1267,8 +1266,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             ComboBox selector = GetTemperaturePopupContent(settingsPopup)
                 .GetLogicalDescendants().OfType<ComboBox>()
                 .Single(comboBox => ReferenceEquals(comboBox.ItemsSource, context.ViewModel.ComplexityLevels));
-            Control row = selector.Parent as Control
-                ?? throw new InvalidOperationException("The complexity row is missing.");
+            GenerationOptionSelector row = GetOptionSelector(selector);
 
             row.IsVisible.Should().BeTrue();
             selector.SelectedItem = context.ViewModel.ComplexityLevels.Single(level => level.Value == "High");
@@ -1307,8 +1305,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 .GetLogicalDescendants()
                 .OfType<ComboBox>()
                 .Single(comboBox => string.Equals(comboBox.Name, "QualityComboBox", StringComparison.Ordinal));
-            Control qualityRow = qualityComboBox.Parent as Control
-                ?? throw new InvalidOperationException("The quality row should be available.");
+            GenerationOptionSelector qualityRow = GetOptionSelector(qualityComboBox);
             settingsButton.IsVisible.Should().BeFalse();
             qualityRow.IsVisible.Should().BeFalse();
 
@@ -1392,6 +1389,90 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
             viewModel.SelectedQuality.Should().Be("Max");
             viewModel.SelectedQualityOption?.Value.Should().Be("Max");
+        });
+    }
+
+    [Theory]
+    [InlineData(false, "Auto")]
+    [InlineData(true, "Авто")]
+    public async Task AspectRatioComboBox_WithCodex_ShowsLocalizedRatiosBetweenModelSelectors(
+        bool useRussian, string expectedAutoLabel)
+    {
+        await DispatchAsync(() =>
+        {
+            ImageModelOptionCatalog catalog = new(new LocalCodexSettings());
+            BuiltInLocalizationCatalog languages = BuiltInLocalizationCatalog.FromAssemblies(typeof(NanoBanana2PanelView).Assembly);
+            TestLocalizationTextProvider textProvider = new(useRussian ? languages.Russian.Strings : languages.English.Strings);
+            using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+                imageModelOptionCatalog: catalog, textProvider: textProvider);
+            LocalCodexTextModel model = new("gpt-6.2-astra", "GPT-6.2 Astra", new[] { "xhigh" }, "xhigh");
+            viewModel.CodexTextModels = new[] { model };
+            viewModel.SelectedCodexTextModel = model;
+            NanoBanana2PanelView view = CreateView(viewModel);
+
+            ComboBox aspectRatio = view.FindControl<ComboBox>("AspectRatioComboBox")
+                ?? throw new InvalidOperationException("The aspect ratio dropdown should be available.");
+            ComboBox[] dropdowns = view.GetLogicalDescendants().OfType<ComboBox>().ToArray();
+            ComboBox imageModel = dropdowns.Single(dropdown => ReferenceEquals(dropdown.SelectedItem, viewModel.SelectedModel));
+            ComboBox textModel = dropdowns.Single(dropdown => ReferenceEquals(dropdown.SelectedItem, model));
+            StackPanel codexOptions = textModel.Parent as StackPanel
+                ?? throw new InvalidOperationException("The text model dropdown should be in the Codex options.");
+
+            aspectRatio.IsVisible.Should().BeTrue();
+            Grid.GetColumn(aspectRatio).Should().BeGreaterThan(Grid.GetColumn(imageModel))
+                .And.BeLessThan(Grid.GetColumn(codexOptions));
+            aspectRatio.Items.Cast<GenerationOptionViewModel>().Select(option => option.Value).Should()
+                .Equal(GenerationAspectRatios.Auto, "1:1", "9:16", "16:9", "21:9");
+            aspectRatio.SelectedItem.Should().BeSameAs(viewModel.AspectRatioOptions[0]);
+
+            Show(view, ExpandedPanelWidth, ExpandedPanelHeight, window =>
+            {
+                UpdateOptionsLayout(window);
+                aspectRatio.GetVisualDescendants().OfType<TextBlock>().Should()
+                    .Contain(text => text.Text == expectedAutoLabel);
+
+                aspectRatio.IsDropDownOpen = true;
+                UpdateOptionsLayout(window);
+                Popup dropDown = aspectRatio.GetVisualDescendants().OfType<Popup>()
+                    .Single(popup => popup.Name == "PART_Popup");
+                Control content = dropDown.Child
+                    ?? throw new InvalidOperationException("The aspect ratio dropdown content was not found.");
+                content.GetVisualDescendants().OfType<TextBlock>().Should()
+                    .Contain(text => text.Text == expectedAutoLabel);
+                aspectRatio.IsDropDownOpen = false;
+            });
+        });
+    }
+
+    [Fact]
+    public async Task CodexReasoningIcon_WhenClicked_ResetsEffortAndKeepsTextModel()
+    {
+        await DispatchAsync(() =>
+        {
+            LocalCodexSettings settings = new();
+            using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(imageModelOptionCatalog: new ImageModelOptionCatalog(settings));
+            LocalCodexTextModel model = new("gpt-6.2-astra", "GPT-6.2 Astra", new[] { "medium", "high" }, "medium");
+            viewModel.CodexTextModels = new[] { model };
+            viewModel.SelectedCodexTextModel = model;
+            viewModel.SelectedCodexReasoningEffort = viewModel.CodexReasoningEfforts.Single(effort => effort.Value == "high");
+            NanoBanana2PanelView view = CreateView(viewModel);
+            Window window = Show(view, ExpandedPanelWidth, ExpandedPanelHeight);
+
+            try
+            {
+                UpdateOptionsLayout(window);
+                GenerationOptionSelector selector = view.FindControl<GenerationOptionSelector>("CodexReasoningSelector")
+                    ?? throw new InvalidOperationException("The Codex reasoning selector was not found.");
+
+                ClickOptionResetButton(GetResetButton(selector, viewModel.ResetThinkingLevelCommand));
+
+                (viewModel.SelectedCodexReasoningEffort?.Value).Should().Be("medium");
+                viewModel.SelectedCodexTextModel.Should().BeSameAs(model);
+            }
+            finally
+            {
+                window.Close();
+            }
         });
     }
 
@@ -1581,7 +1662,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
     private static UniversalNanoBananaPanelViewModel CreateViewModel(
         IGenerationModelCatalogApiClient? catalogApiClient = null,
         IImageModelOptionCatalog? imageModelOptionCatalog = null,
-        IFilePickerService? filePickerService = null)
+        IFilePickerService? filePickerService = null,
+        TestLocalizationTextProvider? textProvider = null)
     {
         IImageGenerationApiClient generationApiClient = new SuccessfulImageGenerationApiClient();
         IGenerationLifecycleEventHub generationLifecycleEventHub = new TestGenerationLifecycleEventHub();
@@ -1591,6 +1673,8 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 generationLifecycleEventHub);
         IImageModelOptionCatalog modelOptionCatalog =
             imageModelOptionCatalog ?? CreateLoadedImageModelOptionCatalog();
+        textProvider ??= TestLocalizationTextProvider.Default;
+        NanoBanana2PanelTextFormatter textFormatter = new(textProvider);
 
         return new UniversalNanoBananaPanelViewModel(
             filePickerService ?? new EmptyFilePickerService(),
@@ -1614,13 +1698,11 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             new RecordingPromptTextSizeController(),
             new NanoBanana2QuoteViewModel(
                 new GenerationPricePreviewEstimator(),
-                new NanoBanana2PanelTextFormatter(
-                    TestLocalizationTextProvider.Default)),
+                textFormatter),
             new WeakReferenceMessenger(),
             new TestViewModelErrorHandler(),
-            TestLocalizationTextProvider.Default,
-            new NanoBanana2PanelTextFormatter(
-                TestLocalizationTextProvider.Default),
+            textProvider,
+            textFormatter,
             TestApiConfiguration.CreateStateWritePolicy());
     }
 
@@ -1684,8 +1766,18 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
         StackPanel options = view.FindControl<StackPanel>("GenerationOptionsPanel")
             ?? throw new InvalidOperationException("The generation options panel was not found.");
 
-        return options.GetLogicalDescendants().OfType<Button>()
+        return GetResetButton(options, command);
+    }
+
+    private static Button GetResetButton(Control selector, IRelayCommand command)
+    {
+        return selector.GetLogicalDescendants().OfType<Button>()
             .Single(button => ReferenceEquals(button.Command, command));
+    }
+
+    private static GenerationOptionSelector GetOptionSelector(ComboBox comboBox)
+    {
+        return comboBox.GetLogicalAncestors().OfType<GenerationOptionSelector>().Single();
     }
 
     private static void ClickOptionResetButton(Button button)

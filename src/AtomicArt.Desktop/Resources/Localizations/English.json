@@ -94,8 +94,15 @@
       },
       "Thinking": {
         "Label": "Thinking level",
+        "TextModel": "Text model",
+        "None": "None",
+        "Minimal": "Minimal",
         "Low": "Low",
-        "High": "High"
+        "Medium": "Medium",
+        "High": "High",
+        "ExtraHigh": "Extra high",
+        "Maximum": "Maximum",
+        "Ultra": "Ultra"
       }
     },
     "Gallery": {
@@ -187,6 +194,15 @@
         "Label": "Displayed models",
         "Model": "Model",
         "Direct": "Direct"
+      },
+      "LocalCodex": {
+        "Title": "Local Codex",
+        "Folder": "Codex folder",
+        "Check": "Check",
+        "Connected": "Codex is connected through ChatGPT.",
+        "Unavailable": "Could not start or connect to Codex",
+        "SignInRequired": "Sign in to Codex with ChatGPT and try again.",
+        "NoImage": "Codex returned no image."
       },
       "Appearance": {
         "ScaleLabel": "Scale",

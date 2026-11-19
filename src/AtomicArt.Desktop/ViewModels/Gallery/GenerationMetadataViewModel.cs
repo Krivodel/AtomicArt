@@ -9,6 +9,7 @@ using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Localization;
 
 namespace AtomicArt.Desktop.ViewModels.Gallery;
@@ -148,9 +149,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     {
         DateTime createdAt = Item.CreatedAtUtc.ToLocalTime();
         string unavailable = _textProvider.Get(GalleryLocalizationKeys.Metadata.Unavailable);
-        string priceText = Item.Price is GenerationPriceDto price
-            ? string.Concat(_priceFormatter.FormatCurrency(price), _priceFormatter.FormatAmount(price))
-            : unavailable;
+        bool isLocalCodex = LocalCodexImageModel.Matches(Item.ModelId);
 
         yield return new GenerationMetadataField(
             _textProvider.Get(GalleryLocalizationKeys.Metadata.CreatedAt),
@@ -159,15 +158,26 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         yield return new GenerationMetadataField(
             _textProvider.Get(GalleryLocalizationKeys.Metadata.GenerationDuration),
             _durationFormatter.Format(Item.GenerationDuration) ?? unavailable);
-        yield return new GenerationMetadataField(
-            _textProvider.Get(GalleryLocalizationKeys.Metadata.Price),
-            priceText);
+        if (!isLocalCodex)
+        {
+            string priceText = Item.Price is GenerationPriceDto price
+                ? string.Concat(_priceFormatter.FormatCurrency(price), _priceFormatter.FormatAmount(price))
+                : unavailable;
+            yield return new GenerationMetadataField(
+                _textProvider.Get(GalleryLocalizationKeys.Metadata.Price),
+                priceText);
+        }
+
         yield return new GenerationMetadataField(
             _textProvider.Get(GalleryLocalizationKeys.Metadata.Resolution),
-            Item.Resolution);
-        yield return new GenerationMetadataField(
-            _textProvider.Get(GalleryLocalizationKeys.Metadata.AspectRatio),
-            FormatAspectRatio(Item.AspectRatio));
+            Item.IsGenerating || string.IsNullOrWhiteSpace(Item.Resolution)
+                || (isLocalCodex && GenerationAspectRatios.IsAuto(Item.Resolution)) ? unavailable : Item.Resolution);
+        if (!isLocalCodex)
+        {
+            yield return new GenerationMetadataField(
+                _textProvider.Get(GalleryLocalizationKeys.Metadata.AspectRatio),
+                FormatAspectRatio(Item.AspectRatio));
+        }
 
         if (Item.RequestSettings is not { } settings)
         {
@@ -177,7 +187,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         foreach ((string name, GenerationSavedParameter parameter) in settings.Parameters)
         {
             string? value = GenerationParameterText.FormatValue(name, parameter.Value, _textProvider);
-            if (string.IsNullOrWhiteSpace(value) || MatchesDisplayedSize(name, value))
+            if (string.IsNullOrWhiteSpace(value) || ShouldHideSizeParameter(name, value, isLocalCodex))
             {
                 continue;
             }
@@ -188,14 +198,14 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         }
     }
 
-    private bool MatchesDisplayedSize(string name, string value)
+    private bool ShouldHideSizeParameter(string name, string value, bool isLocalCodex)
     {
         return name switch
         {
             GenerationParameterNames.AspectRatio =>
-                string.Equals(value, Item.AspectRatio, StringComparison.OrdinalIgnoreCase),
+                isLocalCodex || string.Equals(value, Item.AspectRatio, StringComparison.OrdinalIgnoreCase),
             GenerationParameterNames.Resolution =>
-                string.Equals(value, Item.Resolution, StringComparison.OrdinalIgnoreCase),
+                isLocalCodex || string.Equals(value, Item.Resolution, StringComparison.OrdinalIgnoreCase),
             _ => false
         };
     }
@@ -250,17 +260,21 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         switch (e.PropertyName)
         {
             case nameof(GenerationItemViewModel.CreatedAtUtc):
+            case nameof(GenerationItemViewModel.ModelId):
             case nameof(GenerationItemViewModel.Price):
             case nameof(GenerationItemViewModel.Resolution):
             case nameof(GenerationItemViewModel.AspectRatio):
             case nameof(GenerationItemViewModel.GenerationDuration):
                 OnPropertyChanged(nameof(Rows));
                 break;
+            case nameof(GenerationItemViewModel.IsGenerating):
+                OnPropertyChanged(nameof(Rows));
+                OnPropertyChanged(e.PropertyName);
+                break;
             case nameof(GenerationItemViewModel.Prompt):
             case nameof(GenerationItemViewModel.ModelDisplayName):
             case nameof(GenerationItemViewModel.Status):
             case nameof(GenerationItemViewModel.IsGenerated):
-            case nameof(GenerationItemViewModel.IsGenerating):
             case nameof(GenerationItemViewModel.IsFailed):
                 OnPropertyChanged(e.PropertyName);
                 break;

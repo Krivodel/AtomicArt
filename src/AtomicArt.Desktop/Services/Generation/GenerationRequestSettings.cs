@@ -5,7 +5,8 @@ namespace AtomicArt.Desktop.Services.Generation;
 
 [JsonConverter(typeof(GenerationRequestSettingsJsonConverter))]
 public sealed record GenerationRequestSettings(
-    IReadOnlyDictionary<string, GenerationSavedParameter> Parameters)
+    IReadOnlyDictionary<string, GenerationSavedParameter> Parameters,
+    string? CodexTextModelId = null)
 {
     public string? GetString(string parameterName)
     {

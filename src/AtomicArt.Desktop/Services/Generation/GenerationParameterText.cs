@@ -3,6 +3,7 @@ using System.Text.Json;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Localization;
 
 namespace AtomicArt.Desktop.Services.Generation;
@@ -121,9 +122,11 @@ internal static class GenerationParameterText
     {
         if (string.Equals(name, GenerationParameterNames.ThinkingLevel, StringComparison.Ordinal))
         {
-            return model?.Thinking?.Levels
-                .FirstOrDefault(level => string.Equals(level.Value, value, StringComparison.Ordinal))
-                ?.LocalizationKey;
+            return LocalCodexImageModel.Matches(model?.Id)
+                ? LocalCodexReasoningEffort.GetLocalizationKey(value)
+                : model?.Thinking?.Levels
+                    .FirstOrDefault(level => string.Equals(level.Value, value, StringComparison.Ordinal))
+                    ?.LocalizationKey;
         }
 
         if (string.Equals(name, GenerationParameterNames.AspectRatio, StringComparison.Ordinal)

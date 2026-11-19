@@ -11,6 +11,7 @@ using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Localization;
@@ -70,9 +71,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     public double PromptTextSize => _promptTextSizeController.CurrentTextSize;
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsAttaching => _attachmentsViewModel.HasPendingAttachments;
-    public bool HasLoadedCatalog => _imageModelOptionCatalog.IsLoaded
-                                    && SelectedModel is not null
-                                    && !IsCatalogLoading;
+    public bool IsLocalCodexSelected => LocalCodexImageModel.Matches(SelectedModel?.Id);
+    public bool HasLoadedCatalog => SelectedModel is not null
+        && (IsLocalCodexSelected || (_imageModelOptionCatalog.IsLoaded && !IsCatalogLoading));
     public ImageModelOption? SelectedModel
     {
         get => _selectedModel;
@@ -111,6 +112,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private bool CanRunCommand => HasLoadedCatalog
                                   && !IsAttaching
+                                  && (!IsLocalCodexSelected || _codexModelLoad is null)
                                   && !string.IsNullOrWhiteSpace(Prompt);
     private bool CanLoadModelCatalog => !IsLoading && !IsCatalogLoading && !_imageModelOptionCatalog.IsLoaded;
     private bool CanPickImage => !IsLoading
@@ -201,7 +203,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         ILocalizationTextProvider textProvider,
         NanoBanana2PanelTextFormatter textFormatter,
         StateWritePolicy stateWritePolicy,
-        ProviderCredentialResolver? providerCredentialResolver = null)
+        ProviderCredentialResolver? providerCredentialResolver = null,
+        LocalCodexAppServer? codexAppServer = null,
+        LocalCodexSettings? codexSettings = null)
     {
         ArgumentNullException.ThrowIfNull(filePickerService);
         ArgumentNullException.ThrowIfNull(secretStore);
@@ -234,6 +238,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _filePickerService = filePickerService;
         _secretStore = secretStore;
         _providerCredentialResolver = providerCredentialResolver;
+        _codexAppServer = codexAppServer;
+        _codexSettings = codexSettings;
+        if (_codexSettings is not null)
+        {
+            _codexSettings.OptionsChanged += OnCodexOptionsChanged;
+        }
         _modelScope = modelScope;
         _attachmentsViewModel = attachmentsViewModel;
         _generationRunner = generationRunner;
@@ -246,6 +256,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _promptStateSaveDelay = stateWritePolicy.DeferredWriteDelay;
         _attachmentsViewModel.AttachmentStateChanged += OnAttachmentStateChanged;
         _modelScope.VisibleModelsChanged += OnVisibleModelsChanged;
+        _modelScope.LocalCodexAvailabilityChanged += OnLocalCodexAvailabilityChanged;
         _apiEndpointService.BaseAddressChanged += OnApiBaseAddressChanged;
         _promptTextSizeController.TextSizeChanged += OnPromptTextSizeChanged;
         messenger.Register<LocalizationChangedMessage>(this);
@@ -300,7 +311,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 settings?.GetString(GenerationParameterNames.AspectRatio) ?? preset.AspectRatio,
                 settings?.GetString(GenerationParameterNames.Resolution) ?? preset.Resolution);
 
-            if (settings is not null)
+            if (IsLocalCodexSelected)
+            {
+                ApplyCodexPreset(settings);
+            }
+            else if (settings is not null)
             {
                 ApplyPresetParameters(model, settings);
             }
@@ -357,7 +372,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             option.RefreshLocalization();
         }
 
-        foreach (GenerationOptionViewModel option in QualityLevels.Concat(ComplexityLevels))
+        foreach (GenerationOptionViewModel option in QualityLevels.Concat(ComplexityLevels).Concat(CodexReasoningEfforts))
         {
             option.RefreshLocalization();
         }
@@ -376,8 +391,15 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
 
         _isDisposed = true;
+        if (_codexSettings is not null)
+        {
+            _codexSettings.OptionsChanged -= OnCodexOptionsChanged;
+        }
+
+        CancelCodexModelLoad();
         _attachmentsViewModel.AttachmentStateChanged -= OnAttachmentStateChanged;
         _modelScope.VisibleModelsChanged -= OnVisibleModelsChanged;
+        _modelScope.LocalCodexAvailabilityChanged -= OnLocalCodexAvailabilityChanged;
         _modelScope.Dispose();
         _apiEndpointService.BaseAddressChanged -= OnApiBaseAddressChanged;
         _promptTextSizeController.TextSizeChanged -= OnPromptTextSizeChanged;
@@ -427,7 +449,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             if (clearExistingCatalog)
             {
                 _imageModelOptionCatalog.Clear();
-                ApplyCatalogSnapshot([]);
+                ApplyCatalogSnapshot(_imageModelOptionCatalog.GetModels(), preserveSelection: IsLocalCodexSelected);
             }
 
             GenerationModelCatalogDto catalog = await _generationModelCatalogApiClient.GetCatalogAsync(ct);
@@ -438,7 +460,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             }
 
             _imageModelOptionCatalog.Initialize(catalog);
-            ApplyCatalogSnapshot(_imageModelOptionCatalog.GetModels());
+            ApplyCatalogSnapshot(_imageModelOptionCatalog.GetModels(), preserveSelection: IsLocalCodexSelected);
             await RestorePanelStateCoreAsync(ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -453,8 +475,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             if (IsCurrentCatalogLoad(operationId, endpointRevision))
             {
                 _errorHandler.Log(ex, nameof(LoadModelCatalogAsync));
-                SetLocalizedErrorMessage(
-                    GenerationUiLocalizationKeys.Errors.ModelCatalogLoadFailed);
+                if (!IsLocalCodexSelected)
+                {
+                    SetLocalizedErrorMessage(GenerationUiLocalizationKeys.Errors.ModelCatalogLoadFailed);
+                }
             }
         }
         finally
@@ -663,6 +687,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     [RelayCommand]
     private void ResetThinkingLevel()
     {
+        if (IsLocalCodexSelected)
+        {
+            ResetCodexReasoningEffort();
+            return;
+        }
+
         if (SelectedModel?.Thinking is null)
         {
             return;
@@ -679,9 +709,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         try
         {
             ClearErrorMessage();
+            NanoBanana2GenerationParameters parameters = CreateGenerationParameters();
             await SavePanelStateAsync(nameof(GenerateAsync), ct);
-            ImageModelOption selectedModel = SelectedModel
-                ?? throw new InvalidOperationException(SelectedModelNotInitializedMessage);
+            ImageModelOption selectedModel = parameters.SelectedModel;
             string providerCredential = string.Empty;
 
             if (_providerCredentialResolver is not null)
@@ -712,7 +742,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             }
 
             await _generationRunner.RunAsync(
-                CreateGenerationParameters(),
+                parameters,
                 providerCredential,
                 ct);
         }
@@ -977,7 +1007,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             SelectedThinkingLevel?.Value,
             SupportsQuality ? SelectedQuality.ToLowerInvariant() : null,
             SupportsTemperature,
-            SupportsComplexity ? SelectedComplexity?.ToLowerInvariant() : null);
+            SupportsComplexity ? SelectedComplexity?.ToLowerInvariant() : null,
+            CreateCodexTurnOptions());
     }
 
     private void RefreshAttachmentState()
@@ -1011,6 +1042,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private void OnSelectedModelChanged(ImageModelOption? value)
     {
+        EnsureCodexModelsLoaded();
         if (value is null)
         {
             ResetSelectedModelValues();
@@ -1221,10 +1253,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         SetLocalizedErrorMessage(_errorHandler.GetUserMessageKey(exception));
     }
 
-    private void ApplyCatalogSnapshot(IReadOnlyList<ImageModelOption> models)
+    private void ApplyCatalogSnapshot(IReadOnlyList<ImageModelOption> models, bool preserveSelection = false)
     {
         ArgumentNullException.ThrowIfNull(models);
 
+        string? selectedModelId = preserveSelection ? SelectedModel?.Id : null;
         _availableModels.Clear();
 
         IReadOnlyList<ImageModelOption> supportedModels = models
@@ -1244,7 +1277,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         try
         {
             SelectedModel = supportedModels.Count > 0
-                ? GenerationPanelOptionDefaults.GetDefaultModel(supportedModels)
+                ? supportedModels.FirstOrDefault(model => model.Id == selectedModelId)
+                    ?? GenerationPanelOptionDefaults.GetDefaultModel(supportedModels)
                 : null;
         }
         finally
@@ -1288,7 +1322,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private bool CanRestorePanelState()
     {
-        return _imageModelOptionCatalog.IsLoaded && SelectedModel is not null;
+        return SelectedModel is not null && (_imageModelOptionCatalog.IsLoaded || IsLocalCodexSelected);
     }
 
     private async Task ApplyPanelStateAsync(GenerationPanelState state, CancellationToken ct)
@@ -1311,6 +1345,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         try
         {
             _rememberedThinkingLevelValue = state.ThinkingLevel;
+            RestoreCodexSelection(state.CodexTextModelId, state.CodexReasoningEffort);
             SelectedModel = selectedModel;
             SelectedQuality = ResolveQuality(state.Quality);
             SelectedComplexity = ResolveComplexity(state.Complexity);
@@ -1442,6 +1477,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             Complexity = SelectedComplexity?.ToLowerInvariant(),
             ThinkingLevel = SelectedThinkingLevel?.Value
                 ?? _rememberedThinkingLevelValue,
+            CodexTextModelId = _savedCodexModelId,
+            CodexReasoningEffort = _savedCodexEffort,
             GenerationCount = GenerationCount,
             Prompt = Prompt,
             Attachments = _attachmentsViewModel.GetAttachmentStates()
@@ -1597,6 +1634,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         OnPropertyChanged(nameof(ModelId));
         OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(IsLocalCodexSelected));
         OnPropertyChanged(nameof(AspectRatios));
         OnPropertyChanged(nameof(AspectRatioOptions));
         OnPropertyChanged(nameof(Resolutions));
@@ -1716,7 +1754,15 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         if (!_isDisposed)
         {
-            ApplyCatalogSnapshot(_imageModelOptionCatalog.GetModels());
+            ApplyCatalogSnapshot(_imageModelOptionCatalog.GetModels(), preserveSelection: IsLocalCodexSelected);
+        }
+    }
+
+    private void OnLocalCodexAvailabilityChanged(object? sender, EventArgs e)
+    {
+        if (!_isDisposed)
+        {
+            ApplyCatalogSnapshot(_imageModelOptionCatalog.GetModels(), preserveSelection: true);
         }
     }
 

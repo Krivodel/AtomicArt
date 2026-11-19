@@ -31,9 +31,9 @@ public sealed class GenerationDurationFormatter
         {
             return string.Concat(
                 FormatValue(hours, CommonLocalizationKeys.TimeUnits.HourShort),
-                ":",
+                " ",
                 FormatValue(minutes, CommonLocalizationKeys.TimeUnits.MinuteShort),
-                ":",
+                " ",
                 FormatValue(seconds, CommonLocalizationKeys.TimeUnits.SecondShort));
         }
 
@@ -41,7 +41,7 @@ public sealed class GenerationDurationFormatter
         {
             return string.Concat(
                 FormatValue(minutes, CommonLocalizationKeys.TimeUnits.MinuteShort),
-                ":",
+                " ",
                 FormatValue(seconds, CommonLocalizationKeys.TimeUnits.SecondShort));
         }
 

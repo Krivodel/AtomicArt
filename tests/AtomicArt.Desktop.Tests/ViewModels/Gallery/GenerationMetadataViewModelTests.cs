@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 
 using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
@@ -9,6 +10,7 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -94,6 +96,77 @@ public sealed class GenerationMetadataViewModelTests
 
         rows.Should().HaveCount(2);
         rows[1].Third.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Rows_WithLocalCodex_ShowsActualResolutionAndSavedEffort(bool hasSavedEffort)
+    {
+        Dictionary<string, GenerationSavedParameter> parameters = [];
+        parameters.Add(GenerationParameterNames.AspectRatio, GenerationParameterText.Describe(
+            GenerationParameterNames.AspectRatio, JsonSerializer.SerializeToElement("16:9")));
+        parameters.Add(GenerationParameterNames.Resolution, GenerationParameterText.Describe(
+            GenerationParameterNames.Resolution, JsonSerializer.SerializeToElement(LocalCodexImageModel.Automatic)));
+
+        if (hasSavedEffort)
+        {
+            parameters.Add(GenerationParameterNames.ThinkingLevel, GenerationParameterText.Describe(
+                GenerationParameterNames.ThinkingLevel,
+                JsonSerializer.SerializeToElement("xhigh"),
+                LocalCodexImageModel.Option));
+        }
+
+        GalleryItemState state = new()
+        {
+            Id = ItemId,
+            ModelId = LocalCodexImageModel.Id,
+            ModelDisplayName = LocalCodexImageModel.Option.DisplayName,
+            AspectRatio = LocalCodexImageModel.Automatic,
+            Resolution = "1697x927",
+            RequestSettings = new GenerationRequestSettings(parameters, "gpt-6.2-astra"),
+            CreatedAtUtc = CreatedAtUtc,
+            Status = GenerationItemStatus.Generated,
+            ImagePath = "result.png"
+        };
+        GenerationItemViewModel item = GenerationItemViewModel.Restore(
+            state,
+            state.ImagePath,
+            null,
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
+        using GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
+
+        IReadOnlyList<GenerationMetadataRow> rows = viewModel.Rows;
+        rows.Should().HaveCount(hasSavedEffort ? 2 : 1);
+        GenerationMetadataRow row = rows[0];
+
+        row.First.Label.Should().Be(TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Metadata.CreatedAt));
+        (row.Second?.Label).Should().Be(TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Metadata.GenerationDuration));
+        row.Third.Should().Be(new GenerationMetadataField(
+            TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Metadata.Resolution), state.Resolution));
+
+        if (hasSavedEffort)
+        {
+            rows[1].Should().Be(new GenerationMetadataRow(new GenerationMetadataField(
+                TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Thinking.Label),
+                TestLocalizationTextProvider.Default.Get(GenerationUiLocalizationKeys.Thinking.ExtraHigh)), null, null));
+        }
+    }
+
+    [Fact]
+    public void Rows_WhileLocalCodexIsGenerating_ShowsUnavailableResolution()
+    {
+        GenerationItemDto item = CreateItem(status: GenerationItemStatus.Generating, imagePath: null) with
+        {
+            ModelId = LocalCodexImageModel.Id,
+            Resolution = LocalCodexImageModel.Automatic
+        };
+        using GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
+
+        GenerationMetadataRow row = viewModel.Rows.Should().ContainSingle().Which;
+
+        (row.Third?.Value).Should().Be(TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Metadata.Unavailable));
     }
 
     [Fact]

@@ -50,6 +50,12 @@ internal static class GenerationFailureMessageResolver
                 GenerationUiLocalizationKeys.Errors.TransportInterrupted,
             [GenerationClientFailureCodes.ApiUnavailable] =
                 GenerationUiLocalizationKeys.Errors.ApiUnavailable,
+            [GenerationClientFailureCodes.CodexUnavailable] =
+                SettingsLocalizationKeys.LocalCodex.Unavailable,
+            [GenerationClientFailureCodes.CodexSignInRequired] =
+                SettingsLocalizationKeys.LocalCodex.SignInRequired,
+            [GenerationClientFailureCodes.CodexNoImage] =
+                SettingsLocalizationKeys.LocalCodex.NoImage,
             [GenerationClientFailureCodes.Unknown] =
                 GenerationUiLocalizationKeys.Errors.Failed
         };

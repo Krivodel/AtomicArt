@@ -1,4 +1,5 @@
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
@@ -7,11 +8,13 @@ public sealed record GenerationRunRequest
     public ImageGenerationRequestDto Request { get; }
     public GenerationStartSnapshot StartSnapshot { get; }
     public string ProviderCredential { get; }
+    public LocalCodexTurnOptions? CodexTurnOptions { get; }
 
     public GenerationRunRequest(
         ImageGenerationRequestDto request,
         GenerationStartSnapshot startSnapshot,
-        string? providerCredential)
+        string? providerCredential,
+        LocalCodexTurnOptions? codexTurnOptions = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(startSnapshot);
@@ -19,5 +22,6 @@ public sealed record GenerationRunRequest
         Request = request;
         StartSnapshot = startSnapshot;
         ProviderCredential = providerCredential ?? string.Empty;
+        CodexTurnOptions = codexTurnOptions;
     }
 }

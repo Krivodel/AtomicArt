@@ -33,6 +33,13 @@ public static class GenerationUiLocalizationKeys
     public static class Thinking
     {
         public const string Label = "Generation.Thinking.Label";
+        public const string TextModel = "Generation.Thinking.TextModel";
+        public const string None = "Generation.Thinking.None";
+        public const string Minimal = "Generation.Thinking.Minimal";
+        public const string Medium = "Generation.Thinking.Medium";
+        public const string ExtraHigh = "Generation.Thinking.ExtraHigh";
+        public const string Maximum = "Generation.Thinking.Maximum";
+        public const string Ultra = "Generation.Thinking.Ultra";
     }
 
     public static class Quality

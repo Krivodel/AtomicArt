@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AtomicArt.Desktop.Controls.Generation.GenerationOptionSelector"
+             x:Name="Root">
+    <Grid ColumnDefinitions="Auto,*">
+        <Button Classes="generation-option-reset"
+                Theme="{StaticResource GenerationOptionResetButtonTheme}"
+                AutomationProperties.Name="{Binding #Root.ResetButtonName}"
+                Command="{Binding #Root.ResetCommand}">
+            <PathIcon Data="{Binding #Root.ResetIcon}" />
+        </Button>
+        <ContentControl Grid.Column="1"
+                        HorizontalContentAlignment="Stretch"
+                        Content="{Binding #Root.Selector}" />
+    </Grid>
+</UserControl>

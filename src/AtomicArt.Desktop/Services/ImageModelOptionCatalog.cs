@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 
 namespace AtomicArt.Desktop.Services;
 
@@ -22,9 +23,15 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
     }
 
     private readonly object _syncRoot = new();
+    private readonly LocalCodexSettings? _localCodex;
     private IReadOnlyList<ImageModelOption> _models = [];
     private bool _isLoaded;
     private bool _isLoading;
+
+    public ImageModelOptionCatalog(LocalCodexSettings? localCodex = null)
+    {
+        _localCodex = localCodex;
+    }
 
     public bool IsLoading
     {
@@ -89,7 +96,9 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
     {
         lock (_syncRoot)
         {
-            return _models;
+            return _localCodex?.Current.Enabled == true
+                ? _models.Append(LocalCodexImageModel.Option).ToArray()
+                : _models;
         }
     }
 
@@ -103,6 +112,7 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
         }
 
         return modelMetadata
+            .Where(model => !LocalCodexImageModel.Matches(model?.Id))
             .Select(CreateOption)
             .OrderBy(option => option.DisplayName, StringComparer.Ordinal)
             .ToList();

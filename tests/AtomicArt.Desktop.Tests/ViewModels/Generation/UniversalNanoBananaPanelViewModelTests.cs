@@ -8,13 +8,16 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
+using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Infrastructure.Generation;
@@ -28,6 +31,115 @@ public sealed class UniversalNanoBananaPanelViewModelTests
 {
     private const int PromptDelayedSaveSettleMilliseconds = 500;
     private static readonly byte[] PngBytes = [.. GenerationImageFileSignatures.Png, 0x00];
+
+    [Fact]
+    public async Task PrepareStateRestoreAsync_WithDefaultLocalCodexAndRemoteCatalogOffline_AllowsGeneration()
+    {
+        LocalCodexSettings settings = new();
+        ImageModelOptionCatalog catalog = new(settings);
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            catalogApiClient: new ThrowingGenerationModelCatalogApiClient(),
+            imageModelOptionCatalog: catalog,
+            localCodexSettings: settings);
+        viewModel.Prompt = "A blue circle";
+
+        await viewModel.PrepareStateRestoreAsync(CancellationToken.None);
+
+        catalog.IsLoaded.Should().BeFalse();
+        viewModel.IsLocalCodexSelected.Should().BeTrue();
+        viewModel.GenerateCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GenerateCommand_WithCodexOptions_SnapshotsOptionsAndOriginalPromptForEachRun()
+    {
+        LocalCodexSettings settings = new();
+        ImageModelOptionCatalog catalog = new(settings);
+        CapturingGenerationRunDispatcher dispatcher = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            imageModelOptionCatalog: catalog, dispatcher: dispatcher, localCodexSettings: settings);
+        LocalCodexTextModel model = new("gpt-6.2-astra", "GPT-6.2 Astra", new[] { "medium", "high" }, "medium");
+        viewModel.SelectedCodexTextModel = model;
+        viewModel.SelectedCodexReasoningEffort = viewModel.CodexReasoningEfforts.Single(effort => effort.Value == "high");
+        viewModel.SelectedAspectRatio = "21:9";
+        viewModel.Prompt = "A blue circle";
+        viewModel.GenerationCount = 2;
+
+        await viewModel.GenerateCommand.ExecuteAsync(null);
+
+        dispatcher.CapturedRequests.Should().HaveCount(2).And.AllSatisfy(request =>
+        {
+            request.CodexTurnOptions.Should().Be(new LocalCodexTurnOptions(model.Id, model.DisplayName, "high"));
+            request.StartSnapshot.ModelDisplayName.Should().Be("Codex, GPT-6.2 Astra");
+            request.StartSnapshot.Prompt.Should().Be("A blue circle");
+            GenerationRequestSettings snapshot = request.StartSnapshot.RequestSettings
+                ?? throw new InvalidOperationException("The start event must include request settings.");
+            snapshot.CodexTextModelId.Should().Be(model.Id);
+            snapshot.GetString(GenerationParameterNames.AspectRatio).Should().Be("21:9");
+            snapshot.GetString(GenerationParameterNames.ThinkingLevel).Should().Be("high");
+            request.Request.AspectRatio.Should().Be("21:9");
+            request.Request.ThinkingLevel.Should().BeNull();
+        });
+    }
+
+    [Fact]
+    public void SelectedCodexTextModel_WithNoEffortOverride_PrefersVeryHighOnEachModel()
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        LocalCodexTextModel first = new("sol", "Sol", new[] { "low", "xhigh" }, "low");
+        LocalCodexTextModel second = new("astra", "Astra", new[] { "high", "xhigh", "max" }, "high");
+
+        viewModel.SelectedCodexTextModel = first;
+        (viewModel.SelectedCodexReasoningEffort?.Value).Should().Be("xhigh");
+        viewModel.SelectedCodexTextModel = second;
+
+        (viewModel.SelectedCodexReasoningEffort?.Value).Should().Be("xhigh");
+    }
+
+    [Theory]
+    [InlineData(null, "Codex, GPT-6.2 Astra", null, "high")]
+    [InlineData("gpt-6.2-astra", "Codex, Old name", "medium", "medium")]
+    [InlineData("gpt-6.2-astra", "Codex, GPT-6.2 Astra", "retired-effort", "xhigh")]
+    public async Task ReuseGenerationCommand_WithSavedCodexGeneration_RestoresModelAndEffort(
+        string? savedModelId, string modelDisplayName, string? savedEffort, string expectedEffort)
+    {
+        LocalCodexSettings settings = new();
+        using UniversalNanoBananaPanelViewModel panel = CreateViewModel(
+            imageModelOptionCatalog: new ImageModelOptionCatalog(settings), localCodexSettings: settings);
+        LocalCodexTextModel first = new("gpt-6.2-sol", "GPT-6.2 Sol", new[] { "high", "xhigh" }, "high");
+        LocalCodexTextModel second = new("gpt-6.2-astra", "GPT-6.2 Astra", new[] { "medium", "high", "xhigh" }, "medium");
+        panel.CodexTextModels = new[] { first, second };
+        panel.SelectedCodexTextModel = first;
+        panel.SelectedCodexReasoningEffort = panel.CodexReasoningEfforts.Single(effort => effort.Value == "high");
+        using GalleryViewModel gallery = GalleryViewModelTestFactory.CreateViewModel();
+        gallery.ConfigureGenerationPresetTarget(panel);
+        GenerationRequestSettings? requestSettings = savedModelId is null || savedEffort is null
+            ? null
+            : GenerationRequestSettingsTestFactory.Create((GenerationParameterNames.ThinkingLevel, savedEffort))
+                with { CodexTextModelId = savedModelId };
+        GalleryItemState state = new()
+        {
+            Id = Guid.Parse("77777777-7777-7777-7777-777777777777"),
+            ModelId = LocalCodexImageModel.Id,
+            ModelDisplayName = modelDisplayName,
+            Prompt = "A blue circle",
+            AspectRatio = LocalCodexImageModel.Automatic,
+            Resolution = "1697x927",
+            CreatedAtUtc = new DateTime(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc),
+            Status = GenerationItemStatus.Generated,
+            ImagePath = "result.png",
+            RequestSettings = requestSettings
+        };
+        GalleryItemState restored = JsonSerializer.Deserialize<GalleryItemState>(JsonSerializer.Serialize(state))
+            ?? throw new InvalidOperationException("Gallery item must deserialize.");
+        await gallery.RestoreStateAsync(new[] { restored }, CancellationToken.None);
+        GenerationItemViewModel item = gallery.Items.Single();
+
+        await gallery.ReuseGenerationCommand.ExecuteAsync(item);
+
+        panel.SelectedCodexTextModel.Should().Be(savedModelId is null ? first : second);
+        (panel.SelectedCodexReasoningEffort?.Value).Should().Be(expectedEffort);
+    }
 
     [Fact]
     public async Task GenerateCommand_WhenRequestBegins_PublishesStartedEvent()
@@ -2226,7 +2338,8 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         IAttachedImagePreparationService? attachmentPreparationService = null,
         IApiEndpointService? apiEndpointService = null,
         IUiThreadDispatcher? uiThreadDispatcher = null,
-        bool initializeCatalog = true)
+        bool initializeCatalog = true,
+        LocalCodexSettings? localCodexSettings = null)
     {
         IImageGenerationApiClient generationApiClient = apiClient ?? new SuccessfulImageGenerationApiClient();
         IGenerationLifecycleEventHub generationLifecycleEventHub =
@@ -2245,7 +2358,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             imageModelOptionCatalog ?? CreateImageModelOptionCatalog(initializeCatalog),
             apiEndpointService ?? TestApiEndpointServiceFactory.Create(),
             uiThreadDispatcher ?? new ImmediateUiThreadDispatcher(),
-            new UniversalNanoBananaPanelModelScope(),
+            new UniversalNanoBananaPanelModelScope(localCodex: localCodexSettings),
             new NanoBanana2AttachmentsViewModel(
                 attachmentValidator,
                 attachmentPreparationService ?? new PassThroughAttachedImagePreparationService(),

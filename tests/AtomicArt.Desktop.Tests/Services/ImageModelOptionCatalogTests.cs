@@ -6,12 +6,37 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Tests.Common.Generation;
 
 namespace AtomicArt.Desktop.Tests.Services;
 
 public sealed class ImageModelOptionCatalogTests
 {
+    [Fact]
+    public void GetModels_WithDefaultSettings_ReturnsLocalCodexWithoutRemoteCatalog()
+    {
+        LocalCodexSettings settings = new();
+        ImageModelOptionCatalog catalog = new(settings);
+
+        IReadOnlyList<ImageModelOption> models = catalog.GetModels();
+
+        catalog.IsLoaded.Should().BeFalse();
+        models.Should().ContainSingle().Which.Should().BeSameAs(LocalCodexImageModel.Option);
+    }
+
+    [Fact]
+    public void Initialize_WithRemoteModelUsingLocalCodexId_DoesNotRegisterLocalModel()
+    {
+        LocalCodexSettings settings = new();
+        settings.ApplySerializedValue(JsonSerializer.Serialize(LocalCodexOptions.Default with { Enabled = false }));
+        ImageModelOptionCatalog catalog = new(settings);
+
+        catalog.Initialize(CreateCatalog(modelId: LocalCodexImageModel.Id));
+
+        catalog.GetModels().Should().BeEmpty();
+    }
+
     [Fact]
     public void Initialize_WithRealMetadata_MakesNanoBanana21SelectableAndVisibilityConfigurable()
     {

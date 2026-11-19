@@ -29,7 +29,7 @@ public sealed class GenerationDurationFormatterTests
         result.Should().Be(string.Concat(
             "2",
             TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.MinuteShort),
-            ":30",
+            " 30",
             TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.SecondShort)));
     }
 
@@ -41,9 +41,9 @@ public sealed class GenerationDurationFormatterTests
         result.Should().Be(string.Concat(
             "2",
             TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.HourShort),
-            ":3",
+            " 3",
             TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.MinuteShort),
-            ":30",
+            " 30",
             TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.SecondShort)));
     }
 

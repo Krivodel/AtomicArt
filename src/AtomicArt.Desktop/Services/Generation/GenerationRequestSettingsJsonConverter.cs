@@ -8,6 +8,7 @@ namespace AtomicArt.Desktop.Services.Generation;
 internal sealed class GenerationRequestSettingsJsonConverter : JsonConverter<GenerationRequestSettings>
 {
     private const string ParametersPropertyName = "parameters";
+    private const string CodexTextModelIdPropertyName = "codexTextModelId";
     private const string LegacyThinkingKey = "thinkingLevelLocalizationKey";
 
     private static readonly string[] LegacyParameterNames =
@@ -35,15 +36,17 @@ internal sealed class GenerationRequestSettingsJsonConverter : JsonConverter<Gen
 
         if (snapshot.TryGetProperty(ParametersPropertyName, out JsonElement parameters))
         {
+            string? codexTextModelId = snapshot.TryGetProperty(CodexTextModelIdPropertyName, out JsonElement modelId)
+                && modelId.ValueKind == JsonValueKind.String ? modelId.GetString() : null;
             return parameters.ValueKind == JsonValueKind.Object
-                ? ReadParameters(parameters, options)
+                ? new GenerationRequestSettings(ReadParameters(parameters, options), codexTextModelId)
                 : null;
         }
 
         return ReadLegacySnapshot(snapshot);
     }
 
-    private static GenerationRequestSettings ReadParameters(
+    private static IReadOnlyDictionary<string, GenerationSavedParameter> ReadParameters(
         JsonElement parameters,
         JsonSerializerOptions options)
     {
@@ -71,7 +74,7 @@ internal sealed class GenerationRequestSettingsJsonConverter : JsonConverter<Gen
             }
         }
 
-        return new GenerationRequestSettings(values);
+        return values;
     }
 
     public override void Write(
@@ -82,6 +85,12 @@ internal sealed class GenerationRequestSettingsJsonConverter : JsonConverter<Gen
         writer.WriteStartObject();
         writer.WritePropertyName(ParametersPropertyName);
         JsonSerializer.Serialize(writer, value.Parameters, options);
+
+        if (value.CodexTextModelId is { } modelId)
+        {
+            writer.WriteString(CodexTextModelIdPropertyName, modelId);
+        }
+
         writer.WriteEndObject();
     }
 

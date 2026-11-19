@@ -192,9 +192,9 @@ internal static class GalleryItemStateMapper
                     JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False)
             .ToDictionary(parameter => parameter.Key, parameter => parameter.Value, StringComparer.Ordinal);
 
-        return parameters.Count == 0
+        return parameters.Count == 0 && settings.CodexTextModelId is null
             ? null
-            : new GenerationRequestSettings(parameters);
+            : settings with { Parameters = parameters };
     }
 
     private static GenerationItemStatus ResolveStatus(

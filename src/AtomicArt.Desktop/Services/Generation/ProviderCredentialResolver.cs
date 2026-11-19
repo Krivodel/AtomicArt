@@ -1,4 +1,5 @@
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
@@ -22,7 +23,8 @@ public sealed class ProviderCredentialResolver : IGenerationModelService
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        return !string.Equals(model.Provider, GenerationProviderIds.Test, StringComparison.Ordinal);
+        return !string.Equals(model.Provider, GenerationProviderIds.Test, StringComparison.Ordinal)
+            && !LocalCodexImageModel.Matches(model.Id);
     }
 
     public async Task<ProviderCredentialResolution> ResolveAsync(

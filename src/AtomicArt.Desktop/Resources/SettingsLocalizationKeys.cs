@@ -58,6 +58,17 @@ public static class SettingsLocalizationKeys
         public const string Direct = "Settings.GenerationModels.Direct";
     }
 
+    public static class LocalCodex
+    {
+        public const string Title = "Settings.LocalCodex.Title";
+        public const string Folder = "Settings.LocalCodex.Folder";
+        public const string Check = "Settings.LocalCodex.Check";
+        public const string Connected = "Settings.LocalCodex.Connected";
+        public const string Unavailable = "Settings.LocalCodex.Unavailable";
+        public const string SignInRequired = "Settings.LocalCodex.SignInRequired";
+        public const string NoImage = "Settings.LocalCodex.NoImage";
+    }
+
     public static class Appearance
     {
         public const string ScaleLabel = "Settings.Appearance.ScaleLabel";

@@ -94,8 +94,15 @@
       },
       "Thinking": {
         "Label": "Уровень размышлений",
+        "TextModel": "Текстовая модель",
+        "None": "Нет",
+        "Minimal": "Минимальный",
         "Low": "Низкий",
-        "High": "Высокий"
+        "Medium": "Средний",
+        "High": "Высокий",
+        "ExtraHigh": "Очень высокий",
+        "Maximum": "Максимальный",
+        "Ultra": "Ультра"
       }
     },
     "Gallery": {
@@ -187,6 +194,15 @@
         "Label": "Отображаемые модели",
         "Model": "Модель",
         "Direct": "Напрямую"
+      },
+      "LocalCodex": {
+        "Title": "Локальный Codex",
+        "Folder": "Папка Codex",
+        "Check": "Проверить",
+        "Connected": "Codex подключён через ChatGPT.",
+        "Unavailable": "Не удалось запустить или подключить Codex",
+        "SignInRequired": "Войдите в Codex через ChatGPT и повторите попытку.",
+        "NoImage": "Codex не вернул изображение."
       },
       "Appearance": {
         "ScaleLabel": "Масштаб",

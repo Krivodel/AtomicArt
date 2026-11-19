@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.Services.Generation;
@@ -10,6 +11,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
 {
     private readonly IGenerationConcurrencyLimiter _concurrencyLimiter;
     private readonly IImageGenerationApiClient _apiClient;
+    private readonly LocalCodexGenerationClient? _localCodex;
     private readonly NanoBanana2GenerationLifecyclePublisher _lifecyclePublisher;
     private readonly IGenerationActivityTracker _generationActivityTracker;
     private readonly IGenerationAdmissionGate _generationAdmissionGate;
@@ -33,7 +35,8 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         IOptions<GenerationClientOptions> options,
         IGenerationReferenceStore referenceStore,
         SaveReferencesSetting saveReferences,
-        IGenerationCancellationService? cancellationService = null)
+        IGenerationCancellationService? cancellationService = null,
+        LocalCodexGenerationClient? localCodex = null)
     {
         ArgumentNullException.ThrowIfNull(concurrencyLimiter);
         ArgumentNullException.ThrowIfNull(apiClient);
@@ -46,6 +49,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
 
         _concurrencyLimiter = concurrencyLimiter;
         _apiClient = apiClient;
+        _localCodex = localCodex;
         _lifecyclePublisher = lifecyclePublisher;
         _generationActivityTracker = generationActivityTracker;
         _generationAdmissionGate = generationAdmissionGate;
@@ -100,6 +104,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
                     correlationId,
                     generationRequest,
                     providerCredential,
+                    request.CodexTurnOptions,
                     runState,
                     runLifetime,
                     admissionLease),
@@ -144,6 +149,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         Guid correlationId,
         ImageGenerationRequestDto request,
         string providerCredential,
+        LocalCodexTurnOptions? codexTurnOptions,
         GenerationRunState runState,
         GenerationRunLifetime runLifetime,
         GenerationAdmissionLease admissionLease)
@@ -161,13 +167,14 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
             await _concurrencyLimiter.WaitAsync(ct).ConfigureAwait(false);
             limiterAcquired = true;
             _logger.LogInformation(
-                "Generation run {CorrelationId} started its API request.",
+                "Generation run {CorrelationId} started its request.",
                 correlationId);
 
             GenerationBatchDto batch = await ExecuteAttemptsAsync(
                     correlationId,
                     request,
                     providerCredential,
+                    codexTurnOptions,
                     ct)
                 .ConfigureAwait(false);
 
@@ -209,8 +216,16 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         Guid logicalGenerationId,
         ImageGenerationRequestDto request,
         string providerCredential,
+        LocalCodexTurnOptions? codexTurnOptions,
         CancellationToken ct)
     {
+        if (LocalCodexImageModel.Matches(request.ModelId))
+        {
+            LocalCodexGenerationClient client = _localCodex ?? throw new GenerationAttemptException(
+                "Local Codex is unavailable.", GenerationClientFailureCodes.CodexUnavailable, false);
+            return await client.CreateGenerationAsync(request, logicalGenerationId, codexTurnOptions, ct).ConfigureAwait(false);
+        }
+
         int maximumAttemptNumber = checked(_maxAutomaticRetries + 1);
 
         for (int attemptNumber = 1;

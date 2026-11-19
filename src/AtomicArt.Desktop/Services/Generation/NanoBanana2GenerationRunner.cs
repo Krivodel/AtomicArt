@@ -44,7 +44,8 @@ public sealed class NanoBanana2GenerationRunner : INanoBanana2GenerationRunner, 
             GenerationStartSnapshot startSnapshot = _requestBuilder.CreateStartSnapshot(
                 request,
                 singleGenerationParameters);
-            GenerationRunRequest runRequest = new(request, startSnapshot, providerCredential);
+            GenerationRunRequest runRequest = new(request, startSnapshot, providerCredential,
+                singleGenerationParameters.CodexTurnOptions);
 
             await _runDispatcher
                 .EnqueueAsync(runRequest, ct)

@@ -16,6 +16,8 @@ internal static class GenerationPanelStateSanitizer
             Quality = state.Quality,
             Complexity = state.Complexity,
             ThinkingLevel = state.ThinkingLevel,
+            CodexTextModelId = state.CodexTextModelId,
+            CodexReasoningEffort = state.CodexReasoningEffort,
             GenerationCount = state.GenerationCount,
             Prompt = state.Prompt ?? string.Empty,
             Attachments = PanelAttachmentStateSanitizer.Sanitize(state.Attachments)

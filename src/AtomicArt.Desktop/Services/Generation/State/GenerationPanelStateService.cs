@@ -167,6 +167,8 @@ public sealed class GenerationPanelStateService : IGenerationPanelStateService
                 .Value,
             Quality = state.Quality,
             Complexity = state.Complexity,
+            CodexTextModelId = state.CodexTextModelId,
+            CodexReasoningEffort = state.CodexReasoningEffort,
             ThinkingLevel = GenerationPanelOptionCompatibility.ResolveRememberedThinkingLevel(
                 state.ThinkingLevel,
                 selectedModel,

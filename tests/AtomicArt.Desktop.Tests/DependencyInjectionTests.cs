@@ -15,6 +15,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
@@ -306,6 +307,7 @@ public sealed class DependencyInjectionTests
             typeof(ImageViewerWindowLimitSettingViewModel),
             typeof(BooleanSettingViewModel),
             typeof(GenerationModelVisibilitySettingViewModel),
+            typeof(LocalCodexSettingViewModel),
             typeof(LanguageSettingViewModel),
             typeof(GpuResourceCacheSettingViewModel),
             typeof(GenerationMetadataViewModel)
@@ -344,6 +346,118 @@ public sealed class DependencyInjectionTests
             .GetSettings();
 
         settings.First().Should().BeOfType<ApiBaseAddressSettingDefinition>();
+    }
+
+    [Fact]
+    public void AddDesktopServices_WithModelsTab_PlacesLocalCodexLast()
+    {
+        using ServiceProvider services = CreateServiceProvider();
+        SettingsViewModel settings = services.GetRequiredService<SettingsViewModel>();
+
+        SettingsGroupViewModel models = settings.Groups.Single(group => group.Blocks
+            .SelectMany(block => block.Settings)
+            .Any(item => item is GenerationModelVisibilitySettingViewModel));
+
+        models.Blocks.Last().Settings.Should().ContainSingle().Which.Should().BeOfType<LocalCodexSettingViewModel>();
+    }
+
+    [Fact]
+    public void ApplyValue_WithSavedLocalCodexOptions_UpdatesExistingSettingsView()
+    {
+        using ServiceProvider services = CreateServiceProvider();
+        SettingsViewModel settings = services.GetRequiredService<SettingsViewModel>();
+        LocalCodexSettingViewModel viewModel = settings.Settings.OfType<LocalCodexSettingViewModel>().Single();
+        LocalCodexSettingDefinition definition = services.GetRequiredService<ISettingsDefinitionCatalog>()
+            .GetRequired<LocalCodexSettingDefinition>();
+        LocalCodexOptions options = new(true, Path.GetTempPath());
+
+        services.GetRequiredService<ISettingsStateService>().ApplyValue(definition, JsonSerializer.Serialize(options));
+
+        viewModel.Enabled.Should().BeTrue();
+        viewModel.Folder.Should().Be(options.Folder);
+        viewModel.CommitCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Enabled_WhenTurnedOff_KeepsLocalCodexDisabledAfterRestart()
+    {
+        using TemporaryDirectory directory = new(typeof(DependencyInjectionTests),
+            nameof(Enabled_WhenTurnedOff_KeepsLocalCodexDisabledAfterRestart));
+        ServiceCollection services = CreateServices(directory.DirectoryPath);
+        services.AddSingleton<IUiThreadDispatcher>(new ImmediateUiThreadDispatcher());
+        using ServiceProvider provider = services.BuildServiceProvider();
+        SettingsViewModel settings = provider.GetRequiredService<SettingsViewModel>();
+        LocalCodexSettingViewModel viewModel = settings.Settings.OfType<LocalCodexSettingViewModel>().Single();
+        viewModel.Enabled.Should().BeTrue();
+        provider.GetRequiredService<IImageModelOptionCatalog>().GetModels().Should()
+            .ContainSingle(model => model.Id == LocalCodexImageModel.Id);
+
+        viewModel.Enabled = false;
+        Task save = viewModel.CommitCommand.ExecutionTask
+            ?? throw new InvalidOperationException("Changing Local Codex must start a save.");
+        await save;
+        await provider.GetRequiredService<IStateWriteScheduler>().FlushAsync(CancellationToken.None);
+        using ServiceProvider restartedServices = services.BuildServiceProvider();
+        await restartedServices.GetRequiredService<ISettingsStateService>()
+            .ApplySavedSettingsAsync(CancellationToken.None);
+
+        SettingsViewModel restoredSettings = restartedServices.GetRequiredService<SettingsViewModel>();
+        restoredSettings.Settings.OfType<LocalCodexSettingViewModel>().Single().Enabled.Should().BeFalse();
+        restartedServices.GetRequiredService<IImageModelOptionCatalog>().GetModels().Should()
+            .NotContain(model => model.Id == LocalCodexImageModel.Id);
+    }
+
+    [Fact]
+    public async Task CommitCommand_WhenFolderChanges_SavesNewFolder()
+    {
+        using TemporaryDirectory directory = new(typeof(DependencyInjectionTests),
+            nameof(CommitCommand_WhenFolderChanges_SavesNewFolder));
+        using ServiceProvider services = CreateServiceProvider(directory.DirectoryPath);
+        SettingsViewModel settings = services.GetRequiredService<SettingsViewModel>();
+        LocalCodexSettingViewModel viewModel = settings.Settings.OfType<LocalCodexSettingViewModel>().Single();
+        LocalCodexSettingDefinition definition = services.GetRequiredService<ISettingsDefinitionCatalog>()
+            .GetRequired<LocalCodexSettingDefinition>();
+        string folder = Path.GetTempPath();
+        viewModel.Folder = folder;
+
+        await viewModel.CommitCommand.ExecuteAsync(null);
+        await services.GetRequiredService<IStateWriteScheduler>().FlushAsync(CancellationToken.None);
+
+        string? savedValue = await services.GetRequiredService<ISettingsStateService>()
+            .LoadValueAsync(definition, CancellationToken.None);
+        JsonSerializer.Deserialize<LocalCodexOptions>(savedValue!).Should()
+            .Be(LocalCodexOptions.Default with { Folder = folder });
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CheckConnectionCommand_WhenSettingsChange_ClearsFailureIcon(bool toggleEnabled)
+    {
+        using TemporaryDirectory directory = new(typeof(DependencyInjectionTests),
+            $"{nameof(CheckConnectionCommand_WhenSettingsChange_ClearsFailureIcon)}-{toggleEnabled}");
+        using ServiceProvider services = CreateServiceProvider(directory.DirectoryPath);
+        SettingsViewModel settings = services.GetRequiredService<SettingsViewModel>();
+        LocalCodexSettingViewModel viewModel = settings.Settings.OfType<LocalCodexSettingViewModel>().Single();
+        viewModel.Folder = Path.Combine(directory.DirectoryPath, "missing");
+        await viewModel.CheckConnectionCommand.ExecuteAsync(null);
+        viewModel.IsConnectionCheckFailed.Should().BeTrue();
+        viewModel.HasErrorMessage.Should().BeFalse();
+
+        if (toggleEnabled)
+        {
+            viewModel.Enabled = false;
+            await viewModel.CommitCommand.ExecutionTask!;
+            await services.GetRequiredService<IStateWriteScheduler>().FlushAsync(CancellationToken.None);
+        }
+        else
+        {
+            viewModel.Folder = directory.DirectoryPath;
+        }
+
+        viewModel.IsConnectionCheckFailed.Should().BeFalse();
+        viewModel.IsConnectionCheckSuccessful.Should().BeFalse();
+        viewModel.ConnectionCheckDescription.Should().BeNull();
     }
 
     [Fact]
@@ -589,9 +703,9 @@ public sealed class DependencyInjectionTests
         baseAddress.Should().Be("http://localhost:5000/");
     }
 
-    private static ServiceProvider CreateServiceProvider()
+    private static ServiceProvider CreateServiceProvider(string? dataRoot = null)
     {
-        return DependencyInjectionTests.CreateServices().BuildServiceProvider();
+        return CreateServices(dataRoot).BuildServiceProvider();
     }
 
     private static bool ContainsTypeName(IReadOnlyList<string> typeNames, Type? type)
@@ -604,11 +718,15 @@ public sealed class DependencyInjectionTests
         return typeNames.Contains(type.Name, StringComparer.Ordinal);
     }
 
-    private static ServiceCollection CreateServices()
+    private static ServiceCollection CreateServices(string? dataRoot = null)
     {
         ServiceCollection services = new();
         services.AddSingleton(TestApiConfiguration.Create());
         services.AddDesktopServices();
+        if (dataRoot is not null)
+        {
+            services.AddSingleton<IAtomicArtDataPathProvider>(new AtomicArtDataPathProvider(dataRoot));
+        }
 
         return services;
     }

@@ -17,6 +17,7 @@ using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Logging;
@@ -152,6 +153,7 @@ public static class DependencyInjection
         services.AddViewTemplate<
             GenerationModelVisibilitySettingViewModel,
             GenerationModelVisibilitySettingView>();
+        services.AddViewTemplate<LocalCodexSettingViewModel, LocalCodexSettingView>();
         services.AddViewTemplate<LanguageSettingViewModel, LanguageSettingView>();
         services.AddViewTemplate<
             GpuResourceCacheSettingViewModel,
@@ -345,6 +347,9 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<DesktopModelPanelRegistry>();
         services.AddSingleton<GenerationModelVisibilityService>();
+        services.AddSingleton<LocalCodexSettings>();
+        services.AddSingleton<LocalCodexAppServer>();
+        services.AddTransient<LocalCodexGenerationClient>();
         services.AddSingleton<IImageModelOptionCatalog, ImageModelOptionCatalog>();
         services.AddGenerationImageFormatsByConvention();
         services.AddGenerationItemStatusDescriptorsByConvention();

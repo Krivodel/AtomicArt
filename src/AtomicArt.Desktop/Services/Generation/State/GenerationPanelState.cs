@@ -10,6 +10,8 @@ public sealed class GenerationPanelState
     public string? Quality { get; init; }
     public string? Complexity { get; init; }
     public string? ThinkingLevel { get; init; }
+    public string? CodexTextModelId { get; init; }
+    public string? CodexReasoningEffort { get; init; }
     public int GenerationCount { get; init; }
     public string Prompt { get; init; } = string.Empty;
     public IReadOnlyList<PanelAttachmentState> Attachments { get; init; } =
