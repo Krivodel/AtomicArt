@@ -4,9 +4,9 @@
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.GpuResourceCacheSettingView"
              x:DataType="settings:GpuResourceCacheSettingViewModel">
-    <controls:SettingItemControl>
-        <controls:SettingItemControl.Editor>
-            <StackPanel>
+    <StackPanel>
+        <controls:SettingItemControl>
+            <controls:SettingItemControl.Editor>
                 <ComboBox IsEnabled="{Binding !IsLoading}"
                           ItemsSource="{Binding Options}"
                           SelectedItem="{Binding SelectedOption, Mode=TwoWay}">
@@ -16,9 +16,9 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <TextBlock Classes="settings-description"
-                           Text="{Binding RestartNotice}" />
-            </StackPanel>
-        </controls:SettingItemControl.Editor>
-    </controls:SettingItemControl>
+            </controls:SettingItemControl.Editor>
+        </controls:SettingItemControl>
+        <TextBlock Classes="settings-description"
+                   Text="{Binding RestartNotice}" />
+    </StackPanel>
 </UserControl>

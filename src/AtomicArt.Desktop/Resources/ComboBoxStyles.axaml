@@ -14,7 +14,7 @@
                 Value="Normal" />
         <Setter Property="Template">
             <ControlTemplate>
-                <Border Padding="{StaticResource InputOuterInset}">
+                <Border x:Name="ComboBoxFrame">
                     <Border.Styles>
                         <Style Selector="ToggleButton:pointerover">
                             <Setter Property="Background"
@@ -164,6 +164,11 @@
                 </Border>
             </ControlTemplate>
         </Setter>
+    </Style>
+
+    <Style Selector="ComboBox /template/ Border#ComboBoxFrame">
+        <Setter Property="Padding"
+                Value="{StaticResource InputOuterInset}" />
     </Style>
 
     <Style Selector="ComboBoxItem">

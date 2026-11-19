@@ -23,8 +23,6 @@ public sealed class SettingsItemViewModelProvider : ISettingsItemViewModelProvid
         return _settingsDefinitionCatalog
             .GetSettings()
             .Select(CreateSetting)
-            .OrderBy(setting => setting.Order)
-            .ThenBy(setting => setting.Key, StringComparer.Ordinal)
             .ToList();
     }
 

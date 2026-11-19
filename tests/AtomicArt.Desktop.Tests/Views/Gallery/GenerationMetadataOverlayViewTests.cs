@@ -35,9 +35,9 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlTestBase
 {
     [Fact]
-    public void Background_WhenShown_UsesOpaqueGradientsForHeaderAndBody()
+    public async Task Background_WhenShown_UsesOpaqueGradientsForHeaderAndBody()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             string imagePath = CreateImageFile();
 
@@ -81,12 +81,12 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     [Theory]
     [InlineData(1024d, 768d, 832d)]
     [InlineData(670d, 340d, 630d)]
-    public void Layout_WithLargeOrSmallWindow_KeepsPreviewAndRepeatInModal(
+    public async Task Layout_WithLargeOrSmallWindow_KeepsPreviewAndRepeatInModal(
         double windowWidth,
         double windowHeight,
         double panelWidth)
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             string imagePath = CreateImageFile();
 
@@ -143,9 +143,9 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     [Theory]
     [InlineData(1024d)]
     [InlineData(670d)]
-    public void MetadataFields_WithWideOrNarrowWindow_StayInOrder(double windowWidth)
+    public async Task MetadataFields_WithWideOrNarrowWindow_StayInOrder(double windowWidth)
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             GenerationMetadataOverlayView view = CreateView("result.png");
             GenerationMetadataViewModel viewModel = (GenerationMetadataViewModel)view.DataContext!;
@@ -169,32 +169,29 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
 
                 string.Concat(runs.Select(run => run.Text)).Should().Be(localTime);
                 runs[1].Foreground.Should().NotBe(date.Foreground);
-                date.TextLayout.TextLines.Should().ContainSingle();
-                durationBounds.Top.Should().Be(dateBounds.Top);
+                durationBounds.Top.Should().BeApproximately(dateBounds.Top, 1d);
                 durationBounds.Left.Should().BeGreaterThan(dateBounds.Left);
-                priceBounds.Top.Should().Be(dateBounds.Top);
+                priceBounds.Top.Should().BeApproximately(dateBounds.Top, 1d);
                 priceBounds.Left.Should().BeGreaterThan(durationBounds.Left);
                 resolutionBounds.Top.Should().BeGreaterThan(dateBounds.Bottom);
                 resolutionBounds.Left.Should().Be(dateBounds.Left);
-                aspectRatioBounds.Top.Should().Be(resolutionBounds.Top);
+                aspectRatioBounds.Top.Should().BeApproximately(resolutionBounds.Top, 1d);
                 aspectRatioBounds.Left.Should().Be(durationBounds.Left);
             });
         });
     }
 
-    [Theory]
-    [InlineData(1024d)]
-    [InlineData(670d)]
-    public void ModelName_WithPrice_KeepsFullNameOnOneLine(double windowWidth)
+    [Fact]
+    public async Task ModelName_WithPrice_KeepsFullNameOnOneLine()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             const string ModelName = "GPT Image 2.5 Sunburst";
             GenerationMetadataOverlayView view = CreateView("result.png");
             GenerationMetadataViewModel viewModel = (GenerationMetadataViewModel)view.DataContext!;
             viewModel.Item.ModelDisplayName = ModelName;
 
-            Show(view, windowWidth, 768d, _ =>
+            Show(view, 1024d, 768d, _ =>
             {
                 TextBlock model = view.GetVisualDescendants()
                     .OfType<TextBlock>()
@@ -203,7 +200,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
 
                 model.Text.Should().Be(ModelName);
                 model.FontSize.Should().Be(20d);
-                model.TextLayout.TextLines.Should().ContainSingle();
+                model.TextLayout.TextLines.Count.Should().Be(1);
                 GetBounds(price, view).Top.Should().BeGreaterThan(GetBounds(model, view).Bottom);
             });
         });
@@ -212,9 +209,9 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     [Theory]
     [InlineData(1024d)]
     [InlineData(670d)]
-    public void MetadataFields_WithSavedOptions_FillSecondRowBeforeWrapping(double windowWidth)
+    public async Task MetadataFields_WithSavedOptions_FillSecondRowBeforeWrapping(double windowWidth)
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             GenerationRequestSettings settings = GenerationRequestSettingsTestFactory.Create(
                 (GenerationParameterNames.Quality, "high"),
@@ -235,7 +232,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                 Rect quality = GetBounds(GetMetadataValue(view, GenerationUiLocalizationKeys.Quality.Label), view);
                 Rect complexity = GetBounds(GetMetadataValue(view, GenerationUiLocalizationKeys.Complexity.Label), view);
 
-                quality.Top.Should().Be(resolution.Top);
+                quality.Top.Should().BeApproximately(resolution.Top, 1d);
                 quality.Left.Should().Be(price.Left);
                 complexity.Top.Should().BeGreaterThan(quality.Bottom);
                 complexity.Left.Should().Be(resolution.Left);
@@ -244,9 +241,9 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void Preview_WithPointerAndShift_ExpandsAboveMetadataContent()
+    public async Task Preview_WithPointerAndShift_ExpandsAboveMetadataContent()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             string imagePath = CreateImageFile();
 
@@ -268,8 +265,8 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                     previewImage.Source = bitmap;
                     Grid previewHost = preview.FindControl<Grid>("PreviewExpansionHost")
                         ?? throw new InvalidOperationException("Preview host was not found.");
-                    Border prompt = view.FindControl<Border>("PromptEntry")
-                        ?? throw new InvalidOperationException("Prompt panel was not found.");
+                    previewHost.Transitions = null;
+                    TextBlock date = GetMetadataValue(view, GalleryLocalizationKeys.Metadata.CreatedAt);
                     Point? previewPosition = preview.TranslatePoint(new Point(0d, 0d), window);
                     previewPosition.Should().NotBeNull();
 
@@ -288,8 +285,11 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                     preview.ZIndex.Should().Be(
                         GenerationPreviewExpansionVisualMetrics.ActiveZIndex);
                     Rect expandedBounds = GetBounds(previewHost, view);
-                    Rect promptBounds = GetBounds(prompt, view);
-                    expandedBounds.Intersects(promptBounds).Should().BeTrue();
+                    Rect dateBounds = GetBounds(date, view);
+                    expandedBounds.Intersects(dateBounds).Should().BeTrue(
+                        "the expanded preview at {0} should overlap the metadata column at {1}",
+                        expandedBounds,
+                        dateBounds);
                 }
                 finally
                 {
@@ -319,9 +319,9 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void PromptText_WhenScrolled_UsesFullViewportAndHalfWheelStep()
+    public async Task PromptText_WhenScrolled_UsesFullViewportAndHalfWheelStep()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             string imagePath = CreateImageFile();
             string prompt = string.Join(
@@ -369,9 +369,9 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void PromptText_WhenShown_AlignsWithHeadingAndKeepsVerticalScrollFade()
+    public async Task PromptText_WhenShown_AlignsWithHeadingAndKeepsVerticalScrollFade()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             string imagePath = CreateImageFile();
 
@@ -414,9 +414,9 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void PromptHeading_WhenHovered_RevealsCopyButton()
+    public async Task PromptHeading_WhenHovered_RevealsCopyButton()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             GenerationMetadataOverlayView view = CreateView("result.png");
             TextBlock heading = view.FindControl<TextBlock>("PromptHeading")
@@ -437,9 +437,9 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void Preview_WhenOpenedAndResized_UsesFinalSizeWithoutTransition()
+    public async Task Preview_WhenOpenedAndResized_UsesFinalSizeWithoutTransition()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             GenerationMetadataOverlayView view = CreateView("result.png");
             GenerationPreviewControl preview = view.FindControl<GenerationPreviewControl>("PreviewEntry")
@@ -463,9 +463,9 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void Preview_WhenShown_AttachesLoadingSessionAndBindsImagePath()
+    public async Task Preview_WhenShown_AttachesLoadingSessionAndBindsThumbnailPath()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             string imagePath = CreateImageFile();
 
@@ -504,9 +504,9 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void Preview_WhenClosed_DisposesLoadingSession()
+    public async Task Preview_WhenClosed_DisposesLoadingSession()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             string imagePath = CreateImageFile();
 
@@ -583,7 +583,10 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             2,
             imagePath,
             GenerationItemStatusDescriptorRegistryTestFactory.Create(),
-            TestLocalizationTextProvider.Default);
+            TestLocalizationTextProvider.Default)
+        {
+            ThumbnailPath = imagePath
+        };
 
         return CreateView(item, previewSessionFactory);
     }

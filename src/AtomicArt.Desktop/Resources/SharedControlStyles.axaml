@@ -5,4 +5,5 @@
     <StyleInclude Source="/Resources/ButtonStyles.axaml" />
     <StyleInclude Source="/Resources/GenerationOptionsStyles.axaml" />
     <StyleInclude Source="/Resources/GenerationMetadataStyles.axaml" />
+    <StyleInclude Source="/Resources/SettingsStyles.axaml" />
 </Styles>

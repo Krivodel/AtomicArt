@@ -7,9 +7,19 @@ public static class SettingsLocalizationKeys
     public static class Sections
     {
         public const string Connection = "Settings.Sections.Connection";
+        public const string Models = "Settings.Sections.Models";
         public const string Appearance = "Settings.Sections.Appearance";
         public const string StorageAndPerformance =
             "Settings.Sections.StorageAndPerformance";
+    }
+
+    public static class Connection
+    {
+        public const string Server = "Settings.Connection.Server";
+        public const string Google = "Settings.Connection.Google";
+        public const string OpenRouter = "Settings.Connection.OpenRouter";
+        public const string ApiKey = "Settings.Connection.ApiKey";
+        public const string ManagementKey = "Settings.Connection.ManagementKey";
     }
 
     public static class Language
@@ -44,6 +54,8 @@ public static class SettingsLocalizationKeys
     public static class GenerationModels
     {
         public const string Label = "Settings.GenerationModels.Label";
+        public const string Model = "Settings.GenerationModels.Model";
+        public const string Direct = "Settings.GenerationModels.Direct";
     }
 
     public static class Appearance

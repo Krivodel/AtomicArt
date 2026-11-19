@@ -1,26 +1,30 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:converters="using:Avalonia.Data.Converters"
-             xmlns:settings="using:AtomicArt.Desktop.Controls.Settings"
+             xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Controls.Settings.SettingItemControl"
              x:Name="Root"
-             x:DataType="settings:SettingItemControl">
+             x:DataType="settings:ISettingItemViewModel">
     <Grid RowDefinitions="Auto,Auto,Auto">
-        <TextBlock VerticalAlignment="Center"
-                   Classes="settings-label"
-                   IsVisible="{Binding #Root.Header, Converter={x:Static converters:ObjectConverters.IsNull}}"
-                   Text="{Binding #Root.DisplayName}" />
-        <ContentControl HorizontalContentAlignment="Stretch"
-                        IsVisible="{Binding #Root.Header, Converter={x:Static converters:ObjectConverters.IsNotNull}}"
-                        Content="{Binding #Root.Header}" />
-        <ContentControl Grid.Row="1"
-                        Margin="{StaticResource SettingsEditorMargin}"
+        <Panel VerticalAlignment="Center">
+            <TextBlock VerticalAlignment="Center"
+                       Classes="settings-label"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding #Root.Header, Converter={x:Static converters:ObjectConverters.IsNull}}"
+                       Text="{Binding DisplayName}" />
+            <ContentControl HorizontalContentAlignment="Stretch"
+                            IsVisible="{Binding #Root.Header, Converter={x:Static converters:ObjectConverters.IsNotNull}}"
+                            Content="{Binding #Root.Header}" />
+        </Panel>
+        <ContentControl x:Name="SettingEditor"
+                        Grid.Row="1"
                         HorizontalContentAlignment="Stretch"
+                        IsVisible="{Binding #Root.Editor, Converter={x:Static converters:ObjectConverters.IsNotNull}}"
                         Content="{Binding #Root.Editor}" />
         <TextBlock Grid.Row="2"
                    Margin="{StaticResource SettingsErrorMargin}"
                    Classes="error-message danger-text"
-                   IsVisible="{Binding #Root.HasErrorMessage}"
-                   Text="{Binding #Root.ErrorMessage}" />
+                   IsVisible="{Binding HasErrorMessage}"
+                   Text="{Binding ErrorMessage}" />
     </Grid>
 </UserControl>

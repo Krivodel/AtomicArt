@@ -43,13 +43,10 @@
     <x:Double x:Key="MetadataOverlayWidth">832</x:Double>
     <x:Double x:Key="MetadataCopyButtonSize">32</x:Double>
     <x:Double x:Key="MetadataIconSize">16</x:Double>
-    <x:Double x:Key="SettingsOverlayWidth">600</x:Double>
-    <x:Double x:Key="SettingsOverlayContentMaxHeight">720</x:Double>
-    <x:Double x:Key="SettingsIconButtonSize">36</x:Double>
+    <x:Double x:Key="SettingsOverlayWidth">660</x:Double>
+    <x:Double x:Key="SettingsOverlayHeight">600</x:Double>
+    <x:Double x:Key="SettingsInputMinHeight">36</x:Double>
     <x:Double x:Key="SettingsIconSize">18</x:Double>
-    <x:Double x:Key="SettingsGroupSpacing">22</x:Double>
-    <x:Double x:Key="SettingsSectionHeaderSpacing">8</x:Double>
-    <x:Double x:Key="SettingsItemSpacing">20</x:Double>
     <x:Double x:Key="DialogOverlayWidth">480</x:Double>
     <x:Double x:Key="DialogContentSpacing">20</x:Double>
     <x:Double x:Key="DialogActionButtonMinWidth">120</x:Double>
@@ -59,6 +56,8 @@
     <CornerRadius x:Key="ContextMenuCornerRadius">8</CornerRadius>
     <CornerRadius x:Key="ShellCornerRadius">8</CornerRadius>
     <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
+    <CornerRadius x:Key="GradientOverlayCornerRadius">13</CornerRadius>
+    <CornerRadius x:Key="GradientOverlayHeaderCornerRadius">13,13,0,0</CornerRadius>
     <CornerRadius x:Key="AttachmentPreviewCornerRadius">6</CornerRadius>
     <CornerRadius x:Key="AttachmentRemoveButtonCornerRadius">6,0,6,6</CornerRadius>
     <CornerRadius x:Key="GenerationCardCornerRadius">8</CornerRadius>
@@ -79,8 +78,7 @@
     <Thickness x:Key="GallerySelectionOverlayPadding">18</Thickness>
     <Thickness x:Key="MetadataContentPadding">22</Thickness>
     <Thickness x:Key="MetadataTextScrollInsets">0,6,0,5</Thickness>
-    <Thickness x:Key="SettingsSectionMargin">0,18,0,0</Thickness>
-    <Thickness x:Key="SettingsGroupPadding">16</Thickness>
+    <Thickness x:Key="SettingsContentPadding">26,16,26,22</Thickness>
     <Thickness x:Key="SettingsEditorMargin">0,8,0,0</Thickness>
     <Thickness x:Key="InputOuterInset">5</Thickness>
     <Thickness x:Key="SettingsActionButtonMargin">12,0,0,0</Thickness>

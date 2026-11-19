@@ -26,5 +26,5 @@ public sealed class GenerationModelVisibilitySettingDefinition : IDisplaySetting
     public string Key => KeyValue;
     public int Order => 120;
     public string DisplayNameKey => SettingsLocalizationKeys.GenerationModels.Label;
-    public SettingsSection Section => SettingsSections.Connection;
+    public SettingsSection Section => SettingsSections.Models;
 }

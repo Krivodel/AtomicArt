@@ -6,46 +6,81 @@
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.SettingsOverlayView"
              x:DataType="settings:SettingsViewModel">
-    <controls:ModalOverlayControl Width="{StaticResource SettingsOverlayWidth}"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Top"
-                                  Classes="gradient-background"
-                                  Title="{i18n:I18n {x:Static resources:SettingsLocalizationKeys.Title}}"
+    <controls:ModalOverlayControl x:Name="PanelRoot"
+                                  MaxWidth="{StaticResource SettingsOverlayWidth}"
+                                  MaxHeight="{StaticResource SettingsOverlayHeight}"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Stretch"
+                                  Classes="gradient-surface settings-overlay"
+                                  AutomationProperties.Name="{i18n:I18n {x:Static resources:SettingsLocalizationKeys.Title}}"
                                   CloseCommand="{Binding CloseCommand}">
+        <controls:ModalOverlayControl.Header>
+            <TabStrip x:Name="SectionTabs"
+                      Theme="{StaticResource SettingsTabStripTheme}"
+                      ItemsSource="{Binding Groups}"
+                      SelectedItem="{Binding SelectedGroup, Mode=TwoWay}">
+                <TabStrip.ItemTemplate>
+                    <DataTemplate x:DataType="settings:SettingsGroupViewModel">
+                        <Panel>
+                            <TextBlock FontWeight="SemiBold"
+                                       AutomationProperties.AccessibilityView="Raw"
+                                       IsHitTestVisible="False"
+                                       Opacity="0"
+                                       Text="{Binding Title}" />
+                            <TextBlock Text="{Binding Title}" />
+                        </Panel>
+                    </DataTemplate>
+                </TabStrip.ItemTemplate>
+            </TabStrip>
+        </controls:ModalOverlayControl.Header>
         <controls:ModalOverlayControl.Body>
-            <ScrollViewer MaxHeight="{StaticResource SettingsOverlayContentMaxHeight}"
-                          Margin="{StaticResource SettingsSectionMargin}"
-                          HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding Groups}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Spacing="{StaticResource SettingsGroupSpacing}" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="settings:SettingsGroupViewModel">
-                            <StackPanel Spacing="{StaticResource SettingsSectionHeaderSpacing}">
-                                <TextBlock Classes="settings-section-title"
-                                           Text="{Binding Title}" />
-                                <Border Padding="{StaticResource SettingsGroupPadding}"
-                                        Background="{DynamicResource GlassCardBrush}"
-                                        BorderBrush="{DynamicResource GlassBorderBrush}"
-                                        BorderThickness="{StaticResource ShellBorderThickness}"
-                                        CornerRadius="{StaticResource OverlayCornerRadius}">
-                                    <ItemsControl ItemsSource="{Binding Settings}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <StackPanel Spacing="{StaticResource SettingsItemSpacing}" />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                    </ItemsControl>
-                                </Border>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+            <TransitioningContentControl x:Name="SectionContent"
+                                         HorizontalContentAlignment="Stretch"
+                                         VerticalContentAlignment="Stretch"
+                                         ClipToBounds="True"
+                                         Content="{Binding SelectedGroup}">
+                <TransitioningContentControl.PageTransition>
+                    <CrossFade Duration="{StaticResource SettingsTabTransitionDuration}" />
+                </TransitioningContentControl.PageTransition>
+                <TransitioningContentControl.ContentTemplate>
+                    <DataTemplate x:DataType="settings:SettingsGroupViewModel">
+                        <ScrollViewer Classes="settings-section-scroll"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <Border Padding="{StaticResource SettingsContentPadding}"
+                                    Background="Transparent">
+                                <ItemsControl Classes="settings-blocks"
+                                              ItemsSource="{Binding Blocks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="settings:SettingsBlockViewModel">
+                                            <Border Classes="settings-row"
+                                                    Classes.connection-block="{Binding HasTitle}">
+                                                <Grid ColumnDefinitions="Auto,*">
+                                                    <TextBlock Width="152"
+                                                               Margin="0,0,18,0"
+                                                               FontSize="16"
+                                                               FontWeight="SemiBold"
+                                                               TextWrapping="Wrap"
+                                                               IsVisible="{Binding HasTitle}"
+                                                               Text="{Binding Title}" />
+                                                    <ItemsControl Grid.Column="1"
+                                                                  ItemsSource="{Binding Settings}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Spacing="12" />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                    </ItemsControl>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+                        </ScrollViewer>
+                    </DataTemplate>
+                </TransitioningContentControl.ContentTemplate>
+            </TransitioningContentControl>
         </controls:ModalOverlayControl.Body>
     </controls:ModalOverlayControl>
 </UserControl>

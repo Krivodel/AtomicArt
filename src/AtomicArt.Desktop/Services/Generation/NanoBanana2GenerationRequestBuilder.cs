@@ -28,8 +28,8 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
 
         string? validatedThinkingLevel = ResolveThinkingLevel(thinkingLevel, selectedModel);
 
-        return CreateRequest(
-            selectedModel,
+        return new ImageGenerationRequestDto(
+            selectedModel.Id,
             prompt,
             aspectRatio,
             resolution,
@@ -93,39 +93,6 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
             request.AttachedImages.Count,
             DateTime.UtcNow,
             settings);
-    }
-
-    private static ImageGenerationRequestDto CreateRequest(
-        ImageModelOption selectedModel,
-        string prompt,
-        string aspectRatio,
-        string resolution,
-        double temperature,
-        int generationCount,
-        IReadOnlyList<AttachedImageDto> attachedImages,
-        string? thinkingLevel,
-        string? quality,
-        bool includeTemperature,
-        string? complexity)
-    {
-        ArgumentNullException.ThrowIfNull(selectedModel);
-        ArgumentNullException.ThrowIfNull(prompt);
-        ArgumentNullException.ThrowIfNull(aspectRatio);
-        ArgumentNullException.ThrowIfNull(resolution);
-        ArgumentNullException.ThrowIfNull(attachedImages);
-
-        return new ImageGenerationRequestDto(
-            selectedModel.Id,
-            prompt,
-            aspectRatio,
-            resolution,
-            temperature,
-            generationCount,
-            attachedImages,
-            thinkingLevel,
-            quality,
-            includeTemperature,
-            complexity);
     }
 
     private static void ValidateRequestParameters(

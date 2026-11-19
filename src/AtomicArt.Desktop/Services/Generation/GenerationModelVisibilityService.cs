@@ -66,4 +66,13 @@ public sealed class GenerationModelVisibilityService
         _visibleModelIds.UnionWith(nextIds);
         VisibleModelsChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    public void UpdateVisibleModels(IReadOnlyDictionary<string, bool> visibility)
+    {
+        ArgumentNullException.ThrowIfNull(visibility);
+
+        SetVisibleModelIds(_visibleModelIds
+            .Where(modelId => !visibility.ContainsKey(modelId))
+            .Concat(visibility.Where(entry => entry.Value).Select(entry => entry.Key)));
+    }
 }

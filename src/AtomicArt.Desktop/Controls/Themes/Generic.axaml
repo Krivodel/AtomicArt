@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="using:Avalonia.Data.Converters"
         xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays">
     <Styles.Resources>
         <ControlTheme x:Key="{x:Type overlays:ModalOverlayControl}"
@@ -43,8 +44,6 @@
                                                                   BlurRadius="{TemplateBinding BlurRadius}"
                                                                   Intensity="{TemplateBinding BlurIntensity}"
                                                                   IsDynamic="{TemplateBinding IsBlurDynamic}" />
-                                    <Border Classes="opaque-background-base"
-                                            Background="Transparent" />
                                     <Border Background="{TemplateBinding Background}" />
                                 </Grid>
                             </Border>
@@ -54,8 +53,12 @@
                               RowDefinitions="Auto,*">
                             <Border x:Name="PART_Header">
                                 <Grid ColumnDefinitions="*,Auto,Auto">
-                                    <TextBlock Classes="overlay-title"
-                                               Text="{TemplateBinding Title}" />
+                                    <Panel>
+                                        <TextBlock Classes="overlay-title"
+                                                   IsVisible="{TemplateBinding Header, Converter={x:Static converters:ObjectConverters.IsNull}}"
+                                                   Text="{TemplateBinding Title}" />
+                                        <ContentPresenter Content="{TemplateBinding Header}" />
+                                    </Panel>
                                     <ContentPresenter Grid.Column="1"
                                                       VerticalAlignment="Center"
                                                       Content="{TemplateBinding HeaderAccessory}" />
@@ -78,15 +81,36 @@
         </ControlTheme>
     </Styles.Resources>
 
-    <Style Selector="overlays|ModalOverlayControl.gradient-background">
+    <Style Selector="overlays|ModalOverlayControl.gradient-surface">
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
         <Setter Property="Background"
-                Value="{DynamicResource PopupGradientBrush}" />
+                Value="{StaticResource MetadataSurfaceBrush}" />
         <Setter Property="BlurRadius"
                 Value="0" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource GradientOverlayCornerRadius}" />
     </Style>
 
-    <Style Selector="overlays|ModalOverlayControl.gradient-background /template/ Border.opaque-background-base">
+    <Style Selector="overlays|ModalOverlayControl.gradient-surface /template/ Border#PART_Header">
+        <Setter Property="MinHeight"
+                Value="57" />
+        <Setter Property="Padding"
+                Value="21,8,15,8" />
         <Setter Property="Background"
-                Value="{DynamicResource SukiPopupBackground}" />
+                Value="{StaticResource MetadataHeaderBrush}" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource MetadataDividerBrush}" />
+        <Setter Property="BorderThickness"
+                Value="0,0,0,1" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource GradientOverlayHeaderCornerRadius}" />
+    </Style>
+
+    <Style Selector="overlays|ModalOverlayControl.gradient-surface /template/ Button.close-action">
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataSecondaryTextBrush}" />
     </Style>
 </Styles>

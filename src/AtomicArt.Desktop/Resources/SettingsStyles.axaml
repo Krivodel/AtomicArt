@@ -1,0 +1,245 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
+        xmlns:settings="using:AtomicArt.Desktop.Controls.Settings">
+    <Styles.Resources>
+        <ControlTheme x:Key="SettingsLabelButtonTheme"
+                      TargetType="Button">
+            <Setter Property="HorizontalAlignment"
+                    Value="Stretch" />
+            <Setter Property="Cursor"
+                    Value="Hand" />
+            <Setter Property="Focusable"
+                    Value="False" />
+            <Setter Property="AutomationProperties.AccessibilityView"
+                    Value="Raw" />
+            <Setter Property="Template">
+                <ControlTemplate x:DataType="Button">
+                    <Border Background="Transparent">
+                        <ContentPresenter x:Name="PART_ContentPresenter"
+                                          Content="{TemplateBinding Content}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+
+        <ControlTheme x:Key="SettingsTabTheme"
+                      TargetType="TabStripItem">
+            <Setter Property="Padding"
+                    Value="8,0" />
+            <Setter Property="Foreground"
+                    Value="{StaticResource MetadataSecondaryTextBrush}" />
+            <Setter Property="Cursor"
+                    Value="Hand" />
+            <Setter Property="FontSize"
+                    Value="16" />
+            <Setter Property="Template">
+                <ControlTemplate x:DataType="TabStripItem">
+                    <Border x:Name="TabMarker"
+                            MinHeight="40"
+                            Padding="{TemplateBinding Padding}"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="0,0,0,2">
+                        <Border.Transitions>
+                            <Transitions>
+                                <BrushTransition Duration="{StaticResource SettingsTabTransitionDuration}"
+                                                 Property="BorderBrush" />
+                            </Transitions>
+                        </Border.Transitions>
+                        <ContentPresenter x:Name="PART_ContentPresenter"
+                                          VerticalAlignment="Center"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^:pointerover, ^:focus-visible">
+                <Setter Property="Foreground"
+                        Value="{StaticResource MetadataTextBrush}" />
+            </Style>
+            <Style Selector="^:selected">
+                <Setter Property="Foreground"
+                        Value="{StaticResource MetadataTextBrush}" />
+                <Setter Property="FontWeight"
+                        Value="SemiBold" />
+            </Style>
+            <Style Selector="^:selected /template/ Border#TabMarker">
+                <Setter Property="BorderBrush"
+                        Value="{StaticResource MetadataRepeatBrush}" />
+            </Style>
+        </ControlTheme>
+
+        <ControlTheme x:Key="SettingsTabStripTheme"
+                      TargetType="TabStrip">
+            <Setter Property="ItemContainerTheme"
+                    Value="{StaticResource SettingsTabTheme}" />
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <WrapPanel ItemSpacing="12" />
+                </ItemsPanelTemplate>
+            </Setter>
+            <Setter Property="Template">
+                <ControlTemplate x:DataType="TabStrip">
+                    <ItemsPresenter x:Name="PART_ItemsPresenter"
+                                    ItemsPanel="{TemplateBinding ItemsPanel}" />
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </Styles.Resources>
+
+    <Style Selector="CheckBox.settings-switch">
+        <Setter Property="HorizontalAlignment"
+                Value="Stretch" />
+        <Setter Property="Cursor"
+                Value="Hand" />
+        <Setter Property="Template">
+            <ControlTemplate x:DataType="CheckBox">
+                <Border MinHeight="32"
+                        Background="Transparent">
+                    <Grid VerticalAlignment="Center"
+                          ColumnDefinitions="*,Auto">
+                        <ContentPresenter x:Name="PART_ContentPresenter"
+                                          Margin="0,0,12,0"
+                                          VerticalAlignment="Center"
+                                          IsVisible="{TemplateBinding Content, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}" />
+                        <Border x:Name="SwitchTrack"
+                                Grid.Column="1"
+                                Width="38"
+                                Height="22"
+                                Padding="3"
+                                VerticalAlignment="Center"
+                                Background="{StaticResource MetadataDividerBrush}"
+                                CornerRadius="11">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <BrushTransition Duration="{StaticResource SettingsSwitchTransitionDuration}"
+                                                     Property="Background" />
+                                </Transitions>
+                            </Border.Transitions>
+                            <Ellipse x:Name="SwitchThumb"
+                                     Width="16"
+                                     Height="16"
+                                     HorizontalAlignment="Left"
+                                     Fill="{StaticResource MetadataSecondaryTextBrush}"
+                                     RenderTransform="translateX(0px)">
+                                <Ellipse.Transitions>
+                                    <Transitions>
+                                        <TransformOperationsTransition Duration="{StaticResource SettingsSwitchTransitionDuration}"
+                                                                       Easing="{StaticResource TransientOverlayEasing}"
+                                                                       Property="RenderTransform" />
+                                        <BrushTransition Duration="{StaticResource SettingsSwitchTransitionDuration}"
+                                                         Property="Fill" />
+                                    </Transitions>
+                                </Ellipse.Transitions>
+                            </Ellipse>
+                        </Border>
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+        <Style Selector="^:checked /template/ Border#SwitchTrack">
+            <Setter Property="Background"
+                    Value="{StaticResource MetadataRepeatBrush}" />
+        </Style>
+        <Style Selector="^:checked /template/ Ellipse#SwitchThumb">
+            <Setter Property="Fill"
+                    Value="{StaticResource MetadataRepeatTextBrush}" />
+            <Setter Property="RenderTransform"
+                    Value="translateX(16px)" />
+        </Style>
+        <Style Selector="^:pointerover /template/ Border#SwitchTrack, ^:focus-visible /template/ Border#SwitchTrack">
+            <Setter Property="Opacity"
+                    Value="0.8" />
+        </Style>
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity"
+                    Value="{StaticResource ThemeDisabledOpacity}" />
+        </Style>
+    </Style>
+
+    <Style Selector="overlays|ModalOverlayControl.settings-overlay /template/ Border#PART_Header">
+        <Setter Property="Padding"
+                Value="18,9,15,0" />
+    </Style>
+
+    <Style Selector="overlays|ModalOverlayControl.settings-overlay">
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataTextBrush}" />
+    </Style>
+
+    <Style Selector="overlays|ModalOverlayControl.settings-overlay /template/ Button.close-action">
+        <Setter Property="Margin"
+                Value="8,0,0,8" />
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+    </Style>
+
+    <Style Selector="ItemsControl.settings-blocks > ContentPresenter:nth-child(n+2) Border.connection-block,
+                     Border.settings-model-row.family-divider">
+        <Setter Property="BorderBrush"
+                Value="{StaticResource MetadataDividerBrush}" />
+        <Setter Property="BorderThickness"
+                Value="0,1,0,0" />
+    </Style>
+
+    <Style Selector="Border.settings-row">
+        <Setter Property="Padding"
+                Value="0,8" />
+    </Style>
+
+    <Style Selector="Border.settings-row.connection-block">
+        <Setter Property="Padding"
+                Value="0,12" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-label">
+        <Setter Property="TextElement.FontWeight"
+                Value="SemiBold" />
+        <Setter Property="TextElement.Foreground"
+                Value="{StaticResource MetadataSecondaryTextBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.settings-description,
+                     Border.settings-model-header TextBlock,
+                     ContentControl.settings-model-provider">
+        <Setter Property="TextElement.Foreground"
+                Value="{StaticResource MetadataSecondaryTextBrush}" />
+    </Style>
+
+    <Style Selector="Border.settings-model-header">
+        <Setter Property="Padding"
+                Value="0,0,0,6" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource MetadataDividerBrush}" />
+        <Setter Property="BorderThickness"
+                Value="0,0,0,1" />
+    </Style>
+
+    <Style Selector="Border.settings-model-row:pointerover TextBlock.settings-model-name">
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataRepeatBrush}" />
+    </Style>
+
+    <Style Selector="settings|SettingItemControl ContentControl#SettingEditor">
+        <Setter Property="Margin"
+                Value="{StaticResource SettingsEditorMargin}" />
+    </Style>
+
+    <Style Selector="settings|SettingItemControl ComboBox">
+        <Setter Property="MinHeight"
+                Value="{StaticResource SettingsInputMinHeight}" />
+    </Style>
+
+    <Style Selector="settings|SettingItemControl ComboBox /template/ Border#ComboBoxFrame">
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+
+    <Style Selector="settings|SettingItemControl.settings-table ContentControl#SettingEditor">
+        <Setter Property="Margin"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+</Styles>

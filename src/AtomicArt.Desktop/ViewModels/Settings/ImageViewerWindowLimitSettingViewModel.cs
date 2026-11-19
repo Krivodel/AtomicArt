@@ -54,7 +54,19 @@ public sealed partial class ImageViewerWindowLimitSettingViewModel : SettingItem
     protected override void NotifyOperationCanExecuteChanged()
     {
         base.NotifyOperationCanExecuteChanged();
+        ToggleLimitCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(IsInputEnabled));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanToggleLimit))]
+    private void ToggleLimit()
+    {
+        IsLimitEnabled = !IsLimitEnabled;
+    }
+
+    private bool CanToggleLimit()
+    {
+        return !IsLoading;
     }
 
     [RelayCommand(CanExecute = nameof(CanApply))]

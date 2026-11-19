@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -20,6 +19,44 @@ namespace AtomicArt.Desktop.Tests.Views.Settings;
 
 public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestBase
 {
+    [Fact]
+    public async Task Label_WhenPressedAndReleased_KeepsPositionAndTogglesLimit()
+    {
+        await DispatchAsync(async () =>
+        {
+            ImageViewerWindowLimitSettingsTestContext context = new(new SettingsState());
+            using ImageViewerWindowLimitSettingViewModel editor = context.CreateEditor();
+            ImageViewerWindowLimitSettingView view = new() { DataContext = editor };
+            Window window = Show(view);
+
+            try
+            {
+                TextBlock label = view.GetVisualDescendants().OfType<TextBlock>()
+                    .Single(text => text.Classes.Contains("settings-label") && text.IsEffectivelyVisible);
+                Rect initial = GetBounds(label, view);
+                Point labelPoint = label.TranslatePoint(new Point(8d, label.Bounds.Height / 2d), window)
+                    ?? throw new InvalidOperationException("The setting label is not attached.");
+
+                window.MouseDown(labelPoint, MouseButton.Left);
+                window.CaptureRenderedFrame();
+                await Task.Delay(TimeSpan.FromMilliseconds(160d));
+                window.CaptureRenderedFrame();
+                Rect pressed = GetBounds(label, view);
+                window.MouseUp(labelPoint, MouseButton.Left);
+                await (editor.ApplyCommand.ExecutionTask ?? Task.CompletedTask);
+                window.CaptureRenderedFrame();
+
+                pressed.Should().Be(initial);
+                GetBounds(label, view).Should().Be(initial);
+                context.Limit.Limit.Should().Be(0);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -47,8 +84,8 @@ public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestB
             {
                 CheckBox checkbox = view.GetVisualDescendants().OfType<CheckBox>().Single();
                 NumericUpDown input = view.GetVisualDescendants().OfType<NumericUpDown>().Single();
-                ContentPresenter title = checkbox.GetVisualDescendants().OfType<ContentPresenter>()
-                    .Single(presenter => presenter.Name == "PART_ContentPresenter");
+                TextBlock title = view.GetVisualDescendants().OfType<TextBlock>()
+                    .Single(text => text.Classes.Contains("settings-label") && text.IsEffectivelyVisible);
                 checkbox.IsChecked.Should().BeTrue();
                 input.IsEffectivelyEnabled.Should().BeTrue();
                 input.Value.Should().Be(3);
@@ -57,13 +94,13 @@ public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestB
                     .Single(card => card.Name == "PART_GlassCard");
                 GlassCard comparisonBackground = comparisonInput.GetVisualDescendants().OfType<GlassCard>()
                     .Single(card => card.Name == "border");
-                numericBackground.Bounds.Width.Should().BeApproximately(comparisonBackground.Bounds.Width, 1d);
+                numericBackground.Bounds.Width.Should().BeLessThan(comparisonBackground.Bounds.Width);
                 numericBackground.Bounds.Height.Should().BeApproximately(comparisonBackground.Bounds.Height, 1d);
-                GlassCard indicator = checkbox.GetVisualDescendants().OfType<GlassCard>()
-                    .Single(card => card.Name == "border");
-                Point? checkboxPosition = indicator.TranslatePoint(default, title);
-                checkboxPosition.Should().NotBeNull();
-                checkboxPosition?.X.Should().BeLessThan(-indicator.Bounds.Width);
+                Border indicator = checkbox.GetVisualDescendants().OfType<Border>()
+                    .Single(border => border.Name == "SwitchTrack");
+                (input.TranslatePoint(new Point(0d, input.Bounds.Height / 2d), title)?.Y)
+                    .Should().BeApproximately(title.Bounds.Height / 2d, 1d);
+                (indicator.TranslatePoint(default, input)?.X).Should().BeGreaterThan(input.Bounds.Width);
 
                 TextBox textBox = input.GetVisualDescendants().OfType<TextBox>().Single();
                 textBox.Focus().Should().BeTrue();
@@ -86,7 +123,10 @@ public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestB
                 await (editor.ApplyCommand.ExecutionTask ?? Task.CompletedTask);
                 context.Limit.Limit.Should().Be(12);
 
-                CheckBoxTestInput.Click(window, checkbox, "label");
+                Point titlePoint = title.TranslatePoint(new Point(title.Bounds.Width / 2d, title.Bounds.Height / 2d), window)
+                    ?? throw new InvalidOperationException("The setting title is not attached.");
+                window.MouseDown(titlePoint, MouseButton.Left);
+                window.MouseUp(titlePoint, MouseButton.Left);
                 await (editor.ApplyCommand.ExecutionTask ?? Task.CompletedTask);
                 window.CaptureRenderedFrame();
                 input.IsEffectivelyEnabled.Should().BeFalse();
@@ -94,7 +134,9 @@ public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestB
                 input.Value.Should().Be(12);
                 context.Limit.Limit.Should().Be(0);
 
-                CheckBoxTestInput.Click(window, checkbox, "space");
+                checkbox.Focus().Should().BeTrue();
+                window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
+                window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, null);
                 await (editor.ApplyCommand.ExecutionTask ?? Task.CompletedTask);
                 input.IsEffectivelyEnabled.Should().BeTrue();
                 input.Value.Should().Be(12);
@@ -105,5 +147,12 @@ public sealed class ImageViewerWindowLimitSettingViewTests : DesktopControlTestB
                 window.Close();
             }
         });
+    }
+
+    private static Rect GetBounds(Control control, Control relativeTo)
+    {
+        Matrix transform = control.TransformToVisual(relativeTo)
+            ?? throw new InvalidOperationException("The setting control is not attached.");
+        return new Rect(control.Bounds.Size).TransformToAABB(transform);
     }
 }

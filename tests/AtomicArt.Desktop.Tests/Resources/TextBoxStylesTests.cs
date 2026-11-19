@@ -20,9 +20,9 @@ namespace AtomicArt.Desktop.Tests.Resources;
 public sealed class TextBoxStylesTests : AnimatedGalleryControlTestBase
 {
     [Fact]
-    public void TextBox_WhenScrolled_UsesFullViewportAndKeepsThemeInset()
+    public async Task TextBox_WhenScrolled_UsesFullViewportAndKeepsThemeInset()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             TextBox textBox = new()
             {
@@ -56,9 +56,9 @@ public sealed class TextBoxStylesTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public void ProductionViews_WhenShown_AllTextBoxesUseConfiguredInsetsAndScrollEdgeFade()
+    public async Task ProductionViews_WhenShown_AllTextBoxesUseConfiguredInsetsAndScrollEdgeFade()
     {
-        Dispatch(() =>
+        await DispatchAsync(() =>
         {
             Control[] views =
             [

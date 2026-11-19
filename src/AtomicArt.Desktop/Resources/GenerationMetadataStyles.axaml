@@ -2,34 +2,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
         xmlns:views="using:AtomicArt.Desktop.Views.Gallery">
-    <Style Selector="overlays|ModalOverlayControl.generation-metadata">
-        <Setter Property="Padding"
-                Value="{StaticResource ZeroThickness}" />
-        <Setter Property="Background"
-                Value="{StaticResource MetadataSurfaceBrush}" />
-        <Setter Property="BlurRadius"
-                Value="0" />
-        <Setter Property="BorderThickness"
-                Value="{StaticResource ZeroThickness}" />
-        <Setter Property="CornerRadius"
-                Value="13" />
-    </Style>
-
-    <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ Border#PART_Header">
-        <Setter Property="MinHeight"
-                Value="57" />
-        <Setter Property="Padding"
-                Value="21,8,15,8" />
-        <Setter Property="Background"
-                Value="{StaticResource MetadataHeaderBrush}" />
-        <Setter Property="BorderBrush"
-                Value="{StaticResource MetadataDividerBrush}" />
-        <Setter Property="BorderThickness"
-                Value="0,0,0,1" />
-        <Setter Property="CornerRadius"
-                Value="13,13,0,0" />
-    </Style>
-
     <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ TextBlock.overlay-title">
         <Setter Property="FontSize"
                 Value="18" />
@@ -40,8 +12,6 @@
     <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ Button.close-action">
         <Setter Property="IsVisible"
                 Value="False" />
-        <Setter Property="Foreground"
-                Value="{StaticResource MetadataSecondaryTextBrush}" />
     </Style>
 
     <Style Selector="Border.metadata-status">

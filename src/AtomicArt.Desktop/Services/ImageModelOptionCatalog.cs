@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Generation;
 
@@ -237,7 +239,13 @@ public sealed class ImageModelOptionCatalog : IImageModelOptionCatalog
         return parameters.Select(parameter => parameter with
         {
             DefaultValue = parameter.DefaultValue?.Clone(),
-            AllowedValues = parameter.AllowedValues?.Select(value => value.Clone()).ToArray()
+            AllowedValues = parameter.AllowedValues?.Select(value => value.Clone()).ToArray(),
+            Presentation = parameter.Presentation is { } presentation
+                ? presentation with
+                {
+                    ValueLocalizationKeys = presentation.ValueLocalizationKeys?.ToFrozenDictionary(StringComparer.Ordinal)
+                }
+                : null
         }).ToArray();
     }
 

@@ -48,8 +48,8 @@ internal sealed class GenerationPreviewExpansionController
         _previewTrigger = previewTrigger ?? throw new ArgumentNullException(nameof(previewTrigger));
 
         CubicEaseOut easing = new();
-        _sizeTransitions =
-        [
+        _sizeTransitions = new Transitions
+        {
             new DoubleTransition
             {
                 Property = Control.WidthProperty,
@@ -62,7 +62,7 @@ internal sealed class GenerationPreviewExpansionController
                 Duration = PreviewAnimationDuration,
                 Easing = easing
             }
-        ];
+        };
         InitializePositionAndShadowAnimation(easing);
         _owner.AddHandler(
             InputElement.PointerMovedEvent,
@@ -99,8 +99,8 @@ internal sealed class GenerationPreviewExpansionController
     private void InitializePositionAndShadowAnimation(CubicEaseOut easing)
     {
         _previewExpansionHost.RenderTransform = _previewTranslation;
-        _previewTranslation.Transitions =
-        [
+        _previewTranslation.Transitions = new Transitions
+        {
             new DoubleTransition
             {
                 Property = TranslateTransform.XProperty,
@@ -113,16 +113,16 @@ internal sealed class GenerationPreviewExpansionController
                 Duration = PreviewAnimationDuration,
                 Easing = easing
             }
-        ];
-        _previewShadow.Transitions =
-        [
+        };
+        _previewShadow.Transitions = new Transitions
+        {
             new DoubleTransition
             {
                 Property = Visual.OpacityProperty,
                 Duration = PreviewAnimationDuration,
                 Easing = easing
             }
-        ];
+        };
     }
 
     private void UpdatePreviewExpansionState()

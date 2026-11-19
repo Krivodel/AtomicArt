@@ -150,15 +150,23 @@
       "Title": "Settings",
       "Sections": {
         "Connection": "Connection",
+        "Models": "Models",
         "Appearance": "Interface",
         "StorageAndPerformance": "Other"
+      },
+      "Connection": {
+        "Server": "Server",
+        "Google": "Google",
+        "OpenRouter": "OpenRouter",
+        "ApiKey": "API key",
+        "ManagementKey": "Management key"
       },
       "Language": {
         "Label": "Language",
         "SearchPlaceholder": "Search"
       },
       "ApiBaseAddress": {
-        "Label": "Server address",
+        "Label": "Address",
         "Placeholder": "http://localhost:5000/",
         "Invalid": "Enter an absolute HTTP or HTTPS address."
       },
@@ -172,7 +180,9 @@
         "Label": "OpenRouter management key"
       },
       "GenerationModels": {
-        "Label": "Displayed models"
+        "Label": "Displayed models",
+        "Model": "Model",
+        "Direct": "Direct"
       },
       "Appearance": {
         "ScaleLabel": "Scale",

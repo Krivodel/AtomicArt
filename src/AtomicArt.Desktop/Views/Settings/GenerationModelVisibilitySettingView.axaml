@@ -1,17 +1,72 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
              x:Class="AtomicArt.Desktop.Views.Settings.GenerationModelVisibilitySettingView"
              x:DataType="settings:GenerationModelVisibilitySettingViewModel">
-    <controls:SettingItemControl>
+    <UserControl.Resources>
+        <GridLength x:Key="ProviderColumnWidth">122</GridLength>
+    </UserControl.Resources>
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="settings:GenerationModelVisibilityOptionViewModel"
+                      x:DataType="settings:GenerationModelVisibilityOptionViewModel">
+            <CheckBox HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      AutomationProperties.Name="{Binding DisplayName}"
+                      IsChecked="{Binding IsVisible, Mode=TwoWay}" />
+        </DataTemplate>
+    </UserControl.DataTemplates>
+    <controls:SettingItemControl Classes="settings-table">
+        <controls:SettingItemControl.Header>
+            <Border Classes="settings-model-header">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="{StaticResource ProviderColumnWidth}" />
+                        <ColumnDefinition Width="{StaticResource ProviderColumnWidth}" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+GenerationModels.Model}}" />
+                    <TextBlock Grid.Column="1"
+                               HorizontalAlignment="Center"
+                               Text="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+Connection.OpenRouter}}" />
+                    <TextBlock Grid.Column="2"
+                               HorizontalAlignment="Center"
+                               Text="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+GenerationModels.Direct}}" />
+                </Grid>
+            </Border>
+        </controls:SettingItemControl.Header>
         <controls:SettingItemControl.Editor>
             <ItemsControl IsEnabled="{Binding !IsLoading}"
-                          ItemsSource="{Binding Models}">
+                          ItemsSource="{Binding Rows}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="settings:GenerationModelVisibilityOptionViewModel">
-                        <CheckBox Content="{Binding DisplayName}"
-                                  IsChecked="{Binding IsVisible, Mode=TwoWay}" />
+                    <DataTemplate x:DataType="settings:GenerationModelVisibilityRowViewModel">
+                        <Border Classes="settings-model-row"
+                                Classes.family-divider="{Binding StartsFamily}"
+                                Background="Transparent">
+                            <Grid MinHeight="38">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="{StaticResource ProviderColumnWidth}" />
+                                    <ColumnDefinition Width="{StaticResource ProviderColumnWidth}" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock VerticalAlignment="Center"
+                                           Classes="settings-model-name"
+                                           TextWrapping="Wrap"
+                                           Text="{Binding DisplayName}" />
+                                <ContentControl Grid.Column="1"
+                                                HorizontalContentAlignment="Center"
+                                                VerticalContentAlignment="Center"
+                                                Classes="settings-model-provider"
+                                                Content="{Binding OpenRouter, TargetNullValue=—}" />
+                                <ContentControl Grid.Column="2"
+                                                HorizontalContentAlignment="Center"
+                                                VerticalContentAlignment="Center"
+                                                Classes="settings-model-provider"
+                                                Content="{Binding Direct, TargetNullValue=—}" />
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

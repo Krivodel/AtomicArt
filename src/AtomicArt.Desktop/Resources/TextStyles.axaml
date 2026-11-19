@@ -29,25 +29,9 @@
                 Value="Wrap" />
     </Style>
 
-    <Style Selector="TextBlock.settings-section-title">
-        <Setter Property="Foreground"
-                Value="{DynamicResource MetadataMutedTextBrush}" />
-        <Setter Property="FontSize"
-                Value="13" />
-        <Setter Property="FontWeight"
-                Value="SemiBold" />
-    </Style>
-
-    <Style Selector="TextBlock.settings-label">
-        <Setter Property="FontWeight"
-                Value="SemiBold" />
-    </Style>
-
     <Style Selector="TextBlock.settings-description">
         <Setter Property="Margin"
                 Value="{StaticResource SettingsDescriptionMargin}" />
-        <Setter Property="Foreground"
-                Value="{DynamicResource MetadataMutedTextBrush}" />
         <Setter Property="TextWrapping"
                 Value="Wrap" />
     </Style>

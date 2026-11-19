@@ -94,6 +94,10 @@ public sealed class ImageModelOptionCatalogTests
     {
         ImageModelOptionCatalog catalog = new();
         GenerationModelCatalogDto dto = CreateCatalog();
+        Dictionary<string, string> labels = new(StringComparer.Ordinal)
+        {
+            ["xhigh"] = "Test.Model.Quality.Extra"
+        };
         using (JsonDocument document = JsonDocument.Parse(
             """{"default":"auto","values":["auto","xhigh","max"]}"""))
         {
@@ -102,7 +106,8 @@ public sealed class ImageModelOptionCatalogTests
                 "string",
                 false,
                 document.RootElement.GetProperty("default"),
-                AllowedValues: document.RootElement.GetProperty("values").EnumerateArray().ToArray());
+                AllowedValues: document.RootElement.GetProperty("values").EnumerateArray().ToArray(),
+                Presentation: new GenerationParameterPresentationDto("Test.Model.Quality", labels));
             GenerationModelMetadataDto model = dto.Models.Single() with
             {
                 Parameters = new GenerationModelParameterMetadataDto[] { parameter }
@@ -111,11 +116,13 @@ public sealed class ImageModelOptionCatalogTests
             catalog.Initialize(dto with { Models = new GenerationModelMetadataDto[] { model } });
         }
 
+        labels.Clear();
         ImageModelOption option = catalog.GetModels().Single();
         GenerationModelParameterMetadataDto snapshot = option.Parameters?.Single()
             ?? throw new InvalidOperationException("Parameter metadata should be preserved.");
         snapshot.DefaultValue?.GetString().Should().Be("auto");
         snapshot.AllowedValues?.Select(value => value.GetString()).Should().Equal("auto", "xhigh", "max");
+        (snapshot.Presentation?.ValueLocalizationKeys?["xhigh"]).Should().Be("Test.Model.Quality.Extra");
     }
 
     [Fact]

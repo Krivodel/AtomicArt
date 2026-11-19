@@ -9,7 +9,7 @@ public sealed class OpenRouterManagementKeySettingDefinition : ISecretSettingDef
     public string Key => "openrouter.managementKey";
     public int Order => 111;
     public string SecretName => SecretNameValue;
-    public string DisplayNameKey => SettingsLocalizationKeys.OpenRouterManagementKey.Label;
+    public string DisplayNameKey => SettingsLocalizationKeys.Connection.ManagementKey;
     public string PlaceholderKey => SettingsLocalizationKeys.OpenRouterManagementKey.Label;
-    public SettingsSection Section => SettingsSections.Connection;
+    public SettingsSection Section => SettingsSections.OpenRouter;
 }

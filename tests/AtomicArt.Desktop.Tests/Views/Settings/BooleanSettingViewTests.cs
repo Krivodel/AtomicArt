@@ -1,4 +1,7 @@
+using Avalonia.Animation;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
+using Avalonia.Headless;
 using Avalonia.VisualTree;
 
 using FluentAssertions;
@@ -39,12 +42,19 @@ public sealed class BooleanSettingViewTests : DesktopControlTestBase
             try
             {
                 CheckBox checkBox = view.GetVisualDescendants().OfType<CheckBox>().Single();
+                Ellipse thumb = checkBox.GetVisualDescendants().OfType<Ellipse>()
+                    .Single(ellipse => ellipse.Name == "SwitchThumb");
+                thumb.Transitions.Should().ContainSingle(transition => transition is TransformOperationsTransition);
+                (thumb.RenderTransform?.Value.M31).Should().Be(16d);
 
                 CheckBoxTestInput.Click(window, checkBox, target);
                 await (editor.ApplyCommand.ExecutionTask ?? Task.CompletedTask);
+                await Task.Delay(TimeSpan.FromMilliseconds(200));
+                window.CaptureRenderedFrame();
 
-                checkBox.Content.Should().Be(editor.DisplayName);
+                checkBox.Content.Should().BeOfType<TextBlock>().Subject.Text.Should().Be(editor.DisplayName);
                 editor.IsChecked.Should().BeFalse();
+                (thumb.RenderTransform?.Value.M31).Should().Be(0d);
                 settings.Verify(service => service.SaveValueAsync(
                     definition, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             }
@@ -54,4 +64,5 @@ public sealed class BooleanSettingViewTests : DesktopControlTestBase
             }
         });
     }
+
 }

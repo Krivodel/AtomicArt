@@ -16,6 +16,11 @@ public sealed partial class SettingsViewModel :
 
     public event EventHandler? CloseRequested;
 
+    private readonly IMessenger _messenger;
+
+    [ObservableProperty]
+    private SettingsGroupViewModel? _selectedGroup;
+
     public SettingsViewModel(
         ISettingsItemViewModelProvider settingsItemViewModelProvider,
         ILocalizationTextProvider textProvider,
@@ -25,20 +30,19 @@ public sealed partial class SettingsViewModel :
         ArgumentNullException.ThrowIfNull(textProvider);
         ArgumentNullException.ThrowIfNull(messenger);
 
-        Settings = settingsItemViewModelProvider.CreateSettings();
+        _messenger = messenger;
+        Settings = settingsItemViewModelProvider.CreateSettings()
+            .OrderBy(setting => setting.Order)
+            .ThenBy(setting => setting.Key, StringComparer.Ordinal)
+            .ToArray();
         Groups = Settings
-            .GroupBy(setting => setting.Section)
+            .GroupBy(setting => setting.Section.Parent ?? setting.Section)
             .OrderBy(group => group.Key.Order)
             .ThenBy(group => group.Key.Key, StringComparer.Ordinal)
-            .Select(group => new SettingsGroupViewModel(
-                group.Key,
-                group
-                    .OrderBy(setting => setting.Order)
-                    .ThenBy(setting => setting.Key, StringComparer.Ordinal)
-                    .ToList(),
-                textProvider))
-            .ToList();
-        messenger.Register<LocalizationChangedMessage>(this);
+            .Select(group => new SettingsGroupViewModel(group.Key, group.ToArray(), textProvider))
+            .ToArray();
+        _selectedGroup = Groups.FirstOrDefault();
+        _messenger.Register<LocalizationChangedMessage>(this);
     }
 
     public void Receive(LocalizationChangedMessage message)
@@ -58,6 +62,8 @@ public sealed partial class SettingsViewModel :
 
     public void Dispose()
     {
+        _messenger.UnregisterAll(this);
+
         foreach (IDisposable setting in Settings.OfType<IDisposable>())
         {
             setting.Dispose();

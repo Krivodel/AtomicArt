@@ -11,8 +11,8 @@
                     <TextBox IsReadOnly="True"
                              Text="{Binding Value}" />
                     <Button Grid.Column="1"
-                            Width="{StaticResource SettingsIconButtonSize}"
-                            Height="{StaticResource SettingsIconButtonSize}"
+                            Width="{StaticResource SettingsInputMinHeight}"
+                            Height="{StaticResource SettingsInputMinHeight}"
                             Margin="{StaticResource SettingsActionButtonMargin}"
                             Classes="Icon"
                             Command="{Binding ChangeDirectoryCommand}">

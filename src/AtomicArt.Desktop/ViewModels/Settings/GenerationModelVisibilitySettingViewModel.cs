@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 using CommunityToolkit.Mvvm.Input;
@@ -13,7 +12,7 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class GenerationModelVisibilitySettingViewModel : SettingItemViewModel, IDisposable
 {
-    public ReadOnlyObservableCollection<GenerationModelVisibilityOptionViewModel> Models { get; }
+    public IReadOnlyList<GenerationModelVisibilityRowViewModel> Rows => _rows;
 
     protected override IRelayCommand OperationCommand => SaveCommand;
 
@@ -22,7 +21,9 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
     private readonly IImageModelOptionCatalog _modelCatalog;
     private readonly GenerationModelVisibilityService _visibilityService;
     private readonly ISettingsStateService _settingsStateService;
-    private readonly ObservableCollection<GenerationModelVisibilityOptionViewModel> _models;
+    private IEnumerable<GenerationModelVisibilityOptionViewModel> Options => Rows.SelectMany(row => row.Options);
+    private IReadOnlyList<GenerationModelVisibilityRowViewModel> _rows =
+        Array.Empty<GenerationModelVisibilityRowViewModel>();
     private bool _isDisposed;
     private bool _isLoaded;
     private bool _isSynchronizing;
@@ -45,9 +46,6 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
         _visibilityService = visibilityService ?? throw new ArgumentNullException(nameof(visibilityService));
         _settingsStateService = settingsStateService ?? throw new ArgumentNullException(nameof(settingsStateService));
 
-        _models = [];
-        Models = new ReadOnlyObservableCollection<GenerationModelVisibilityOptionViewModel>(_models);
-
         _visibilityService.VisibleModelsChanged += OnVisibleModelsChanged;
         _modelCatalog.CatalogChanged += OnCatalogChanged;
     }
@@ -61,13 +59,9 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
 
         _isDisposed = true;
 
-        foreach (GenerationModelVisibilityOptionViewModel model in Models)
-        {
-            model.PropertyChanged -= OnModelPropertyChanged;
-        }
-
         _visibilityService.VisibleModelsChanged -= OnVisibleModelsChanged;
         _modelCatalog.CatalogChanged -= OnCatalogChanged;
+        ReplaceRows(Array.Empty<GenerationModelVisibilityRowViewModel>());
     }
 
     protected override void NotifyOperationCanExecuteChanged()
@@ -88,9 +82,11 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
                     _modelCatalog.Initialize(catalog);
                 }
 
-                PopulateModels();
-                _isLoaded = true;
-                NotifyOperationCanExecuteChanged();
+                if (!_isLoaded)
+                {
+                    PopulateModels();
+                    _isLoaded = true;
+                }
             },
             ct,
             nameof(LoadAsync));
@@ -102,8 +98,8 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
         await RunOperationAsync(
             async () =>
             {
-                _visibilityService.SetVisibleModelIds(
-                    Models.Where(model => model.IsVisible).Select(model => model.ModelId));
+                _visibilityService.UpdateVisibleModels(
+                    Options.ToDictionary(model => model.ModelId, model => model.IsVisible, StringComparer.Ordinal));
                 await _settingsStateService
                     .SaveValueAsync(_definition, _visibilityService.GetSerializedValue(), ct)
                     .ConfigureAwait(false);
@@ -138,7 +134,7 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
 
         try
         {
-            foreach (GenerationModelVisibilityOptionViewModel model in Models)
+            foreach (GenerationModelVisibilityOptionViewModel model in Options)
             {
                 model.IsVisible = _visibilityService.IsVisible(model.ModelId);
             }
@@ -159,6 +155,7 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
         if (!_modelCatalog.IsLoaded)
         {
             _isLoaded = false;
+            ReplaceRows(Array.Empty<GenerationModelVisibilityRowViewModel>());
         }
         else
         {
@@ -172,25 +169,70 @@ public sealed partial class GenerationModelVisibilitySettingViewModel : SettingI
 
     private void PopulateModels()
     {
-        foreach (GenerationModelVisibilityOptionViewModel model in _models)
+        IReadOnlyList<GenerationModelVisibilityRowViewModel> rows = _modelCatalog
+            .GetModels()
+            .Where(model => GenerationModelVisibilitySettingDefinition.SupportedModelIds.Contains(model.Id))
+            .GroupBy(GetModelIdentity, StringComparer.Ordinal)
+            .Select(models => (Row: CreateRow(models), VendorId: GetVendorId(models.First())))
+            .OrderBy(model => model.Row.DisplayName, StringComparer.Ordinal)
+            .GroupBy(model => model.VendorId, StringComparer.Ordinal)
+            .SelectMany((family, familyIndex) => family.Select((model, modelIndex) => model.Row with
+            {
+                StartsFamily = familyIndex > 0 && modelIndex == 0
+            }))
+            .ToArray();
+
+        ReplaceRows(rows);
+    }
+
+    private void ReplaceRows(IReadOnlyList<GenerationModelVisibilityRowViewModel> rows)
+    {
+        foreach (GenerationModelVisibilityOptionViewModel model in Options)
         {
             model.PropertyChanged -= OnModelPropertyChanged;
         }
 
-        _models.Clear();
-
-        IEnumerable<GenerationModelVisibilityOptionViewModel> models = _modelCatalog
-            .GetModels()
-            .Where(model => GenerationModelVisibilitySettingDefinition.SupportedModelIds.Contains(model.Id))
-            .Select(model => new GenerationModelVisibilityOptionViewModel(
-                model.Id,
-                model.DisplayName,
-                _visibilityService.IsVisible(model.Id)));
-
-        foreach (GenerationModelVisibilityOptionViewModel model in models)
+        foreach (GenerationModelVisibilityOptionViewModel model in rows.SelectMany(row => row.Options))
         {
             model.PropertyChanged += OnModelPropertyChanged;
-            _models.Add(model);
         }
+
+        _rows = rows;
+        OnPropertyChanged(nameof(Rows));
+    }
+
+    private GenerationModelVisibilityRowViewModel CreateRow(IGrouping<string, ImageModelOption> models)
+    {
+        ImageModelOption? openRouter = models.FirstOrDefault(model => model.Provider == GenerationProviderIds.OpenRouter);
+        ImageModelOption? direct = models.FirstOrDefault(model => model.Provider == GenerationProviderIds.Google);
+        return new GenerationModelVisibilityRowViewModel(
+            (openRouter ?? models.First()).DisplayName,
+            CreateModelOption(openRouter),
+            CreateModelOption(direct));
+    }
+
+    private GenerationModelVisibilityOptionViewModel? CreateModelOption(ImageModelOption? model)
+    {
+        return model is null
+            ? null
+            : new GenerationModelVisibilityOptionViewModel(
+                model.Id,
+                model.DisplayName,
+                _visibilityService.IsVisible(model.Id));
+    }
+
+    private static string GetModelIdentity(ImageModelOption model)
+    {
+        const string OpenRouterPrefix = GenerationProviderIds.OpenRouter + "-";
+        return model.Provider == GenerationProviderIds.OpenRouter
+            && model.Id.StartsWith(OpenRouterPrefix, StringComparison.Ordinal)
+            ? model.Id[OpenRouterPrefix.Length..]
+            : model.Id;
+    }
+
+    private static string GetVendorId(ImageModelOption model)
+    {
+        int separatorIndex = model.ProviderModelId.IndexOf('/');
+        return separatorIndex > 0 ? model.ProviderModelId[..separatorIndex] : model.Provider;
     }
 }

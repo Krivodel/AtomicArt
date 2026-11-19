@@ -150,15 +150,23 @@
       "Title": "Настройки",
       "Sections": {
         "Connection": "Подключение",
+        "Models": "Модели",
         "Appearance": "Интерфейс",
         "StorageAndPerformance": "Прочее"
+      },
+      "Connection": {
+        "Server": "Сервер",
+        "Google": "Google",
+        "OpenRouter": "OpenRouter",
+        "ApiKey": "API-ключ",
+        "ManagementKey": "Ключ управления"
       },
       "Language": {
         "Label": "Язык",
         "SearchPlaceholder": "Поиск"
       },
       "ApiBaseAddress": {
-        "Label": "Адрес сервера",
+        "Label": "Адрес",
         "Placeholder": "http://localhost:5000/",
         "Invalid": "Укажи абсолютный адрес HTTP или HTTPS."
       },
@@ -169,10 +177,12 @@
         "Label": "OpenRouter API-ключ"
       },
       "OpenRouterManagementKey": {
-        "Label": "OpenRouter management key"
+        "Label": "Ключ управления OpenRouter"
       },
       "GenerationModels": {
-        "Label": "Отображаемые модели"
+        "Label": "Отображаемые модели",
+        "Model": "Модель",
+        "Direct": "Напрямую"
       },
       "Appearance": {
         "ScaleLabel": "Масштаб",

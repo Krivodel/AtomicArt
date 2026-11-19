@@ -23,9 +23,8 @@
                            Text="{Binding Label}" />
                 <TextBlock Grid.Row="1"
                            Classes="metadata-value">
-                    <Run Text="{Binding Value}" />
-                    <Run Foreground="{StaticResource MetadataSecondaryTextBrush}"
-                         Text="{Binding SecondaryValue}" />
+                    <Run Text="{Binding Value}"/><Run Foreground="{StaticResource MetadataSecondaryTextBrush}"
+                                                      Text="{Binding SecondaryValue}" />
                 </TextBlock>
             </Grid>
         </DataTemplate>
@@ -34,7 +33,7 @@
     <overlays:ModalOverlayControl x:Name="PanelRoot"
                                   MaxWidth="{StaticResource MetadataOverlayWidth}"
                                   HorizontalAlignment="Stretch"
-                                  Classes="generation-metadata"
+                                  Classes="generation-metadata gradient-surface"
                                   Title="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Title}}"
                                   CloseCommand="{Binding CloseCommand}">
         <overlays:ModalOverlayControl.HeaderAccessory>

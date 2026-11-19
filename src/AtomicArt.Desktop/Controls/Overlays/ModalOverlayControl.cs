@@ -28,6 +28,11 @@ public sealed class ModalOverlayControl : TemplatedControl
         get => GetValue(CloseCommandProperty);
         set => SetValue(CloseCommandProperty, value);
     }
+    public object? Header
+    {
+        get => GetValue(HeaderProperty);
+        set => SetValue(HeaderProperty, value);
+    }
     public object? HeaderAccessory
     {
         get => GetValue(HeaderAccessoryProperty);
@@ -52,6 +57,8 @@ public sealed class ModalOverlayControl : TemplatedControl
         AvaloniaProperty.Register<ModalOverlayControl, object?>(nameof(Body));
     public static readonly StyledProperty<ICommand?> CloseCommandProperty =
         AvaloniaProperty.Register<ModalOverlayControl, ICommand?>(nameof(CloseCommand));
+    public static readonly StyledProperty<object?> HeaderProperty =
+        AvaloniaProperty.Register<ModalOverlayControl, object?>(nameof(Header));
     public static readonly StyledProperty<object?> HeaderAccessoryProperty =
         AvaloniaProperty.Register<ModalOverlayControl, object?>(nameof(HeaderAccessory));
     public static readonly StyledProperty<bool> IsBlurDynamicProperty =

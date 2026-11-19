@@ -155,7 +155,7 @@ public sealed class SettingsViewModelTests
 
         secretSetting.Key.Should().Be(GoogleApiKeySettingDefinition.KeyValue);
         secretSetting.SecretName.Should().Be(GoogleApiKeySettingDefinition.SecretNameValue);
-        secretSetting.DisplayName.Should().Be(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.GoogleApiKey.Label));
+        secretSetting.DisplayName.Should().Be(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.Connection.ApiKey));
     }
 
     [Fact]
@@ -175,19 +175,25 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
-    public void Groups_WithDefaultSettings_GroupsSettingsByDefinitionSection()
+    public void Groups_WithProviderCredentials_KeepsEachProviderInOneConnectionBlock()
     {
-        SettingsViewModel viewModel = CreateViewModel(
+        OpenRouterManagementKeySettingDefinition managementKey = new();
+        using SettingsViewModel viewModel = CreateViewModel(
             new RecordingSecretStore(),
             new RecordingUiScaleService(),
-            new TestViewModelErrorHandler());
+            new TestViewModelErrorHandler(),
+            new OpenRouterApiKeySettingDefinition(),
+            managementKey);
 
         viewModel.Groups.Should().HaveCount(2);
         viewModel.Groups[0].Title.Should().Be(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.Sections.Connection));
-        viewModel.Groups[0].Settings.Should()
+        viewModel.Groups[0].Blocks.Select(block => block.Title).Should().Equal("Google", "OpenRouter");
+        viewModel.Groups[0].Blocks[0].Settings.Should()
             .ContainSingle(setting => setting.Key == GoogleApiKeySettingDefinition.KeyValue);
+        viewModel.Groups[0].Blocks[1].Settings.Select(setting => setting.Key)
+            .Should().Equal(OpenRouterApiKeySettingDefinition.KeyValue, managementKey.Key);
         viewModel.Groups[1].Title.Should().Be(TestLocalizationTextProvider.Default.Get(SettingsLocalizationKeys.Sections.Appearance));
-        viewModel.Groups[1].Settings.Should()
+        viewModel.Groups[1].Blocks.Should().ContainSingle().Subject.Settings.Should()
             .ContainSingle(setting => setting.Key == UiScaleSettingDefinition.KeyValue);
     }
 

@@ -24,8 +24,8 @@ internal static class CheckBoxTestInput
         {
             "label" => checkBox.GetVisualDescendants().OfType<ContentPresenter>()
                 .Single(presenter => presenter.Name == "PART_ContentPresenter"),
-            "indicator" => checkBox.GetVisualDescendants().OfType<GlassCard>()
-                .Single(card => card.Name == "border"),
+            "indicator" => checkBox.GetVisualDescendants().OfType<Control>()
+                .Single(control => control is GlassCard { Name: "border" } or Border { Name: "SwitchTrack" }),
             "space" => checkBox,
             _ => throw new ArgumentOutOfRangeException(nameof(target), target, "Unknown checkbox click target.")
         };
