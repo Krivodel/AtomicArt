@@ -126,6 +126,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
             return;
         }
 
+        OnPropertyChanging(nameof(Item));
         Item.PropertyChanged -= OnItemPropertyChanged;
         Item = item;
         Item.PropertyChanged += OnItemPropertyChanged;

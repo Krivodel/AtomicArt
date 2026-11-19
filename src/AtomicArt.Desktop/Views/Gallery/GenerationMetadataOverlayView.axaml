@@ -32,9 +32,9 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <Grid x:Name="NavigationLayout"
-          Margin="{StaticResource MetadataNavigationMargin}"
-          VerticalAlignment="Center">
+    <views:GenerationMetadataLayout x:Name="NavigationLayout"
+                                    Margin="{StaticResource MetadataNavigationMargin}"
+                                    VerticalAlignment="Center">
         <Grid.ColumnDefinitions>
             <ColumnDefinition MinWidth="{StaticResource MetadataNavigationButtonSize}" />
             <ColumnDefinition Width="*" />
@@ -52,6 +52,7 @@
                                       MaxWidth="{StaticResource MetadataOverlayWidth}"
                                       Margin="{StaticResource ZeroThickness}"
                                       HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch"
                                       Classes="generation-metadata gradient-surface"
                                       Title="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Title}}"
                                       CloseCommand="{Binding CloseCommand}">
@@ -73,7 +74,8 @@
             </overlays:ModalOverlayControl.HeaderAccessory>
 
             <overlays:ModalOverlayControl.Body>
-                <Grid Margin="{StaticResource MetadataContentPadding}"
+                <Grid x:Name="MetadataBody"
+                      Margin="{StaticResource MetadataContentPadding}"
                       ClipToBounds="False"
                       RowDefinitions="*,Auto"
                       RowSpacing="14">
@@ -233,6 +235,16 @@
                     </Grid>
                 </Grid>
             </overlays:ModalOverlayControl.Body>
+            <overlays:ModalOverlayControl.VisualOverlay>
+                <Border ClipToBounds="True"
+                        CornerRadius="{Binding #PanelRoot.CornerRadius}">
+                    <Canvas>
+                        <Image x:Name="PreviousMetadataPage"
+                               Opacity="0"
+                               Stretch="Fill" />
+                    </Canvas>
+                </Border>
+            </overlays:ModalOverlayControl.VisualOverlay>
         </overlays:ModalOverlayControl>
         <Button x:Name="NextGenerationButton"
                 Grid.Column="2"
@@ -241,5 +253,5 @@
                 AutomationProperties.Name="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.NextGeneration}}"
                 Command="{Binding NavigateCommand}"
                 CommandParameter="{x:Static models:OverlayNavigationDirection.Next}" />
-    </Grid>
+    </views:GenerationMetadataLayout>
 </UserControl>

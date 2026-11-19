@@ -54,6 +54,7 @@ public partial class GenerationPreviewControl : UserControl
 
     internal IGenerationPreviewExpansionHost? ExpansionHost { get; set; }
     internal Control? OverflowOwner { get; set; }
+    internal bool IsPreviewLoadPending => _previewLoadCancellation is not null;
 
     private const double DefaultPreviewSize = 220d;
 

@@ -25,6 +25,15 @@ internal sealed class TestUiFrameScheduler : IUiFrameScheduler
         frameAction(frameTime);
     }
 
+    public void RunFrame(TimeSpan frameTime)
+    {
+        int pendingActions = _frameActions.Count;
+        for (int i = 0; i < pendingActions; i++)
+        {
+            RunNextFrame(frameTime);
+        }
+    }
+
     public async Task RunNextFrameAsync(TimeSpan frameTime)
     {
         RunNextFrame(frameTime);

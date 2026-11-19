@@ -75,6 +75,11 @@
                                             VerticalContentAlignment="Stretch"
                                             Content="{TemplateBinding Body}" />
                         </Grid>
+                        <ContentPresenter HorizontalContentAlignment="Stretch"
+                                          VerticalContentAlignment="Stretch"
+                                          IsHitTestVisible="False"
+                                          IsVisible="{TemplateBinding VisualOverlay, Converter={x:Static converters:ObjectConverters.IsNotNull}}"
+                                          Content="{TemplateBinding VisualOverlay}" />
                     </Grid>
                 </ControlTemplate>
             </Setter>

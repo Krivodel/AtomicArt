@@ -48,6 +48,11 @@ public sealed class ModalOverlayControl : TemplatedControl
         get => GetValue(TitleProperty);
         set => SetValue(TitleProperty, value);
     }
+    public Control? VisualOverlay
+    {
+        get => GetValue(VisualOverlayProperty);
+        set => SetValue(VisualOverlayProperty, value);
+    }
 
     public static readonly StyledProperty<double> BlurIntensityProperty =
         ModalOverlayPresenterControl.BlurIntensityProperty.AddOwner<ModalOverlayControl>();
@@ -65,6 +70,8 @@ public sealed class ModalOverlayControl : TemplatedControl
         AvaloniaProperty.Register<ModalOverlayControl, bool>(nameof(IsBlurDynamic));
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<ModalOverlayControl, string?>(nameof(Title));
+    public static readonly StyledProperty<Control?> VisualOverlayProperty =
+        AvaloniaProperty.Register<ModalOverlayControl, Control?>(nameof(VisualOverlay));
 
     internal BlurBackdropControl? BlurBackdrop => _blurBackdrop;
 

@@ -24,12 +24,14 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Controls.Overlays;
+using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
+using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
@@ -43,6 +45,165 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 
 public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlTestBase
 {
+    [Fact]
+    public async Task Navigation_WhenInputsRepeat_ShowsIntermediateEntriesAndKeepsHeightTransition()
+    {
+        await DispatchAsync(async () =>
+        {
+            using GalleryViewModel gallery = GalleryViewModelTestFactory.CreateViewModel();
+            GenerationReference reference = new(new string('a', 64), "reference.png", GenerationImageContentTypes.Png);
+            GalleryItemState[] items =
+            [
+                GalleryItemStateTestFactory.CreateGenerated(prompt: "First", secondsBefore: 0),
+                GalleryItemStateTestFactory.CreateGenerated(prompt: "Second", secondsBefore: 1, references: [reference]),
+                GalleryItemStateTestFactory.CreateGenerated(prompt: "Third", secondsBefore: 2),
+                GalleryItemStateTestFactory.CreateGenerated(prompt: "Fourth", secondsBefore: 3),
+                GalleryItemStateTestFactory.CreateGenerated(prompt: "Fifth", secondsBefore: 4, references: [reference])
+            ];
+            await gallery.RestoreStateAsync(items, CancellationToken.None);
+            gallery.OpenMetadataCommand.Execute(gallery.Items[0]);
+            TestUiFrameScheduler frameScheduler = new();
+            GenerationMetadataOverlayView view = new()
+            {
+                DataContext = gallery.SelectedMetadata,
+                NavigationFrameScheduler = frameScheduler
+            };
+            Window window = Show(view, 1040d, 640d);
+
+            try
+            {
+                ModalOverlayControl panel = view.FindControl<ModalOverlayControl>("PanelRoot")!;
+                Image previousPage = view.FindControl<Image>("PreviousMetadataPage")!;
+                Grid currentBody = view.FindControl<Grid>("MetadataBody")!;
+                TextBox prompt = view.FindControl<TextBox>("PromptText")!;
+                double startHeight = panel.Bounds.Height;
+                double startWidth = panel.Bounds.Width;
+                previousPage.Source.Should().BeNull();
+                currentBody.Opacity.Should().Be(1d);
+                frameScheduler.HasQueuedFrame.Should().BeFalse();
+
+                gallery.NavigateMetadataCommand.Execute(OverlayNavigationDirection.Next);
+                double firstFrameHeight = RenderNavigationFrame(0);
+                firstFrameHeight.Should().Be(startHeight);
+                RenderTargetBitmap firstPage = previousPage.Source.Should().BeOfType<RenderTargetBitmap>().Subject;
+                previousPage.Opacity.Should().Be(1d);
+                currentBody.Opacity.Should().Be(0d);
+                RenderNavigationFrame(1);
+                double growingHeight = RenderNavigationFrame(40);
+                growingHeight.Should().BeGreaterThan(firstFrameHeight);
+                previousPage.Source.Should().BeSameAs(firstPage);
+                previousPage.Opacity.Should().BeGreaterThan(0d).And.BeLessThan(1d);
+                currentBody.Opacity.Should().BeGreaterThan(0d).And.BeLessThan(1d);
+
+                gallery.NavigateMetadataCommand.Execute(OverlayNavigationDirection.Next);
+                RenderNavigationFrame(41).Should().Be(growingHeight);
+                previousPage.Source.Should().BeNull();
+                currentBody.Opacity.Should().Be(1d);
+                prompt.Text.Should().Be("Third");
+                double shrinkingHeight = RenderNavigationFrame(81);
+                shrinkingHeight.Should().BeInRange(startHeight + 1d, growingHeight - 1d);
+
+                gallery.NavigateMetadataCommand.Execute(OverlayNavigationDirection.Next);
+                RenderNavigationFrame(82).Should().Be(shrinkingHeight);
+                previousPage.Source.Should().BeNull();
+                currentBody.Opacity.Should().Be(1d);
+                prompt.Text.Should().Be("Fourth");
+                RenderNavigationFrame(300).Should().Be(startHeight);
+
+                gallery.NavigateMetadataCommand.Execute(OverlayNavigationDirection.Next);
+                RenderNavigationFrame(301).Should().Be(startHeight);
+                previousPage.Opacity.Should().Be(1d);
+                currentBody.Opacity.Should().Be(0d);
+                RenderNavigationFrame(302);
+                RenderNavigationFrame(391);
+                previousPage.Source.Should().NotBeNull();
+                RenderNavigationFrame(392);
+                previousPage.Source.Should().BeNull();
+                RenderNavigationFrame(421);
+                currentBody.Opacity.Should().BeLessThan(1d);
+                RenderNavigationFrame(422);
+                currentBody.Opacity.Should().Be(1d);
+                double finalHeight = RenderNavigationFrame(461);
+                finalHeight.Should().BeGreaterThan(growingHeight);
+                panel.Bounds.Width.Should().Be(startWidth);
+                frameScheduler.HasQueuedFrame.Should().BeFalse();
+
+                double RenderNavigationFrame(int milliseconds)
+                {
+                    frameScheduler.RunFrame(TimeSpan.FromMilliseconds(milliseconds));
+                    window.CaptureRenderedFrame();
+                    return panel.Bounds.Height;
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Navigation_WhenPreviewIsPending_HoldsPreviousPageUntilPreviewIsPresented()
+    {
+        await DispatchAsync(async () =>
+        {
+            using GalleryViewModel gallery = GalleryViewModelTestFactory.CreateViewModel();
+            GalleryItemState[] items =
+            [
+                GalleryItemStateTestFactory.CreateGenerated(secondsBefore: 0),
+                GalleryItemStateTestFactory.CreateGenerated(secondsBefore: 1, thumbnailPath: "second-thumbnail.png")
+            ];
+            await gallery.RestoreStateAsync(items, CancellationToken.None);
+            gallery.OpenMetadataCommand.Execute(gallery.Items[0]);
+            TestUiFrameScheduler navigationFrames = new();
+            TestUiFrameScheduler previewFrames = new();
+            TaskCompletionSource<GalleryPreviewBitmapLease?> decode = new();
+            StubGalleryPreviewBitmapProvider provider = new((_, _) => decode.Task);
+            GalleryPreviewSourceScheduler sourceScheduler = new(
+                previewFrames, TestApiConfiguration.CreateGalleryOptionsWrapper());
+            GenerationPreviewSessionFactory sessionFactory = new(
+                _ => new GenerationPreviewSession(provider, sourceScheduler));
+            GenerationMetadataOverlayView view = new(sessionFactory)
+            {
+                DataContext = gallery.SelectedMetadata,
+                NavigationFrameScheduler = navigationFrames
+            };
+            Window window = Show(view, 1040d, 640d);
+
+            try
+            {
+                Image previousPage = view.FindControl<Image>("PreviousMetadataPage")!;
+                GenerationPreviewControl preview = view.FindControl<GenerationPreviewControl>("PreviewEntry")!;
+                using MemoryStream image = new(GalleryThumbnailTestImages.CreatePngBytes(32, 32));
+                using Bitmap bitmap = new(image);
+
+                gallery.NavigateMetadataCommand.Execute(OverlayNavigationDirection.Next);
+                navigationFrames.RunFrame(TimeSpan.Zero);
+                navigationFrames.RunFrame(TimeSpan.FromMilliseconds(100d));
+                previousPage.Opacity.Should().Be(1d);
+
+                decode.SetResult(new GalleryPreviewBitmapLease(bitmap, () => { }));
+                await Task.Yield();
+                previewFrames.HasQueuedFrame.Should().BeTrue();
+                navigationFrames.RunFrame(TimeSpan.FromMilliseconds(150d));
+                previousPage.Opacity.Should().Be(1d);
+
+                previewFrames.RunFrame(TimeSpan.FromMilliseconds(151d));
+                await Task.Yield();
+                preview.IsPreviewLoadPending.Should().BeFalse();
+                navigationFrames.RunFrame(TimeSpan.FromMilliseconds(152d));
+                navigationFrames.RunFrame(TimeSpan.FromMilliseconds(168d));
+                navigationFrames.RunFrame(TimeSpan.FromMilliseconds(220d));
+
+                previousPage.Opacity.Should().BeGreaterThan(0d).And.BeLessThan(1d);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     [Theory]
     [InlineData(1200d, 128d)]
     [InlineData(1040d, 104d)]
