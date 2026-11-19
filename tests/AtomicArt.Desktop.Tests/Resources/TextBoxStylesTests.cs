@@ -19,6 +19,57 @@ namespace AtomicArt.Desktop.Tests.Resources;
 
 public sealed class TextBoxStylesTests : AnimatedGalleryControlTestBase
 {
+    [Theory]
+    [InlineData("prompt-input", false)]
+    [InlineData("metadata-text", true)]
+    public async Task PromptText_WithFractionalScrollOffset_MovesByTheFullOffset(string styleClass, bool isReadOnly)
+    {
+        await DispatchAsync(() =>
+        {
+            TextBox textBox = new()
+            {
+                AcceptsReturn = true,
+                Height = 80d,
+                IsReadOnly = isReadOnly,
+                Text = string.Join(
+                    Environment.NewLine,
+                    Enumerable.Range(1, 20).Select(lineNumber => $"Line {lineNumber}")),
+                Width = 300d
+            };
+            textBox.Classes.Add(styleClass);
+            Window window = Show(textBox);
+
+            try
+            {
+                ScrollViewer scrollViewer = GetScrollViewer(textBox);
+                ScrollContentPresenter viewport = GetScrollPresenter(textBox);
+                Control textPresenter = TextBoxScrollContentAssertions.GetTextPresenter(textBox);
+                double initialTop = GetTextTopAtOffset(12d);
+
+                double firstTop = GetTextTopAtOffset(12.25d);
+                double secondTop = GetTextTopAtOffset(12.75d);
+
+                (initialTop - firstTop).Should().BeApproximately(0.25d, 0.01d);
+                (initialTop - secondTop).Should().BeApproximately(0.75d, 0.01d);
+                textPresenter.CacheMode.Should().BeNull();
+                TextOptions.GetTextHintingMode(textPresenter).Should().Be(TextHintingMode.None);
+                TextOptions.GetBaselinePixelAlignment(textPresenter).Should().Be(BaselinePixelAlignment.Unaligned);
+
+                double GetTextTopAtOffset(double offset)
+                {
+                    scrollViewer.Offset = new Vector(0d, offset);
+                    window.CaptureRenderedFrame();
+                    return (textPresenter.TranslatePoint(default, viewport)
+                        ?? throw new InvalidOperationException("Text presenter position was not resolved.")).Y;
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     [Fact]
     public async Task TextBox_WhenScrolled_UsesFullViewportAndKeepsThemeInset()
     {
