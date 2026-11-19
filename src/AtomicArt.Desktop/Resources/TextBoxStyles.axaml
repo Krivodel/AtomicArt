@@ -41,12 +41,12 @@
     </Style>
 
     <Style Selector="TextBox /template/ ScrollViewer /template/ ScrollContentPresenter#PART_ContentPresenter">
-        <Setter Property="behaviors:VerticalFadeMaskBehavior.Insets"
+        <Setter Property="behaviors:ScrollFadeMaskBehavior.Insets"
                 Value="{DynamicResource TextControlThemePadding}" />
     </Style>
 
     <Style Selector="TextBox.metadata-text /template/ ScrollViewer /template/ ScrollContentPresenter#PART_ContentPresenter">
-        <Setter Property="behaviors:VerticalFadeMaskBehavior.Insets"
+        <Setter Property="behaviors:ScrollFadeMaskBehavior.Insets"
                 Value="{StaticResource MetadataTextScrollInsets}" />
     </Style>
 </Styles>

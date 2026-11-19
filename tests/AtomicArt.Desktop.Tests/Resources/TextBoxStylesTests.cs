@@ -110,7 +110,7 @@ public sealed class TextBoxStylesTests : AnimatedGalleryControlTestBase
                         placeholders.Should().NotBeEmpty();
                         placeholders.Should().OnlyContain(
                             placeholder => placeholder.Margin == expectedInsets);
-                        VerticalFadeMaskBehavior.GetInsets(scrollPresenter)
+                        ScrollFadeMaskBehavior.GetInsets(scrollPresenter)
                             .Should()
                             .Be(expectedInsets);
                         scrollPresenter.OpacityMask.Should()
@@ -181,14 +181,15 @@ public sealed class TextBoxStylesTests : AnimatedGalleryControlTestBase
             .BeOfType<LinearGradientBrush>()
             .Subject;
         (double topFadeEnd, double bottomFadeStart) =
-            VerticalFadeMaskBehavior.CalculateFadeOffsets(
+            ScrollFadeMaskBehavior.CalculateFadeOffsets(
                 scrollPresenter.Bounds.Height,
-                fadeInsets);
+                fadeInsets.Top,
+                fadeInsets.Bottom);
 
         scrollViewer.OpacityMask.Should().BeNull();
         scrollPresenter.ClipToBounds.Should().BeTrue();
         scrollPresenter.Bounds.Size.Should().Be(scrollPresenter.Viewport);
-        VerticalFadeMaskBehavior.GetInsets(scrollPresenter)
+        ScrollFadeMaskBehavior.GetInsets(scrollPresenter)
             .Should()
             .Be(fadeInsets);
         opacityMask.GradientStops.Should().HaveCount(4);

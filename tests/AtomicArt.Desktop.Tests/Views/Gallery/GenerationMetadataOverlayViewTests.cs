@@ -137,6 +137,62 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
+    public async Task References_WhenScrolled_FadeOnlyWhereItemsExtendPastTheViewport()
+    {
+        await DispatchAsync(() =>
+        {
+            GenerationReference[] references = Enumerable.Range(0, 16)
+                .Select(index => new GenerationReference("reference", $"reference-{index}.png", GenerationImageContentTypes.Png))
+                .ToArray();
+            GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(references: references);
+            GenerationItemViewModel item = GenerationItemViewModel.Restore(
+                state, state.ImagePath, state.ThumbnailPath,
+                GenerationItemStatusDescriptorRegistryTestFactory.Create(), TestLocalizationTextProvider.Default);
+            GenerationMetadataOverlayView view = CreateView(item);
+            Window window = Show(view);
+
+            try
+            {
+                ScrollViewer scroller = view.GetVisualDescendants().OfType<ScrollViewer>()
+                    .Single(control => control.Classes.Contains("metadata-references"));
+                ScrollContentPresenter presenter = scroller.GetVisualDescendants()
+                    .OfType<ScrollContentPresenter>().Single();
+                LinearGradientBrush mask = presenter.OpacityMask.Should().BeOfType<LinearGradientBrush>().Subject;
+                double maximumOffset = scroller.Extent.Width - scroller.Viewport.Width;
+
+                maximumOffset.Should().BeGreaterThan(40d);
+                scroller.OpacityMask.Should().BeNull();
+                mask.EndPoint.Should().Be(new RelativePoint(1d, 0d, RelativeUnit.Relative));
+                mask.GradientStops[0].Color.A.Should().Be(byte.MaxValue);
+                mask.GradientStops[3].Color.A.Should().Be(0);
+
+                scroller.Offset = new Vector(10d, 0d);
+                window.CaptureRenderedFrame();
+
+                mask.GradientStops[0].Color.A.Should().Be(0);
+                mask.GradientStops[1].Offset.Should().BeApproximately(10d / presenter.Bounds.Width, 0.001d);
+                mask.GradientStops[3].Color.A.Should().Be(0);
+
+                scroller.Offset = new Vector(maximumOffset, 0d);
+                window.CaptureRenderedFrame();
+
+                mask.GradientStops[0].Color.A.Should().Be(0);
+                mask.GradientStops[3].Color.A.Should().Be(byte.MaxValue);
+
+                scroller.GetVisualDescendants().OfType<ItemsControl>().Single().ItemsSource = references.Take(1);
+                window.CaptureRenderedFrame();
+
+                mask.GradientStops[0].Color.A.Should().Be(byte.MaxValue);
+                mask.GradientStops[3].Color.A.Should().Be(byte.MaxValue);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public async Task ReferencePreview_WhenImageArrives_FadesIn()
     {
         string imagePath = CreateImageFile();
@@ -544,7 +600,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                     GetBounds(textPresenter, view).Left.Should().Be(GetBounds(heading, view).Left);
                     GetBounds(textPresenter, view).Right.Should().Be(GetBounds(textBox, view).Right);
                     textPresenter.Margin.Should().Be(fadeInsets);
-                    VerticalFadeMaskBehavior.GetInsets(scrollPresenter).Should().Be(fadeInsets);
+                    ScrollFadeMaskBehavior.GetInsets(scrollPresenter).Should().Be(fadeInsets);
                     scrollPresenter.OpacityMask.Should().BeOfType<LinearGradientBrush>();
                 }
                 finally

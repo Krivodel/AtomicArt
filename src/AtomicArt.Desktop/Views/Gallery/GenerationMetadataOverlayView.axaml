@@ -167,6 +167,7 @@
                                IsVisible="{Binding !HasReferences}"
                                Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.EmptyAttachments}}" />
                     <ScrollViewer Grid.Row="1"
+                                  Classes="metadata-references"
                                   IsVisible="{Binding HasReferences}"
                                   HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Disabled">

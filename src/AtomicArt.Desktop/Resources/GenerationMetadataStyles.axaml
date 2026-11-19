@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
         xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
         xmlns:views="using:AtomicArt.Desktop.Views.Gallery">
     <Styles.Resources>
@@ -16,6 +17,15 @@
             </Setter>
         </ControlTheme>
     </Styles.Resources>
+
+    <Style Selector="ScrollViewer.metadata-references /template/ ScrollContentPresenter#PART_ContentPresenter">
+        <Setter Property="behaviors:ScrollFadeMaskBehavior.Orientation"
+                Value="Horizontal" />
+        <Setter Property="behaviors:ScrollFadeMaskBehavior.FadeWhenClipped"
+                Value="True" />
+        <Setter Property="behaviors:ScrollFadeMaskBehavior.Insets"
+                Value="{StaticResource MetadataReferencesScrollInsets}" />
+    </Style>
 
     <Style Selector="views|GenerationReferencePreviewControl">
         <Setter Property="Opacity"

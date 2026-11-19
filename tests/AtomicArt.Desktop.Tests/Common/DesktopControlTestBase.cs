@@ -36,16 +36,24 @@ public abstract class DesktopControlTestBase
             action);
     }
 
-    private protected static async Task DispatchAsync(Action action)
+    private protected static Task DispatchAsync(Action action)
+    {
+        return DispatchAsync(typeof(DesktopControlTestBase), action);
+    }
+
+    private protected static async Task DispatchAsync(Type testApplicationType, Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        await DispatchAsync(() =>
-        {
-            action();
+        await HeadlessTestSessionDispatcher.DispatchAsync(
+            testApplicationType,
+            SessionLock,
+            () =>
+            {
+                action();
 
-            return Task.CompletedTask;
-        });
+                return Task.CompletedTask;
+            });
     }
 
     private protected static Window Show(Control control)
