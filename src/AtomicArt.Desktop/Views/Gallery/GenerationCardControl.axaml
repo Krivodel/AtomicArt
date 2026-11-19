@@ -145,21 +145,26 @@
                 <Border x:Name="GenerationCardInfo"
                         Grid.Row="1"
                         Classes="generation-card-info"
-                        Classes.favorite="{Binding IsFavorite}">
-                    <Grid RowDefinitions="*,Auto">
-                        <uiControls:OverflowEllipsisTextBlock Grid.Row="0"
-                                                              Classes="generation-card-prompt"
-                                                              Text="{Binding Prompt}" />
-                        <Grid Grid.Row="1"
-                              ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0"
-                                       Classes="generation-card-model"
-                                       Text="{Binding ModelDisplayName}" />
-                            <TextBlock Grid.Column="1"
-                                       Classes="generation-card-time"
-                                       Text="{Binding ElapsedText}" />
+                        Classes.favorite="{Binding IsFavorite}"
+                        Classes.metadata-hovered="{Binding #PromptDragSource.IsPointerOver}">
+                    <Panel>
+                        <Border Classes="generation-card-info-hover" />
+                        <Grid Margin="{StaticResource GalleryCardInfoPadding}"
+                              RowDefinitions="*,Auto">
+                            <uiControls:OverflowEllipsisTextBlock Grid.Row="0"
+                                                                  Classes="generation-card-prompt"
+                                                                  Text="{Binding Prompt}" />
+                            <Grid Grid.Row="1"
+                                  ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0"
+                                           Classes="generation-card-model"
+                                           Text="{Binding ModelDisplayName}" />
+                                <TextBlock Grid.Column="1"
+                                           Classes="generation-card-time"
+                                           Text="{Binding ElapsedText}" />
+                            </Grid>
                         </Grid>
-                    </Grid>
+                    </Panel>
                 </Border>
 
                 <Path x:Name="FavoriteAccent"

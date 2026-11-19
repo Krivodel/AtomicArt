@@ -229,8 +229,6 @@
     </Style>
 
     <Style Selector="Border.generation-card-info">
-        <Setter Property="Padding"
-                Value="{StaticResource GalleryCardInfoPadding}" />
         <Setter Property="Background"
                 Value="{DynamicResource GlassCardBrush}" />
         <Setter Property="CornerRadius"
@@ -240,6 +238,33 @@
     <Style Selector="Border.generation-card-info.favorite">
         <Setter Property="Background"
                 Value="{StaticResource GalleryFavoriteInfoBackgroundBrush}" />
+    </Style>
+
+    <Style Selector="Border.generation-card-info-hover">
+        <Setter Property="Background"
+                Value="{StaticResource GalleryCardInfoHoverBrush}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource GenerationCardInfoCornerRadius}" />
+        <Setter Property="IsHitTestVisible"
+                Value="False" />
+        <Setter Property="Opacity"
+                Value="0" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity"
+                                  Duration="{StaticResource GenerationCardVisualStateTransitionDuration}" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.generation-card-info.favorite Border.generation-card-info-hover">
+        <Setter Property="Background"
+                Value="{StaticResource GalleryFavoriteInfoHoverBrush}" />
+    </Style>
+
+    <Style Selector="galleryViews|GenerationCardControl[IsSelectionMode=False] Border.metadata-hovered Border.generation-card-info-hover">
+        <Setter Property="Opacity"
+                Value="1" />
     </Style>
 
     <Style Selector="Border.prompt-drag-preview">

@@ -8,7 +8,9 @@
     <Color x:Key="ContextMenuGradientEndColor">#273149</Color>
     <Color x:Key="ImageDropBorderColor">#1E385C</Color>
     <Color x:Key="GallerySelectionTintColor">#000000</Color>
+    <Color x:Key="GalleryCardInfoHoverColor">#303C52</Color>
     <Color x:Key="GalleryFavoriteInfoBackgroundColor">#3B315D</Color>
+    <Color x:Key="GalleryFavoriteInfoHoverColor">#4D4173</Color>
     <Color x:Key="GalleryFavoriteAccentColor">#F59E0B</Color>
     <Color x:Key="GalleryDeleteIconColor">#FF3333</Color>
     <Color x:Key="MetadataSurfaceColor">#1B2435</Color>

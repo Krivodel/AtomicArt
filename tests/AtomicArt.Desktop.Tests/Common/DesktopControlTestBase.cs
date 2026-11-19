@@ -28,12 +28,9 @@ public abstract class DesktopControlTestBase
             action);
     }
 
-    private protected static async Task DispatchAsync(Func<Task> action)
+    private protected static Task DispatchAsync(Func<Task> action)
     {
-        await HeadlessTestSessionDispatcher.DispatchAsync(
-            typeof(DesktopControlTestBase),
-            SessionLock,
-            action);
+        return DesktopControlTestBase.DispatchAsync(typeof(DesktopControlTestBase), action);
     }
 
     private protected static Task DispatchAsync(Action action)
@@ -41,19 +38,23 @@ public abstract class DesktopControlTestBase
         return DispatchAsync(typeof(DesktopControlTestBase), action);
     }
 
-    private protected static async Task DispatchAsync(Type testApplicationType, Action action)
+    private protected static Task DispatchAsync(Type testApplicationType, Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        await HeadlessTestSessionDispatcher.DispatchAsync(
+        return DesktopControlTestBase.DispatchAsync(
             testApplicationType,
-            SessionLock,
             () =>
             {
                 action();
 
                 return Task.CompletedTask;
             });
+    }
+
+    private protected static Task DispatchAsync(Type testApplicationType, Func<Task> action)
+    {
+        return HeadlessTestSessionDispatcher.DispatchAsync(testApplicationType, SessionLock, action);
     }
 
     private protected static Window Show(Control control)

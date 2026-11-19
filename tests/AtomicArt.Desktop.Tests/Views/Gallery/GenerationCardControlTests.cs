@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
@@ -14,6 +16,7 @@ using FluentAssertions;
 using Lang.Avalonia;
 using Pica.Viewer.Resources;
 using Pica.Viewer.Services;
+using SkiaSharp;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -38,6 +41,13 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
     private static readonly Size PreviewSize = new(220d, 220d);
     private static readonly Rect DefaultViewportBounds = new(0d, 0d, 1000d, 600d);
     private static readonly TimeSpan AnimationCompletionTimeout = TimeSpan.FromSeconds(1d);
+
+    public new static AppBuilder BuildAvaloniaApp()
+    {
+        return AppBuilder.Configure<DesktopControlTestApplication>()
+            .UseSkia()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+    }
 
     [Fact]
     public void ContextFlyout_WhenFavoriteChanges_UpdatesImbaActionLabel()
@@ -581,6 +591,93 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         {
             File.Delete(imagePath);
         }
+    }
+
+    [Theory]
+    [InlineData(false, "GalleryCardInfoHoverBrush")]
+    [InlineData(true, "GalleryFavoriteInfoHoverBrush")]
+    public async Task CardBackground_WhenPointerMoves_AnimatesOnlyOnMetadataHoverAsync(bool isFavorite, string hoverBrushKey)
+    {
+        await DispatchAsync(typeof(GenerationCardControlTests), async () =>
+        {
+            GenerationItemViewModel item = GenerationCardControlTests.CreateItem("image.webp", "thumbnail.jpg");
+            item.IsFavorite = isFavorite;
+            GenerationCardControl control = new()
+            {
+                DataContext = item,
+                OpenMetadataCommand = new RelayCommand(() => { })
+            };
+
+            Window window = Show(control, GalleryLayoutService.CardWidth, GalleryLayoutService.CardHeight);
+            try
+            {
+                Border info = control.FindControl<Border>("GenerationCardInfo")!;
+                GenerationPreviewControl preview = control.FindControl<GenerationPreviewControl>("GenerationPreview")!;
+                ISolidColorBrush hoverBrush = control.FindResource(hoverBrushKey).Should()
+                    .BeAssignableTo<ISolidColorBrush>().Subject;
+                SKColor hoverColor = new(hoverBrush.Color.R, hoverBrush.Color.G, hoverBrush.Color.B);
+                TimeSpan transitionDuration = control.FindResource("GenerationCardVisualStateTransitionDuration")
+                    .Should().BeOfType<TimeSpan>().Subject;
+                Point imageCenter = GetCenter(preview);
+                Point infoCenter = GetCenter(info);
+                Point samplePosition = info.TranslatePoint(new Point(6d, info.Bounds.Height / 2d), window)
+                    ?? throw new InvalidOperationException("The card background is not in the window.");
+                SKColor restingColor = CaptureBackground();
+
+                window.MouseMove(imageCenter, RawInputModifiers.None);
+                CaptureBackground().Should().Be(restingColor);
+
+                await MovePointerAndAssertTransitionAsync(infoCenter, restingColor, hoverColor);
+                await MovePointerAndAssertTransitionAsync(imageCenter, hoverColor, restingColor);
+
+                control.IsSelectionMode = true;
+                window.MouseMove(infoCenter, RawInputModifiers.None);
+                await Task.Delay(transitionDuration);
+                CaptureBackground().Should().Be(restingColor);
+
+                async Task MovePointerAndAssertTransitionAsync(Point position, SKColor initialColor, SKColor finalColor)
+                {
+                    window.MouseMove(position, RawInputModifiers.None);
+                    Stopwatch elapsed = Stopwatch.StartNew();
+                    bool hasIntermediateColor = false;
+                    SKColor color = CaptureBackground();
+                    while (color != finalColor && elapsed.Elapsed < GenerationCardControlTests.AnimationCompletionTimeout)
+                    {
+                        AssertChannelInRange(color.Red, initialColor.Red, finalColor.Red);
+                        AssertChannelInRange(color.Green, initialColor.Green, finalColor.Green);
+                        AssertChannelInRange(color.Blue, initialColor.Blue, finalColor.Blue);
+                        hasIntermediateColor |= color != initialColor;
+
+                        await Task.Delay(TimeSpan.FromMilliseconds(8d));
+                        color = CaptureBackground();
+                    }
+
+                    color.Should().Be(finalColor);
+                    hasIntermediateColor.Should().BeTrue();
+
+                    static void AssertChannelInRange(byte actual, byte initial, byte final)
+                    {
+                        actual.Should().BeInRange(Math.Min(initial, final), Math.Max(initial, final));
+                    }
+                }
+
+                SKColor CaptureBackground()
+                {
+                    using SKBitmap bitmap = CaptureRenderedBitmap(window);
+                    return bitmap.GetPixel((int)samplePosition.X, (int)samplePosition.Y);
+                }
+
+                Point GetCenter(Control target)
+                {
+                    return target.TranslatePoint(new Rect(target.Bounds.Size).Center, window)
+                        ?? throw new InvalidOperationException("The card area is not in the window.");
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
     }
 
     [Fact]

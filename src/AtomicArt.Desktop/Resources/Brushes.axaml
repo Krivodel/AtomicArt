@@ -17,8 +17,12 @@
                      Color="{x:Static resources:GalleryHighlightPalette.BackgroundColor}" />
     <SolidColorBrush x:Key="GalleryHighlightBorderBrush"
                      Color="{x:Static resources:GalleryHighlightPalette.BorderColor}" />
+    <SolidColorBrush x:Key="GalleryCardInfoHoverBrush"
+                     Color="{StaticResource GalleryCardInfoHoverColor}" />
     <SolidColorBrush x:Key="GalleryFavoriteInfoBackgroundBrush"
                      Color="{StaticResource GalleryFavoriteInfoBackgroundColor}" />
+    <SolidColorBrush x:Key="GalleryFavoriteInfoHoverBrush"
+                     Color="{StaticResource GalleryFavoriteInfoHoverColor}" />
     <SolidColorBrush x:Key="GalleryFavoriteAccentBrush"
                      Color="{StaticResource GalleryFavoriteAccentColor}" />
     <SolidColorBrush x:Key="GptQualityLowBrush"
