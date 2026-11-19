@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Platform;
 using Rectangle = Avalonia.Controls.Shapes.Rectangle;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -379,6 +380,93 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     flyout.Hide();
                 }
             });
+        });
+    }
+
+    [Fact]
+    public async Task OpenWithMenu_WhenPointerReturnsOrEntersSubmenu_KeepsSubmenuOpenAsync()
+    {
+        await DispatchAsync(async () =>
+        {
+            GenerationCardControl control = new()
+            {
+                DataContext = GenerationCardControlTests.CreateItem("image.webp", "thumbnail.jpg"),
+                LoadOpenWithApplicationsCommand = new AsyncRelayCommand<GenerationItemViewModel>(
+                    _ => Task.CompletedTask),
+                ChooseApplicationCommand = new RelayCommand(() => { }),
+                RevealInFolderCommand = new RelayCommand(() => { })
+            };
+            Window window = Show(control);
+            Border container = control.FindControl<Border>("GenerationCardContainer")!;
+            AnimatedContextMenuFlyout flyout = container.ContextFlyout.Should()
+                .BeOfType<AnimatedContextMenuFlyout>().Subject;
+            MenuItem openWithMenuItem = control.FindControl<MenuItem>("OpenWithMenuItem")!;
+
+            try
+            {
+                flyout.ShowAt(container);
+                window.CaptureRenderedFrame();
+                await Task.Delay(ContextMenuRevealHost.OpeningDurationMilliseconds);
+
+                MenuItem previousItem = control.FindControl<MenuItem>("ShowInFolderMenuItem")!;
+                TopLevel menuRoot = TopLevel.GetTopLevel(openWithMenuItem)
+                    ?? throw new InvalidOperationException("The context menu is not open.");
+                Point openWithCenter = GenerationCardControlTests.GetMenuItemCenter(openWithMenuItem, menuRoot);
+                Point previousItemCenter = GenerationCardControlTests.GetMenuItemCenter(previousItem, menuRoot);
+                TimeSpan hoverDelay = DefaultMenuInteractionHandler.MenuShowDelay + TimeSpan.FromMilliseconds(50d);
+                bool submenuClosed = false;
+                openWithMenuItem.PropertyChanged += (_, eventArgs) =>
+                {
+                    if ((eventArgs.Property == MenuItem.IsSubMenuOpenProperty)
+                        && !openWithMenuItem.IsSubMenuOpen)
+                    {
+                        submenuClosed = true;
+                    }
+                };
+
+                menuRoot.MouseMove(openWithCenter, RawInputModifiers.None);
+                openWithMenuItem.IsSubMenuOpen.Should().BeTrue();
+
+                menuRoot.MouseMove(previousItemCenter, RawInputModifiers.None);
+                menuRoot.MouseMove(openWithCenter, RawInputModifiers.None);
+                await Task.Delay(hoverDelay);
+
+                openWithMenuItem.IsPointerOver.Should().BeTrue();
+                submenuClosed.Should().BeFalse();
+
+                MenuItem chooseApplication = control.FindControl<MenuItem>("ChooseApplicationMenuItem")!;
+                TopLevel submenuRoot = TopLevel.GetTopLevel(chooseApplication)
+                    ?? throw new InvalidOperationException("The submenu is not open.");
+                Point chooseApplicationCenter = GenerationCardControlTests.GetMenuItemCenter(
+                    chooseApplication,
+                    submenuRoot);
+
+                menuRoot.MouseMove(previousItemCenter, RawInputModifiers.None);
+                submenuRoot.MouseMove(chooseApplicationCenter, RawInputModifiers.None);
+                await Task.Delay(hoverDelay);
+
+                chooseApplication.IsPointerOver.Should().BeTrue();
+                submenuClosed.Should().BeFalse();
+
+                menuRoot.MouseMove(previousItemCenter, RawInputModifiers.None);
+                await Task.Delay(hoverDelay);
+
+                openWithMenuItem.IsSubMenuOpen.Should().BeFalse();
+            }
+            finally
+            {
+                openWithMenuItem.Close();
+
+                if (flyout.IsOpen)
+                {
+                    TaskCompletionSource closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                    flyout.Closed += (_, _) => closed.TrySetResult();
+                    flyout.Hide();
+                    await closed.Task.WaitAsync(GenerationCardControlTests.AnimationCompletionTimeout);
+                }
+
+                window.Close();
+            }
         });
     }
 
@@ -1778,16 +1866,16 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         TopLevel popupRoot = TopLevel.GetTopLevel(revealHost)
             ?? throw new InvalidOperationException(
                 "Context menu popup root was not found.");
-        Point menuItemCenter = menuItem.TranslatePoint(
-                new Point(
-                    menuItem.Bounds.Width / 2d,
-                    menuItem.Bounds.Height / 2d),
-                popupRoot)
-            ?? throw new InvalidOperationException(
-                "Context menu item position was not found.");
+        Point menuItemCenter = GenerationCardControlTests.GetMenuItemCenter(menuItem, popupRoot);
 
         popupRoot.MouseDown(menuItemCenter, MouseButton.Left);
         popupRoot.MouseUp(menuItemCenter, MouseButton.Left);
+    }
+
+    private static Point GetMenuItemCenter(MenuItem menuItem, TopLevel popupRoot)
+    {
+        return menuItem.TranslatePoint(new Rect(menuItem.Bounds.Size).Center, popupRoot)
+            ?? throw new InvalidOperationException("Context menu item position was not found.");
     }
 
     private static void AssertIconHeaderGap(MenuItem menuItem, Control icon)

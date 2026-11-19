@@ -51,6 +51,17 @@ internal sealed class AnimatedContextSubmenu : IDisposable
         }
     }
 
+    internal static Popup? FindPopup(MenuItem menuItem)
+    {
+        return menuItem
+            .GetVisualDescendants()
+            .OfType<Popup>()
+            .FirstOrDefault(candidate => string.Equals(
+                candidate.Name,
+                PopupPartName,
+                StringComparison.Ordinal));
+    }
+
     private void StartOpeningAnimation(int animationVersion)
     {
         if ((animationVersion != _animationVersion)
@@ -116,13 +127,7 @@ internal sealed class AnimatedContextSubmenu : IDisposable
 
         ReleaseRevealHost();
 
-        Popup? popup = _menuItem
-            .GetVisualDescendants()
-            .OfType<Popup>()
-            .FirstOrDefault(candidate => string.Equals(
-                candidate.Name,
-                PopupPartName,
-                StringComparison.Ordinal));
+        Popup? popup = AnimatedContextSubmenu.FindPopup(_menuItem);
 
         if ((popup?.Child is not LayoutTransformControl layoutTransform)
             || (layoutTransform.Child is not Control content))
