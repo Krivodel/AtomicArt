@@ -20,7 +20,7 @@ internal sealed class AtomicArtDataRootMigrationService :
     private readonly IGenerationActivityTracker _generationActivityTracker;
     private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly IApplicationStateFlushService _stateFlushService;
-    private readonly IDataRootViewerPreparationService _viewerPreparationService;
+    private readonly IImageViewerWindowCloser _imageViewerWindowCloser;
     private readonly DataRootMigrationTargetAttachmentService _targetAttachmentService;
     private readonly IDataRootLogRelocationService _logRelocationService;
     private readonly IUiThreadDispatcher _uiThreadDispatcher;
@@ -38,7 +38,7 @@ internal sealed class AtomicArtDataRootMigrationService :
         IGenerationActivityTracker generationActivityTracker,
         IDataRootAccessCoordinator accessCoordinator,
         IApplicationStateFlushService stateFlushService,
-        IDataRootViewerPreparationService viewerPreparationService,
+        IImageViewerWindowCloser imageViewerWindowCloser,
         DataRootMigrationTargetAttachmentService targetAttachmentService,
         IDataRootLogRelocationService logRelocationService,
         IUiThreadDispatcher uiThreadDispatcher,
@@ -58,8 +58,8 @@ internal sealed class AtomicArtDataRootMigrationService :
             ?? throw new ArgumentNullException(nameof(accessCoordinator));
         _stateFlushService = stateFlushService
             ?? throw new ArgumentNullException(nameof(stateFlushService));
-        _viewerPreparationService = viewerPreparationService
-            ?? throw new ArgumentNullException(nameof(viewerPreparationService));
+        _imageViewerWindowCloser = imageViewerWindowCloser
+            ?? throw new ArgumentNullException(nameof(imageViewerWindowCloser));
         _targetAttachmentService = targetAttachmentService
             ?? throw new ArgumentNullException(nameof(targetAttachmentService));
         _logRelocationService = logRelocationService
@@ -193,7 +193,7 @@ internal sealed class AtomicArtDataRootMigrationService :
         await _uiThreadDispatcher.InvokeAsync(
             async () =>
             {
-                await _viewerPreparationService.CloseAllAsync(ct);
+                await _imageViewerWindowCloser.CloseAllAsync(ct);
                 target.PrepareForDataRootMigration();
             },
             ct).ConfigureAwait(false);

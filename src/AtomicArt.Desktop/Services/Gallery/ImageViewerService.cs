@@ -13,7 +13,7 @@ namespace AtomicArt.Desktop.Services.Gallery;
 
 public sealed class ImageViewerService :
     IImageViewerService,
-    IDataRootViewerPreparationService,
+    IImageViewerWindowCloser,
     IDisposable
 {
     private readonly IImageViewerWindowFactory _windowFactory;

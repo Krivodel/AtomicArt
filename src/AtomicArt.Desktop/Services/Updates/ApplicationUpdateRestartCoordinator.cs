@@ -1,3 +1,4 @@
+using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.State;
 
 namespace AtomicArt.Desktop.Services.Updates;
@@ -7,16 +8,20 @@ public sealed class ApplicationUpdateRestartCoordinator :
     IApplicationUpdateRestartAttachmentService
 {
     private readonly IApplicationStateFlushService _stateFlushService;
+    private readonly IImageViewerWindowCloser _viewerWindowCloser;
     private readonly IApplicationUpdateService _updateService;
     private readonly object _syncRoot = new();
     private IAppStateFlushTarget? _stateFlushTarget;
 
     public ApplicationUpdateRestartCoordinator(
         IApplicationStateFlushService stateFlushService,
+        IImageViewerWindowCloser viewerWindowCloser,
         IApplicationUpdateService updateService)
     {
         _stateFlushService = stateFlushService
             ?? throw new ArgumentNullException(nameof(stateFlushService));
+        _viewerWindowCloser = viewerWindowCloser
+            ?? throw new ArgumentNullException(nameof(viewerWindowCloser));
         _updateService = updateService
             ?? throw new ArgumentNullException(nameof(updateService));
     }
@@ -37,6 +42,7 @@ public sealed class ApplicationUpdateRestartCoordinator :
         await _stateFlushService
             .FlushAsync(stateFlushTarget, ct)
             .ConfigureAwait(false);
+        await _viewerWindowCloser.CloseAllAsync(ct).ConfigureAwait(false);
         _updateService.ApplyUpdateAndRestart(update);
     }
 

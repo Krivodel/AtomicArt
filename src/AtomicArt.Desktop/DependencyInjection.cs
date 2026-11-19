@@ -304,7 +304,7 @@ public static class DependencyInjection
         services.AddSingleton<ImageViewerWindowLimitService>();
         services.AddSharedSingletonAliases<ImageViewerService>(
             typeof(IImageViewerService),
-            typeof(IDataRootViewerPreparationService));
+            typeof(IImageViewerWindowCloser));
 
         return services;
     }

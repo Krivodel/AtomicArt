@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using Pica.Viewer.Services;
 
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.SingleInstance;
@@ -97,6 +98,15 @@ public class App : Avalonia.Application
     internal static void RequestInitialRootDirectorySelection()
     {
         ShouldOfferInitialRootDirectorySelection = true;
+    }
+
+    internal void AttachDesktopShutdownHandlers(
+        IClassicDesktopStyleApplicationLifetime desktopLifetime,
+        IImageViewerWindowCloser viewerWindowCloser)
+    {
+        desktopLifetime.ShutdownRequested += (_, eventArgs) =>
+            OnDesktopLifetimeShutdownRequested(desktopLifetime, eventArgs, viewerWindowCloser);
+        desktopLifetime.Exit += OnDesktopLifetimeExit;
     }
 
     internal static IConfiguration CreateConfiguration()
@@ -190,7 +200,7 @@ public class App : Avalonia.Application
             GetRequiredService<IVirtualFileDropAttachmentService>();
 
         windowAttachmentService.Attach(mainWindow);
-        trayAttachmentService.Attach(mainWindow);
+        trayAttachmentService.Attach(desktopLifetime);
         filePickerAttachmentService.Attach(mainWindow.StorageProvider);
         GetRequiredService<IPicaImageFileActions>().Attach(mainWindow.StorageProvider);
         virtualFileDropAttachmentService.Attach(mainWindow);
@@ -217,8 +227,9 @@ public class App : Avalonia.Application
         }
 
         StartMainWindowInitialization(mainWindow);
-        desktopLifetime.ShutdownRequested += OnDesktopLifetimeShutdownRequested;
-        desktopLifetime.Exit += OnDesktopLifetimeExit;
+        AttachDesktopShutdownHandlers(
+            desktopLifetime,
+            GetRequiredService<IImageViewerWindowCloser>());
         _logger?.LogInformation("Atomic Art main window and desktop lifetime were configured.");
     }
 
@@ -241,7 +252,9 @@ public class App : Avalonia.Application
         return _serviceProvider.GetRequiredService<TService>();
     }
 
-    private async Task FlushStateAndShutdownAsync(IClassicDesktopStyleApplicationLifetime desktopLifetime)
+    private async Task FlushStateAndShutdownAsync(
+        IClassicDesktopStyleApplicationLifetime desktopLifetime,
+        IImageViewerWindowCloser viewerWindowCloser)
     {
         try
         {
@@ -253,23 +266,37 @@ public class App : Avalonia.Application
                 await stateFlushService.FlushAsync(target, CancellationToken.None);
             }
 
-            _isShutdownFlushCompleted = true;
             _logger?.LogInformation("Atomic Art desktop shutdown state flush completed.");
-            desktopLifetime.Shutdown();
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Atomic Art desktop shutdown state flush failed.");
-            _isShutdownFlushCompleted = true;
-            desktopLifetime.Shutdown();
         }
         finally
         {
+            await CloseViewerWindowsAsync(viewerWindowCloser);
+            _isShutdownFlushCompleted = true;
             _isShutdownFlushRunning = false;
+            desktopLifetime.Shutdown();
         }
     }
 
-    private void OnDesktopLifetimeShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
+    private async Task CloseViewerWindowsAsync(IImageViewerWindowCloser viewerWindowCloser)
+    {
+        try
+        {
+            await viewerWindowCloser.CloseAllAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to close the embedded Pica viewer windows.");
+        }
+    }
+
+    private void OnDesktopLifetimeShutdownRequested(
+        IClassicDesktopStyleApplicationLifetime desktopLifetime,
+        ShutdownRequestedEventArgs e,
+        IImageViewerWindowCloser viewerWindowCloser)
     {
         if (_isShutdownFlushCompleted)
         {
@@ -283,15 +310,10 @@ public class App : Avalonia.Application
             return;
         }
 
-        if (sender is not IClassicDesktopStyleApplicationLifetime desktopLifetime)
-        {
-            return;
-        }
-
         e.Cancel = true;
         _isShutdownFlushRunning = true;
         _logger?.LogInformation("Atomic Art desktop shutdown was requested.");
-        _ = FlushStateAndShutdownAsync(desktopLifetime);
+        _ = FlushStateAndShutdownAsync(desktopLifetime, viewerWindowCloser);
     }
 
     private void OnDesktopLifetimeExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)

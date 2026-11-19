@@ -1,8 +1,8 @@
-using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 
 namespace AtomicArt.Desktop.Services;
 
 public interface ITrayAttachmentService
 {
-    void Attach(Window window);
+    void Attach(IClassicDesktopStyleApplicationLifetime desktopLifetime);
 }

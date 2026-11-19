@@ -1,6 +1,6 @@
 namespace AtomicArt.Desktop.Services.Gallery;
 
-public interface IDataRootViewerPreparationService
+public interface IImageViewerWindowCloser
 {
     Task CloseAllAsync(CancellationToken ct);
 }

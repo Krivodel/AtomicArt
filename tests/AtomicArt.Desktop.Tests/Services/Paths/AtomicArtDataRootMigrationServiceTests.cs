@@ -512,8 +512,8 @@ public sealed class AtomicArtDataRootMigrationServiceTests
         activityTrackerMock
             .Setup(tracker => tracker.WaitUntilIdleAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        Mock<IDataRootViewerPreparationService> viewerPreparationMock = new();
-        viewerPreparationMock
+        Mock<IImageViewerWindowCloser> viewerWindowCloserMock = new();
+        viewerWindowCloserMock
             .Setup(service => service.CloseAllAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         Mock<IUiThreadDispatcher> uiThreadDispatcherMock = new();
@@ -536,7 +536,7 @@ public sealed class AtomicArtDataRootMigrationServiceTests
             activityTrackerMock.Object,
             accessCoordinator,
             flushService,
-            viewerPreparationMock.Object,
+            viewerWindowCloserMock.Object,
             targetAttachmentService,
             logRelocationService,
             uiThreadDispatcherMock.Object,

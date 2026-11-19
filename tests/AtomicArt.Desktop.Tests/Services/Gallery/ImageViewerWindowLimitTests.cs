@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Headless;
+using CommunityToolkit.Mvvm.Messaging;
 using FluentAssertions;
 using Moq;
 using Pica.Protocol;
@@ -22,6 +24,45 @@ namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
 public sealed class ImageViewerWindowLimitTests : DesktopControlTestBase
 {
+    [Fact]
+    public async Task ExitApplication_WithOpenViewers_CompletesViewerCleanupBeforeShutdown()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ViewerContext context = new(ImageViewerWindowLimitSettingDefinition.Unlimited);
+            await context.OpenAsync();
+            await context.OpenAsync(temporary: false);
+            using TrayService trayService = new(
+                Mock.Of<IWindowStateService>(),
+                TestLocalizationTextProvider.Default,
+                new WeakReferenceMessenger());
+            Mock<IClassicDesktopStyleApplicationLifetime> lifetime = new();
+            ShutdownRequestedEventArgs request = new();
+            TaskCompletionSource<bool> shutdown = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            lifetime.Setup(target => target.TryShutdown(0)).Returns(() =>
+            {
+                lifetime.Raise(target => target.ShutdownRequested += null, lifetime.Object, request);
+                return !request.Cancel;
+            });
+            lifetime.Setup(target => target.Shutdown(0)).Callback(() => shutdown.TrySetResult(
+                context.Windows.All(window => !window.IsVisible && window.CloseCleanupCompletion.IsCompletedSuccessfully)
+                && !File.Exists(context.ImagePaths[0])));
+            App app = new();
+            app.AttachDesktopShutdownHandlers(lifetime.Object, context.Service);
+            trayService.Attach(lifetime.Object);
+
+            trayService.HideToTray();
+            context.Windows.Should().OnlyContain(window => window.IsVisible);
+
+            trayService.ExitApplication();
+
+            bool viewerCleanupCompleted = await shutdown.Task.WaitAsync(TimeSpan.FromSeconds(3d));
+            request.Cancel.Should().BeTrue();
+            viewerCleanupCompleted.Should().BeTrue();
+            File.Exists(context.ImagePaths[1]).Should().BeTrue();
+        });
+    }
+
     [Fact]
     public async Task OpenAsync_WithSavedAttachment_ClosingViewerKeepsAttachmentFile()
     {

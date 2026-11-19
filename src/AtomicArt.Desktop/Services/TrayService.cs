@@ -23,7 +23,7 @@ public sealed class TrayService :
     private TrayIcon? _trayIcon;
     private NativeMenuItem? _showWindowItem;
     private NativeMenuItem? _exitItem;
-    private Window? _window;
+    private IClassicDesktopStyleApplicationLifetime? _desktopLifetime;
 
     public TrayService(
         IWindowStateService windowStateService,
@@ -39,11 +39,9 @@ public sealed class TrayService :
         messenger.Register<LocalizationChangedMessage>(this);
     }
 
-    public void Attach(Window window)
+    public void Attach(IClassicDesktopStyleApplicationLifetime desktopLifetime)
     {
-        ArgumentNullException.ThrowIfNull(window);
-
-        _window = window;
+        _desktopLifetime = desktopLifetime ?? throw new ArgumentNullException(nameof(desktopLifetime));
 
         if (_trayIcon is not null)
         {
@@ -73,16 +71,7 @@ public sealed class TrayService :
             _trayIcon.IsVisible = false;
         }
 
-        if (_window is not null)
-        {
-            _window.Close();
-            return;
-        }
-
-        if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
-        {
-            desktopLifetime.Shutdown();
-        }
+        _desktopLifetime?.TryShutdown();
     }
 
     public void Receive(LocalizationChangedMessage message)
