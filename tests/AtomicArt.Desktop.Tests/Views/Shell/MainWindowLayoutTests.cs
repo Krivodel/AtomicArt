@@ -78,6 +78,29 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         TimeSpan.FromMilliseconds(100d);
 
     [Fact]
+    public async Task MainWindow_WithMetadataLayer_RoutesGalleryDragsToGenerationPanel()
+    {
+        await DispatchAsync(() =>
+        {
+            using MainWindowTestContext context = new();
+            MainWindow window = context.Window;
+            MainWindowViewModel viewModel = window.DataContext.Should().BeOfType<MainWindowViewModel>().Subject;
+
+            window.Show();
+            window.CaptureRenderedFrame();
+
+            ModalOverlayLayerControl layer = window.GetVisualDescendants()
+                .OfType<ModalOverlayLayerControl>().Single();
+            Control target = layer.GetVisualAncestors().OfType<Control>()
+                .Single(control => ImageDropBehavior.GetTargetKind(control) == ImageDropTargetKind.GalleryImage);
+            ImageDropBehavior.GetIsEnabled(target).Should().BeTrue();
+            ImageDropBehavior.GetDropArea(target).Should().BeSameAs(window.FindControl<Border>(GenerationPanelHostName));
+            ImageAttachmentBehavior.GetAttachImagesCommand(target)
+                .Should().BeSameAs(viewModel.ActiveGenerationPanel.AttachImageInputsCommand);
+        });
+    }
+
+    [Fact]
     public async Task MainWindow_WithAccountBalance_ShowsTextBeforeAllTitleButtons()
     {
         await DispatchAsync(async () =>

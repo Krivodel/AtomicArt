@@ -68,7 +68,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     [Theory]
     [InlineData("medium", "high", "Medium", "High")]
     [InlineData("removed", "removed", "Max", "Medium")]
-    public void ApplyPreset_WithSavedGptSettings_UsesCompatibleRequestOptions(
+    public async Task TryApplyPresetAsync_WithSavedGptSettings_UsesCompatibleRequestOptions(
         string savedQuality,
         string savedComplexity,
         string expectedQuality,
@@ -90,7 +90,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             model.Resolutions.Last(),
             settings);
 
-        viewModel.ApplyPreset(preset);
+        await viewModel.TryApplyPresetAsync(preset, CancellationToken.None);
 
         viewModel.SelectedModel.Should().BeSameAs(model);
         viewModel.SelectedAspectRatio.Should().Be(GenerationAspectRatios.Auto);
@@ -102,7 +102,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
-    public void ApplyPreset_WithSavedTemperatureAndThinking_RestoresBothOptions()
+    public async Task TryApplyPresetAsync_WithSavedTemperatureAndThinking_RestoresBothOptions()
     {
         using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
         ImageModelOption model = GetModel(viewModel, ApiModelMetadataTestCatalog.NanoBanana2ModelId);
@@ -116,14 +116,14 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             (GenerationParameterNames.ThinkingLevel, alternateLevel));
         GenerationPanelPreset preset = new(model.Id, "Prompt", "1:1", "2K", settings);
 
-        viewModel.ApplyPreset(preset);
+        await viewModel.TryApplyPresetAsync(preset, CancellationToken.None);
 
         viewModel.Temperature.Should().Be(model.Temperature.Minimum);
         viewModel.SelectedThinkingLevel?.Value.Should().Be(alternateLevel);
     }
 
     [Fact]
-    public void ApplyPreset_WithSupportedGenerationValues_UpdatesPanel()
+    public async Task TryApplyPresetAsync_WithSupportedGenerationValues_UpdatesPanel()
     {
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
         ImageModelOption model = viewModel.AvailableModels
@@ -140,7 +140,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             aspectRatio,
             resolution);
 
-        viewModel.ApplyPreset(preset);
+        await viewModel.TryApplyPresetAsync(preset, CancellationToken.None);
 
         viewModel.SelectedModel.Should().BeSameAs(model);
         viewModel.Prompt.Should().Be(preset.Prompt);
@@ -161,6 +161,59 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         bool result = viewModel.CanApplyPreset(preset);
 
         result.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(null, "draft.png")]
+    [InlineData(0, null)]
+    [InlineData(2, "first.png,second.png")]
+    public async Task TryApplyPresetAsync_WithOrWithoutSavedReferences_ReplacesOnlyKnownSets(
+        int? savedCount, string? expectedFileNames)
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        ImageModelOption model = GetModel(viewModel, ApiModelMetadataTestCatalog.NanoBanana2ModelId);
+        viewModel.SelectedModel = model;
+        await viewModel.AttachImagesCommand.ExecuteAsync(new AttachedImageDto[] { CreateAttachedImage("draft.png") });
+        AttachedImageDto[] savedImages = [CreateAttachedImage("first.png"), CreateAttachedImage("second.png")];
+        GenerationPanelPreset preset = new(
+            model.Id, "Prompt from history", model.AspectRatios.First(), model.Resolutions.First(),
+            References: savedCount is int count ? savedImages[..count] : null);
+        bool counterRefreshed = false;
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            counterRefreshed |= args.PropertyName == nameof(viewModel.AttachmentCounterText);
+        };
+
+        bool applied = await viewModel.TryApplyPresetAsync(preset, CancellationToken.None);
+
+        applied.Should().BeTrue();
+        string[] expected = expectedFileNames?.Split(',') ?? Array.Empty<string>();
+        viewModel.AttachedImages.Select(image => image.FileName).Should().Equal(expected);
+        viewModel.Prompt.Should().Be(preset.Prompt);
+        if (savedCount is not null)
+        {
+            counterRefreshed.Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public async Task TryApplyPresetAsync_WithIncompatibleReferences_LeavesDraftIntact()
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        ImageModelOption model = GetModel(viewModel, ApiModelMetadataTestCatalog.NanoBanana2ModelId);
+        viewModel.SelectedModel = model;
+        viewModel.Prompt = "Draft";
+        await viewModel.AttachImagesCommand.ExecuteAsync(new AttachedImageDto[] { CreateAttachedImage("draft.png") });
+        AttachedImageDto reference = CreateAttachedImage("reference.png");
+        GenerationPanelPreset preset = new(
+            model.Id, "Prompt from history", model.AspectRatios.First(), model.Resolutions.First(),
+            References: Enumerable.Repeat(reference, model.MaxAttachedImages + 1).ToArray());
+
+        bool applied = await viewModel.TryApplyPresetAsync(preset, CancellationToken.None);
+
+        applied.Should().BeFalse();
+        viewModel.AttachedImages.Select(image => image.FileName).Should().Equal("draft.png");
+        viewModel.Prompt.Should().Be("Draft");
     }
 
     [Fact]

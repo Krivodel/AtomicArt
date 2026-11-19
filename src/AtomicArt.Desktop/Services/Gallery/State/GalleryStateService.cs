@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 
@@ -8,7 +9,7 @@ namespace AtomicArt.Desktop.Services.Gallery.State;
 public sealed class GalleryStateService : IGalleryStateService
 {
     private readonly IAppStateStore _stateStore;
-    private readonly IStateWriteScheduler _writeScheduler;
+    private readonly IGenerationReferenceStore _referenceStore;
     private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly GalleryStatePathConverter _pathConverter;
     private readonly GalleryStateSection _section;
@@ -18,14 +19,14 @@ public sealed class GalleryStateService : IGalleryStateService
 
     public GalleryStateService(
         IAppStateStore stateStore,
-        IStateWriteScheduler writeScheduler,
+        IGenerationReferenceStore referenceStore,
         IDataRootAccessCoordinator accessCoordinator,
         GalleryStatePathConverter pathConverter,
         GalleryStateSection section,
         ILogger<GalleryStateService> logger)
     {
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
-        _writeScheduler = writeScheduler ?? throw new ArgumentNullException(nameof(writeScheduler));
+        _referenceStore = referenceStore ?? throw new ArgumentNullException(nameof(referenceStore));
         _accessCoordinator = accessCoordinator
             ?? throw new ArgumentNullException(nameof(accessCoordinator));
         _pathConverter = pathConverter ?? throw new ArgumentNullException(nameof(pathConverter));
@@ -40,9 +41,6 @@ public sealed class GalleryStateService : IGalleryStateService
 
         try
         {
-            using DataRootAccessLease accessLease =
-                await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
-
             if (_currentState is not null)
             {
                 _logger.LogDebug(
@@ -54,7 +52,18 @@ public sealed class GalleryStateService : IGalleryStateService
             GalleryState loadedState = await _stateStore
                 .LoadAsync<GalleryState>(_section, ct)
                 .ConfigureAwait(false);
-            GalleryState normalizedState = NormalizeRestoredState(loadedState);
+            GalleryState normalizedState;
+            using (DataRootAccessLease accessLease =
+                await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false))
+            {
+                normalizedState = NormalizeRestoredState(loadedState);
+            }
+
+            if (loadedState.HasSavedPayload)
+            {
+                await _referenceStore.PruneAsync(GetReferenceHashes(normalizedState), ct).ConfigureAwait(false);
+            }
+
             _currentState = normalizedState;
             _logger.LogInformation(
                 "Loaded and normalized gallery state with {ItemCount} items",
@@ -76,24 +85,41 @@ public sealed class GalleryStateService : IGalleryStateService
 
         try
         {
-            using DataRootAccessLease accessLease =
-                await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
-            GalleryState runtimeState = NormalizeRuntimeState(
-                new GalleryState
-                {
-                    Items = items.ToList()
-                });
-            GalleryState storageState = CreateStorageState(runtimeState);
+            GalleryState runtimeState;
+            GalleryState storageState;
+            using (DataRootAccessLease accessLease =
+                await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false))
+            {
+                runtimeState = NormalizeRuntimeState(new GalleryState { Items = items.ToList() });
+                storageState = CreateStorageState(runtimeState);
+            }
+
+            await _stateStore.SaveAsync(_section, storageState, ct).ConfigureAwait(false);
+            HashSet<string> previousHashes = GetReferenceHashes(_currentState);
+            HashSet<string> retainedHashes = GetReferenceHashes(runtimeState);
             _currentState = runtimeState;
-            _writeScheduler.ScheduleWrite(_section, storageState);
+            if (!previousHashes.IsSubsetOf(retainedHashes))
+            {
+                await _referenceStore.PruneAsync(retainedHashes, CancellationToken.None).ConfigureAwait(false);
+            }
+
             _logger.LogInformation(
-                "Scheduled gallery state snapshot with {ItemCount} items",
+                "Saved gallery state snapshot with {ItemCount} items",
                 storageState.Items.Count);
         }
         finally
         {
             _stateLock.Release();
         }
+    }
+
+    private static HashSet<string> GetReferenceHashes(GalleryState? state)
+    {
+        return (state?.Items ?? Array.Empty<GalleryItemState>())
+            .SelectMany(item => item.References ?? Array.Empty<GenerationReference>())
+            .Where(reference => reference is not null)
+            .Select(reference => reference.Hash)
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     private static GalleryState NormalizeState(

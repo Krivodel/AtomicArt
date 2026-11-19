@@ -17,6 +17,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     public GenerationItemViewModel Item { get; }
     public string Prompt => Item.Prompt;
     public string ModelDisplayName => Item.ModelDisplayName;
+    public IReadOnlyList<GenerationReference> References => Item.References ?? Array.Empty<GenerationReference>();
+    public bool HasReferences => References.Count > 0;
     public IReadOnlyList<GenerationMetadataRow> Rows => EnumerateFields()
         .Chunk(FieldsPerRow)
         .Select(row => new GenerationMetadataRow(
@@ -32,6 +34,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     public IRelayCommand OpenViewerCommand { get; }
     public IRelayCommand ShowFailureDetailsCommand { get; }
     public IRelayCommand RepeatCommand { get; }
+    public IAsyncRelayCommand<GenerationReference?>? OpenReferenceCommand { get; }
     public IAsyncRelayCommand CopyPromptCommand { get; }
 
     private const int FieldsPerRow = 3;
@@ -52,13 +55,15 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         IViewModelErrorHandler errorHandler,
         GenerationPriceFormatter priceFormatter,
         GenerationDurationFormatter durationFormatter,
-        ILocalizationTextProvider textProvider)
+        ILocalizationTextProvider textProvider,
+        IAsyncRelayCommand<GenerationReference?>? openReferenceCommand)
     {
         Item = item;
         CloseCommand = closeCommand;
         OpenViewerCommand = openViewerCommand;
         ShowFailureDetailsCommand = showFailureDetailsCommand;
         RepeatCommand = repeatCommand;
+        OpenReferenceCommand = openReferenceCommand;
         _textClipboardService = textClipboardService;
         _errorHandler = errorHandler;
         _priceFormatter = priceFormatter;
@@ -78,7 +83,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         IViewModelErrorHandler errorHandler,
         GenerationPriceFormatter priceFormatter,
         GenerationDurationFormatter durationFormatter,
-        ILocalizationTextProvider textProvider)
+        ILocalizationTextProvider textProvider,
+        IAsyncRelayCommand<GenerationReference?>? openReferenceCommand = null)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(closeCommand);
@@ -101,7 +107,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
             errorHandler,
             priceFormatter,
             durationFormatter,
-            textProvider);
+            textProvider,
+            openReferenceCommand);
     }
 
     public void RefreshLocalization()

@@ -170,6 +170,7 @@ internal static class GalleryItemStateMapper
             Usage = source.Usage,
             FailureCode = ResolveFailureCode(source, status),
             AttachedImagesCount = Math.Max(0, source.AttachedImagesCount),
+            References = source.References?.ToArray(),
             IsFavorite = source.IsFavorite,
             CorrelationId = ResolveGeneratingValue(source, status, source => source.CorrelationId),
             GenerationOrdinal = ResolveGeneratingValue(source, status, source => source.GenerationOrdinal)

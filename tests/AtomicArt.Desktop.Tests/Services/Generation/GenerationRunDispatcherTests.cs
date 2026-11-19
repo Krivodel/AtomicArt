@@ -6,6 +6,8 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Settings;
+using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
 using TestGenerationCredentials = AtomicArt.Tests.Common.Generation.TestGenerationCredentials;
@@ -61,6 +63,57 @@ public sealed class GenerationRunDispatcherTests
             .Which.Should().Be(TestGenerationCredentials.ProviderCredential);
 
         await CompleteRunAsync(context);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_WithReferences_PersistsSubmittedImagesBeforePublishingStarted()
+    {
+        string root = TestDirectories.GetUniqueDirectoryPath(typeof(GenerationRunDispatcherTests));
+        try
+        {
+            GenerationReferenceStore store = GenerationReferenceStoreTests.CreateStore(root);
+            TestGenerationLifecycleEventHub lifecycle = new();
+            using GenerationRunDispatcher dispatcher = GenerationRunDispatcherTestFactory.Create(
+                new ThrowingImageGenerationApiClient(), lifecycle, referenceStore: store);
+            AttachedImageDto image = new(
+                "reference.png", GenerationImageContentTypes.Png, GalleryThumbnailTestImages.CreatePngBytes(160, 80));
+            GenerationRunRequest request = CreateRunRequest(new AttachedImageDto[] { image });
+
+            await dispatcher.EnqueueAsync(request, CancellationToken.None);
+
+            GenerationLifecycleEvent started = lifecycle.PublishedEvents
+                .Single(entry => entry.Status == GenerationLifecycleStatus.Started);
+            GenerationReference reference = started.Start!.References.Should().ContainSingle().Subject;
+            AttachedImageDto? stored = await store.LoadAsync(reference, CancellationToken.None);
+            stored.Should().BeEquivalentTo(image);
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(root);
+        }
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_WithReferenceSavingDisabled_SendsAttachmentsWithoutSavingHistory()
+    {
+        SaveReferencesSetting setting = new(new BooleanSettingValueConverter());
+        setting.Apply("false");
+        TestGenerationLifecycleEventHub lifecycle = new();
+        BlockingImageGenerationApiClient apiClient = new();
+        Moq.Mock<IGenerationReferenceStore> store = new(Moq.MockBehavior.Strict);
+        using GenerationRunDispatcher dispatcher = GenerationRunDispatcherTestFactory.Create(
+            apiClient, lifecycle, referenceStore: store.Object, saveReferences: setting);
+        AttachedImageDto image = new("reference.png", GenerationImageContentTypes.Png, new byte[] { 1 });
+        GenerationRunRequest request = CreateRunRequest(new AttachedImageDto[] { image });
+
+        await dispatcher.EnqueueAsync(request, CancellationToken.None);
+        await apiClient.WaitForCallCountAsync(1);
+
+        GenerationLifecycleEvent started = lifecycle.PublishedEvents
+            .Single(entry => entry.Status == GenerationLifecycleStatus.Started);
+        started.Start!.References.Should().BeNull();
+        apiClient.CapturedRequests.Should().ContainSingle().Which.AttachedImages.Should().Equal(image);
+        store.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -416,12 +469,13 @@ public sealed class GenerationRunDispatcherTests
             logger: logger);
     }
 
-    private static GenerationRunRequest CreateRunRequest()
+    private static GenerationRunRequest CreateRunRequest(IReadOnlyList<AttachedImageDto>? attachedImages = null)
     {
         ImageGenerationRequestDto request = ImageGenerationRequestDtoTestFactory.Create(
             modelId: ModelId,
             aspectRatio: "1:1",
-            resolution: "1k");
+            resolution: "1k",
+            attachedImages: attachedImages);
         GenerationStartSnapshot startSnapshot = new(
             request.ModelId,
             "Test Model",

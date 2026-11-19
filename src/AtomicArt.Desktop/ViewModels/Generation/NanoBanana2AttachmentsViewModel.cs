@@ -182,6 +182,61 @@ public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerat
         }
     }
 
+    public async Task<bool> TryReplaceAsync(
+        string panelId,
+        ImageModelOption model,
+        IReadOnlyList<AttachedImageDto> images,
+        CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(panelId);
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(images);
+
+        if (_attachmentValidator.CreateValidatedAttachments(
+                model, Array.Empty<AttachedImageDto>(), images) is null)
+        {
+            return false;
+        }
+
+        List<AttachedImageViewModel> replacement = [];
+        try
+        {
+            foreach (AttachedImageDto image in images)
+            {
+                PanelAttachmentState state = _attachmentStore.CreateState(image);
+                await _attachmentStore.SaveAsync(panelId, state, image, ct);
+                replacement.Add(new AttachedImageViewModel(CreateManagedImage(image, state), state));
+            }
+
+            ct.ThrowIfCancellationRequested();
+        }
+        catch
+        {
+            foreach (AttachedImageViewModel image in replacement)
+            {
+                await DeleteSavedStateAsync(panelId, image.State);
+            }
+
+            throw;
+        }
+
+        IReadOnlyList<PanelAttachmentState> previous = GetAttachmentStates();
+        foreach (CancellationTokenSource cancellation in _preparationCancellations.Values.ToArray())
+        {
+            cancellation.Cancel();
+        }
+
+        _preparationCancellations.Clear();
+        ReplaceAttachedImages(replacement);
+        NotifyStateChanged(AttachmentStateChangeKind.Replaced);
+        foreach (PanelAttachmentState state in previous)
+        {
+            await DeleteSavedStateAsync(panelId, state);
+        }
+
+        return true;
+    }
+
     public void MoveAttachment(AttachedImageViewModel attachedImage, int targetIndex)
     {
         ArgumentNullException.ThrowIfNull(attachedImage);
@@ -292,10 +347,7 @@ public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerat
                 return;
             }
 
-            AttachedImageDto managedImage = new(
-                savedState.FileName,
-                savedState.ContentType,
-                preparedImage.Content);
+            AttachedImageDto managedImage = CreateManagedImage(preparedImage, savedState);
             pendingImage.Complete(managedImage, savedState);
             CompletePreparation(pendingImage, cancellation);
             NotifyStateChanged(AttachmentStateChangeKind.Completed);
@@ -321,6 +373,11 @@ public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerat
         {
             input.Dispose();
         }
+    }
+
+    private static AttachedImageDto CreateManagedImage(AttachedImageDto image, PanelAttachmentState state)
+    {
+        return new AttachedImageDto(state.FileName, state.ContentType, image.Content);
     }
 
     private async Task CompleteCanceledPreparationAsync(

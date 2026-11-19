@@ -5,6 +5,7 @@
              xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:picaResources="using:Pica.Viewer.Resources"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:generation="using:AtomicArt.Desktop.Services.Generation"
              xmlns:views="using:AtomicArt.Desktop.Views.Gallery"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationMetadataOverlayView"
              x:Name="Root"
@@ -154,28 +155,62 @@
                 </ScrollViewer>
 
                 <Grid Grid.Row="1"
-                      ColumnDefinitions="*,Auto">
-                    <StackPanel VerticalAlignment="Center"
-                                Spacing="3">
-                        <TextBlock Classes="metadata-heading"
-                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Attachments}}" />
-                        <TextBlock Classes="metadata-label"
-                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.EmptyAttachments}}" />
-                    </StackPanel>
-                    <Button x:Name="RepeatEntry"
-                            Grid.Column="1"
-                            VerticalAlignment="Center"
-                            Classes="metadata-repeat"
-                            Command="{Binding RepeatCommand}"
-                            CommandParameter="{Binding Item}">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="8">
-                            <Path Classes="metadata-outline-icon"
-                                  Data="{StaticResource MetadataRepeatIcon}"
-                                  Stroke="{Binding $parent[Button].Foreground}" />
-                            <TextBlock Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Repeat}}" />
-                        </StackPanel>
-                    </Button>
+                      ColumnDefinitions="*,Auto"
+                      ColumnSpacing="12"
+                      RowDefinitions="Auto,Auto"
+                      RowSpacing="8">
+                    <TextBlock x:Name="ReferencesHeading"
+                               Classes="metadata-heading"
+                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Attachments}}" />
+                    <TextBlock Grid.Row="1"
+                               Classes="metadata-label"
+                               IsVisible="{Binding !HasReferences}"
+                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.EmptyAttachments}}" />
+                    <ScrollViewer Grid.Row="1"
+                                  IsVisible="{Binding HasReferences}"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding References}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="generation:GenerationReference">
+                                    <views:GenerationReferenceButton Classes="metadata-reference"
+                                                                     Theme="{StaticResource MetadataReferenceButtonTheme}"
+                                                                     AutomationProperties.Name="{Binding FileName}"
+                                                                     DragService="{Binding #Root.ReferenceDragService}"
+                                                                     Command="{Binding #Root.DataContext.OpenReferenceCommand}"
+                                                                     CommandParameter="{Binding}">
+                                        <Border Classes="attachment-preview">
+                                            <views:GenerationReferencePreviewControl Stretch="UniformToFill"
+                                                                                     Loader="{Binding #Root.ReferencePreviewLoader}"
+                                                                                     Reference="{Binding}" />
+                                        </Border>
+                                    </views:GenerationReferenceButton>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <Panel Grid.Column="1"
+                           Classes="metadata-reuse-host"
+                           Classes.with-references="{Binding HasReferences}">
+                        <Button x:Name="RepeatEntry"
+                                VerticalAlignment="Bottom"
+                                Classes="metadata-repeat"
+                                Command="{Binding RepeatCommand}"
+                                CommandParameter="{Binding Item}">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="8">
+                                <Path Classes="metadata-outline-icon"
+                                      Data="{StaticResource MetadataRepeatIcon}"
+                                      Stroke="{Binding $parent[Button].Foreground}" />
+                                <TextBlock Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Repeat}}" />
+                            </StackPanel>
+                        </Button>
+                    </Panel>
                 </Grid>
             </Grid>
         </overlays:ModalOverlayControl.Body>

@@ -1,4 +1,5 @@
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Services.Gallery;
 
@@ -8,16 +9,19 @@ public sealed class GalleryGenerationStartedHandler : IGalleryLifecycleEventHand
 
     private readonly IGalleryLifecycleViewState _viewState;
     private readonly IGalleryStateService _galleryStateService;
+    private readonly IGenerationReferenceStore _referenceStore;
 
     public GalleryGenerationStartedHandler(
         IGalleryLifecycleViewState viewState,
-        IGalleryStateService galleryStateService)
+        IGalleryStateService galleryStateService,
+        IGenerationReferenceStore referenceStore)
     {
         ArgumentNullException.ThrowIfNull(viewState);
         ArgumentNullException.ThrowIfNull(galleryStateService);
 
         _viewState = viewState;
         _galleryStateService = galleryStateService;
+        _referenceStore = referenceStore ?? throw new ArgumentNullException(nameof(referenceStore));
     }
 
     public async Task HandleAsync(GenerationLifecycleEvent lifecycleEvent, CancellationToken ct)
@@ -29,5 +33,6 @@ public sealed class GalleryGenerationStartedHandler : IGalleryLifecycleEventHand
                 stateSaved: null,
                 ct)
             .ConfigureAwait(false);
+        _referenceStore.Release(lifecycleEvent.CorrelationId);
     }
 }

@@ -211,6 +211,9 @@ public static class DependencyInjection
         services.AddSingleton<IGenerationPanelStateService, GenerationPanelStateService>();
         services.AddSingleton<GalleryStatePathConverter>();
         services.AddSingleton<IGalleryStateService, GalleryStateService>();
+        services.AddSingleton<IGenerationReferenceStore, GenerationReferenceStore>();
+        services.AddSingleton<IGenerationReferenceDragService, GenerationReferenceDragService>();
+        services.AddSingleton<GenerationReferencePreviewLoader>();
         services.AddSingleton<
             IGalleryFileOrderSynchronizer,
             GalleryFileOrderSynchronizer>();

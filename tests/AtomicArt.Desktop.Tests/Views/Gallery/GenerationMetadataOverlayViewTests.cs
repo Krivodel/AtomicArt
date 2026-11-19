@@ -1,6 +1,9 @@
 using System.Globalization;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 using Avalonia;
+using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Controls.Presenters;
@@ -12,6 +15,7 @@ using Avalonia.VisualTree;
 
 using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -20,6 +24,7 @@ using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
@@ -29,11 +34,152 @@ using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views.Gallery;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Views.Gallery;
 
 public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlTestBase
 {
+    [Theory]
+    [InlineData(1)]
+    [InlineData(16)]
+    public async Task References_WhenShown_MatchAttachmentTilesAndAlignWithReuse(int referenceCount)
+    {
+        string root = TestDirectories.GetUniqueDirectoryPath(typeof(GenerationMetadataOverlayViewTests));
+        try
+        {
+            GenerationReferenceStore store = GenerationReferenceStoreTests.CreateStore(root);
+            AttachedImageDto image = new(
+                "panorama.png", GenerationImageContentTypes.Png, GalleryThumbnailTestImages.CreatePngBytes(1024, 84));
+            Guid runId = Guid.NewGuid();
+            IReadOnlyList<GenerationReference> references = await store.SaveAsync(
+                runId, Enumerable.Repeat(image, referenceCount).ToArray(), CancellationToken.None);
+            store.Release(runId);
+            GenerationReferencePreviewLoader loader = new(
+                store, NullLogger<GenerationReferencePreviewLoader>.Instance);
+
+            await DispatchAsync(async () =>
+            {
+                GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(references: references);
+                GenerationItemViewModel item = GenerationItemViewModel.Restore(
+                    state, state.ImagePath, state.ThumbnailPath,
+                    GenerationItemStatusDescriptorRegistryTestFactory.Create(), TestLocalizationTextProvider.Default);
+                GenerationReference? opened = null;
+                AsyncRelayCommand<GenerationReference?> command = new(reference =>
+                {
+                    opened = reference;
+                    return Task.CompletedTask;
+                });
+                Mock<IGenerationReferenceDragService> dragService = new();
+                dragService.Setup(service => service.DragAsync(
+                    It.IsAny<Control>(), It.IsAny<PointerPressedEventArgs>(),
+                    It.IsAny<GenerationReference>(), It.IsAny<CancellationToken>()))
+                    .Returns(Task.CompletedTask);
+                GenerationMetadataOverlayView view = CreateView(
+                    item, new RecordingGenerationPreviewSessionFactory(), loader, command, dragService.Object);
+                Window window = Show(view);
+                try
+                {
+                    GenerationReferenceButton button =
+                        view.GetVisualDescendants().OfType<GenerationReferenceButton>().First();
+                    button.DragService.Should().BeSameAs(dragService.Object);
+                    Border tile = button.GetVisualDescendants().OfType<Border>()
+                        .Single(control => control.Classes.Contains("attachment-preview"));
+                    Button reuse = view.FindControl<Button>("RepeatEntry")!;
+                    TextBlock heading = view.FindControl<TextBlock>("ReferencesHeading")!;
+                    GenerationReferencePreviewControl preview = button.GetVisualDescendants()
+                        .OfType<GenerationReferencePreviewControl>().Single();
+                    TaskCompletionSource<Bitmap> loaded = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                    preview.PropertyChanged += (_, args) =>
+                    {
+                        if (args.Property == Image.SourceProperty && preview.Source is Bitmap bitmap)
+                        {
+                            loaded.TrySetResult(bitmap);
+                        }
+                    };
+
+                    Bitmap thumbnail = preview.Source as Bitmap
+                        ?? await loaded.Task.WaitAsync(TimeSpan.FromSeconds(3));
+                    Point position = GetBounds(button, window).Center;
+                    window.MouseDown(position, MouseButton.Left);
+                    window.MouseUp(position, MouseButton.Left);
+
+                    thumbnail.PixelSize.Width.Should().BeInRange(1, 96);
+                    thumbnail.PixelSize.Height.Should().BeInRange(1, 96);
+                    opened.Should().Be(references[0]);
+                    tile.Bounds.Size.Should().Be(new Size(56d, 56d));
+                    tile.BorderThickness.Should().Be(default(Thickness));
+                    GetBounds(tile, view).Bottom.Should().Be(GetBounds(reuse, view).Bottom);
+                    (GetBounds(tile, view).Top - GetBounds(heading, view).Bottom).Should().Be(8d);
+                    Directory.GetFiles(GenerationReferenceStoreTests.GetHistoryDirectory(root)).Should().ContainSingle();
+
+                    opened = null;
+                    window.MouseDown(position, MouseButton.Left);
+                    window.MouseMove(position + new Vector(2d, 0d), RawInputModifiers.LeftMouseButton);
+                    dragService.VerifyNoOtherCalls();
+                    window.MouseMove(position + new Vector(10d, 0d), RawInputModifiers.LeftMouseButton);
+                    window.MouseUp(position + new Vector(10d, 0d), MouseButton.Left);
+
+                    dragService.Verify(service => service.DragAsync(
+                        button, It.IsAny<PointerPressedEventArgs>(), references[0], CancellationToken.None), Times.Once);
+                    opened.Should().BeNull();
+                }
+                finally
+                {
+                    window.Close();
+                }
+            });
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(root);
+        }
+    }
+
+    [Fact]
+    public async Task ReferencePreview_WhenImageArrives_FadesIn()
+    {
+        string imagePath = CreateImageFile();
+        try
+        {
+            await DispatchAsync(async () =>
+            {
+                using Bitmap bitmap = new(imagePath);
+                GenerationReferencePreviewControl preview = new();
+                Window window = Show(preview);
+                try
+                {
+                    preview.Opacity.Should().Be(0d);
+                    preview.Transitions.Should().ContainSingle()
+                        .Which.Should().BeOfType<DoubleTransition>().Which.Property.Should().Be(Visual.OpacityProperty);
+                    TaskCompletionSource visible = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                    preview.PropertyChanged += (_, args) =>
+                    {
+                        if (args.Property == Visual.OpacityProperty && preview.Opacity == 1d)
+                        {
+                            visible.TrySetResult();
+                        }
+                    };
+
+                    preview.Source = bitmap;
+
+                    preview.Opacity.Should().BeLessThan(1d);
+                    await visible.Task.WaitAsync(TimeSpan.FromSeconds(3));
+                    preview.Opacity.Should().Be(1d);
+                    preview.Source = null;
+                }
+                finally
+                {
+                    window.Close();
+                }
+            });
+        }
+        finally
+        {
+            File.Delete(imagePath);
+        }
+    }
+
     [Fact]
     public async Task Background_WhenShown_UsesOpaqueGradientsForHeaderAndBody()
     {
@@ -593,7 +739,10 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
 
     private static GenerationMetadataOverlayView CreateView(
         GenerationItemViewModel item,
-        IGenerationPreviewSessionFactory? previewSessionFactory = null)
+        IGenerationPreviewSessionFactory? previewSessionFactory = null,
+        GenerationReferencePreviewLoader? referencePreviewLoader = null,
+        IAsyncRelayCommand<GenerationReference?>? openReferenceCommand = null,
+        IGenerationReferenceDragService? referenceDragService = null)
     {
         GenerationMetadataViewModel viewModel = GenerationMetadataViewModel.FromItem(
             item,
@@ -605,10 +754,11 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             new TestViewModelErrorHandler(),
             new GenerationPriceFormatter(),
             new GenerationDurationFormatter(TestLocalizationTextProvider.Default),
-            TestLocalizationTextProvider.Default);
+            TestLocalizationTextProvider.Default,
+            openReferenceCommand);
         GenerationMetadataOverlayView view = previewSessionFactory is null
             ? new GenerationMetadataOverlayView()
-            : new GenerationMetadataOverlayView(previewSessionFactory);
+            : new GenerationMetadataOverlayView(previewSessionFactory, referencePreviewLoader, referenceDragService);
         view.DataContext = viewModel;
 
         return view;

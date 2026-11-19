@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -9,6 +10,8 @@ using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
+using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Tests.Common;
 
@@ -38,17 +41,14 @@ public sealed class GalleryStateServiceTests
             Directory.CreateDirectory(pathProvider.ThumbnailsDirectory);
             await File.WriteAllBytesAsync(imagePath, [0x01, 0x02, 0x03]);
             await File.WriteAllBytesAsync(thumbnailPath, [0x01, 0x02, 0x03]);
-            IStateWriteScheduler scheduler = CreateRealScheduler(pathProvider);
             GalleryStateService service = CreateService(
-                new GalleryState(),
-                scheduler,
+                CreateRealStore(pathProvider),
                 new ExistingFileTrustedImageFileService(),
                 pathProvider);
 
             await service.SaveAsync(
                 [CreateGeneratedItem(imagePath, thumbnailPath)],
                 CancellationToken.None);
-            await scheduler.FlushAsync(CancellationToken.None);
 
             string statePath = Path.Combine(pathProvider.StateDirectory, new GalleryStateSection().FileName);
             File.Exists(statePath).Should().BeTrue();
@@ -63,6 +63,45 @@ public sealed class GalleryStateServiceTests
         finally
         {
             TestDirectories.DeleteIfExists(rootDirectory);
+        }
+    }
+
+    [Fact]
+    public async Task SaveAsync_WithSharedReferences_KeepsFilesUntilTheLastEntryIsRemoved()
+    {
+        string root = TestDirectories.GetUniqueDirectoryPath(typeof(GalleryStateServiceTests));
+        try
+        {
+            AtomicArtDataPathProvider paths = new(root);
+            GenerationReferenceStore references = GenerationReferenceStoreTests.CreateStore(root);
+            IAppStateStore stateStore = CreateRealStore(paths);
+            GalleryStateService service = CreateService(
+                stateStore, new PassthroughTrustedImageFileService(), paths, references);
+            AttachedImageDto image = new(
+                "reference.png", GenerationImageContentTypes.Png, GalleryThumbnailTestImages.CreatePngBytes(120, 80));
+            Guid runId = Guid.NewGuid();
+            IReadOnlyList<GenerationReference> saved = await references.SaveAsync(
+                runId, new AttachedImageDto[] { image }, CancellationToken.None);
+            GalleryItemState first = GalleryItemStateTestFactory.CreateGenerated(references: saved);
+            GalleryItemState second = GalleryItemStateTestFactory.CreateGenerated(references: saved);
+            await service.SaveAsync(new GalleryItemState[] { first, second }, CancellationToken.None);
+            references.Release(runId);
+
+            GalleryStateService reopened = CreateService(
+                stateStore, new PassthroughTrustedImageFileService(), paths, references);
+            GalleryState restored = await reopened.LoadAsync(CancellationToken.None);
+            await reopened.SaveAsync(new GalleryItemState[] { second }, CancellationToken.None);
+
+            restored.Items.Should().HaveCount(2).And.OnlyContain(item => item.References![0] == saved[0]);
+            Directory.GetFiles(GenerationReferenceStoreTests.GetHistoryDirectory(root)).Should().ContainSingle();
+
+            await reopened.SaveAsync(Array.Empty<GalleryItemState>(), CancellationToken.None);
+
+            Directory.GetFiles(GenerationReferenceStoreTests.GetHistoryDirectory(root)).Should().BeEmpty();
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(root);
         }
     }
 
@@ -109,21 +148,18 @@ public sealed class GalleryStateServiceTests
     }
 
     [Fact]
-    public async Task SaveAsync_WithRunningItem_SchedulesPlaceholderMetadata()
+    public async Task SaveAsync_WithRunningItem_SavesPlaceholderMetadata()
     {
-        RecordingStateWriteScheduler scheduler = new();
+        RecordingAppStateStore stateStore = new(typeof(GalleryState));
         GalleryStateService service = CreateService(
-            new GalleryState(),
-            scheduler,
+            stateStore,
             new PassthroughTrustedImageFileService());
 
         await service.SaveAsync(
             [CreateRunningItem()],
             CancellationToken.None);
 
-        GalleryState savedState = scheduler.SavedState.Should()
-            .BeOfType<GalleryState>()
-            .Subject;
+        GalleryState savedState = stateStore.GetSavedStates<GalleryState>().Should().ContainSingle().Subject;
         savedState.Items.Should().ContainSingle();
         GalleryItemState item = savedState.Items[0];
         item.Status.Should().Be(GenerationItemStatus.Generating);
@@ -136,10 +172,9 @@ public sealed class GalleryStateServiceTests
     {
         AtomicArtDataPathProvider pathProvider = CreatePathProvider();
         string imagePath = Path.Combine(pathProvider.ArtDirectory, "generation.png");
-        RecordingStateWriteScheduler scheduler = new();
+        RecordingAppStateStore stateStore = new(typeof(GalleryState));
         GalleryStateService service = CreateService(
-            new GalleryState(),
-            scheduler,
+            stateStore,
             new PassthroughTrustedImageFileService(),
             pathProvider);
 
@@ -148,9 +183,7 @@ public sealed class GalleryStateServiceTests
             CancellationToken.None);
         GalleryState loadedState = await service.LoadAsync(CancellationToken.None);
 
-        GalleryState savedState = scheduler.SavedState.Should()
-            .BeOfType<GalleryState>()
-            .Subject;
+        GalleryState savedState = stateStore.GetSavedStates<GalleryState>().Should().ContainSingle().Subject;
         savedState.Items.Should().ContainSingle();
         savedState.Items[0].ImagePath.Should().Be("Art/generation.png");
         loadedState.Items.Should().ContainSingle();
@@ -158,10 +191,10 @@ public sealed class GalleryStateServiceTests
     }
 
     private static GalleryStateService CreateService(
-        GalleryState initialState,
-        IStateWriteScheduler scheduler,
+        IAppStateStore stateStore,
         ITrustedImageFileService trustedImageFileService,
-        AtomicArtDataPathProvider? pathProvider = null)
+        AtomicArtDataPathProvider? pathProvider = null,
+        IGenerationReferenceStore? references = null)
     {
         AtomicArtDataPathProvider resolvedPathProvider = pathProvider ?? CreatePathProvider();
         GalleryStatePathConverter pathConverter = new(
@@ -170,8 +203,8 @@ public sealed class GalleryStateServiceTests
             NullLogger<GalleryStatePathConverter>.Instance);
 
         return new GalleryStateService(
-            new StubAppStateStore(initialState),
-            scheduler,
+            stateStore,
+            references ?? Mock.Of<IGenerationReferenceStore>(),
             new DataRootAccessCoordinator(),
             pathConverter,
             new GalleryStateSection(),
@@ -189,8 +222,7 @@ public sealed class GalleryStateServiceTests
         };
 
         return CreateService(
-            state,
-            new RecordingStateWriteScheduler(),
+            new StubAppStateStore(state),
             trustedImageFileService,
             pathProvider);
     }
@@ -229,18 +261,14 @@ public sealed class GalleryStateServiceTests
         return state.Items[0];
     }
 
-    private static IStateWriteScheduler CreateRealScheduler(AtomicArtDataPathProvider pathProvider)
+    private static IAppStateStore CreateRealStore(AtomicArtDataPathProvider pathProvider)
     {
-        AppStateStore stateStore = new(
+        return new AppStateStore(
             pathProvider,
             new DataRootAccessCoordinator(),
             TestApiConfiguration.CreateTrustedFileStreamFactory(),
             NullLogger<AppStateStore>.Instance);
 
-        return new StateWriteScheduler(
-            stateStore,
-            NullLogger<StateWriteScheduler>.Instance,
-            TestApiConfiguration.CreateStateWritePolicy());
     }
 
     private static GalleryItemState CreateGeneratedItem(

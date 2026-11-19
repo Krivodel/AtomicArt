@@ -1,6 +1,7 @@
 <suki:SukiWindow xmlns="https://github.com/avaloniaui"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:i18n="https://codewf.com"
+                 xmlns:converters="using:Avalonia.Data.Converters"
                  xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
                  xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
                  xmlns:dlss5="using:AtomicArt.Desktop.Services.Dlss5"
@@ -83,14 +84,20 @@
                                 ScaleY="{Binding UiScale}" />
             </LayoutTransformControl.LayoutTransform>
 
-            <Grid>
+            <Grid behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding ActiveGenerationPanel.AttachImageInputsCommand}"
+                  behaviors:ImageDropBehavior.DropArea="{Binding #GenerationPanelHost}"
+                  behaviors:ImageDropBehavior.Overlay="{Binding #PanelDropOverlay}"
+                  behaviors:ImageDropBehavior.TargetKind="GalleryImage">
+                <behaviors:ImageDropBehavior.IsEnabled>
+                    <MultiBinding Converter="{x:Static converters:BoolConverters.And}">
+                        <Binding Path="!Gallery.IsSelectionMode" />
+                        <Binding Path="!Dlss5.IsOpen" />
+                        <Binding Path="!IsSettingsOpen" />
+                        <Binding Path="!ErrorDialog.IsOpen" />
+                    </MultiBinding>
+                </behaviors:ImageDropBehavior.IsEnabled>
                 <Grid x:Name="ShellContentGrid"
-                      behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding ActiveGenerationPanel.AttachImageInputsCommand}"
-                      IsVisible="{Binding !Dlss5.IsOpen}"
-                      behaviors:ImageDropBehavior.DropArea="{Binding #GenerationPanelHost}"
-                      behaviors:ImageDropBehavior.IsEnabled="{Binding !Gallery.IsSelectionMode}"
-                      behaviors:ImageDropBehavior.Overlay="{Binding #PanelDropOverlay}"
-                      behaviors:ImageDropBehavior.TargetKind="GalleryImage">
+                      IsVisible="{Binding !Dlss5.IsOpen}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"
                                        MinHeight="0" />

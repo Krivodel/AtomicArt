@@ -25,20 +25,19 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
         _itemsController = itemsController;
     }
 
-    public async Task ApplyStartedAsync(GenerationLifecycleEvent lifecycleEvent, CancellationToken ct)
+    public Task ApplyStartedAsync(GenerationLifecycleEvent lifecycleEvent, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(lifecycleEvent);
 
-        IReadOnlyList<GenerationItemViewModel> placeholders = [];
-
-        await _uiThreadDispatcher.InvokeAsync(
+        return _uiThreadDispatcher.InvokeAsync(
             () =>
             {
-                placeholders = _itemsController.CreatePlaceholders(lifecycleEvent);
+                IReadOnlyList<GenerationItemViewModel> placeholders = _itemsController.CreatePlaceholders(lifecycleEvent);
                 _itemsController.AddPlaceholders(placeholders);
+
+                return _animatedGalleryOperations.GenerateFrontAsync(placeholders.Cast<object>().ToList(), ct);
             },
             ct);
-        await _animatedGalleryOperations.GenerateFrontAsync(placeholders.Cast<object>().ToList(), ct);
     }
 
     public async Task ApplyCompletedAsync(
@@ -169,21 +168,20 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
             GenerationClientFailureCodes.Unknown);
     }
 
-    private async Task ApplyMixedMutationAsync(
+    private Task ApplyMixedMutationAsync(
         Action mutation,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(mutation);
 
-        IReadOnlyList<object> finalItems = new List<object>();
-
-        await _uiThreadDispatcher.InvokeAsync(
+        return _uiThreadDispatcher.InvokeAsync(
             () =>
             {
                 mutation();
-                finalItems = _itemsController.GetItemsSnapshot();
+                IReadOnlyList<object> finalItems = _itemsController.GetItemsSnapshot();
+
+                return _animatedGalleryOperations.ApplyMixedMutationAsync(finalItems, ct);
             },
             ct);
-        await _animatedGalleryOperations.ApplyMixedMutationAsync(finalItems, ct);
     }
 }

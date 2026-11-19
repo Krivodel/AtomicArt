@@ -6,5 +6,5 @@ public interface IGenerationPanelPresetTarget
 
     bool CanApplyPreset(GenerationPanelPreset preset);
 
-    void ApplyPreset(GenerationPanelPreset preset);
+    Task<bool> TryApplyPresetAsync(GenerationPanelPreset preset, CancellationToken ct);
 }

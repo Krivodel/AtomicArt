@@ -23,6 +23,7 @@ public sealed class GalleryStateSection : StateSection<GalleryState>
 
         return new GalleryState
         {
+            HasSavedPayload = true,
             Items = state.Items
                 .Where(GalleryItemStateMapper.IsValid)
                 .Select(GalleryItemStateMapper.NormalizeForDeserialization)

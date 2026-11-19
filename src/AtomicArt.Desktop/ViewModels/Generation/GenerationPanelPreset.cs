@@ -1,3 +1,4 @@
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.ViewModels.Generation;
@@ -7,4 +8,5 @@ public sealed record GenerationPanelPreset(
     string Prompt,
     string AspectRatio,
     string Resolution,
-    GenerationRequestSettings? RequestSettings = null);
+    GenerationRequestSettings? RequestSettings = null,
+    IReadOnlyList<AttachedImageDto>? References = null);

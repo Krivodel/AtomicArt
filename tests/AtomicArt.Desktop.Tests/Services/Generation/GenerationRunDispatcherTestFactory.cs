@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
@@ -14,7 +16,9 @@ internal static class GenerationRunDispatcherTestFactory
         IGenerationLifecycleEventHub lifecycleEventHub,
         IGenerationConcurrencyLimiter? limiter = null,
         int maxAutomaticRetries = TestApiConfiguration.MaxAutomaticRetries,
-        ILogger<GenerationRunDispatcher>? logger = null)
+        ILogger<GenerationRunDispatcher>? logger = null,
+        IGenerationReferenceStore? referenceStore = null,
+        SaveReferencesSetting? saveReferences = null)
     {
         ArgumentNullException.ThrowIfNull(apiClient);
         ArgumentNullException.ThrowIfNull(lifecycleEventHub);
@@ -31,6 +35,8 @@ internal static class GenerationRunDispatcherTestFactory
             logger ?? NullLogger<GenerationRunDispatcher>.Instance,
             Options.Create(
                 TestApiConfiguration.CreateGenerationOptions(
-                    maxAutomaticRetries: maxAutomaticRetries)));
+                    maxAutomaticRetries: maxAutomaticRetries)),
+            referenceStore ?? Mock.Of<IGenerationReferenceStore>(),
+            saveReferences ?? new SaveReferencesSetting(new BooleanSettingValueConverter()));
     }
 }

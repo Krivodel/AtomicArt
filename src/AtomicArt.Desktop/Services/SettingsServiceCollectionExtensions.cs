@@ -46,7 +46,10 @@ public static class SettingsServiceCollectionExtensions
         IReadOnlyList<Type> applicatorTypes =
             DesktopTypeDiscovery.FindPublicImplementations(applicatorType);
 
-        services.AddSingletonImplementations(applicatorType, applicatorTypes);
+        foreach (Type implementationType in applicatorTypes)
+        {
+            services.AddSharedSingletonImplementation(applicatorType, implementationType);
+        }
 
         return services;
     }

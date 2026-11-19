@@ -266,7 +266,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         return SupportsModel(preset.ModelId);
     }
 
-    public void ApplyPreset(GenerationPanelPreset preset)
+    public async Task<bool> TryApplyPresetAsync(GenerationPanelPreset preset, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(preset);
 
@@ -274,8 +274,13 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
         if (model is null)
         {
-            throw new InvalidOperationException(
-                $"Generation preset model '{preset.ModelId}' is unavailable.");
+            return false;
+        }
+
+        if (preset.References is not null && !await _attachmentsViewModel.TryReplaceAsync(
+                PanelId, model, preset.References, ct))
+        {
+            return false;
         }
 
         bool wasPanelStateSaveSuppressed = _suppressPanelStateSave;
@@ -310,7 +315,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
 
         RefreshPricePreviewUnlessSuppressed();
-        SchedulePanelStateSave(nameof(ApplyPreset));
+        await SavePanelStateAsync(nameof(TryApplyPresetAsync), ct);
+        return true;
     }
 
     public async Task PrepareStateRestoreAsync(CancellationToken ct)

@@ -111,6 +111,8 @@
         "RequestedAspectRatio": "Requested aspect ratio",
         "Attachments": "References",
         "EmptyAttachments": "Empty",
+        "ReferenceUnavailable": "A saved reference could not be loaded.",
+        "ReferencesIncompatible": "The saved references do not meet the current model limits.",
         "Price": "Price",
         "GenerationDuration": "Duration",
         "Status": "Status",
@@ -196,6 +198,9 @@
         "Label": "GPU cache",
         "RestartNotice": "The cache setting will apply after restart.",
         "MegabytesFormat": "{0} MB"
+      },
+      "SaveReferences": {
+        "Label": "Save references"
       },
       "DataRoot": {
         "Label": "Save folder",

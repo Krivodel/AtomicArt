@@ -23,6 +23,7 @@ public sealed partial class GenerationItemViewModel :
     public DateTime? GalleryOrderTimestampUtc { get; private set; }
     public string? FailureCode { get; private set; }
     public GenerationRequestSettings? RequestSettings { get; private init; }
+    public IReadOnlyList<GenerationReference>? References { get; private init; }
     public string DisplayImagePath => ImagePath ?? string.Empty;
     public string DisplayThumbnailPath => ThumbnailPath ?? string.Empty;
     public bool HasDisplayImagePath => !string.IsNullOrWhiteSpace(DisplayImagePath);
@@ -136,6 +137,7 @@ public sealed partial class GenerationItemViewModel :
         Resolution = start.Resolution;
         AspectRatio = start.AspectRatio;
         RequestSettings = start.RequestSettings;
+        References = start.References;
         CreatedAtUtc = start.RequestedAtUtc;
         GalleryOrderTimestampUtc = galleryOrderTimestampUtc;
         CompletedAtUtc = null;
@@ -200,6 +202,7 @@ public sealed partial class GenerationItemViewModel :
             ThumbnailPath = normalizedState.ThumbnailPath,
             FailureCode = normalizedState.FailureCode,
             RequestSettings = normalizedState.RequestSettings,
+            References = normalizedState.References,
             IsFavorite = normalizedState.IsFavorite
         };
 

@@ -775,6 +775,77 @@ public sealed class GalleryViewModelTests
         viewModel.IsMetadataOpen.Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ReuseGenerationCommand_WithSavedReferences_RequiresTheWholeSet(bool complete)
+    {
+        GenerationReference first = new("first", "first.png", GenerationImageContentTypes.Png);
+        GenerationReference second = new("second", "second.png", GenerationImageContentTypes.Png);
+        AttachedImageDto firstImage = new(first.FileName, first.ContentType, new byte[] { 1 });
+        AttachedImageDto secondImage = new(second.FileName, second.ContentType, new byte[] { 2 });
+        Mock<IGenerationReferenceStore> store = new();
+        store.Setup(referenceStore => referenceStore.LoadAsync(first, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(firstImage);
+        store.Setup(referenceStore => referenceStore.LoadAsync(second, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(complete ? secondImage : null);
+        RecordingDialogService dialogs = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            dialogService: dialogs, referenceStore: store.Object);
+        RecordingGenerationPanelPresetTarget presetTarget = new();
+        viewModel.ConfigureGenerationPresetTarget(presetTarget);
+        GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(
+            references: new GenerationReference[] { first, second });
+        await viewModel.RestoreStateAsync(new GalleryItemState[] { state }, CancellationToken.None);
+        GenerationItemViewModel item = viewModel.Items[0];
+        viewModel.OpenMetadataCommand.Execute(item);
+
+        await viewModel.ReuseGenerationCommand.ExecuteAsync(item);
+
+        if (complete)
+        {
+            presetTarget.Preset?.References.Should().Equal(firstImage, secondImage);
+            viewModel.IsMetadataOpen.Should().BeFalse();
+        }
+        else
+        {
+            presetTarget.Preset.Should().BeNull();
+            viewModel.IsMetadataOpen.Should().BeTrue();
+            dialogs.ErrorMessages.Should().ContainSingle();
+        }
+    }
+
+    [Fact]
+    public async Task OpenReferenceCommand_WithSavedImages_OpensWholeSetAtClickedSlot()
+    {
+        GenerationReference first = new("first", "first.png", GenerationImageContentTypes.Png);
+        GenerationReference second = first with { };
+        GenerationReference last = new("last", "last.png", GenerationImageContentTypes.Png);
+        AttachedImageDto firstImage = new(first.FileName, first.ContentType, new byte[] { 1, 2 });
+        AttachedImageDto lastImage = new(last.FileName, last.ContentType, new byte[] { 3, 4 });
+        Mock<IGenerationReferenceStore> store = new();
+        store.Setup(referenceStore => referenceStore.LoadAsync(first, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(firstImage);
+        store.Setup(referenceStore => referenceStore.LoadAsync(last, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(lastImage);
+        RecordingImageViewerService viewer = new();
+        using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
+            imageViewerService: viewer, referenceStore: store.Object);
+        GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(
+            references: new GenerationReference[] { first, second, last });
+        await viewModel.RestoreStateAsync(new GalleryItemState[] { state }, CancellationToken.None);
+        viewModel.OpenMetadataCommand.Execute(viewModel.Items[0]);
+
+        await viewModel.OpenReferenceCommand.ExecuteAsync(second);
+
+        GalleryImageViewerRequest request = viewer.LastRequest!;
+        IReadOnlyList<GalleryImageViewerItem> items = request.ItemsSource.GetItems();
+        items.Select(item => ((GalleryAttachedImageViewerSource)item.Source).Image)
+            .Should().Equal(firstImage, firstImage, lastImage);
+        items.Select(item => item.Id).Should().OnlyHaveUniqueItems();
+        request.SelectedItemId.Should().Be(items[1].Id);
+    }
+
     [Fact]
     public void RepeatCommand_WithUnavailablePreset_RemainsOpenAndDoesNotApplyPreset()
     {
@@ -1376,11 +1447,12 @@ public sealed class GalleryViewModelTests
             return CanApply;
         }
 
-        public void ApplyPreset(GenerationPanelPreset preset)
+        public Task<bool> TryApplyPresetAsync(GenerationPanelPreset preset, CancellationToken ct)
         {
             ArgumentNullException.ThrowIfNull(preset);
 
             Preset = preset;
+            return Task.FromResult(true);
         }
 
         public void SetCanApply(bool value)

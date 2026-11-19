@@ -10,7 +10,8 @@ internal static class PreviewBitmapDecoder
     internal static Bitmap Decode(
         Stream stream,
         int maximumShortSidePixels,
-        CancellationToken ct)
+        CancellationToken ct,
+        int? maximumLongSidePixels = null)
     {
         ArgumentNullException.ThrowIfNull(stream);
 
@@ -27,10 +28,11 @@ internal static class PreviewBitmapDecoder
         PixelSize decodeSize = ImagePreviewSizeCalculator.Calculate(
             pixelSize.Width,
             pixelSize.Height,
-            maximumShortSidePixels);
+            maximumShortSidePixels,
+            maximumLongSidePixels);
         stream.Position = 0;
         Bitmap bitmap = decodeSize != pixelSize
-            ? DecodeReducedBitmap(stream, pixelSize, decodeSize)
+            ? DecodeReducedBitmap(stream, pixelSize, decodeSize, maximumLongSidePixels.HasValue)
             : new Bitmap(stream);
 
         if (ct.IsCancellationRequested)
@@ -45,19 +47,23 @@ internal static class PreviewBitmapDecoder
     private static Bitmap DecodeReducedBitmap(
         Stream stream,
         PixelSize pixelSize,
-        PixelSize decodeSize)
+        PixelSize decodeSize,
+        bool useLongSide)
     {
-        if (pixelSize.Width >= pixelSize.Height)
+        bool useWidth = useLongSide
+            ? pixelSize.Width >= pixelSize.Height
+            : pixelSize.Width < pixelSize.Height;
+        if (useWidth)
         {
-            return Bitmap.DecodeToHeight(
+            return Bitmap.DecodeToWidth(
                 stream,
-                decodeSize.Height,
+                decodeSize.Width,
                 BitmapInterpolationMode.MediumQuality);
         }
 
-        return Bitmap.DecodeToWidth(
+        return Bitmap.DecodeToHeight(
             stream,
-            decodeSize.Width,
+            decodeSize.Height,
             BitmapInterpolationMode.MediumQuality);
     }
 

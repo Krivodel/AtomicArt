@@ -27,6 +27,8 @@ public sealed class GalleryItemState : IGalleryItemStateSource
     public GenerationUsageDto? Usage { get; init; }
     public string? FailureCode { get; init; }
     public int AttachedImagesCount { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<GenerationReference>? References { get; init; }
     public bool IsFavorite { get; init; }
     public Guid? CorrelationId { get; init; }
     public int? GenerationOrdinal { get; init; }

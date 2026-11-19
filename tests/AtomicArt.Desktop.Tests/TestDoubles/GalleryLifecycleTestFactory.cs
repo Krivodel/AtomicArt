@@ -1,5 +1,6 @@
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
@@ -106,7 +107,9 @@ internal static class GalleryLifecycleTestFactory
     }
 
     public static GalleryLifecycleViewStateController CreateViewStateController(
-        IGenerationItemStatusDescriptorRegistry statusRegistry)
+        IGenerationItemStatusDescriptorRegistry statusRegistry,
+        IUiThreadDispatcher? uiThreadDispatcher = null,
+        IAnimatedGalleryOperations? animatedGalleryOperations = null)
     {
         ArgumentNullException.ThrowIfNull(statusRegistry);
 
@@ -117,8 +120,8 @@ internal static class GalleryLifecycleTestFactory
             TestLocalizationTextProvider.Default);
 
         return new GalleryLifecycleViewStateController(
-            new ImmediateUiThreadDispatcher(),
-            new RecordingAnimatedGalleryOperations(),
+            uiThreadDispatcher ?? new ImmediateUiThreadDispatcher(),
+            animatedGalleryOperations ?? new RecordingAnimatedGalleryOperations(),
             itemsController);
     }
 }

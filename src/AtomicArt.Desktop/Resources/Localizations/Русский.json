@@ -111,6 +111,8 @@
         "RequestedAspectRatio": "Запрошенное соотношение",
         "Attachments": "Референсы",
         "EmptyAttachments": "Пусто",
+        "ReferenceUnavailable": "Не удалось загрузить сохранённый референс.",
+        "ReferencesIncompatible": "Сохранённые референсы не подходят под текущие ограничения модели.",
         "Price": "Цена",
         "GenerationDuration": "Длительность",
         "Status": "Статус",
@@ -196,6 +198,9 @@
         "Label": "GPU-кэш",
         "RestartNotice": "Кэш применится после перезапуска.",
         "MegabytesFormat": "{0} МБ"
+      },
+      "SaveReferences": {
+        "Label": "Сохранять референсы"
       },
       "DataRoot": {
         "Label": "Папка сохранений",

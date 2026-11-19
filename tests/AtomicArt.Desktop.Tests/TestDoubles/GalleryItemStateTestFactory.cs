@@ -25,7 +25,8 @@ internal static class GalleryItemStateTestFactory
         GenerationUsageDto? usage = null,
         int attachedImagesCount = 0,
         bool isFavorite = false,
-        GenerationRequestSettings? requestSettings = null)
+        GenerationRequestSettings? requestSettings = null,
+        IReadOnlyList<GenerationReference>? references = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
 
@@ -48,6 +49,7 @@ internal static class GalleryItemStateTestFactory
             Price = price,
             Usage = usage,
             AttachedImagesCount = attachedImagesCount,
+            References = references,
             IsFavorite = isFavorite
         };
     }

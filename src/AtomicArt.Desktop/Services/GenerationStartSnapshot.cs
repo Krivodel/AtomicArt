@@ -12,6 +12,7 @@ public sealed record GenerationStartSnapshot
     public GenerationRequestSettings? RequestSettings { get; }
     public int GenerationCount { get; }
     public int AttachedImagesCount { get; }
+    public IReadOnlyList<GenerationReference>? References { get; init; }
     public DateTime RequestedAtUtc { get; }
 
     public GenerationStartSnapshot(

@@ -51,7 +51,8 @@ internal static class GalleryViewModelTestFactory
         IGalleryThumbnailStorage? galleryThumbnailStorage = null,
         IMessenger? messenger = null,
         IPicaImageFileActions? picaImageFileActions = null,
-        IGallerySaveNotificationService? saveNotificationService = null)
+        IGallerySaveNotificationService? saveNotificationService = null,
+        IGenerationReferenceStore? referenceStore = null)
     {
         IFileRevealService revealService =
             fileRevealService ?? new SuccessfulFileRevealService();
@@ -92,6 +93,7 @@ internal static class GalleryViewModelTestFactory
             galleryThumbnailStorage ?? new NullGalleryThumbnailStorage();
         IMessenger localizationMessenger =
             messenger ?? new WeakReferenceMessenger();
+        IGenerationReferenceStore references = referenceStore ?? Mock.Of<IGenerationReferenceStore>();
         GalleryItemsController itemsController = new(
             trustedService,
             statusRegistry,
@@ -114,7 +116,7 @@ internal static class GalleryViewModelTestFactory
                 new NoOpGalleryFileOrderSynchronizer(),
                 NullLogger<GalleryGenerationCompletedHandler>.Instance),
             new GalleryGenerationFailedHandler(viewStateController, galleryState),
-            new GalleryGenerationStartedHandler(viewStateController, galleryState),
+            new GalleryGenerationStartedHandler(viewStateController, galleryState, references),
             new GalleryGenerationStartFailedHandler(viewStateController)
         ];
         GalleryLifecycleController lifecycleController = new(
@@ -147,6 +149,7 @@ internal static class GalleryViewModelTestFactory
             TestLocalizationTextProvider.Default,
             picaImageFileActions ?? new Mock<IPicaImageFileActions>().Object,
             saveNotificationService ?? new Mock<IGallerySaveNotificationService>().Object,
+            references,
             generationCancellationService);
     }
 

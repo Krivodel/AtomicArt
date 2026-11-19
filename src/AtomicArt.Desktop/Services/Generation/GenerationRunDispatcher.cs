@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
@@ -14,6 +15,8 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
     private readonly IGenerationAdmissionGate _generationAdmissionGate;
     private readonly ILogger<GenerationRunDispatcher> _logger;
     private readonly IGenerationCancellationService _cancellationService;
+    private readonly IGenerationReferenceStore _referenceStore;
+    private readonly SaveReferencesSetting _saveReferences;
     private readonly int _maxAutomaticRetries;
     private readonly object _syncRoot = new();
     private readonly HashSet<GenerationRunLifetime> _activeRunLifetimes = [];
@@ -26,28 +29,10 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         IGenerationResultStorage generationResultStorage,
         IGenerationActivityTracker generationActivityTracker,
         IGenerationAdmissionGate generationAdmissionGate,
-        ILogger<GenerationRunDispatcher> logger)
-        : this(
-            concurrencyLimiter,
-            apiClient,
-            lifecyclePublisher,
-            generationResultStorage,
-            generationActivityTracker,
-            generationAdmissionGate,
-            logger,
-            Options.Create(new GenerationClientOptions()))
-    {
-    }
-
-    public GenerationRunDispatcher(
-        IGenerationConcurrencyLimiter concurrencyLimiter,
-        IImageGenerationApiClient apiClient,
-        NanoBanana2GenerationLifecyclePublisher lifecyclePublisher,
-        IGenerationResultStorage generationResultStorage,
-        IGenerationActivityTracker generationActivityTracker,
-        IGenerationAdmissionGate generationAdmissionGate,
         ILogger<GenerationRunDispatcher> logger,
         IOptions<GenerationClientOptions> options,
+        IGenerationReferenceStore referenceStore,
+        SaveReferencesSetting saveReferences,
         IGenerationCancellationService? cancellationService = null)
     {
         ArgumentNullException.ThrowIfNull(concurrencyLimiter);
@@ -67,6 +52,8 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         _logger = logger;
         _cancellationService = cancellationService
             ?? NullGenerationCancellationService.Instance;
+        _referenceStore = referenceStore ?? throw new ArgumentNullException(nameof(referenceStore));
+        _saveReferences = saveReferences ?? throw new ArgumentNullException(nameof(saveReferences));
         _maxAutomaticRetries = options.Value.MaxAutomaticRetries;
     }
 
@@ -89,13 +76,23 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
 
         try
         {
+            IReadOnlyList<GenerationReference>? references = null;
+            if (_saveReferences.CurrentValue || generationRequest.AttachedImages.Count == 0)
+            {
+                references = await _referenceStore
+                    .SaveAsync(correlationId, generationRequest.AttachedImages, ct)
+                    .ConfigureAwait(false);
+            }
+
+            GenerationStartSnapshot start = request.StartSnapshot with { References = references };
+
             _logger.LogInformation(
                 "Generation run {CorrelationId} was accepted with {GenerationCount} requested results and {AttachmentCount} attachments.",
                 correlationId,
                 generationRequest.GenerationCount,
                 generationRequest.AttachedImages.Count);
             _lifecyclePublisher.PublishStartRequested(correlationId);
-            _lifecyclePublisher.PublishStarted(correlationId, request.StartSnapshot);
+            _lifecyclePublisher.PublishStarted(correlationId, start);
             runState.MarkStarted();
 
             _ = Task.Run(
@@ -110,6 +107,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         }
         catch
         {
+            _referenceStore.Release(correlationId);
             admissionLease.Dispose();
             CompleteRunLifetime(correlationId, runLifetime);
 

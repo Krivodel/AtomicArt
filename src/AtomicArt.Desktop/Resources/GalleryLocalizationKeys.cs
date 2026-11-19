@@ -24,6 +24,8 @@ public static class GalleryLocalizationKeys
         public const string RequestedAspectRatio = "Gallery.Metadata.RequestedAspectRatio";
         public const string Attachments = "Gallery.Metadata.Attachments";
         public const string EmptyAttachments = "Gallery.Metadata.EmptyAttachments";
+        public const string ReferenceUnavailable = "Gallery.Metadata.ReferenceUnavailable";
+        public const string ReferencesIncompatible = "Gallery.Metadata.ReferencesIncompatible";
         public const string Price = "Gallery.Metadata.Price";
         public const string GenerationDuration =
             "Gallery.Metadata.GenerationDuration";

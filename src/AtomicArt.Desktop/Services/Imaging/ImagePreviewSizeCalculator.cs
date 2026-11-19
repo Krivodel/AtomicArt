@@ -7,7 +7,8 @@ internal static class ImagePreviewSizeCalculator
     internal static PixelSize Calculate(
         int width,
         int height,
-        int maximumShortSidePixels)
+        int maximumShortSidePixels,
+        int? maximumLongSidePixels = null)
     {
         if ((width <= 0) || (height <= 0))
         {
@@ -25,12 +26,19 @@ internal static class ImagePreviewSizeCalculator
 
         int shortSide = Math.Min(width, height);
 
-        if (shortSide <= maximumShortSidePixels)
+        int longSide = Math.Max(width, height);
+        double scale = (double)maximumShortSidePixels / shortSide;
+        if (maximumLongSidePixels is int maximumLongSide)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumLongSide);
+            scale = Math.Min(scale, (double)maximumLongSide / longSide);
+        }
+
+        if (scale >= 1d)
         {
             return new PixelSize(width, height);
         }
 
-        double scale = (double)maximumShortSidePixels / shortSide;
         int previewWidth = Math.Max(
             1,
             (int)Math.Round(width * scale, MidpointRounding.AwayFromZero));

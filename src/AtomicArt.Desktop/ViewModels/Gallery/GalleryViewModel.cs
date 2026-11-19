@@ -70,6 +70,7 @@ public sealed partial class GalleryViewModel :
     private readonly GenerationPriceFormatter _priceFormatter;
     private readonly GenerationDurationFormatter _durationFormatter;
     private readonly IGenerationCancellationService _generationCancellationService;
+    private readonly IGenerationReferenceStore _referenceStore;
     private readonly ILocalizationTextProvider _textProvider;
     private readonly Dlss5SessionViewModel? _dlss5;
     private IGenerationPanelPresetTarget? _generationPanelPresetTarget;
@@ -102,6 +103,7 @@ public sealed partial class GalleryViewModel :
         ILocalizationTextProvider textProvider,
         IPicaImageFileActions picaImageFileActions,
         IGallerySaveNotificationService saveNotificationService,
+        IGenerationReferenceStore referenceStore,
         IGenerationCancellationService? generationCancellationService = null,
         Dlss5SessionViewModel? dlss5 = null)
     {
@@ -125,6 +127,7 @@ public sealed partial class GalleryViewModel :
         ArgumentNullException.ThrowIfNull(saveNotificationService);
 
         _fileRevealService = fileRevealService;
+        _referenceStore = referenceStore ?? throw new ArgumentNullException(nameof(referenceStore));
         _imageViewerService = imageViewerService;
         _dialogService = dialogService;
         _deletionConfirmationService = deletionConfirmationService;
@@ -484,7 +487,8 @@ public sealed partial class GalleryViewModel :
             _errorHandler,
             _priceFormatter,
             _durationFormatter,
-            _textProvider);
+            _textProvider,
+            OpenReferenceCommand);
         IsMetadataOpen = true;
     }
 
@@ -615,7 +619,7 @@ public sealed partial class GalleryViewModel :
     }
 
     [RelayCommand(CanExecute = nameof(CanReuseGeneration))]
-    private void ReuseGeneration(GenerationItemViewModel? item)
+    private async Task ReuseGenerationAsync(GenerationItemViewModel? item, CancellationToken ct)
     {
         IGenerationPanelPresetTarget? target = _generationPanelPresetTarget;
         if ((item is null) || (target is null))
@@ -629,8 +633,109 @@ public sealed partial class GalleryViewModel :
             return;
         }
 
-        target.ApplyPreset(preset);
-        IsMetadataOpen = false;
+        try
+        {
+            if (item.References is not null)
+            {
+                List<AttachedImageDto> images = [];
+                foreach (GenerationReference reference in item.References)
+                {
+                    AttachedImageDto? image = await LoadReferenceAsync(reference, ct);
+                    if (image is null)
+                    {
+                        await _dialogService.ShowLocalizedErrorAsync(
+                            GalleryLocalizationKeys.Metadata.ReferenceUnavailable, ct);
+                        return;
+                    }
+
+                    images.Add(image);
+                }
+
+                preset = preset with { References = images };
+            }
+
+            if (await target.TryApplyPresetAsync(preset, ct))
+            {
+                if (ReferenceEquals(SelectedMetadata?.Item, item))
+                {
+                    IsMetadataOpen = false;
+                }
+            }
+            else
+            {
+                await _dialogService.ShowLocalizedErrorAsync(
+                    GalleryLocalizationKeys.Metadata.ReferencesIncompatible, ct);
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _errorHandler.Log(ex, nameof(ReuseGenerationAsync));
+            await _dialogService.ShowLocalizedErrorAsync(GalleryLocalizationKeys.Metadata.ReferenceUnavailable, ct);
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenReferenceAsync(GenerationReference? reference, CancellationToken ct)
+    {
+        GenerationMetadataViewModel? metadata = SelectedMetadata;
+        if (reference is null || metadata is null)
+        {
+            return;
+        }
+
+        List<GalleryImageViewerItem> viewerItems = [];
+        Guid? selectedItemId = null;
+        foreach (GenerationReference savedReference in metadata.References)
+        {
+            AttachedImageDto? image = await LoadReferenceAsync(savedReference, ct);
+            if (image is null)
+            {
+                continue;
+            }
+
+            Guid itemId = Guid.NewGuid();
+            viewerItems.Add(new GalleryImageViewerItem(itemId, new GalleryAttachedImageViewerSource(image)));
+            if (ReferenceEquals(savedReference, reference))
+            {
+                selectedItemId ??= itemId;
+            }
+        }
+
+        if (selectedItemId is null)
+        {
+            await _dialogService.ShowLocalizedErrorAsync(GalleryLocalizationKeys.Metadata.ReferenceUnavailable, ct);
+            return;
+        }
+
+        GalleryImageViewerRequest request = new(
+            new GalleryStaticImageViewerItemsSource(viewerItems),
+            selectedItemId.Value,
+            AttachImagesCommand: null);
+        await ExecuteUserOperationAsync(
+            operationCt => _imageViewerService.OpenAsync(request, operationCt),
+            nameof(OpenReferenceAsync),
+            ct);
+    }
+
+    private async Task<AttachedImageDto?> LoadReferenceAsync(GenerationReference? reference, CancellationToken ct)
+    {
+        if (reference is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await _referenceStore.LoadAsync(reference, ct);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            _errorHandler.Log(ex, nameof(LoadReferenceAsync));
+            return null;
+        }
     }
 
     private bool CanReuseGeneration(GenerationItemViewModel? item)

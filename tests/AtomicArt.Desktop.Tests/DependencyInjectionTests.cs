@@ -18,9 +18,11 @@ using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.Tests.Services;
+using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.ViewModels.Dialogs;
 using AtomicArt.Desktop.ViewModels.Dlss5;
@@ -414,6 +416,36 @@ public sealed class DependencyInjectionTests
                 setting.Key,
                 ConfirmDeletionSettingDefinition.KeyValue,
                 StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AddDesktopServices_WithSaveReferencesSetting_AppliesStoredValueToRuntimeAndEditor()
+    {
+        SettingsState saved = SettingsState.FromValues(new Dictionary<string, string>
+        {
+            [SaveReferencesSettingDefinition.KeyValue] = "false"
+        });
+        ServiceCollection services = DependencyInjectionTests.CreateServices();
+        services.AddSingleton<IAppStateStore>(new StubAppStateStore(saved));
+        services.AddSingleton<IUiThreadDispatcher>(new ImmediateUiThreadDispatcher());
+        using ServiceProvider provider = services.BuildServiceProvider();
+        SaveReferencesSetting runtime = provider.GetRequiredService<SaveReferencesSetting>();
+        ISettingsStateService state = provider.GetRequiredService<ISettingsStateService>();
+        SaveReferencesSettingDefinition definition = provider.GetRequiredService<ISettingsDefinitionCatalog>()
+            .GetRequired<SaveReferencesSettingDefinition>();
+        ISettingItemViewModel[] storageSettings = provider.GetRequiredService<ISettingsItemViewModelProvider>()
+            .CreateSettings().Where(setting => setting.Section == SettingsSections.StorageAndPerformance)
+            .OrderBy(setting => setting.Order).ToArray();
+        using BooleanSettingViewModel editor = storageSettings[1].Should().BeOfType<BooleanSettingViewModel>().Subject;
+        bool wasEnabled = runtime.CurrentValue;
+
+        await state.ApplySavedSettingsAsync(CancellationToken.None);
+
+        wasEnabled.Should().BeTrue();
+        storageSettings.Select(setting => setting.Key).Should().Equal(
+            DataRootSettingDefinition.KeyValue, definition.Key, GpuResourceCacheSettingDefinition.SettingKey);
+        runtime.CurrentValue.Should().BeFalse();
+        editor.IsChecked.Should().BeFalse();
     }
 
     [Fact]

@@ -2,6 +2,37 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
         xmlns:views="using:AtomicArt.Desktop.Views.Gallery">
+    <Styles.Resources>
+        <ControlTheme x:Key="MetadataReferenceButtonTheme"
+                      TargetType="Button">
+            <Setter Property="Cursor"
+                    Value="Hand" />
+            <Setter Property="Template">
+                <ControlTemplate x:DataType="Button">
+                    <ContentPresenter x:Name="PART_ContentPresenter"
+                                      Background="Transparent"
+                                      Content="{TemplateBinding Content}" />
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </Styles.Resources>
+
+    <Style Selector="views|GenerationReferencePreviewControl">
+        <Setter Property="Opacity"
+                Value="0" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                  Easing="{StaticResource TransientOverlayEasing}"
+                                  Property="Opacity" />
+            </Transitions>
+        </Setter>
+        <Style Selector="^:decoded">
+            <Setter Property="Opacity"
+                    Value="1" />
+        </Style>
+    </Style>
+
     <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ TextBlock.overlay-title">
         <Setter Property="FontSize"
                 Value="18" />
@@ -157,6 +188,22 @@
                 Value="Round" />
         <Setter Property="StrokeJoin"
                 Value="Round" />
+    </Style>
+
+    <Style Selector="Panel.metadata-reuse-host:not(.with-references)">
+        <Setter Property="Grid.RowSpan"
+                Value="2" />
+        <Setter Property="VerticalAlignment"
+                Value="Bottom" />
+    </Style>
+
+    <Style Selector="Panel.metadata-reuse-host.with-references">
+        <Setter Property="Grid.Row"
+                Value="1" />
+        <Setter Property="MinHeight"
+                Value="{StaticResource AttachmentItemSize}" />
+        <Setter Property="VerticalAlignment"
+                Value="Top" />
     </Style>
 
     <Style Selector="Button.metadata-repeat">

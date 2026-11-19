@@ -4,6 +4,7 @@ using FluentAssertions;
 using Moq;
 using Xunit;
 
+using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Gallery;
@@ -11,6 +12,8 @@ using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
+using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Paths;
@@ -30,6 +33,13 @@ public sealed class AtomicArtDataRootMigrationServiceTests
         try
         {
             string sourceFile = CreateSourceFile(sourceDirectory, content);
+            GenerationReferenceStore referenceStore = GenerationReferenceStoreTests.CreateStore(sourceDirectory);
+            AttachedImageDto reference = new(
+                "reference.png", GenerationImageContentTypes.Png, GalleryThumbnailTestImages.CreatePngBytes(64, 32));
+            Guid runId = Guid.NewGuid();
+            IReadOnlyList<GenerationReference> references = await referenceStore.SaveAsync(
+                runId, new AttachedImageDto[] { reference }, CancellationToken.None);
+            referenceStore.Release(runId);
             Directory.CreateDirectory(destinationDirectory);
             AtomicArtDataPathProvider pathProvider = new(sourceDirectory);
             AtomicArtDataRootBootstrapStore bootstrapStore = new(bootstrapDirectory);
@@ -66,6 +76,9 @@ public sealed class AtomicArtDataRootMigrationServiceTests
                 Path.GetRelativePath(sourceDirectory, sourceFile));
             File.Exists(destinationFile).Should().BeTrue();
             File.ReadAllBytes(destinationFile).Should().Equal(content);
+            AttachedImageDto? migrated = await GenerationReferenceStoreTests.CreateStore(destinationDirectory)
+                .LoadAsync(references[0], CancellationToken.None);
+            migrated.Should().BeEquivalentTo(reference);
             Directory.Exists(sourceDirectory).Should().BeFalse();
             pathProvider.RootDirectory.Should().Be(Path.GetFullPath(destinationDirectory));
             bootstrapStore.LoadRootDirectory().Should().Be(

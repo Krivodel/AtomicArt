@@ -79,6 +79,11 @@ public static class SettingsLocalizationKeys
         public const string MegabytesFormat = "Settings.GpuCache.MegabytesFormat";
     }
 
+    public static class SaveReferences
+    {
+        public const string Label = "Settings.SaveReferences.Label";
+    }
+
     public static class DataRoot
     {
         public const string Label = "Settings.DataRoot.Label";
