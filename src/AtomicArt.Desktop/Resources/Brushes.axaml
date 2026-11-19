@@ -37,10 +37,22 @@
     <SolidColorBrush x:Key="ModalOverlayTintBrush"
                      Color="{DynamicResource SukiPopupBackground}"
                      Opacity="{DynamicResource ModalOverlayTintOpacity}" />
-    <SolidColorBrush x:Key="MetadataSurfaceBrush"
-                     Color="{StaticResource MetadataSurfaceColor}" />
-    <SolidColorBrush x:Key="MetadataHeaderBrush"
-                     Color="{StaticResource MetadataHeaderColor}" />
+    <LinearGradientBrush x:Key="MetadataSurfaceBrush"
+                         EndPoint="100%,100%"
+                         StartPoint="0%,0%">
+        <GradientStop Color="{StaticResource MetadataSurfaceColor}"
+                      Offset="0" />
+        <GradientStop Color="{StaticResource MetadataSurfaceShadeColor}"
+                      Offset="1" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="MetadataHeaderBrush"
+                         EndPoint="100%,100%"
+                         StartPoint="0%,0%">
+        <GradientStop Color="{StaticResource MetadataHeaderHighlightColor}"
+                      Offset="0" />
+        <GradientStop Color="{StaticResource MetadataHeaderColor}"
+                      Offset="1" />
+    </LinearGradientBrush>
     <SolidColorBrush x:Key="MetadataDividerBrush"
                      Color="{StaticResource MetadataDividerColor}" />
     <SolidColorBrush x:Key="MetadataTextBrush"

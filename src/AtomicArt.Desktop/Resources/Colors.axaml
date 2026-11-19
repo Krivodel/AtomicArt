@@ -12,7 +12,9 @@
     <Color x:Key="GalleryFavoriteAccentColor">#F59E0B</Color>
     <Color x:Key="GalleryDeleteIconColor">#FF3333</Color>
     <Color x:Key="MetadataSurfaceColor">#1B2435</Color>
+    <Color x:Key="MetadataSurfaceShadeColor">#121B2C</Color>
     <Color x:Key="MetadataHeaderColor">#202A3C</Color>
+    <Color x:Key="MetadataHeaderHighlightColor">#293345</Color>
     <Color x:Key="MetadataDividerColor">#354155</Color>
     <Color x:Key="MetadataTextColor">#F1F4FB</Color>
     <Color x:Key="MetadataSecondaryTextColor">#AAB6CA</Color>

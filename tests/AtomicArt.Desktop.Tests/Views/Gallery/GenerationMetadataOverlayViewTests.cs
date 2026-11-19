@@ -35,7 +35,7 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlTestBase
 {
     [Fact]
-    public void Background_WhenShown_UsesOpaqueMetadataPaletteWithoutBlur()
+    public void Background_WhenShown_UsesOpaqueGradientsForHeaderAndBody()
     {
         Dispatch(() =>
         {
@@ -60,8 +60,8 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                         .OfType<Border>()
                         .Single(control => control.Classes.Contains("metadata-status"));
 
-                    AssertBrushColor(panel.Background, "#1B2435");
-                    AssertBrushColor(header.Background, "#202A3C");
+                    AssertOpaqueGradient(panel.Background, "#1B2435", "#121B2C");
+                    AssertOpaqueGradient(header.Background, "#293345", "#202A3C");
                     AssertBrushColor(status.Background, "#203B35");
                     panel.BlurRadius.Should().Be(0d);
                     panel.BorderThickness.Should().Be(default(Thickness));
@@ -301,6 +301,14 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                 File.Delete(imagePath);
             }
         });
+    }
+
+    private static void AssertOpaqueGradient(IBrush? brush, string startColor, string endColor)
+    {
+        ILinearGradientBrush gradient = brush.Should().BeAssignableTo<ILinearGradientBrush>().Subject;
+        gradient.GradientStops.Select(stop => stop.Color)
+            .Should().Equal(Color.Parse(startColor), Color.Parse(endColor));
+        gradient.Opacity.Should().Be(1d);
     }
 
     private static void AssertBrushColor(IBrush? brush, string hex)
