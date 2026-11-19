@@ -43,7 +43,7 @@ public sealed class NanoBanana2GenerationRunner : INanoBanana2GenerationRunner, 
             ImageGenerationRequestDto request = _requestBuilder.CreateValidatedRequest(singleGenerationParameters);
             GenerationStartSnapshot startSnapshot = _requestBuilder.CreateStartSnapshot(
                 request,
-                singleGenerationParameters.ModelDisplayName);
+                singleGenerationParameters);
             GenerationRunRequest runRequest = new(request, startSnapshot, providerCredential);
 
             await _runDispatcher

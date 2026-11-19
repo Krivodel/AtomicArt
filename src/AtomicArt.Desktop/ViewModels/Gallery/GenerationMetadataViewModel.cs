@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,21 +15,15 @@ namespace AtomicArt.Desktop.ViewModels.Gallery;
 public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
 {
     public GenerationItemViewModel Item { get; }
-    public DateTime CreatedAt => Item.CreatedAtUtc.ToLocalTime();
     public string Prompt => Item.Prompt;
     public string ModelDisplayName => Item.ModelDisplayName;
-    public string Resolution => Item.Resolution;
-    public string AspectRatio => GenerationAspectRatios.IsAuto(Item.AspectRatio)
-        ? _textProvider.Get(GenerationLocalizationKeys.OptionsAuto)
-        : Item.AspectRatio;
-    public string PriceCurrency => Item.Price is GenerationPriceDto price
-        ? _priceFormatter.FormatCurrency(price)
-        : string.Empty;
-    public string PriceAmount => Item.Price is GenerationPriceDto price
-        ? _priceFormatter.FormatAmount(price)
-        : _textProvider.Get(GalleryLocalizationKeys.Metadata.Unavailable);
-    public string GenerationDuration => _durationFormatter.Format(Item.GenerationDuration)
-        ?? _textProvider.Get(GalleryLocalizationKeys.Metadata.Unavailable);
+    public IReadOnlyList<GenerationMetadataRow> Rows => EnumerateFields()
+        .Chunk(FieldsPerRow)
+        .Select(row => new GenerationMetadataRow(
+            row[0],
+            row.ElementAtOrDefault(1),
+            row.ElementAtOrDefault(2)))
+        .ToArray();
     public string Status => Item.Status;
     public bool IsGenerated => Item.IsGenerated;
     public bool IsGenerating => Item.IsGenerating;
@@ -38,6 +33,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     public IRelayCommand ShowFailureDetailsCommand { get; }
     public IRelayCommand RepeatCommand { get; }
     public IAsyncRelayCommand CopyPromptCommand { get; }
+
+    private const int FieldsPerRow = 3;
 
     private readonly ITextClipboardService _textClipboardService;
     private readonly IViewModelErrorHandler _errorHandler;
@@ -109,15 +106,90 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
 
     public void RefreshLocalization()
     {
-        OnPropertyChanged(nameof(AspectRatio));
-        OnPropertyChanged(nameof(PriceAmount));
-        OnPropertyChanged(nameof(GenerationDuration));
+        OnPropertyChanged(nameof(Rows));
         OnPropertyChanged(nameof(Status));
     }
 
     public void Dispose()
     {
         Item.PropertyChanged -= OnItemPropertyChanged;
+    }
+
+    private IEnumerable<GenerationMetadataField> EnumerateFields()
+    {
+        DateTime createdAt = Item.CreatedAtUtc.ToLocalTime();
+        string unavailable = _textProvider.Get(GalleryLocalizationKeys.Metadata.Unavailable);
+        string priceText = Item.Price is GenerationPriceDto price
+            ? string.Concat(_priceFormatter.FormatCurrency(price), _priceFormatter.FormatAmount(price))
+            : unavailable;
+
+        yield return new GenerationMetadataField(
+            _textProvider.Get(GalleryLocalizationKeys.Metadata.CreatedAt),
+            createdAt.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture),
+            createdAt.ToString(" HH:mm", CultureInfo.CurrentCulture));
+        yield return new GenerationMetadataField(
+            _textProvider.Get(GalleryLocalizationKeys.Metadata.GenerationDuration),
+            _durationFormatter.Format(Item.GenerationDuration) ?? unavailable);
+        yield return new GenerationMetadataField(
+            _textProvider.Get(GalleryLocalizationKeys.Metadata.Price),
+            priceText);
+        yield return new GenerationMetadataField(
+            _textProvider.Get(GalleryLocalizationKeys.Metadata.Resolution),
+            Item.Resolution);
+        yield return new GenerationMetadataField(
+            _textProvider.Get(GalleryLocalizationKeys.Metadata.AspectRatio),
+            FormatAspectRatio(Item.AspectRatio));
+
+        if (Item.RequestSettings is not { } settings)
+        {
+            yield break;
+        }
+
+        foreach ((string name, GenerationSavedParameter parameter) in settings.Parameters)
+        {
+            string? value = GenerationParameterText.FormatValue(name, parameter.Value, _textProvider);
+            if (string.IsNullOrWhiteSpace(value) || MatchesDisplayedSize(name, value))
+            {
+                continue;
+            }
+
+            yield return new GenerationMetadataField(
+                LocalizeOption(name, parameter.LabelLocalizationKey),
+                LocalizeOption(value, parameter.ValueLocalizationKey));
+        }
+    }
+
+    private bool MatchesDisplayedSize(string name, string value)
+    {
+        return name switch
+        {
+            GenerationParameterNames.AspectRatio =>
+                string.Equals(value, Item.AspectRatio, StringComparison.OrdinalIgnoreCase),
+            GenerationParameterNames.Resolution =>
+                string.Equals(value, Item.Resolution, StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+    }
+
+    private string FormatAspectRatio(string aspectRatio)
+    {
+        return GenerationAspectRatios.IsAuto(aspectRatio)
+            ? _textProvider.Get(GenerationLocalizationKeys.OptionsAuto)
+            : aspectRatio;
+    }
+
+    private string LocalizeOption(string value, string? localizationKey)
+    {
+        if (string.IsNullOrWhiteSpace(localizationKey))
+        {
+            return value;
+        }
+
+        string localized = _textProvider.Get(localizationKey);
+
+        return string.Equals(localized, localizationKey, StringComparison.Ordinal)
+            ? value
+            : localized;
     }
 
     private async Task CopyPromptAsync(CancellationToken ct)
@@ -149,17 +221,14 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         switch (e.PropertyName)
         {
             case nameof(GenerationItemViewModel.CreatedAtUtc):
-                OnPropertyChanged(nameof(CreatedAt));
-                break;
             case nameof(GenerationItemViewModel.Price):
-                OnPropertyChanged(nameof(PriceCurrency));
-                OnPropertyChanged(nameof(PriceAmount));
-                break;
-            case nameof(GenerationItemViewModel.Prompt):
-            case nameof(GenerationItemViewModel.ModelDisplayName):
             case nameof(GenerationItemViewModel.Resolution):
             case nameof(GenerationItemViewModel.AspectRatio):
             case nameof(GenerationItemViewModel.GenerationDuration):
+                OnPropertyChanged(nameof(Rows));
+                break;
+            case nameof(GenerationItemViewModel.Prompt):
+            case nameof(GenerationItemViewModel.ModelDisplayName):
             case nameof(GenerationItemViewModel.Status):
             case nameof(GenerationItemViewModel.IsGenerated):
             case nameof(GenerationItemViewModel.IsGenerating):

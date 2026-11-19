@@ -55,9 +55,71 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             start.Prompt.Should().Be("Prompt");
             start.AspectRatio.Should().Be(GenerationAspectRatios.Auto);
             start.GenerationCount.Should().Be(1);
+            GenerationRequestSettings settings = start.RequestSettings
+                ?? throw new InvalidOperationException("The start event must include request settings.");
+            settings.GetNumber(GenerationParameterNames.Temperature).Should().Be(viewModel.Temperature);
+            settings.GetString(GenerationParameterNames.ThinkingLevel)
+                .Should().Be(viewModel.SelectedThinkingLevel?.Value);
             start.AttachedImagesCount.Should().Be(0);
             start.ModelId.Should().Be(ApiModelMetadataTestCatalog.NanoBanana2ModelId);
         });
+    }
+
+    [Theory]
+    [InlineData("medium", "high", "Medium", "High")]
+    [InlineData("removed", "removed", "Max", "Medium")]
+    public void ApplyPreset_WithSavedGptSettings_UsesCompatibleRequestOptions(
+        string savedQuality,
+        string savedComplexity,
+        string expectedQuality,
+        string expectedComplexity)
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        ImageModelOption model = GetModel(viewModel, "openrouter-gpt-image-2-6-sunburst");
+        GenerationRequestSettings settings = GenerationRequestSettingsTestFactory.Create(
+            (GenerationParameterNames.AspectRatio, GenerationAspectRatios.Auto),
+            (GenerationParameterNames.Resolution, model.Resolutions.First()),
+            (GenerationParameterNames.Quality, savedQuality),
+            (GenerationParameterNames.Complexity, savedComplexity));
+        viewModel.SelectedModel = model;
+        viewModel.GenerationCount = model.GenerationCounts.Last();
+        GenerationPanelPreset preset = new(
+            model.Id,
+            "Prompt from history",
+            "16:9",
+            model.Resolutions.Last(),
+            settings);
+
+        viewModel.ApplyPreset(preset);
+
+        viewModel.SelectedModel.Should().BeSameAs(model);
+        viewModel.SelectedAspectRatio.Should().Be(GenerationAspectRatios.Auto);
+        viewModel.SelectedResolution.Should().Be(model.Resolutions.First());
+        viewModel.GenerationCount.Should().Be(model.GenerationCounts.Last());
+        viewModel.SelectedQualityOption?.Value.Should().Be(expectedQuality);
+        viewModel.SelectedComplexityOption?.Value.Should().Be(expectedComplexity);
+        viewModel.Prompt.Should().Be(preset.Prompt);
+    }
+
+    [Fact]
+    public void ApplyPreset_WithSavedTemperatureAndThinking_RestoresBothOptions()
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        ImageModelOption model = GetModel(viewModel, ApiModelMetadataTestCatalog.NanoBanana2ModelId);
+        GenerationModelThinkingMetadataDto thinking = model.Thinking
+            ?? throw new InvalidOperationException("The test requires thinking options.");
+        string alternateLevel = thinking.Levels.Single(level => level.Value != thinking.Default).Value;
+        GenerationRequestSettings settings = GenerationRequestSettingsTestFactory.Create(
+            (GenerationParameterNames.AspectRatio, model.AspectRatios.First()),
+            (GenerationParameterNames.Resolution, model.Resolutions.First()),
+            (GenerationParameterNames.Temperature, model.Temperature.Minimum),
+            (GenerationParameterNames.ThinkingLevel, alternateLevel));
+        GenerationPanelPreset preset = new(model.Id, "Prompt", "1:1", "2K", settings);
+
+        viewModel.ApplyPreset(preset);
+
+        viewModel.Temperature.Should().Be(model.Temperature.Minimum);
+        viewModel.SelectedThinkingLevel?.Value.Should().Be(alternateLevel);
     }
 
     [Fact]
@@ -346,8 +408,11 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     {
         CapturingGenerationRunDispatcher dispatcher = new();
         UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(dispatcher: dispatcher);
+        viewModel.SelectedModel = GetModel(viewModel, "openrouter-gpt-image-2-6-sunburst");
         viewModel.Prompt = "Prompt";
         viewModel.GenerationCount = 4;
+        viewModel.SelectedQuality = "Medium";
+        viewModel.SelectedComplexity = "High";
 
         await viewModel.GenerateCommand.ExecuteAsync(null);
 
@@ -357,7 +422,52 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             request.Request.GenerationCount.Should().Be(1);
             request.StartSnapshot.GenerationCount.Should().Be(1);
             request.Request.Prompt.Should().Be("Prompt");
+            GenerationRequestSettings settings = request.StartSnapshot.RequestSettings
+                ?? throw new InvalidOperationException("The start event must include request settings.");
+            settings.Parameters.Keys.Should().BeEquivalentTo(
+                GenerationParameterNames.AspectRatio,
+                GenerationParameterNames.Resolution,
+                GenerationParameterNames.Quality,
+                GenerationParameterNames.Complexity);
+            settings.GetString(GenerationParameterNames.Quality).Should().Be("medium");
+            settings.GetString(GenerationParameterNames.Complexity).Should().Be("high");
         });
+    }
+
+    [Theory]
+    [InlineData("openrouter-gpt-image-2-6-sunburst", "Model.Sunburst.Quality", "Model.Sunburst.Medium")]
+    [InlineData("openrouter-gpt-image-2-6-flare", "Model.Flare.Detail", "Model.Flare.Regular")]
+    public async Task GenerateCommand_WithModelPresentation_SavesMeaningForThatModel(
+        string modelId,
+        string labelKey,
+        string valueKey)
+    {
+        CapturingGenerationRunDispatcher dispatcher = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(dispatcher: dispatcher);
+        ImageModelOption model = GetModel(viewModel, modelId);
+        GenerationParameterPresentationDto presentation = new(
+            labelKey,
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["medium"] = valueKey });
+        viewModel.SelectedModel = model with
+        {
+            Parameters = model.Parameters!
+                .Select(parameter => parameter.Name == GenerationParameterNames.Quality
+                    ? parameter with { Presentation = presentation }
+                    : parameter)
+                .ToArray()
+        };
+        viewModel.Prompt = "Prompt";
+        viewModel.SelectedQuality = "Medium";
+
+        await viewModel.GenerateCommand.ExecuteAsync(null);
+
+        GenerationRequestSettings settings = dispatcher.CapturedRequest?.StartSnapshot.RequestSettings
+            ?? throw new InvalidOperationException("The start event must include request settings.");
+        GenerationSavedParameter quality = settings.Parameters[GenerationParameterNames.Quality];
+        quality.Value.GetString().Should().Be("medium");
+        quality.LabelLocalizationKey.Should().Be(labelKey);
+        quality.ValueLocalizationKey.Should().Be(valueKey);
+        viewModel.SelectedQualityOption?.LocalizationKey.Should().Be(valueKey);
     }
 
     [Fact]

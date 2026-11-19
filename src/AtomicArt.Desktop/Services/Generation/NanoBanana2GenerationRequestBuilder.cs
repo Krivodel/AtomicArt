@@ -60,21 +60,39 @@ public sealed class NanoBanana2GenerationRequestBuilder : IGenerationModelServic
             parameters.Complexity);
     }
 
-    public GenerationStartSnapshot CreateStartSnapshot(
+    internal GenerationStartSnapshot CreateStartSnapshot(
         ImageGenerationRequestDto request,
-        string displayName)
+        NanoBanana2GenerationParameters parameters)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(parameters);
+
+        if (!string.Equals(request.ModelId, parameters.SelectedModel.Id, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("Request and model metadata must refer to the same model.", nameof(parameters));
+        }
+
+        Dictionary<string, GenerationSavedParameter> savedParameters = GenerationWireParameters
+            .Create(request)
+            .ToDictionary(
+                parameter => parameter.Key,
+                parameter => GenerationParameterText.Describe(
+                    parameter.Key,
+                    parameter.Value,
+                    parameters.SelectedModel),
+                StringComparer.Ordinal);
+        GenerationRequestSettings settings = new(savedParameters);
 
         return new GenerationStartSnapshot(
             request.ModelId,
-            displayName,
+            parameters.ModelDisplayName,
             request.Prompt,
             request.AspectRatio,
             request.Resolution,
             request.GenerationCount,
             request.AttachedImages.Count,
-            DateTime.UtcNow);
+            DateTime.UtcNow,
+            settings);
     }
 
     private static ImageGenerationRequestDto CreateRequest(

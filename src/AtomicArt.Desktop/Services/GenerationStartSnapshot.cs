@@ -9,6 +9,7 @@ public sealed record GenerationStartSnapshot
     public string Prompt { get; }
     public string AspectRatio { get; }
     public string Resolution { get; }
+    public GenerationRequestSettings? RequestSettings { get; }
     public int GenerationCount { get; }
     public int AttachedImagesCount { get; }
     public DateTime RequestedAtUtc { get; }
@@ -21,7 +22,8 @@ public sealed record GenerationStartSnapshot
         string resolution,
         int generationCount,
         int attachedImagesCount,
-        DateTime requestedAtUtc)
+        DateTime requestedAtUtc,
+        GenerationRequestSettings? requestSettings = null)
     {
         ArgumentNullException.ThrowIfNull(modelId);
         ArgumentNullException.ThrowIfNull(modelDisplayName);
@@ -50,6 +52,7 @@ public sealed record GenerationStartSnapshot
         Prompt = prompt;
         AspectRatio = aspectRatio;
         Resolution = resolution;
+        RequestSettings = requestSettings;
         GenerationCount = generationCount;
         AttachedImagesCount = attachedImagesCount;
         RequestedAtUtc = requestedAtUtc;

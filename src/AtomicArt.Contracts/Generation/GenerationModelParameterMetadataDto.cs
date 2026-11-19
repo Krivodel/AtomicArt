@@ -10,4 +10,5 @@ public sealed record GenerationModelParameterMetadataDto(
     double? Minimum = null,
     double? Maximum = null,
     double? Step = null,
-    IReadOnlyList<JsonElement>? AllowedValues = null);
+    IReadOnlyList<JsonElement>? AllowedValues = null,
+    GenerationParameterPresentationDto? Presentation = null);

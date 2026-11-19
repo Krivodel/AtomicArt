@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Generation;
 
@@ -155,6 +157,7 @@ internal static class GalleryItemStateMapper
             Prompt = source.Prompt ?? string.Empty,
             AspectRatio = source.AspectRatio ?? string.Empty,
             Resolution = source.Resolution ?? string.Empty,
+            RequestSettings = NormalizeRequestSettings(source.RequestSettings),
             CreatedAtUtc = source.CreatedAtUtc,
             GalleryOrderTimestampUtc =
                 galleryOrderTimestampUtc ?? source.GalleryOrderTimestampUtc,
@@ -171,6 +174,26 @@ internal static class GalleryItemStateMapper
             CorrelationId = ResolveGeneratingValue(source, status, source => source.CorrelationId),
             GenerationOrdinal = ResolveGeneratingValue(source, status, source => source.GenerationOrdinal)
         };
+    }
+
+    private static GenerationRequestSettings? NormalizeRequestSettings(
+        GenerationRequestSettings? settings)
+    {
+        if (settings is null)
+        {
+            return null;
+        }
+
+        Dictionary<string, GenerationSavedParameter> parameters = settings.Parameters
+            .Where(parameter =>
+                !string.IsNullOrWhiteSpace(parameter.Key)
+                && parameter.Value?.Value.ValueKind is
+                    JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False)
+            .ToDictionary(parameter => parameter.Key, parameter => parameter.Value, StringComparer.Ordinal);
+
+        return parameters.Count == 0
+            ? null
+            : new GenerationRequestSettings(parameters);
     }
 
     private static GenerationItemStatus ResolveStatus(

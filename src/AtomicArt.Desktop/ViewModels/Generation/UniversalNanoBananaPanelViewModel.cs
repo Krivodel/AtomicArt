@@ -37,7 +37,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     public double MaximumTemperature => SelectedModel?.Temperature.Maximum ?? 0d;
     public double DefaultTemperature => SelectedModel?.Temperature.Default ?? 0d;
     public double TemperatureStep => SelectedModel?.Temperature.Step ?? 1d;
-    public string TemperatureText => _textFormatter.FormatTemperatureText(Temperature);
+    public string TemperatureText => GenerationParameterText.FormatTemperature(Temperature, _textProvider);
     public bool SupportsTemperature => (SelectedModel?.SupportsTemperature ?? true)
         && !IsGptImageModel(SelectedModel?.ProviderModelId);
     public IReadOnlyList<GenerationOptionViewModel> QualityLevels { get; private set; } = [];
@@ -103,7 +103,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private const string SelectedModelNotInitializedMessage =
         "Selected model is not initialized.";
-    private const string AutomaticQuality = "Auto";
 
     private GenerationModelParameterMetadataDto? QualityParameter =>
         FindParameter(GenerationParameterNames.Quality);
@@ -164,7 +163,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     [ObservableProperty]
     private double _temperature;
     [ObservableProperty]
-    private string _selectedQuality = AutomaticQuality;
+    private string _selectedQuality = GenerationParameterText.AutomaticValue;
     [ObservableProperty]
     private GenerationOptionViewModel? _selectedQualityOption;
     [ObservableProperty]
@@ -279,18 +278,39 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 $"Generation preset model '{preset.ModelId}' is unavailable.");
         }
 
-        SelectedModel = model;
-        SelectedAspectRatio = GenerationPanelOptionCompatibility.ResolveString(
-            preset.AspectRatio,
-            model.AspectRatios,
-            GenerationPanelOptionDefaults.GetDefaultAspectRatio(model))
-            .Value;
-        SelectedResolution = GenerationPanelOptionCompatibility.ResolveString(
-            preset.Resolution,
-            model.Resolutions,
-            GenerationPanelOptionDefaults.GetDefaultResolution(model))
-            .Value;
-        Prompt = preset.Prompt;
+        bool wasPanelStateSaveSuppressed = _suppressPanelStateSave;
+        bool wasPricePreviewRefreshSuppressed = _suppressPricePreviewRefresh;
+        bool wasSelectionValueResetNotificationsSuppressed = _suppressSelectionValueResetNotifications;
+        _suppressPanelStateSave = true;
+        _suppressPricePreviewRefresh = true;
+        _suppressSelectionValueResetNotifications = true;
+
+        try
+        {
+            SelectedModel = model;
+
+            GenerationRequestSettings? settings = preset.RequestSettings;
+            ApplyCompatibleImageSize(
+                model,
+                settings?.GetString(GenerationParameterNames.AspectRatio) ?? preset.AspectRatio,
+                settings?.GetString(GenerationParameterNames.Resolution) ?? preset.Resolution);
+
+            if (settings is not null)
+            {
+                ApplyPresetParameters(model, settings);
+            }
+
+            Prompt = preset.Prompt;
+        }
+        finally
+        {
+            _suppressPanelStateSave = wasPanelStateSaveSuppressed;
+            _suppressPricePreviewRefresh = wasPricePreviewRefreshSuppressed;
+            _suppressSelectionValueResetNotifications = wasSelectionValueResetNotificationsSuppressed;
+        }
+
+        RefreshPricePreviewUnlessSuppressed();
+        SchedulePanelStateSave(nameof(ApplyPreset));
     }
 
     public async Task PrepareStateRestoreAsync(CancellationToken ct)
@@ -816,29 +836,18 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         return GenerationProviderModelIds.IsGptImageModel(providerModelId);
     }
 
-    private static string FormatOptionValue(string? optionValue)
-    {
-        if (string.IsNullOrWhiteSpace(optionValue))
-        {
-            return AutomaticQuality;
-        }
-
-        string value = optionValue.Trim().ToLowerInvariant();
-        return $"{char.ToUpperInvariant(value[0])}{value[1..]}";
-    }
-
     private string ResolveQuality(string? quality)
     {
         if (!SupportsQuality)
         {
-            return FormatOptionValue(quality);
+            return GenerationParameterText.NormalizeOptionValue(quality);
         }
 
         string[] supportedValues = QualityLevels.Select(level => level.Value).ToArray();
         string preferredDefault = UsesGptImageQuality
             ? DescendingQualityLevels.FirstOrDefault(supportedValues.Contains) ?? supportedValues[^1]
             : QualityParameter?.DefaultValue is { ValueKind: JsonValueKind.String } value
-                ? FormatOptionValue(value.GetString())
+                ? GenerationParameterText.NormalizeOptionValue(value.GetString())
                 : supportedValues[0];
         string defaultValue = GenerationPanelOptionCompatibility.ResolveString(
             preferredDefault, supportedValues, supportedValues[0]).Value;
@@ -852,9 +861,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private void UpdateQualityOptions()
     {
-        QualityLevels = CreateParameterOptions(QualityParameter, GenerationUiLocalizationKeys.Quality.OptionPrefix)
+        QualityLevels = CreateParameterOptions(QualityParameter)
             .Where(option => !UsesGptImageQuality
-                || !string.Equals(option.Value, AutomaticQuality, StringComparison.Ordinal))
+                || !string.Equals(
+                    option.Value,
+                    GenerationParameterText.AutomaticValue,
+                    StringComparison.Ordinal))
             .ToArray();
         OnPropertyChanged(nameof(QualityLevels));
     }
@@ -868,27 +880,27 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     }
 
     private IReadOnlyList<GenerationOptionViewModel> CreateParameterOptions(
-        GenerationModelParameterMetadataDto? parameter,
-        string localizationPrefix)
+        GenerationModelParameterMetadataDto? parameter)
     {
-        return parameter?.AllowedValues?
+        if (parameter?.AllowedValues is not { } allowedValues)
+        {
+            return Array.Empty<GenerationOptionViewModel>();
+        }
+
+        return allowedValues
             .Where(value => value.ValueKind == JsonValueKind.String
                 && !string.IsNullOrWhiteSpace(value.GetString()))
-            .Select(value => FormatOptionValue(value.GetString()))
+            .Select(value => GenerationParameterText.NormalizeOptionValue(value.GetString()))
             .Select(value => new GenerationOptionViewModel(
                 value,
-                string.Equals(value, AutomaticQuality, StringComparison.Ordinal)
-                    ? GenerationLocalizationKeys.OptionsAuto
-                    : $"{localizationPrefix}{value}",
+                GenerationParameterText.GetOptionLocalizationKey(parameter, value),
                 _textProvider))
-            .ToArray() ?? Array.Empty<GenerationOptionViewModel>();
+            .ToArray();
     }
 
     private void UpdateComplexityOptions()
     {
-        ComplexityLevels = CreateParameterOptions(
-            ComplexityParameter,
-            GenerationUiLocalizationKeys.Complexity.OptionPrefix);
+        ComplexityLevels = CreateParameterOptions(ComplexityParameter);
         OnPropertyChanged(nameof(ComplexityLevels));
 
         if (SupportsComplexity)
@@ -908,7 +920,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
         string[] supportedValues = ComplexityLevels.Select(level => level.Value).ToArray();
         string defaultValue = ComplexityParameter?.DefaultValue is { ValueKind: JsonValueKind.String } value
-            ? FormatOptionValue(value.GetString())
+            ? GenerationParameterText.NormalizeOptionValue(value.GetString())
             : supportedValues[0];
 
         return GenerationPanelOptionCompatibility.ResolveString(
@@ -1009,6 +1021,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         UpdateAspectRatioOptions(value);
 
         bool wasPanelStateSaveSuppressed = _suppressPanelStateSave;
+        bool wasPricePreviewRefreshSuppressed = _suppressPricePreviewRefresh;
 
         try
         {
@@ -1035,14 +1048,14 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         finally
         {
             _suppressPanelStateSave = wasPanelStateSaveSuppressed;
-            _suppressPricePreviewRefresh = false;
+            _suppressPricePreviewRefresh = wasPricePreviewRefreshSuppressed;
         }
 
         PickImageCommand.NotifyCanExecuteChanged();
         AttachImagesCommand.NotifyCanExecuteChanged();
         AttachImageInputsCommand.NotifyCanExecuteChanged();
         GenerateCommand.NotifyCanExecuteChanged();
-        RefreshPricePreview();
+        RefreshPricePreviewUnlessSuppressed();
         SchedulePanelStateSave(nameof(OnSelectedModelChanged));
     }
 
@@ -1111,7 +1124,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     partial void OnPromptChanged(string value)
     {
-        RefreshPricePreview();
+        RefreshPricePreviewUnlessSuppressed();
         GenerateCommand.NotifyCanExecuteChanged();
         SchedulePromptStateSave();
     }
@@ -1295,16 +1308,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             SelectedModel = selectedModel;
             SelectedQuality = ResolveQuality(state.Quality);
             SelectedComplexity = ResolveComplexity(state.Complexity);
-            SelectedAspectRatio = GenerationPanelOptionCompatibility.ResolveString(
-                state.AspectRatio,
-                selectedModel.AspectRatios,
-                GenerationPanelOptionDefaults.GetDefaultAspectRatio(selectedModel))
-                .Value;
-            SelectedResolution = GenerationPanelOptionCompatibility.ResolveString(
-                state.Resolution,
-                selectedModel.Resolutions,
-                GenerationPanelOptionDefaults.GetDefaultResolution(selectedModel))
-                .Value;
+            ApplyCompatibleImageSize(selectedModel, state.AspectRatio, state.Resolution);
             Temperature = GenerationPanelOptionCompatibility.ResolveTemperature(
                 state.Temperature,
                 selectedModel.Temperature)
@@ -1446,16 +1450,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         string? previousThinkingLevel,
         int previousGenerationCount)
     {
-        (string selectedAspectRatio, bool aspectRatioWasReset) =
-            GenerationPanelOptionCompatibility.ResolveString(
-                previousAspectRatio,
-                selectedModel.AspectRatios,
-                GenerationPanelOptionDefaults.GetDefaultAspectRatio(selectedModel));
-        (string selectedResolution, bool resolutionWasReset) =
-            GenerationPanelOptionCompatibility.ResolveString(
-                previousResolution,
-                selectedModel.Resolutions,
-                GenerationPanelOptionDefaults.GetDefaultResolution(selectedModel));
+        (bool aspectRatioWasReset, bool resolutionWasReset) = ApplyCompatibleImageSize(
+            selectedModel,
+            previousAspectRatio,
+            previousResolution);
         double temperature = GenerationPanelOptionCompatibility.ResolveTemperature(
                 previousTemperature,
                 selectedModel.Temperature)
@@ -1468,14 +1466,34 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 previousGenerationCount,
                 selectedModel);
 
-        SelectedAspectRatio = selectedAspectRatio;
-        SelectedResolution = selectedResolution;
         Temperature = temperature;
         _hasTemperatureValue = true;
         SelectedThinkingLevel = thinkingLevel;
         GenerationCount = generationCount;
 
         NotifySelectionValueReset(aspectRatioWasReset, resolutionWasReset, generationCountWasReset);
+    }
+
+    private (bool AspectRatioWasReset, bool ResolutionWasReset) ApplyCompatibleImageSize(
+        ImageModelOption model,
+        string aspectRatio,
+        string resolution)
+    {
+        (string selectedAspectRatio, bool aspectRatioWasReset) =
+            GenerationPanelOptionCompatibility.ResolveString(
+                aspectRatio,
+                model.AspectRatios,
+                GenerationPanelOptionDefaults.GetDefaultAspectRatio(model));
+        (string selectedResolution, bool resolutionWasReset) =
+            GenerationPanelOptionCompatibility.ResolveString(
+                resolution,
+                model.Resolutions,
+                GenerationPanelOptionDefaults.GetDefaultResolution(model));
+
+        SelectedAspectRatio = selectedAspectRatio;
+        SelectedResolution = selectedResolution;
+
+        return (aspectRatioWasReset, resolutionWasReset);
     }
 
     private void NotifySelectionValueReset(
@@ -1523,7 +1541,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             SelectedResolution = string.Empty;
             _hasTemperatureValue = false;
             Temperature = 0d;
-            SelectedQuality = AutomaticQuality;
+            SelectedQuality = GenerationParameterText.AutomaticValue;
             SynchronizeSelectedQualityOption();
             SelectedComplexity = null;
             SynchronizeSelectedComplexityOption();

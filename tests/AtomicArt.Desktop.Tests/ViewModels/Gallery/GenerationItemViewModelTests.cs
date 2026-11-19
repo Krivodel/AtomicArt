@@ -130,11 +130,19 @@ public sealed class GenerationItemViewModelTests
     }
 
     [Fact]
-    public void Restore_AfterCompletionAndStateSerialization_KeepsLocalStartTime()
+    public void Restore_AfterCompletionAndStateSerialization_KeepsRequestSettingsAndStartTime()
     {
-        GenerationItemViewModel viewModel = CreatePlaceholder();
+        GenerationRequestSettings settings = GenerationRequestSettingsTestFactory.Create(
+            (GenerationParameterNames.AspectRatio, GenerationAspectRatios.Auto),
+            (GenerationParameterNames.Resolution, "2K"),
+            (GenerationParameterNames.Temperature, 0.5d),
+            (GenerationParameterNames.Quality, "high"),
+            (GenerationParameterNames.Complexity, "medium"),
+            (GenerationParameterNames.ThinkingLevel, "high"));
+        GenerationItemViewModel viewModel = CreatePlaceholder(settings);
         GenerationItemDto result = GenerationItemDtoTestFactory.Create(
             id: ItemId,
+            aspectRatio: "16:9",
             createdAtUtc: CreatedAtUtc.AddHours(1));
         JsonSerializerOptions serializerOptions = new(JsonSerializerDefaults.Web);
         GalleryStateSection section = new();
@@ -159,10 +167,64 @@ public sealed class GenerationItemViewModelTests
         restoredViewModel.RefreshElapsedText(CreatedAtUtc.AddMinutes(2));
 
         restoredViewModel.CreatedAtUtc.Should().Be(CreatedAtUtc);
+        JsonSerializer.Serialize(restoredViewModel.RequestSettings, serializerOptions)
+            .Should().Be(JsonSerializer.Serialize(settings, serializerOptions));
+        restoredViewModel.AspectRatio.Should().Be(result.AspectRatio);
         restoredViewModel.ElapsedText.Should().Be(string.Concat(
             "2",
             TestLocalizationTextProvider.Default.Get(CommonLocalizationKeys.TimeUnits.MinuteShort)));
         restoredViewModel.GalleryOrderTimestampUtc.Should().Be(CreatedAtUtc);
+    }
+
+    [Fact]
+    public void Deserialize_WithFlatRequestSettings_KeepsParametersAndDropsImageCount()
+    {
+        const string Json = """
+            {
+              "aspectRatio": "auto",
+              "resolution": "2K",
+              "generationCount": 4,
+              "quality": "high",
+              "thinkingLevel": "low",
+              "thinkingLevelLocalizationKey": "Generation.Thinking.Low"
+            }
+            """;
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+
+        GenerationRequestSettings settings = JsonSerializer
+            .Deserialize<GenerationRequestSettings>(Json, options)
+            ?? throw new InvalidOperationException("The legacy request settings were not loaded.");
+        string saved = JsonSerializer.Serialize(settings, options);
+
+        settings.GetString(GenerationParameterNames.Quality).Should().Be("high");
+        settings.Parameters[GenerationParameterNames.ThinkingLevel].ValueLocalizationKey
+            .Should().Be(GenerationLocalizationKeys.ThinkingLow);
+        saved.Should().NotContain("generationCount");
+    }
+
+    [Fact]
+    public void Deserialize_WithParameterMissingValue_CanResaveValidParameters()
+    {
+        const string Json = """
+            {
+              "parameters": {
+                "quality": { "value": "high" },
+                "complexity": { "labelLocalizationKey": "Generation.Labels.Complexity" }
+              }
+            }
+            """;
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+
+        GenerationRequestSettings settings = JsonSerializer
+            .Deserialize<GenerationRequestSettings>(Json, options)
+            ?? throw new InvalidOperationException("The request settings were not loaded.");
+        string saved = JsonSerializer.Serialize(settings, options);
+        GenerationRequestSettings? restored = JsonSerializer
+            .Deserialize<GenerationRequestSettings>(saved, options);
+
+        restored.Should().NotBeNull();
+        restored!.Parameters.Keys.Should().Equal(GenerationParameterNames.Quality);
+        restored.GetString(GenerationParameterNames.Quality).Should().Be("high");
     }
 
     [Fact]
@@ -246,13 +308,15 @@ public sealed class GenerationItemViewModelTests
             GenerationProviderFailureErrorCodes.RequestRejected);
     }
 
-    private static GenerationItemViewModel CreatePlaceholder()
+    private static GenerationItemViewModel CreatePlaceholder(
+        GenerationRequestSettings? requestSettings = null)
     {
         GenerationLifecycleEvent startedEvent = GalleryLifecycleTestFactory.CreateStartedEvent(
             ItemId,
             CreatedAtUtc,
             generationCount: 1,
-            attachedImagesCount: 0);
+            attachedImagesCount: 0,
+            requestSettings: requestSettings);
         GenerationStartSnapshot start = startedEvent.Start
             ?? throw new InvalidOperationException("Test generation start snapshot is missing.");
 

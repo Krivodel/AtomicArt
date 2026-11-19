@@ -20,6 +20,8 @@ public static class GalleryLocalizationKeys
         public const string Model = "Gallery.Metadata.Model";
         public const string Resolution = "Gallery.Metadata.Resolution";
         public const string AspectRatio = "Gallery.Metadata.AspectRatio";
+        public const string RequestedResolution = "Gallery.Metadata.RequestedResolution";
+        public const string RequestedAspectRatio = "Gallery.Metadata.RequestedAspectRatio";
         public const string Attachments = "Gallery.Metadata.Attachments";
         public const string EmptyAttachments = "Gallery.Metadata.EmptyAttachments";
         public const string Price = "Gallery.Metadata.Price";

@@ -1,4 +1,7 @@
+using System.Text.Json.Serialization;
+
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Services.Gallery.State;
 
@@ -10,6 +13,8 @@ public sealed class GalleryItemState : IGalleryItemStateSource
     public string Prompt { get; init; } = string.Empty;
     public string AspectRatio { get; init; } = string.Empty;
     public string Resolution { get; init; } = string.Empty;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GenerationRequestSettings? RequestSettings { get; init; }
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? GalleryOrderTimestampUtc { get; init; }
     public GenerationItemStatus Status { get; init; }

@@ -10,6 +10,27 @@
              x:Name="Root"
              x:DataType="gallery:GenerationMetadataViewModel"
              ClipToBounds="False">
+    <UserControl.Resources>
+        <DataTemplate x:Key="MetadataFieldTemplate"
+                      x:DataType="gallery:GenerationMetadataField">
+            <Grid RowSpacing="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"
+                                   SharedSizeGroup="MetadataLabel" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Classes="metadata-label"
+                           Text="{Binding Label}" />
+                <TextBlock Grid.Row="1"
+                           Classes="metadata-value">
+                    <Run Text="{Binding Value}" />
+                    <Run Foreground="{StaticResource MetadataSecondaryTextBrush}"
+                         Text="{Binding SecondaryValue}" />
+                </TextBlock>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <overlays:ModalOverlayControl x:Name="PanelRoot"
                                   MaxWidth="{StaticResource MetadataOverlayWidth}"
                                   HorizontalAlignment="Stretch"
@@ -72,56 +93,29 @@
                             </StackPanel>
 
                             <Border Classes="metadata-specs">
-                                <Grid ColumnDefinitions="1.25*,1.15*,*"
-                                      ColumnSpacing="14"
-                                      RowDefinitions="Auto,Auto,6,Auto,Auto"
-                                      RowSpacing="2">
-                                    <TextBlock Classes="metadata-label"
-                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.CreatedAt}}" />
-                                    <TextBlock Grid.Column="1"
-                                               Classes="metadata-label"
-                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.GenerationDuration}}" />
-                                    <TextBlock Grid.Column="2"
-                                               Classes="metadata-label"
-                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Price}}" />
-                                    <TextBlock x:Name="CreatedAtText"
-                                               Grid.Row="1"
-                                               Classes="metadata-value">
-                                        <Run Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy}'}" />
-                                        <Run Foreground="{StaticResource MetadataSecondaryTextBrush}"
-                                             Text="{Binding CreatedAt, StringFormat=' {0:HH:mm}'}" />
-                                    </TextBlock>
-                                    <TextBlock x:Name="DurationText"
-                                               Grid.Row="1"
-                                               Grid.Column="1"
-                                               Classes="metadata-value"
-                                               Text="{Binding GenerationDuration}" />
-                                    <TextBlock x:Name="PriceText"
-                                               Grid.Row="1"
-                                               Grid.Column="2"
-                                               Classes="metadata-value">
-                                        <Run Text="{Binding PriceCurrency}" /><Run Text="{Binding PriceAmount}" />
-                                    </TextBlock>
-
-                                    <TextBlock Grid.Row="3"
-                                               Classes="metadata-label"
-                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Resolution}}" />
-                                    <TextBlock Grid.Row="3"
-                                               Grid.Column="1"
-                                               Grid.ColumnSpan="2"
-                                               Classes="metadata-label"
-                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.AspectRatio}}" />
-                                    <TextBlock x:Name="ResolutionText"
-                                               Grid.Row="4"
-                                               Classes="metadata-value"
-                                               Text="{Binding Resolution}" />
-                                    <TextBlock x:Name="AspectRatioText"
-                                               Grid.Row="4"
-                                               Grid.Column="1"
-                                               Grid.ColumnSpan="2"
-                                               Classes="metadata-value"
-                                               Text="{Binding AspectRatio}" />
-                                </Grid>
+                                <ItemsControl ItemsSource="{Binding Rows}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Spacing="10" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="gallery:GenerationMetadataRow">
+                                            <Grid Grid.IsSharedSizeScope="True"
+                                                  ColumnDefinitions="1.25*,1.15*,*"
+                                                  ColumnSpacing="14">
+                                                <ContentControl ContentTemplate="{StaticResource MetadataFieldTemplate}"
+                                                                Content="{Binding First}" />
+                                                <ContentControl Grid.Column="1"
+                                                                ContentTemplate="{StaticResource MetadataFieldTemplate}"
+                                                                Content="{Binding Second}" />
+                                                <ContentControl Grid.Column="2"
+                                                                ContentTemplate="{StaticResource MetadataFieldTemplate}"
+                                                                Content="{Binding Third}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </Border>
                             <Border x:Name="PromptEntry"
                                     Classes="metadata-copy-host"
@@ -131,6 +125,7 @@
                                     <TextBlock x:Name="PromptHeading"
                                                VerticalAlignment="Center"
                                                Classes="metadata-heading"
+                                               Foreground="{StaticResource MetadataSecondaryTextBrush}"
                                                Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Prompt}}" />
                                     <Button x:Name="PromptCopyButton"
                                             Grid.Column="1"

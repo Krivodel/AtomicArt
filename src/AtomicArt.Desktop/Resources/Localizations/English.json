@@ -41,6 +41,7 @@
         "NoSlots": "No slots"
       },
       "Temperature": {
+        "Label": "Temperature",
         "ValueFormat": "{0:0.0}"
       },
       "Quality": {
@@ -92,6 +93,7 @@
         "Auto": "Auto"
       },
       "Thinking": {
+        "Label": "Thinking level",
         "Low": "Low",
         "High": "High"
       }
@@ -105,6 +107,8 @@
         "Model": "Model",
         "Resolution": "Resolution",
         "AspectRatio": "Aspect ratio",
+        "RequestedResolution": "Requested resolution",
+        "RequestedAspectRatio": "Requested aspect ratio",
         "Attachments": "References",
         "EmptyAttachments": "Empty",
         "Price": "Price",

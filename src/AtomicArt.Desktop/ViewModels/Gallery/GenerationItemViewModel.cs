@@ -22,6 +22,7 @@ public sealed partial class GenerationItemViewModel :
     public int? GenerationOrdinal { get; private set; }
     public DateTime? GalleryOrderTimestampUtc { get; private set; }
     public string? FailureCode { get; private set; }
+    public GenerationRequestSettings? RequestSettings { get; private init; }
     public string DisplayImagePath => ImagePath ?? string.Empty;
     public string DisplayThumbnailPath => ThumbnailPath ?? string.Empty;
     public bool HasDisplayImagePath => !string.IsNullOrWhiteSpace(DisplayImagePath);
@@ -134,6 +135,7 @@ public sealed partial class GenerationItemViewModel :
         Prompt = start.Prompt;
         Resolution = start.Resolution;
         AspectRatio = start.AspectRatio;
+        RequestSettings = start.RequestSettings;
         CreatedAtUtc = start.RequestedAtUtc;
         GalleryOrderTimestampUtc = galleryOrderTimestampUtc;
         CompletedAtUtc = null;
@@ -197,6 +199,7 @@ public sealed partial class GenerationItemViewModel :
             GalleryOrderTimestampUtc = normalizedState.GalleryOrderTimestampUtc,
             ThumbnailPath = normalizedState.ThumbnailPath,
             FailureCode = normalizedState.FailureCode,
+            RequestSettings = normalizedState.RequestSettings,
             IsFavorite = normalizedState.IsFavorite
         };
 

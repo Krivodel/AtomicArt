@@ -70,6 +70,39 @@ public sealed class GenerationModelCatalogContractsSerializationTests
         deserialized.Should().BeEquivalentTo(catalog);
     }
 
+    [Fact]
+    public void SerializeAndDeserialize_WithSameParameterName_PreservesEachModelsPresentation()
+    {
+        GenerationModelMetadataDto model = CreateCatalog().Models.Single();
+        GenerationModelParameterMetadataDto quality = new(
+            GenerationParameterNames.Quality,
+            GenerationParameterTypes.String,
+            false,
+            Presentation: new GenerationParameterPresentationDto(
+                "Model.First.Quality",
+                new Dictionary<string, string>(StringComparer.Ordinal) { ["high"] = "Model.First.High" }));
+        GenerationModelCatalogDto catalog = new(
+        [
+            model with { Id = "first", Parameters = [quality] },
+            model with
+            {
+                Id = "second",
+                Parameters =
+                [
+                    quality with
+                    {
+                        Presentation = new GenerationParameterPresentationDto("Model.Second.Detail")
+                    }
+                ]
+            }
+        ]);
+
+        string json = JsonSerializer.Serialize(catalog, JsonOptions);
+        GenerationModelCatalogDto? restored = JsonSerializer.Deserialize<GenerationModelCatalogDto>(json, JsonOptions);
+
+        restored.Should().BeEquivalentTo(catalog);
+    }
+
     private static GenerationModelCatalogDto CreateCatalog()
     {
         return new GenerationModelCatalogDto(

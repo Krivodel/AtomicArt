@@ -7,6 +7,7 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
@@ -31,10 +32,10 @@ public sealed class GenerationMetadataViewModelTests
 
         GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
 
-        viewModel.PriceCurrency.Should().Be("$");
-        viewModel.PriceAmount.Should().Be(
-            0.0678m.ToString("0.####", CultureInfo.CurrentCulture));
-        viewModel.GenerationDuration.Should().Be(
+        GenerationMetadataRow row = viewModel.Rows[0];
+        (row.Third?.Value).Should().Be(
+            string.Concat("$", 0.0678m.ToString("0.####", CultureInfo.CurrentCulture)));
+        (row.Second?.Value).Should().Be(
             new GenerationDurationFormatter(
                 TestLocalizationTextProvider.Default).Format(
                 TimeSpan.FromSeconds(30)));
@@ -47,9 +48,52 @@ public sealed class GenerationMetadataViewModelTests
 
         GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
 
-        viewModel.PriceCurrency.Should().BeEmpty();
-        viewModel.PriceAmount.Should().Be(TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Metadata.Unavailable));
-        viewModel.GenerationDuration.Should().Be(TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Metadata.Unavailable));
+        GenerationMetadataRow row = viewModel.Rows[0];
+        string unavailable = TestLocalizationTextProvider.Default.Get(GalleryLocalizationKeys.Metadata.Unavailable);
+        (row.Second?.Value).Should().Be(unavailable);
+        (row.Third?.Value).Should().Be(unavailable);
+    }
+
+    [Fact]
+    public void Rows_WithSavedOptions_ShowsLocalizedValuesAndChangedResolution()
+    {
+        GenerationRequestSettings settings = GenerationRequestSettingsTestFactory.Create(
+            (GenerationParameterNames.AspectRatio, GenerationAspectRatios.Auto),
+            (GenerationParameterNames.Resolution, "4K"),
+            (GenerationParameterNames.Quality, "high"),
+            (GenerationParameterNames.Complexity, "medium"),
+            (GenerationParameterNames.Temperature, 0.30000000000000004d));
+        GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(requestSettings: settings);
+        GenerationItemViewModel item = GenerationItemViewModel.Restore(
+            state,
+            state.ImagePath,
+            null,
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+            TestLocalizationTextProvider.Default);
+        using GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item);
+
+        IReadOnlyList<GenerationMetadataRow> rows = viewModel.Rows;
+
+        rows.Should().HaveCount(3);
+        rows[1].First.Value.Should().Be(state.Resolution);
+        rows[1].Third.Should().Be(new GenerationMetadataField("Requested resolution", "4K"));
+        rows[2].Should().Be(new GenerationMetadataRow(
+            new GenerationMetadataField("Quality", "High"),
+            new GenerationMetadataField("Complexity", "Medium"),
+            new GenerationMetadataField(
+                "Temperature",
+                string.Concat("0", CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator, "3"))));
+    }
+
+    [Fact]
+    public void Rows_WithLegacyItem_LeavesLastCellEmpty()
+    {
+        using GenerationMetadataViewModel viewModel = CreateMetadataViewModel(CreateItem());
+
+        IReadOnlyList<GenerationMetadataRow> rows = viewModel.Rows;
+
+        rows.Should().HaveCount(2);
+        rows[1].Third.Should().BeNull();
     }
 
     [Fact]
@@ -81,15 +125,18 @@ public sealed class GenerationMetadataViewModelTests
             imagePath: "result.png",
             price: price,
             generationDuration: TimeSpan.FromSeconds(30));
+        List<string?> changedProperties = [];
+        viewModel.PropertyChanged += (_, args) => changedProperties.Add(args.PropertyName);
 
         viewModel.Item.UpdateFromResult(completedItem, completedItem.ImagePath, null);
 
+        changedProperties.Should().Contain(nameof(GenerationMetadataViewModel.Rows));
         viewModel.IsGenerated.Should().BeTrue();
         viewModel.IsGenerating.Should().BeFalse();
-        viewModel.PriceCurrency.Should().Be("$");
-        viewModel.PriceAmount.Should().Be(
-            0.0678m.ToString("0.####", CultureInfo.CurrentCulture));
-        viewModel.GenerationDuration.Should().Be(
+        GenerationMetadataRow row = viewModel.Rows[0];
+        (row.Third?.Value).Should().Be(
+            string.Concat("$", 0.0678m.ToString("0.####", CultureInfo.CurrentCulture)));
+        (row.Second?.Value).Should().Be(
             new GenerationDurationFormatter(
                 TestLocalizationTextProvider.Default).Format(
                 TimeSpan.FromSeconds(30)));
@@ -125,8 +172,17 @@ public sealed class GenerationMetadataViewModelTests
             GenerationItemStatusDescriptorRegistryTestFactory.Create(),
             TestLocalizationTextProvider.Default);
 
+        return CreateMetadataViewModel(itemViewModel, textClipboardService, closeCommand, repeatCommand);
+    }
+
+    private static GenerationMetadataViewModel CreateMetadataViewModel(
+        GenerationItemViewModel item,
+        ITextClipboardService? textClipboardService = null,
+        IRelayCommand? closeCommand = null,
+        IRelayCommand? repeatCommand = null)
+    {
         return GenerationMetadataViewModel.FromItem(
-            itemViewModel,
+            item,
             closeCommand ?? new RelayCommand(() => { }),
             new RelayCommand(() => { }),
             new RelayCommand(() => { }),

@@ -37,13 +37,6 @@ public sealed class NanoBanana2PanelTextFormatter
             FormatPrice(price, currency));
     }
 
-    public string FormatTemperatureText(double temperature)
-    {
-        return _textProvider.Format(
-            GenerationUiLocalizationKeys.Temperature.ValueFormat,
-            temperature);
-    }
-
     private static string FormatPrice(decimal price, string currency)
     {
         return string.Create(

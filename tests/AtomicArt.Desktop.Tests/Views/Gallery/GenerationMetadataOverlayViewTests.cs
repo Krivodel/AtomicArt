@@ -18,6 +18,8 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Controls.Overlays;
+using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
@@ -100,18 +102,26 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                         ?? throw new InvalidOperationException("Metadata panel was not found.");
                     Button repeat = view.FindControl<Button>("RepeatEntry")
                         ?? throw new InvalidOperationException("Repeat button was not found.");
+                    Button close = panel.GetVisualDescendants()
+                        .OfType<Button>()
+                        .Single(button => button.Classes.Contains("close-action"));
+                    Border status = panel.GetVisualDescendants()
+                        .OfType<Border>()
+                        .Single(border => border.Classes.Contains("metadata-status"));
                     GenerationPreviewControl preview =
                         view.FindControl<GenerationPreviewControl>("PreviewEntry")
                         ?? throw new InvalidOperationException("Preview was not found.");
-                    TextBlock createdAt = view.FindControl<TextBlock>("CreatedAtText")
-                        ?? throw new InvalidOperationException("Date field was not found.");
+                    TextBlock createdAt = GetMetadataValue(view, GalleryLocalizationKeys.Metadata.CreatedAt);
                     Rect repeatBounds = GetBounds(repeat, panel);
+                    Rect statusBounds = GetBounds(status, panel);
 
                     panel.Bounds.Width.Should().Be(panelWidth);
                     panel.Bounds.Height.Should().BeLessThan(Math.Min(windowHeight, 480d));
                     GetBounds(panel, view).Center.X.Should().BeApproximately(windowWidth / 2d, 1d);
                     repeatBounds.Bottom.Should().BeLessThan(panel.Bounds.Height);
                     repeatBounds.Right.Should().BeLessThan(panel.Bounds.Width);
+                    close.IsVisible.Should().BeFalse();
+                    (panel.Bounds.Width - statusBounds.Right).Should().BeApproximately(statusBounds.Top, 2d);
                     preview.Bounds.Width.Should().BeInRange(230d, 300d);
                     preview.Bounds.Height.Should().Be(preview.Bounds.Width);
                     double columnGap = GetBounds(createdAt, panel).Left - GetBounds(preview, panel).Right;
@@ -145,17 +155,11 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
 
             Show(view, windowWidth, 768d, _ =>
             {
-                TextBlock date = view.FindControl<TextBlock>("CreatedAtText")
-                    ?? throw new InvalidOperationException("Date field was not found.");
-
-                TextBlock duration = view.FindControl<TextBlock>("DurationText")
-                    ?? throw new InvalidOperationException("Duration field was not found.");
-                TextBlock price = view.FindControl<TextBlock>("PriceText")
-                    ?? throw new InvalidOperationException("Price field was not found.");
-                TextBlock resolution = view.FindControl<TextBlock>("ResolutionText")
-                    ?? throw new InvalidOperationException("Resolution field was not found.");
-                TextBlock aspectRatio = view.FindControl<TextBlock>("AspectRatioText")
-                    ?? throw new InvalidOperationException("Aspect ratio field was not found.");
+                TextBlock date = GetMetadataValue(view, GalleryLocalizationKeys.Metadata.CreatedAt);
+                TextBlock duration = GetMetadataValue(view, GalleryLocalizationKeys.Metadata.GenerationDuration);
+                TextBlock price = GetMetadataValue(view, GalleryLocalizationKeys.Metadata.Price);
+                TextBlock resolution = GetMetadataValue(view, GalleryLocalizationKeys.Metadata.Resolution);
+                TextBlock aspectRatio = GetMetadataValue(view, GalleryLocalizationKeys.Metadata.AspectRatio);
                 Run[] runs = date.Inlines!.OfType<Run>().ToArray();
                 Rect dateBounds = GetBounds(date, view);
                 Rect durationBounds = GetBounds(duration, view);
@@ -195,12 +199,46 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                 TextBlock model = view.GetVisualDescendants()
                     .OfType<TextBlock>()
                     .Single(text => text.Classes.Contains("metadata-model"));
-                TextBlock price = view.FindControl<TextBlock>("PriceText")
-                    ?? throw new InvalidOperationException("Price field was not found.");
+                TextBlock price = GetMetadataValue(view, GalleryLocalizationKeys.Metadata.Price);
 
                 model.Text.Should().Be(ModelName);
+                model.FontSize.Should().Be(20d);
                 model.TextLayout.TextLines.Should().ContainSingle();
                 GetBounds(price, view).Top.Should().BeGreaterThan(GetBounds(model, view).Bottom);
+            });
+        });
+    }
+
+    [Theory]
+    [InlineData(1024d)]
+    [InlineData(670d)]
+    public void MetadataFields_WithSavedOptions_FillSecondRowBeforeWrapping(double windowWidth)
+    {
+        Dispatch(() =>
+        {
+            GenerationRequestSettings settings = GenerationRequestSettingsTestFactory.Create(
+                (GenerationParameterNames.Quality, "high"),
+                (GenerationParameterNames.Complexity, "medium"));
+            GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(requestSettings: settings);
+            GenerationItemViewModel item = GenerationItemViewModel.Restore(
+                state,
+                state.ImagePath,
+                state.ThumbnailPath,
+                GenerationItemStatusDescriptorRegistryTestFactory.Create(),
+                TestLocalizationTextProvider.Default);
+            GenerationMetadataOverlayView view = CreateView(item);
+
+            Show(view, windowWidth, 768d, _ =>
+            {
+                Rect price = GetBounds(GetMetadataValue(view, GalleryLocalizationKeys.Metadata.Price), view);
+                Rect resolution = GetBounds(GetMetadataValue(view, GalleryLocalizationKeys.Metadata.Resolution), view);
+                Rect quality = GetBounds(GetMetadataValue(view, GenerationUiLocalizationKeys.Quality.Label), view);
+                Rect complexity = GetBounds(GetMetadataValue(view, GenerationUiLocalizationKeys.Complexity.Label), view);
+
+                quality.Top.Should().Be(resolution.Top);
+                quality.Left.Should().Be(price.Left);
+                complexity.Top.Should().BeGreaterThan(quality.Bottom);
+                complexity.Left.Should().Be(resolution.Left);
             });
         });
     }
@@ -484,6 +522,16 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
         });
     }
 
+    private static TextBlock GetMetadataValue(GenerationMetadataOverlayView view, string labelKey)
+    {
+        string label = TestLocalizationTextProvider.Default.Get(labelKey);
+        return view.GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(text => text.Classes.Contains("metadata-value")
+                && text.DataContext is GenerationMetadataField field
+                && field.Label == label);
+    }
+
     private static Rect GetBounds(Control control, Control relativeTo)
     {
         Point? position = control.TranslatePoint(new Point(0d, 0d), relativeTo);
@@ -528,6 +576,14 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             imagePath,
             GenerationItemStatusDescriptorRegistryTestFactory.Create(),
             TestLocalizationTextProvider.Default);
+
+        return CreateView(item, previewSessionFactory);
+    }
+
+    private static GenerationMetadataOverlayView CreateView(
+        GenerationItemViewModel item,
+        IGenerationPreviewSessionFactory? previewSessionFactory = null)
+    {
         GenerationMetadataViewModel viewModel = GenerationMetadataViewModel.FromItem(
             item,
             new RelayCommand(() => { }),

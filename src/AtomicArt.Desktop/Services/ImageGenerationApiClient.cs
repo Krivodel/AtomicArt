@@ -289,39 +289,6 @@ public sealed class ImageGenerationApiClient
         Guid logicalGenerationId,
         int attemptNumber)
     {
-        Dictionary<string, JsonElement> parameters =
-            new Dictionary<string, JsonElement>(StringComparer.Ordinal)
-            {
-                [GenerationParameterNames.AspectRatio] =
-                    JsonSerializer.SerializeToElement(request.AspectRatio),
-                [GenerationParameterNames.Resolution] =
-                    JsonSerializer.SerializeToElement(request.Resolution)
-            };
-
-        if (request.IncludeTemperature)
-        {
-            parameters[GenerationParameterNames.Temperature] =
-                JsonSerializer.SerializeToElement(request.Temperature);
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.ThinkingLevel))
-        {
-            parameters[GenerationParameterNames.ThinkingLevel] =
-                JsonSerializer.SerializeToElement(request.ThinkingLevel);
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Quality))
-        {
-            parameters[GenerationParameterNames.Quality] =
-                JsonSerializer.SerializeToElement(request.Quality);
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Complexity))
-        {
-            parameters[GenerationParameterNames.Complexity] =
-                JsonSerializer.SerializeToElement(request.Complexity);
-        }
-
         List<GenerationAttachmentMetadataDto> attachmentMetadata =
             request.AttachedImages
                 .Select(CreateAttachmentMetadata)
@@ -331,7 +298,7 @@ public sealed class ImageGenerationApiClient
             attemptNumber,
             request.ModelId,
             request.Prompt,
-            parameters,
+            GenerationWireParameters.Create(request),
             attachmentMetadata);
         MultipartFormDataContent multipart = new();
         string metadataJson = JsonSerializer.Serialize(

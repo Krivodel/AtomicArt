@@ -38,13 +38,13 @@
     </Style>
 
     <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ Button.close-action">
+        <Setter Property="IsVisible"
+                Value="False" />
         <Setter Property="Foreground"
                 Value="{StaticResource MetadataSecondaryTextBrush}" />
     </Style>
 
     <Style Selector="Border.metadata-status">
-        <Setter Property="Margin"
-                Value="0,0,12,0" />
         <Setter Property="Padding"
                 Value="9,4" />
         <Setter Property="Background"
@@ -145,7 +145,7 @@
 
     <Style Selector="TextBlock.metadata-model">
         <Setter Property="FontSize"
-                Value="23" />
+                Value="20" />
     </Style>
 
     <Style Selector="Border.metadata-specs">

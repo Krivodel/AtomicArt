@@ -33,7 +33,8 @@ internal static class GalleryLifecycleTestFactory
         Guid correlationId,
         DateTime requestedAtUtc,
         int generationCount,
-        int attachedImagesCount)
+        int attachedImagesCount,
+        GenerationRequestSettings? requestSettings = null)
     {
         GenerationStartSnapshot start = new(
             ApiModelMetadataTestCatalog.NanoBanana2ModelId,
@@ -43,7 +44,8 @@ internal static class GalleryLifecycleTestFactory
             TestGenerationOutputMetadata.GeneratedImageResolution,
             generationCount,
             attachedImagesCount,
-            requestedAtUtc);
+            requestedAtUtc,
+            requestSettings);
 
         return new GenerationLifecycleEvent(
             correlationId,

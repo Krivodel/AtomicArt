@@ -26,7 +26,13 @@ public static class GenerationUiLocalizationKeys
 
     public static class Temperature
     {
+        public const string Label = "Generation.Temperature.Label";
         public const string ValueFormat = "Generation.Temperature.ValueFormat";
+    }
+
+    public static class Thinking
+    {
+        public const string Label = "Generation.Thinking.Label";
     }
 
     public static class Quality

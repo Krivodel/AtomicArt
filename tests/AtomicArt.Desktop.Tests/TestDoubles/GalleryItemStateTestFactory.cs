@@ -1,5 +1,6 @@
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Tests.TestDoubles;
 
@@ -23,7 +24,8 @@ internal static class GalleryItemStateTestFactory
         GenerationPriceDto? price = null,
         GenerationUsageDto? usage = null,
         int attachedImagesCount = 0,
-        bool isFavorite = false)
+        bool isFavorite = false,
+        GenerationRequestSettings? requestSettings = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
 
@@ -35,6 +37,7 @@ internal static class GalleryItemStateTestFactory
             Prompt = prompt,
             AspectRatio = GenerationAspectRatios.Auto,
             Resolution = TestGenerationOutputMetadata.GeneratedImageResolution,
+            RequestSettings = requestSettings,
             CreatedAtUtc = createdAtUtc ?? CreatedAtUtc.AddSeconds(-secondsBefore),
             GalleryOrderTimestampUtc = galleryOrderTimestampUtc,
             Status = GenerationItemStatus.Generated,

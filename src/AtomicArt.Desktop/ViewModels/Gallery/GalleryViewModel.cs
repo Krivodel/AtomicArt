@@ -260,7 +260,8 @@ public sealed partial class GalleryViewModel :
             item.ModelId,
             item.Prompt,
             item.AspectRatio,
-            item.Resolution);
+            item.Resolution,
+            item.RequestSettings);
     }
 
     private static GalleryItemDeletionRequest CreateDeletionRequest(GenerationItemViewModel item)

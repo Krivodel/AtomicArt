@@ -743,27 +743,35 @@ public sealed class GalleryViewModelTests
         viewModel.IsMetadataOpen.Should().BeFalse();
     }
 
-    [Fact]
-    public void RepeatCommand_WithOpenMetadata_AppliesPresetAndClosesOverlay()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RepeatCommand_WithOpenMetadata_AppliesPresetAndClosesOverlay(bool hasRequestSettings)
     {
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel();
         RecordingGenerationPanelPresetTarget presetTarget = new();
         viewModel.ConfigureGenerationPresetTarget(presetTarget);
-        List<GenerationItemDto> items =
-        [
-            GalleryViewModelTestFactory.CreateItem(prompt: "Repeat this prompt")
-        ];
-        viewModel.AddGeneratedItems(items, 0);
+        GenerationRequestSettings? requestSettings = hasRequestSettings
+            ? GenerationRequestSettingsTestFactory.Create(
+                (GenerationParameterNames.AspectRatio, GenerationAspectRatios.Auto),
+                (GenerationParameterNames.Resolution, "2K"),
+                (GenerationParameterNames.Quality, "high"))
+            : null;
+        GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(
+            prompt: "Repeat this prompt",
+            requestSettings: requestSettings);
+        await viewModel.RestoreStateAsync([state], CancellationToken.None);
         GenerationItemViewModel item = viewModel.Items[0];
         viewModel.OpenMetadataCommand.Execute(item);
 
         viewModel.SelectedMetadata?.RepeatCommand.Execute(item);
 
-        presetTarget.Preset.Should().Be(new GenerationPanelPreset(
+        presetTarget.Preset.Should().BeEquivalentTo(new GenerationPanelPreset(
             item.ModelId,
             item.Prompt,
             item.AspectRatio,
-            item.Resolution));
+            item.Resolution,
+            item.RequestSettings));
         viewModel.IsMetadataOpen.Should().BeFalse();
     }
 

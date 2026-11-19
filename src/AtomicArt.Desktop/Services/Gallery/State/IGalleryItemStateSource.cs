@@ -1,4 +1,5 @@
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Services.Gallery.State;
 
@@ -10,6 +11,7 @@ public interface IGalleryItemStateSource
     string Prompt { get; }
     string AspectRatio { get; }
     string Resolution { get; }
+    GenerationRequestSettings? RequestSettings { get; }
     DateTime CreatedAtUtc { get; }
     DateTime? GalleryOrderTimestampUtc { get; }
     GenerationItemStatus StatusKind { get; }

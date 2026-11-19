@@ -41,6 +41,7 @@
         "NoSlots": "Мест нет"
       },
       "Temperature": {
+        "Label": "Температура",
         "ValueFormat": "{0:0.0}"
       },
       "Quality": {
@@ -92,6 +93,7 @@
         "Auto": "Авто"
       },
       "Thinking": {
+        "Label": "Уровень размышлений",
         "Low": "Низкий",
         "High": "Высокий"
       }
@@ -105,6 +107,8 @@
         "Model": "Модель",
         "Resolution": "Разрешение",
         "AspectRatio": "Соотношение сторон",
+        "RequestedResolution": "Запрошенное разрешение",
+        "RequestedAspectRatio": "Запрошенное соотношение",
         "Attachments": "Референсы",
         "EmptyAttachments": "Пусто",
         "Price": "Цена",
