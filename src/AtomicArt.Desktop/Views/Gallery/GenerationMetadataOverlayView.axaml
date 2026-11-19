@@ -6,6 +6,7 @@
              xmlns:picaResources="using:Pica.Viewer.Resources"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:generation="using:AtomicArt.Desktop.Services.Generation"
+             xmlns:models="using:AtomicArt.Desktop.Models"
              xmlns:views="using:AtomicArt.Desktop.Views.Gallery"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationMetadataOverlayView"
              x:Name="Root"
@@ -31,189 +32,214 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <overlays:ModalOverlayControl x:Name="PanelRoot"
-                                  MaxWidth="{StaticResource MetadataOverlayWidth}"
-                                  HorizontalAlignment="Stretch"
-                                  Classes="generation-metadata gradient-surface"
-                                  Title="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Title}}"
-                                  CloseCommand="{Binding CloseCommand}">
-        <overlays:ModalOverlayControl.HeaderAccessory>
-            <Border Classes="metadata-status"
-                    Classes.generated="{Binding IsGenerated}"
-                    Classes.generating="{Binding IsGenerating}"
-                    Classes.failed="{Binding IsFailed}">
-                <StackPanel Orientation="Horizontal"
-                            Spacing="6">
-                    <Ellipse Width="6"
-                             Height="6"
-                             VerticalAlignment="Center"
-                             Classes="metadata-status-dot" />
-                    <TextBlock Classes="metadata-status-text"
-                               Text="{Binding Status}" />
-                </StackPanel>
-            </Border>
-        </overlays:ModalOverlayControl.HeaderAccessory>
+    <Grid x:Name="NavigationLayout"
+          Margin="{StaticResource MetadataNavigationMargin}"
+          VerticalAlignment="Center">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition MinWidth="{StaticResource MetadataNavigationButtonSize}" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition MinWidth="{StaticResource MetadataNavigationButtonSize}" />
+        </Grid.ColumnDefinitions>
+        <Button x:Name="PreviousGenerationButton"
+                VerticalAlignment="Stretch"
+                Classes="previous"
+                Theme="{StaticResource MetadataNavigationButtonTheme}"
+                AutomationProperties.Name="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.PreviousGeneration}}"
+                Command="{Binding NavigateCommand}"
+                CommandParameter="{x:Static models:OverlayNavigationDirection.Previous}" />
+        <overlays:ModalOverlayControl x:Name="PanelRoot"
+                                      Grid.Column="1"
+                                      MaxWidth="{StaticResource MetadataOverlayWidth}"
+                                      Margin="{StaticResource ZeroThickness}"
+                                      HorizontalAlignment="Stretch"
+                                      Classes="generation-metadata gradient-surface"
+                                      Title="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Title}}"
+                                      CloseCommand="{Binding CloseCommand}">
+            <overlays:ModalOverlayControl.HeaderAccessory>
+                <Border Classes="metadata-status"
+                        Classes.generated="{Binding IsGenerated}"
+                        Classes.generating="{Binding IsGenerating}"
+                        Classes.failed="{Binding IsFailed}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="6">
+                        <Ellipse Width="6"
+                                 Height="6"
+                                 VerticalAlignment="Center"
+                                 Classes="metadata-status-dot" />
+                        <TextBlock Classes="metadata-status-text"
+                                   Text="{Binding Status}" />
+                    </StackPanel>
+                </Border>
+            </overlays:ModalOverlayControl.HeaderAccessory>
 
-        <overlays:ModalOverlayControl.Body>
-            <Grid Margin="{StaticResource MetadataContentPadding}"
-                  ClipToBounds="False"
-                  RowDefinitions="*,Auto"
-                  RowSpacing="14">
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                              VerticalScrollBarVisibility="Auto">
-                    <Grid ClipToBounds="False"
-                          ColumnSpacing="24">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition MaxWidth="300"
-                                              Width="0.75*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+            <overlays:ModalOverlayControl.Body>
+                <Grid Margin="{StaticResource MetadataContentPadding}"
+                      ClipToBounds="False"
+                      RowDefinitions="*,Auto"
+                      RowSpacing="14">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <Grid ClipToBounds="False"
+                              ColumnSpacing="24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition MaxWidth="300"
+                                                  Width="0.75*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
 
-                        <Panel x:Name="PreviewSlot"
-                               ClipToBounds="False"
-                               ZIndex="1">
-                            <views:GenerationPreviewControl x:Name="PreviewEntry"
-                                                            HorizontalAlignment="Left"
-                                                            VerticalAlignment="Top"
-                                                            Classes="metadata-preview"
-                                                            DataContext="{Binding Item}"
-                                                            PreviewPath="{Binding DisplayThumbnailPath}"
-                                                            PreviewSize="{Binding #PreviewSlot.Bounds.Width}"
-                                                            OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}"
-                                                            ShowFailureDetailsCommand="{Binding #Root.DataContext.ShowFailureDetailsCommand}" />
-                        </Panel>
+                            <Panel x:Name="PreviewSlot"
+                                   ClipToBounds="False"
+                                   ZIndex="1">
+                                <views:GenerationPreviewControl x:Name="PreviewEntry"
+                                                                HorizontalAlignment="Left"
+                                                                VerticalAlignment="Top"
+                                                                Classes="metadata-preview"
+                                                                DataContext="{Binding Item}"
+                                                                PreviewPath="{Binding DisplayThumbnailPath}"
+                                                                PreviewSize="{Binding #PreviewSlot.Bounds.Width}"
+                                                                OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}"
+                                                                ShowFailureDetailsCommand="{Binding #Root.DataContext.ShowFailureDetailsCommand}" />
+                            </Panel>
 
-                        <StackPanel Grid.Column="1"
-                                    Spacing="14">
-                            <StackPanel Spacing="3">
-                                <TextBlock Classes="metadata-label"
-                                           Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Model}}" />
-                                <TextBlock Classes="metadata-model"
-                                           Text="{Binding ModelDisplayName}" />
+                            <StackPanel Grid.Column="1"
+                                        Spacing="14">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Classes="metadata-label"
+                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Model}}" />
+                                    <TextBlock Classes="metadata-model"
+                                               Text="{Binding ModelDisplayName}" />
+                                </StackPanel>
+
+                                <Border Classes="metadata-specs">
+                                    <ItemsControl ItemsSource="{Binding Rows}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Spacing="10" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="gallery:GenerationMetadataRow">
+                                                <Grid Grid.IsSharedSizeScope="True"
+                                                      ColumnDefinitions="1.25*,1.15*,*"
+                                                      ColumnSpacing="14">
+                                                    <ContentControl ContentTemplate="{StaticResource MetadataFieldTemplate}"
+                                                                    Content="{Binding First}" />
+                                                    <ContentControl Grid.Column="1"
+                                                                    ContentTemplate="{StaticResource MetadataFieldTemplate}"
+                                                                    Content="{Binding Second}" />
+                                                    <ContentControl Grid.Column="2"
+                                                                    ContentTemplate="{StaticResource MetadataFieldTemplate}"
+                                                                    Content="{Binding Third}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
+                                <Border x:Name="PromptEntry"
+                                        Classes="metadata-copy-host"
+                                        Background="Transparent">
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          RowDefinitions="Auto,*">
+                                        <TextBlock x:Name="PromptHeading"
+                                                   VerticalAlignment="Center"
+                                                   Classes="metadata-heading"
+                                                   Foreground="{StaticResource MetadataSecondaryTextBrush}"
+                                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Prompt}}" />
+                                        <Button x:Name="PromptCopyButton"
+                                                Grid.Column="1"
+                                                Classes="Icon metadata-copy"
+                                                AutomationProperties.Name="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Copy}}"
+                                                Command="{Binding CopyPromptCommand}">
+                                            <Path Classes="metadata-outline-icon"
+                                                  Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
+                                                  Stroke="{Binding $parent[Button].Foreground}" />
+                                        </Button>
+                                        <TextBox x:Name="PromptText"
+                                                 Grid.Row="1"
+                                                 Grid.ColumnSpan="2"
+                                                 MaxHeight="116"
+                                                 Classes="metadata-text"
+                                                 AcceptsReturn="True"
+                                                 IsReadOnly="True"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                 TextWrapping="Wrap"
+                                                 Text="{Binding Prompt}" />
+                                    </Grid>
+                                </Border>
+
                             </StackPanel>
-
-                            <Border Classes="metadata-specs">
-                                <ItemsControl ItemsSource="{Binding Rows}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Spacing="10" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="gallery:GenerationMetadataRow">
-                                            <Grid Grid.IsSharedSizeScope="True"
-                                                  ColumnDefinitions="1.25*,1.15*,*"
-                                                  ColumnSpacing="14">
-                                                <ContentControl ContentTemplate="{StaticResource MetadataFieldTemplate}"
-                                                                Content="{Binding First}" />
-                                                <ContentControl Grid.Column="1"
-                                                                ContentTemplate="{StaticResource MetadataFieldTemplate}"
-                                                                Content="{Binding Second}" />
-                                                <ContentControl Grid.Column="2"
-                                                                ContentTemplate="{StaticResource MetadataFieldTemplate}"
-                                                                Content="{Binding Third}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Border>
-                            <Border x:Name="PromptEntry"
-                                    Classes="metadata-copy-host"
-                                    Background="Transparent">
-                                <Grid ColumnDefinitions="*,Auto"
-                                      RowDefinitions="Auto,*">
-                                    <TextBlock x:Name="PromptHeading"
-                                               VerticalAlignment="Center"
-                                               Classes="metadata-heading"
-                                               Foreground="{StaticResource MetadataSecondaryTextBrush}"
-                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Prompt}}" />
-                                    <Button x:Name="PromptCopyButton"
-                                            Grid.Column="1"
-                                            Classes="Icon metadata-copy"
-                                            AutomationProperties.Name="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Copy}}"
-                                            Command="{Binding CopyPromptCommand}">
-                                        <Path Classes="metadata-outline-icon"
-                                              Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
-                                              Stroke="{Binding $parent[Button].Foreground}" />
-                                    </Button>
-                                    <TextBox x:Name="PromptText"
-                                             Grid.Row="1"
-                                             Grid.ColumnSpan="2"
-                                             MaxHeight="116"
-                                             Classes="metadata-text"
-                                             AcceptsReturn="True"
-                                             IsReadOnly="True"
-                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                             TextWrapping="Wrap"
-                                             Text="{Binding Prompt}" />
-                                </Grid>
-                            </Border>
-
-                        </StackPanel>
-                    </Grid>
-                </ScrollViewer>
-
-                <Grid Grid.Row="1"
-                      ColumnDefinitions="*,Auto"
-                      ColumnSpacing="12"
-                      RowDefinitions="Auto,Auto"
-                      RowSpacing="8">
-                    <TextBlock x:Name="ReferencesHeading"
-                               Classes="metadata-heading"
-                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Attachments}}" />
-                    <TextBlock Grid.Row="1"
-                               Classes="metadata-label"
-                               IsVisible="{Binding !HasReferences}"
-                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.EmptyAttachments}}" />
-                    <ScrollViewer Grid.Row="1"
-                                  Classes="metadata-references"
-                                  IsVisible="{Binding HasReferences}"
-                                  HorizontalScrollBarVisibility="Auto"
-                                  VerticalScrollBarVisibility="Disabled">
-                        <ItemsControl ItemsSource="{Binding References}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="generation:GenerationReference">
-                                    <views:GenerationReferenceButton Classes="metadata-reference"
-                                                                     Theme="{StaticResource MetadataReferenceButtonTheme}"
-                                                                     AutomationProperties.Name="{Binding FileName}"
-                                                                     DragService="{Binding #Root.ReferenceDragService}"
-                                                                     Command="{Binding #Root.DataContext.OpenReferenceCommand}"
-                                                                     CommandParameter="{Binding}">
-                                        <Border Classes="attachment-preview">
-                                            <views:GenerationReferencePreviewControl Stretch="UniformToFill"
-                                                                                     Loader="{Binding #Root.ReferencePreviewLoader}"
-                                                                                     Reference="{Binding}" />
-                                        </Border>
-                                    </views:GenerationReferenceButton>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        </Grid>
                     </ScrollViewer>
-                    <Panel Grid.Column="1"
-                           Classes="metadata-reuse-host"
-                           Classes.with-references="{Binding HasReferences}">
-                        <Button x:Name="RepeatEntry"
-                                VerticalAlignment="Bottom"
-                                Classes="metadata-repeat"
-                                Command="{Binding RepeatCommand}"
-                                CommandParameter="{Binding Item}">
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="8">
-                                <Path Classes="metadata-outline-icon"
-                                      Data="{StaticResource MetadataRepeatIcon}"
-                                      Stroke="{Binding $parent[Button].Foreground}" />
-                                <TextBlock Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Repeat}}" />
-                            </StackPanel>
-                        </Button>
-                    </Panel>
+
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12"
+                          RowDefinitions="Auto,Auto"
+                          RowSpacing="8">
+                        <TextBlock x:Name="ReferencesHeading"
+                                   Classes="metadata-heading"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Attachments}}" />
+                        <TextBlock Grid.Row="1"
+                                   Classes="metadata-label"
+                                   IsVisible="{Binding !HasReferences}"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.EmptyAttachments}}" />
+                        <ScrollViewer Grid.Row="1"
+                                      Classes="metadata-references"
+                                      IsVisible="{Binding HasReferences}"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding References}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="generation:GenerationReference">
+                                        <views:GenerationReferenceButton Classes="metadata-reference"
+                                                                         Theme="{StaticResource MetadataReferenceButtonTheme}"
+                                                                         AutomationProperties.Name="{Binding FileName}"
+                                                                         DragService="{Binding #Root.ReferenceDragService}"
+                                                                         Command="{Binding #Root.DataContext.OpenReferenceCommand}"
+                                                                         CommandParameter="{Binding}">
+                                            <Border Classes="attachment-preview">
+                                                <views:GenerationReferencePreviewControl Stretch="UniformToFill"
+                                                                                         Loader="{Binding #Root.ReferencePreviewLoader}"
+                                                                                         Reference="{Binding}" />
+                                            </Border>
+                                        </views:GenerationReferenceButton>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <Panel Grid.Column="1"
+                               Classes="metadata-reuse-host"
+                               Classes.with-references="{Binding HasReferences}">
+                            <Button x:Name="RepeatEntry"
+                                    VerticalAlignment="Bottom"
+                                    Classes="metadata-repeat"
+                                    Command="{Binding RepeatCommand}"
+                                    CommandParameter="{Binding Item}">
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="8">
+                                    <Path Classes="metadata-outline-icon"
+                                          Data="{StaticResource MetadataRepeatIcon}"
+                                          Stroke="{Binding $parent[Button].Foreground}" />
+                                    <TextBlock Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Repeat}}" />
+                                </StackPanel>
+                            </Button>
+                        </Panel>
+                    </Grid>
                 </Grid>
-            </Grid>
-        </overlays:ModalOverlayControl.Body>
-    </overlays:ModalOverlayControl>
+            </overlays:ModalOverlayControl.Body>
+        </overlays:ModalOverlayControl>
+        <Button x:Name="NextGenerationButton"
+                Grid.Column="2"
+                VerticalAlignment="Stretch"
+                Theme="{StaticResource MetadataNavigationButtonTheme}"
+                AutomationProperties.Name="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.NextGeneration}}"
+                Command="{Binding NavigateCommand}"
+                CommandParameter="{x:Static models:OverlayNavigationDirection.Next}" />
+    </Grid>
 </UserControl>

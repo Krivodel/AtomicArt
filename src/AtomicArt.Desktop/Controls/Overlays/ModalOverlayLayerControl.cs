@@ -6,6 +6,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 
+using AtomicArt.Desktop.Models;
+
 namespace AtomicArt.Desktop.Controls.Overlays;
 
 public sealed class ModalOverlayLayerControl : Grid
@@ -18,6 +20,10 @@ public sealed class ModalOverlayLayerControl : Grid
 
         DetachKeyboardHandler();
         _topLevel = TopLevel.GetTopLevel(this);
+        _topLevel?.AddHandler(
+            InputElement.KeyDownEvent,
+            OnTopLevelPreviewKeyDown,
+            RoutingStrategies.Tunnel);
         _topLevel?.AddHandler(
             InputElement.KeyDownEvent,
             OnTopLevelKeyDown,
@@ -45,7 +51,47 @@ public sealed class ModalOverlayLayerControl : Grid
         }
 
         _topLevel.RemoveHandler(InputElement.KeyDownEvent, OnTopLevelKeyDown);
+        _topLevel.RemoveHandler(InputElement.KeyDownEvent, OnTopLevelPreviewKeyDown);
         _topLevel = null;
+    }
+
+    private ModalOverlayPresenterControl? GetTopmostOpenOverlay()
+    {
+        return Children.OfType<ModalOverlayPresenterControl>()
+            .Where(overlay => overlay.IsOpen)
+            .OrderBy(overlay => overlay.Order)
+            .LastOrDefault();
+    }
+
+    private void OnTopLevelPreviewKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || e.KeyModifiers != KeyModifiers.None
+            || GetNavigationDirection(e) is not { } direction
+            || GetTopmostOpenOverlay()?.NavigateCommand is not { } command)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        if (command.CanExecute(direction))
+        {
+            command.Execute(direction);
+        }
+    }
+
+    private static OverlayNavigationDirection? GetNavigationDirection(KeyEventArgs e)
+    {
+        return e.Key switch
+        {
+            Key.Left or Key.A => OverlayNavigationDirection.Previous,
+            Key.Right or Key.D => OverlayNavigationDirection.Next,
+            _ => e.PhysicalKey switch
+            {
+                PhysicalKey.A => OverlayNavigationDirection.Previous,
+                PhysicalKey.D => OverlayNavigationDirection.Next,
+                _ => null
+            }
+        };
     }
 
     private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
@@ -57,12 +103,7 @@ public sealed class ModalOverlayLayerControl : Grid
             return;
         }
 
-        ModalOverlayPresenterControl? topmostOverlay = Children
-            .OfType<ModalOverlayPresenterControl>()
-            .Where(overlay => overlay.IsOpen)
-            .OrderBy(overlay => overlay.Order)
-            .LastOrDefault();
-        ICommand? closeCommand = topmostOverlay?.CloseCommand;
+        ICommand? closeCommand = GetTopmostOpenOverlay()?.CloseCommand;
 
         if (closeCommand is null || !closeCommand.CanExecute(null))
         {

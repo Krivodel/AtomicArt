@@ -41,6 +41,7 @@
     <x:Double x:Key="ZeroSize">0</x:Double>
     <x:Double x:Key="ThemeDisabledOpacity">0.75</x:Double>
     <x:Double x:Key="MetadataOverlayWidth">832</x:Double>
+    <x:Double x:Key="MetadataNavigationButtonSize">32</x:Double>
     <x:Double x:Key="MetadataCopyButtonSize">32</x:Double>
     <x:Double x:Key="MetadataIconSize">16</x:Double>
     <x:Double x:Key="SettingsOverlayWidth">660</x:Double>
@@ -77,6 +78,7 @@
     <Thickness x:Key="GalleryCardActionMargin">6</Thickness>
     <Thickness x:Key="GallerySelectionOverlayPadding">18</Thickness>
     <Thickness x:Key="MetadataContentPadding">22</Thickness>
+    <Thickness x:Key="MetadataNavigationMargin">0,20</Thickness>
     <Thickness x:Key="MetadataTextScrollInsets">0,6,0,5</Thickness>
     <Thickness x:Key="MetadataReferencesScrollInsets">20,0</Thickness>
     <Thickness x:Key="SettingsContentPadding">26,16,26,22</Thickness>

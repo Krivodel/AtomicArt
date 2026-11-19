@@ -117,7 +117,9 @@
         "GenerationDuration": "Duration",
         "Status": "Status",
         "Unavailable": "Unavailable",
-        "Repeat": "Reuse"
+        "Repeat": "Reuse",
+        "PreviousGeneration": "Previous generation",
+        "NextGeneration": "Next generation"
       },
       "Errors": {
         "FileRevealFailed": "Could not show the file in its folder."

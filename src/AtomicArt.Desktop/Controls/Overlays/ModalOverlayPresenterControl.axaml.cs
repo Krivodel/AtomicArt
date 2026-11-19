@@ -26,6 +26,11 @@ public partial class ModalOverlayPresenterControl : UserControl
         get => GetValue(CloseCommandProperty);
         set => SetValue(CloseCommandProperty, value);
     }
+    public ICommand? NavigateCommand
+    {
+        get => GetValue(NavigateCommandProperty);
+        set => SetValue(NavigateCommandProperty, value);
+    }
     public bool IsOpen
     {
         get => GetValue(IsOpenProperty);
@@ -46,6 +51,8 @@ public partial class ModalOverlayPresenterControl : UserControl
         AvaloniaProperty.Register<ModalOverlayPresenterControl, object?>(nameof(Body));
     public static readonly StyledProperty<ICommand?> CloseCommandProperty =
         AvaloniaProperty.Register<ModalOverlayPresenterControl, ICommand?>(nameof(CloseCommand));
+    public static readonly StyledProperty<ICommand?> NavigateCommandProperty =
+        AvaloniaProperty.Register<ModalOverlayPresenterControl, ICommand?>(nameof(NavigateCommand));
     public static readonly StyledProperty<bool> IsOpenProperty =
         AvaloniaProperty.Register<ModalOverlayPresenterControl, bool>(nameof(IsOpen));
     public static readonly StyledProperty<int> OrderProperty =

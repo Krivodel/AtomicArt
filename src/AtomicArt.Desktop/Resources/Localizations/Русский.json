@@ -117,7 +117,9 @@
         "GenerationDuration": "Длительность",
         "Status": "Статус",
         "Unavailable": "Недоступно",
-        "Repeat": "Переиспользовать"
+        "Repeat": "Переиспользовать",
+        "PreviousGeneration": "Предыдущая генерация",
+        "NextGeneration": "Следующая генерация"
       },
       "Errors": {
         "FileRevealFailed": "Не удалось показать файл в папке."

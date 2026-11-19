@@ -7,6 +7,7 @@ using Pica.Viewer.Services;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
@@ -27,6 +28,39 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Gallery;
 
 public sealed class GalleryViewModelTests
 {
+    [Fact]
+    public async Task NavigateMetadataCommand_WithOpenProperties_UsesGalleryOrderWithoutReplacingOverlay()
+    {
+        using GalleryViewModel gallery = GalleryViewModelTestFactory.CreateViewModel();
+        GalleryItemState[] items =
+        [
+            GalleryItemStateTestFactory.CreateGenerated(prompt: "First", secondsBefore: 0),
+            GalleryItemStateTestFactory.CreateGenerated(prompt: "Second", secondsBefore: 1),
+            GalleryItemStateTestFactory.CreateGenerated(prompt: "Third", secondsBefore: 2)
+        ];
+        await gallery.RestoreStateAsync(items, CancellationToken.None);
+        gallery.OpenMetadataCommand.Execute(gallery.Items[1]);
+        GenerationMetadataViewModel properties = gallery.SelectedMetadata!;
+
+        gallery.NavigateMetadataCommand.Execute(OverlayNavigationDirection.Previous);
+
+        gallery.SelectedMetadata.Should().BeSameAs(properties);
+        properties.Item.Should().BeSameAs(gallery.Items[0]);
+        properties.Prompt.Should().Be("First");
+        gallery.NavigateMetadataCommand.CanExecute(OverlayNavigationDirection.Previous).Should().BeFalse();
+
+        gallery.NavigateMetadataCommand.Execute(OverlayNavigationDirection.Previous);
+        properties.Item.Should().BeSameAs(gallery.Items[0]);
+        gallery.NavigateMetadataCommand.Execute(OverlayNavigationDirection.Next);
+        gallery.NavigateMetadataCommand.Execute(OverlayNavigationDirection.Next);
+
+        properties.Item.Should().BeSameAs(gallery.Items[2]);
+        gallery.NavigateMetadataCommand.CanExecute(OverlayNavigationDirection.Next).Should().BeFalse();
+        gallery.IsMetadataOpen.Should().BeTrue();
+        gallery.CloseOverlayCommand.Execute(null);
+        gallery.NavigateMetadataCommand.CanExecute(OverlayNavigationDirection.Previous).Should().BeFalse();
+    }
+
     [Fact]
     public async Task CopyImageCommand_WithGeneratedImage_CopiesImageFile()
     {

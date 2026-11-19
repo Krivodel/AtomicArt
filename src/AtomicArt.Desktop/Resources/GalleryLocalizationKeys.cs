@@ -32,6 +32,8 @@ public static class GalleryLocalizationKeys
         public const string Status = "Gallery.Metadata.Status";
         public const string Unavailable = "Gallery.Metadata.Unavailable";
         public const string Repeat = "Gallery.Metadata.Repeat";
+        public const string PreviousGeneration = "Gallery.Metadata.PreviousGeneration";
+        public const string NextGeneration = "Gallery.Metadata.NextGeneration";
     }
 
     public static class Errors

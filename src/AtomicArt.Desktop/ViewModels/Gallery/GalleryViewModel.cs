@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -6,6 +7,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Pica.Viewer.Services;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
@@ -136,6 +138,7 @@ public sealed partial class GalleryViewModel :
         _viewStateController = viewStateController;
         _itemsController = itemsController;
         Items = _itemsController.Items;
+        ((INotifyCollectionChanged)Items).CollectionChanged += OnMetadataItemsChanged;
         _itemsController.IsEmptyChanged += OnItemsEmptyChanged;
         _selectionController = new GallerySelectionController(Items);
         _selectionController.StateChanged += OnSelectionStateChanged;
@@ -243,6 +246,7 @@ public sealed partial class GalleryViewModel :
     public void Dispose()
     {
         SelectedMetadata = null;
+        ((INotifyCollectionChanged)Items).CollectionChanged -= OnMetadataItemsChanged;
         _itemsController.IsEmptyChanged -= OnItemsEmptyChanged;
         _selectionController.StateChanged -= OnSelectionStateChanged;
         _selectionController.Dispose();
@@ -477,6 +481,13 @@ public sealed partial class GalleryViewModel :
             return;
         }
 
+        if (IsMetadataOpen && SelectedMetadata is { } metadata)
+        {
+            metadata.SelectItem(item);
+            NavigateMetadataCommand.NotifyCanExecuteChanged();
+            return;
+        }
+
         SelectedMetadata = GenerationMetadataViewModel.FromItem(
             item,
             CloseOverlayCommand,
@@ -488,8 +499,48 @@ public sealed partial class GalleryViewModel :
             _priceFormatter,
             _durationFormatter,
             _textProvider,
-            OpenReferenceCommand);
+            OpenReferenceCommand,
+            NavigateMetadataCommand);
         IsMetadataOpen = true;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanNavigateMetadata))]
+    private void NavigateMetadata(OverlayNavigationDirection direction)
+    {
+        OpenMetadata(GetAdjacentMetadataItem(direction));
+    }
+
+    private bool CanNavigateMetadata(OverlayNavigationDirection direction)
+    {
+        return GetAdjacentMetadataItem(direction) is not null;
+    }
+
+    private GenerationItemViewModel? GetAdjacentMetadataItem(OverlayNavigationDirection direction)
+    {
+        if (!IsMetadataOpen || SelectedMetadata is null
+            || direction is not (OverlayNavigationDirection.Previous or OverlayNavigationDirection.Next))
+        {
+            return null;
+        }
+
+        int currentIndex = Items.IndexOf(SelectedMetadata.Item);
+        int adjacentIndex = currentIndex + (int)direction;
+        return currentIndex >= 0 && adjacentIndex >= 0 && adjacentIndex < Items.Count
+            ? Items[adjacentIndex]
+            : null;
+    }
+
+    partial void OnIsMetadataOpenChanged(bool value)
+    {
+        NavigateMetadataCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnMetadataItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (IsMetadataOpen)
+        {
+            NavigateMetadataCommand.NotifyCanExecuteChanged();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanRunCommand))]

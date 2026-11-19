@@ -11,6 +11,11 @@ public partial class GenerationMetadataOverlayView : UserControl
     public GenerationReferencePreviewLoader? ReferencePreviewLoader { get; }
     public IGenerationReferenceDragService? ReferenceDragService { get; }
 
+    private const double NavigationTriggerWidthMultiplier = 4d;
+
+    private ColumnDefinition PreviousNavigationColumn => NavigationLayout.ColumnDefinitions[0];
+    private ColumnDefinition NextNavigationColumn => NavigationLayout.ColumnDefinitions[^1];
+
     private readonly StandaloneGenerationPreviewExpansionHost _previewExpansionHost;
     private readonly IGenerationPreviewSessionFactory? _previewSessionFactory;
     private IGenerationPreviewSession? _previewSession;
@@ -18,6 +23,8 @@ public partial class GenerationMetadataOverlayView : UserControl
     public GenerationMetadataOverlayView()
     {
         InitializeComponent();
+        NavigationLayout.MaxWidth = PanelRoot.MaxWidth
+            + NavigationTriggerWidthMultiplier * (PreviousNavigationColumn.MinWidth + NextNavigationColumn.MinWidth);
         _previewExpansionHost = new StandaloneGenerationPreviewExpansionHost(this);
         PreviewEntry.ExpansionHost = _previewExpansionHost;
         PreviewEntry.OverflowOwner = PreviewEntry;
@@ -48,6 +55,14 @@ public partial class GenerationMetadataOverlayView : UserControl
         _previewSession = null;
         _previewExpansionHost.Detach();
         base.OnDetachedFromVisualTree(e);
+    }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        double layoutWidth = Math.Min(availableSize.Width, NavigationLayout.MaxWidth);
+        double sideWidth = Math.Max(PreviousNavigationColumn.MinWidth, (layoutWidth - PanelRoot.MaxWidth) / 2d);
+        PreviousNavigationColumn.Width = NextNavigationColumn.Width = new GridLength(sideWidth);
+        return base.MeasureOverride(availableSize);
     }
 
     private void AttachPreviewSession()

@@ -201,7 +201,8 @@
                     <overlays:ModalOverlayPresenterControl Order="{StaticResource MetadataModalOverlayOrder}"
                                                            Body="{Binding Gallery.SelectedMetadata}"
                                                            IsOpen="{Binding Gallery.IsMetadataOpen}"
-                                                           CloseCommand="{Binding Gallery.CloseOverlayCommand}" />
+                                                           CloseCommand="{Binding Gallery.CloseOverlayCommand}"
+                                                           NavigateCommand="{Binding Gallery.NavigateMetadataCommand}" />
                     <overlays:ModalOverlayPresenterControl Order="{StaticResource ErrorDialogModalOverlayOrder}"
                                                            Body="{Binding ErrorDialog}"
                                                            IsOpen="{Binding ErrorDialog.IsOpen}"

@@ -4,6 +4,62 @@
         xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
         xmlns:views="using:AtomicArt.Desktop.Views.Gallery">
     <Styles.Resources>
+        <ControlTheme x:Key="MetadataNavigationButtonTheme"
+                      TargetType="Button">
+            <Setter Property="Cursor"
+                    Value="Hand" />
+            <Setter Property="Focusable"
+                    Value="False" />
+            <Setter Property="Foreground"
+                    Value="{StaticResource MetadataTextBrush}" />
+            <Setter Property="Template">
+                <ControlTemplate x:DataType="Button">
+                    <Grid Background="Transparent">
+                        <Border x:Name="NavigationIconHost"
+                                Width="{StaticResource MetadataNavigationButtonSize}"
+                                Height="{StaticResource MetadataNavigationButtonSize}"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Center"
+                                Background="{StaticResource MetadataDividerBrush}"
+                                CornerRadius="0,8,8,0"
+                                Opacity="0">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                                      Easing="{StaticResource TransientOverlayEasing}"
+                                                      Property="Opacity" />
+                                </Transitions>
+                            </Border.Transitions>
+                            <Path x:Name="NavigationChevron"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Stretch="None"
+                                  Fill="{TemplateBinding Foreground}"
+                                  Data="{StaticResource MetadataNavigationIcon}" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+            <Style Selector="^.previous /template/ Border#NavigationIconHost">
+                <Setter Property="HorizontalAlignment"
+                        Value="Right" />
+                <Setter Property="CornerRadius"
+                        Value="8,0,0,8" />
+            </Style>
+            <Style Selector="^.previous /template/ Path#NavigationChevron">
+                <Setter Property="RenderTransform"
+                        Value="scale(-1,1)" />
+            </Style>
+            <Style Selector="^:pointerover:not(:disabled) /template/ Border#NavigationIconHost">
+                <Setter Property="Opacity"
+                        Value="1" />
+            </Style>
+            <Style Selector="^:disabled">
+                <Setter Property="IsHitTestVisible"
+                        Value="False" />
+            </Style>
+        </ControlTheme>
+
         <ControlTheme x:Key="MetadataReferenceButtonTheme"
                       TargetType="Button">
             <Setter Property="Cursor"

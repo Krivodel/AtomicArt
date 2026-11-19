@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
@@ -14,7 +15,7 @@ namespace AtomicArt.Desktop.ViewModels.Gallery;
 
 public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
 {
-    public GenerationItemViewModel Item { get; }
+    public GenerationItemViewModel Item { get; private set; }
     public string Prompt => Item.Prompt;
     public string ModelDisplayName => Item.ModelDisplayName;
     public IReadOnlyList<GenerationReference> References => Item.References ?? Array.Empty<GenerationReference>();
@@ -36,6 +37,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     public IRelayCommand RepeatCommand { get; }
     public IAsyncRelayCommand<GenerationReference?>? OpenReferenceCommand { get; }
     public IAsyncRelayCommand CopyPromptCommand { get; }
+    public IRelayCommand<OverlayNavigationDirection>? NavigateCommand { get; }
 
     private const int FieldsPerRow = 3;
 
@@ -56,7 +58,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         GenerationPriceFormatter priceFormatter,
         GenerationDurationFormatter durationFormatter,
         ILocalizationTextProvider textProvider,
-        IAsyncRelayCommand<GenerationReference?>? openReferenceCommand)
+        IAsyncRelayCommand<GenerationReference?>? openReferenceCommand,
+        IRelayCommand<OverlayNavigationDirection>? navigateCommand)
     {
         Item = item;
         CloseCommand = closeCommand;
@@ -64,6 +67,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         ShowFailureDetailsCommand = showFailureDetailsCommand;
         RepeatCommand = repeatCommand;
         OpenReferenceCommand = openReferenceCommand;
+        NavigateCommand = navigateCommand;
         _textClipboardService = textClipboardService;
         _errorHandler = errorHandler;
         _priceFormatter = priceFormatter;
@@ -84,7 +88,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         GenerationPriceFormatter priceFormatter,
         GenerationDurationFormatter durationFormatter,
         ILocalizationTextProvider textProvider,
-        IAsyncRelayCommand<GenerationReference?>? openReferenceCommand = null)
+        IAsyncRelayCommand<GenerationReference?>? openReferenceCommand = null,
+        IRelayCommand<OverlayNavigationDirection>? navigateCommand = null)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(closeCommand);
@@ -108,7 +113,23 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
             priceFormatter,
             durationFormatter,
             textProvider,
-            openReferenceCommand);
+            openReferenceCommand,
+            navigateCommand);
+    }
+
+    internal void SelectItem(GenerationItemViewModel item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        if (ReferenceEquals(Item, item))
+        {
+            return;
+        }
+
+        Item.PropertyChanged -= OnItemPropertyChanged;
+        Item = item;
+        Item.PropertyChanged += OnItemPropertyChanged;
+        OnPropertyChanged(string.Empty);
     }
 
     public void RefreshLocalization()

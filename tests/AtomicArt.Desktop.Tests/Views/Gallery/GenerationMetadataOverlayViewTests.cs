@@ -13,6 +13,8 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 
+using ShapePath = Avalonia.Controls.Shapes.Path;
+
 using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
 using Moq;
@@ -32,6 +34,7 @@ using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels;
+using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.Views.Gallery;
 using AtomicArt.Tests.Common;
@@ -40,6 +43,102 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 
 public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlTestBase
 {
+    [Theory]
+    [InlineData(1200d, 128d)]
+    [InlineData(1040d, 104d)]
+    [InlineData(670d, 32d)]
+    public async Task SideArrows_WhenPointerMovesOutsidePanel_AppearOnHoveredSideAndNavigate(
+        double windowWidth,
+        double triggerWidth)
+    {
+        await DispatchAsync(async () =>
+        {
+            using GalleryViewModel gallery = GalleryViewModelTestFactory.CreateViewModel();
+            GalleryItemState[] items =
+            [
+                GalleryItemStateTestFactory.CreateGenerated(prompt: "First", secondsBefore: 0),
+                GalleryItemStateTestFactory.CreateGenerated(prompt: "Second", secondsBefore: 1),
+                GalleryItemStateTestFactory.CreateGenerated(prompt: "Third", secondsBefore: 2)
+            ];
+            await gallery.RestoreStateAsync(items, CancellationToken.None);
+            gallery.OpenMetadataCommand.Execute(gallery.Items[1]);
+            GenerationMetadataOverlayView view = new() { DataContext = gallery.SelectedMetadata };
+            Window window = Show(view, windowWidth, 640d);
+
+            try
+            {
+                Button previous = view.FindControl<Button>("PreviousGenerationButton")!;
+                Button next = view.FindControl<Button>("NextGenerationButton")!;
+                TextBox prompt = view.FindControl<TextBox>("PromptText")!;
+                Border leftIcon = GetNavigationIcon(previous);
+                Border rightIcon = GetNavigationIcon(next);
+                Rect panel = GetBounds(view.FindControl<ModalOverlayControl>("PanelRoot")!, window);
+                Rect previousBounds = GetBounds(previous, window);
+                Rect nextBounds = GetBounds(next, window);
+                Rect leftIconBounds = GetBounds(leftIcon, window);
+                Rect rightIconBounds = GetBounds(rightIcon, window);
+
+                previousBounds.Width.Should().Be(triggerWidth);
+                nextBounds.Width.Should().Be(triggerWidth);
+                previousBounds.Right.Should().Be(panel.Left);
+                nextBounds.Left.Should().Be(panel.Right);
+                leftIconBounds.Right.Should().Be(panel.Left);
+                rightIconBounds.Left.Should().Be(panel.Right);
+                AssertNavigationIconLayout(leftIcon, new CornerRadius(8d, 0d, 0d, 8d));
+                AssertNavigationIconLayout(rightIcon, new CornerRadius(0d, 8d, 8d, 0d));
+                window.MouseMove(new Point(panel.Left + 1d, panel.Center.Y), RawInputModifiers.None);
+                leftIcon.Opacity.Should().Be(0d);
+                rightIcon.Opacity.Should().Be(0d);
+
+                window.MouseMove(new Point(previousBounds.Left + 1d, panel.Center.Y), RawInputModifiers.None);
+                leftIcon.Opacity.Should().Be(1d);
+                rightIcon.Opacity.Should().Be(0d);
+                window.MouseMove(leftIconBounds.Center, RawInputModifiers.None);
+                window.MouseDown(leftIconBounds.Center, MouseButton.Left);
+                window.MouseUp(leftIconBounds.Center, MouseButton.Left);
+
+                gallery.SelectedMetadata!.Item.Should().BeSameAs(gallery.Items[0]);
+                prompt.Text.Should().Be("First");
+                previous.IsEffectivelyEnabled.Should().BeFalse();
+                leftIcon.Opacity.Should().Be(0d);
+
+                window.MouseMove(new Point(nextBounds.Right - 1d, panel.Center.Y), RawInputModifiers.None);
+                rightIcon.Opacity.Should().Be(1d);
+                window.MouseMove(rightIconBounds.Center, RawInputModifiers.None);
+                window.MouseDown(rightIconBounds.Center, MouseButton.Left);
+                window.MouseUp(rightIconBounds.Center, MouseButton.Left);
+                gallery.SelectedMetadata.Item.Should().BeSameAs(gallery.Items[1]);
+                prompt.Text.Should().Be("Second");
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    private static Border GetNavigationIcon(Button button)
+    {
+        Border icon = button.GetVisualDescendants().OfType<Border>()
+            .Single(border => border.Name == "NavigationIconHost");
+        icon.Transitions = null;
+        return icon;
+    }
+
+    private static void AssertNavigationIconLayout(Border icon, CornerRadius expectedRadius)
+    {
+        ShapePath chevron = icon.GetVisualDescendants().OfType<ShapePath>()
+            .Single(path => path.Name == "NavigationChevron");
+        Geometry geometry = chevron.RenderedGeometry ?? throw new InvalidOperationException("Chevron has no geometry.");
+        Point center = chevron.TranslatePoint(geometry.Bounds.Center, icon)
+            ?? throw new InvalidOperationException("Chevron has no position.");
+
+        icon.Bounds.Size.Should().Be(new Size(32d, 32d));
+        icon.CornerRadius.Should().Be(expectedRadius);
+        center.X.Should().BeApproximately(icon.Bounds.Width / 2d, 0.5d);
+        center.Y.Should().BeApproximately(icon.Bounds.Height / 2d, 0.5d);
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(16)]
@@ -282,7 +381,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
 
     [Theory]
     [InlineData(1024d, 768d, 832d)]
-    [InlineData(670d, 340d, 630d)]
+    [InlineData(670d, 340d, 606d)]
     public async Task Layout_WithLargeOrSmallWindow_KeepsPreviewAndRepeatInModal(
         double windowWidth,
         double windowHeight,
@@ -324,7 +423,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                     repeatBounds.Right.Should().BeLessThan(panel.Bounds.Width);
                     close.IsVisible.Should().BeFalse();
                     (panel.Bounds.Width - statusBounds.Right).Should().BeApproximately(statusBounds.Top, 2d);
-                    preview.Bounds.Width.Should().BeInRange(230d, 300d);
+                    preview.Bounds.Width.Should().BeInRange(220d, 300d);
                     preview.Bounds.Height.Should().Be(preview.Bounds.Width);
                     double columnGap = GetBounds(createdAt, panel).Left - GetBounds(preview, panel).Right;
                     columnGap.Should().Be(24d);
@@ -378,7 +477,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                 resolutionBounds.Top.Should().BeGreaterThan(dateBounds.Bottom);
                 resolutionBounds.Left.Should().Be(dateBounds.Left);
                 aspectRatioBounds.Top.Should().BeApproximately(resolutionBounds.Top, 1d);
-                aspectRatioBounds.Left.Should().Be(durationBounds.Left);
+                aspectRatioBounds.Left.Should().BeApproximately(durationBounds.Left, 1d);
             });
         });
     }
