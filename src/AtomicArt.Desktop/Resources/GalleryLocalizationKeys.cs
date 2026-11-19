@@ -21,12 +21,11 @@ public static class GalleryLocalizationKeys
         public const string Resolution = "Gallery.Metadata.Resolution";
         public const string AspectRatio = "Gallery.Metadata.AspectRatio";
         public const string Attachments = "Gallery.Metadata.Attachments";
+        public const string EmptyAttachments = "Gallery.Metadata.EmptyAttachments";
         public const string Price = "Gallery.Metadata.Price";
         public const string GenerationDuration =
             "Gallery.Metadata.GenerationDuration";
-        public const string ImagePath = "Gallery.Metadata.ImagePath";
         public const string Status = "Gallery.Metadata.Status";
-        public const string NoFilePath = "Gallery.Metadata.NoFilePath";
         public const string Unavailable = "Gallery.Metadata.Unavailable";
         public const string Repeat = "Gallery.Metadata.Repeat";
     }

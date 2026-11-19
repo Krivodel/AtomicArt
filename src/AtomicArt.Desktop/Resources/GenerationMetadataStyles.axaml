@@ -1,0 +1,213 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
+        xmlns:views="using:AtomicArt.Desktop.Views.Gallery">
+    <Style Selector="overlays|ModalOverlayControl.generation-metadata">
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Background"
+                Value="{StaticResource MetadataSurfaceBrush}" />
+        <Setter Property="BlurRadius"
+                Value="0" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="CornerRadius"
+                Value="13" />
+    </Style>
+
+    <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ Border#PART_Header">
+        <Setter Property="MinHeight"
+                Value="57" />
+        <Setter Property="Padding"
+                Value="21,8,15,8" />
+        <Setter Property="Background"
+                Value="{StaticResource MetadataHeaderBrush}" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource MetadataDividerBrush}" />
+        <Setter Property="BorderThickness"
+                Value="0,0,0,1" />
+        <Setter Property="CornerRadius"
+                Value="13,13,0,0" />
+    </Style>
+
+    <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ TextBlock.overlay-title">
+        <Setter Property="FontSize"
+                Value="18" />
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataTextBrush}" />
+    </Style>
+
+    <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ Button.close-action">
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataSecondaryTextBrush}" />
+    </Style>
+
+    <Style Selector="Border.metadata-status">
+        <Setter Property="Margin"
+                Value="0,0,12,0" />
+        <Setter Property="Padding"
+                Value="9,4" />
+        <Setter Property="Background"
+                Value="{StaticResource MetadataPreviewBrush}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource MetadataStatusCornerRadius}" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-status-text">
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataSecondaryTextBrush}" />
+    </Style>
+
+    <Style Selector="Ellipse.metadata-status-dot">
+        <Setter Property="Fill"
+                Value="{StaticResource MetadataSecondaryTextBrush}" />
+    </Style>
+
+    <Style Selector="Border.metadata-status.generated">
+        <Setter Property="Background"
+                Value="{StaticResource MetadataReadySurfaceBrush}" />
+        <Style Selector="^ TextBlock.metadata-status-text">
+            <Setter Property="Foreground"
+                    Value="{StaticResource MetadataReadyBrush}" />
+        </Style>
+        <Style Selector="^ Ellipse.metadata-status-dot">
+            <Setter Property="Fill"
+                    Value="{StaticResource MetadataReadyBrush}" />
+        </Style>
+    </Style>
+
+    <Style Selector="Border.metadata-status.generating">
+        <Setter Property="Background"
+                Value="{StaticResource MetadataGeneratingSurfaceBrush}" />
+        <Style Selector="^ TextBlock.metadata-status-text">
+            <Setter Property="Foreground"
+                    Value="{StaticResource MetadataGeneratingBrush}" />
+        </Style>
+        <Style Selector="^ Ellipse.metadata-status-dot">
+            <Setter Property="Fill"
+                    Value="{StaticResource MetadataGeneratingBrush}" />
+        </Style>
+    </Style>
+
+    <Style Selector="Border.metadata-status.failed">
+        <Setter Property="Background"
+                Value="{StaticResource MetadataFailedSurfaceBrush}" />
+        <Style Selector="^ TextBlock.metadata-status-text">
+            <Setter Property="Foreground"
+                    Value="{StaticResource MetadataFailedBrush}" />
+        </Style>
+        <Style Selector="^ Ellipse.metadata-status-dot">
+            <Setter Property="Fill"
+                    Value="{StaticResource MetadataFailedBrush}" />
+        </Style>
+    </Style>
+
+    <Style Selector="views|GenerationPreviewControl.metadata-preview Border.generation-card-preview,
+                     views|GenerationPreviewControl.metadata-preview Border.generation-card-empty,
+                     views|GenerationPreviewControl.metadata-preview Border.generation-card-error">
+        <Setter Property="Background"
+                Value="{StaticResource MetadataPreviewBrush}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource GenerationCardCornerRadius}" />
+    </Style>
+
+    <Style Selector="views|GenerationPreviewControl.metadata-preview Image.generation-card-image">
+        <Setter Property="Stretch"
+                Value="Uniform" />
+    </Style>
+
+    <Style Selector="views|GenerationPreviewControl.metadata-preview TextBlock.generation-card-error-text">
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataFailedBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-label">
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataSecondaryTextBrush}" />
+        <Setter Property="TextWrapping"
+                Value="Wrap" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-model,
+                     TextBlock.metadata-value,
+                     TextBlock.metadata-heading">
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataTextBrush}" />
+        <Setter Property="TextWrapping"
+                Value="Wrap" />
+    </Style>
+
+    <Style Selector="TextBlock.metadata-model">
+        <Setter Property="FontSize"
+                Value="23" />
+    </Style>
+
+    <Style Selector="Border.metadata-specs">
+        <Setter Property="Padding"
+                Value="0,12" />
+        <Setter Property="BorderBrush"
+                Value="{StaticResource MetadataDividerBrush}" />
+        <Setter Property="BorderThickness"
+                Value="0,1" />
+    </Style>
+
+    <Style Selector="TextBox.metadata-text">
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="VerticalContentAlignment"
+                Value="Top" />
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="CaretBrush"
+                Value="Transparent" />
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataPromptTextBrush}" />
+        <Setter Property="LineHeight"
+                Value="21" />
+    </Style>
+
+    <Style Selector="Path.metadata-outline-icon">
+        <Setter Property="Width"
+                Value="{StaticResource MetadataIconSize}" />
+        <Setter Property="Height"
+                Value="{StaticResource MetadataIconSize}" />
+        <Setter Property="Stretch"
+                Value="Uniform" />
+        <Setter Property="StrokeThickness"
+                Value="1.6" />
+        <Setter Property="StrokeLineCap"
+                Value="Round" />
+        <Setter Property="StrokeJoin"
+                Value="Round" />
+    </Style>
+
+    <Style Selector="Button.metadata-repeat">
+        <Setter Property="MinHeight"
+                Value="39" />
+        <Setter Property="Padding"
+                Value="18,7" />
+        <Setter Property="Background"
+                Value="{StaticResource MetadataRepeatBrush}" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="CornerRadius"
+                Value="7" />
+        <Setter Property="FontWeight"
+                Value="SemiBold" />
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataRepeatTextBrush}" />
+    </Style>
+
+    <Style Selector="Button.metadata-repeat:pointerover:not(:disabled)">
+        <Setter Property="Background"
+                Value="{StaticResource MetadataRepeatHoverBrush}" />
+    </Style>
+</Styles>

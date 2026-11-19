@@ -53,7 +53,7 @@ public sealed class GenerationMetadataViewModelTests
     }
 
     [Fact]
-    public async Task CopyCommands_WithPromptAndPath_WriteExactText()
+    public async Task CopyPromptCommand_WithPrompt_WritesExactText()
     {
         GenerationItemDto item = CreateItem();
         RecordingTextClipboardService clipboardService = new();
@@ -65,9 +65,6 @@ public sealed class GenerationMetadataViewModelTests
 
         clipboardService.Text.Should().Be(viewModel.Prompt);
 
-        await viewModel.CopyImagePathCommand.ExecuteAsync(null);
-
-        clipboardService.Text.Should().Be(viewModel.ImagePath);
     }
 
     [Fact]
@@ -89,7 +86,6 @@ public sealed class GenerationMetadataViewModelTests
 
         viewModel.IsGenerated.Should().BeTrue();
         viewModel.IsGenerating.Should().BeFalse();
-        viewModel.ImagePath.Should().Be("result.png");
         viewModel.PriceCurrency.Should().Be("$");
         viewModel.PriceAmount.Should().Be(
             0.0678m.ToString("0.####", CultureInfo.CurrentCulture));
@@ -97,20 +93,6 @@ public sealed class GenerationMetadataViewModelTests
             new GenerationDurationFormatter(
                 TestLocalizationTextProvider.Default).Format(
                 TimeSpan.FromSeconds(30)));
-        viewModel.CopyImagePathCommand.CanExecute(null).Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task CopyImagePathCommand_WithoutImagePath_DoesNotCopyPlaceholder()
-    {
-        GenerationItemDto item = CreateItem(imagePath: null);
-        RecordingTextClipboardService clipboardService = new();
-        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item, clipboardService);
-
-        await viewModel.CopyImagePathCommand.ExecuteAsync(null);
-
-        clipboardService.Text.Should().BeNull();
-        viewModel.CopyImagePathCommand.CanExecute(null).Should().BeFalse();
     }
 
     [Fact]

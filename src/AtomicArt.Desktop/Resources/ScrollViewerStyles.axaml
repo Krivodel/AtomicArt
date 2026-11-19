@@ -5,7 +5,8 @@
                 Value="True" />
     </Style>
 
-    <Style Selector="TextBox.prompt-input /template/ ScrollViewer">
+    <Style Selector="TextBox.prompt-input /template/ ScrollViewer,
+                     TextBox.metadata-text /template/ ScrollViewer">
         <Setter Property="behaviors:SmoothScrollBehavior.WheelMultiplier"
                 Value="48" />
     </Style>

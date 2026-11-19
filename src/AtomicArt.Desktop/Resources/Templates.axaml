@@ -266,46 +266,4 @@
                 Value="UniformToFill" />
     </Style>
 
-    <Style Selector="Path.metadata-outline-icon">
-        <Setter Property="Width"
-                Value="{StaticResource MetadataIconSize}" />
-        <Setter Property="Height"
-                Value="{StaticResource MetadataIconSize}" />
-        <Setter Property="Stretch"
-                Value="Uniform" />
-        <Setter Property="Stroke"
-                Value="{DynamicResource SukiText}" />
-        <Setter Property="StrokeThickness"
-                Value="2" />
-        <Setter Property="StrokeLineCap"
-                Value="Round" />
-        <Setter Property="StrokeJoin"
-                Value="Round" />
-    </Style>
-
-    <Style Selector="Border.metadata-chip">
-        <Setter Property="Height"
-                Value="{StaticResource MetadataChipHeight}" />
-        <Setter Property="Padding"
-                Value="{StaticResource MetadataChipPadding}" />
-        <Setter Property="Background"
-                Value="{DynamicResource GlassCardBrush}" />
-        <Setter Property="BorderBrush"
-                Value="{DynamicResource MetadataBorderBrush}" />
-        <Setter Property="BorderThickness"
-                Value="{StaticResource ShellBorderThickness}" />
-        <Setter Property="CornerRadius"
-                Value="{StaticResource MetadataChipCornerRadius}" />
-    </Style>
-
-    <Style Selector="Border.metadata-status">
-        <Setter Property="Height"
-                Value="{StaticResource MetadataStatusHeight}" />
-        <Setter Property="Padding"
-                Value="{StaticResource MetadataStatusPadding}" />
-        <Setter Property="HorizontalAlignment"
-                Value="Left" />
-        <Setter Property="VerticalAlignment"
-                Value="Top" />
-    </Style>
 </Styles>

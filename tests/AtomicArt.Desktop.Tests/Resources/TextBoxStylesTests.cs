@@ -123,7 +123,7 @@ public sealed class TextBoxStylesTests : AnimatedGalleryControlTestBase
                 }
             }
 
-            textBoxCount.Should().Be(6);
+            textBoxCount.Should().Be(5);
         });
     }
 

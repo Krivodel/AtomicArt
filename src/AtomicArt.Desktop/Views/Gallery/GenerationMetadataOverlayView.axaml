@@ -11,317 +11,178 @@
              x:DataType="gallery:GenerationMetadataViewModel"
              ClipToBounds="False">
     <overlays:ModalOverlayControl x:Name="PanelRoot"
-                                  Width="{StaticResource MetadataOverlayWidth}"
-                                  Height="{StaticResource MetadataOverlayHeight}"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  Classes="gradient-background"
+                                  MaxWidth="{StaticResource MetadataOverlayWidth}"
+                                  HorizontalAlignment="Stretch"
+                                  Classes="generation-metadata"
                                   Title="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Title}}"
                                   CloseCommand="{Binding CloseCommand}">
-        <overlays:ModalOverlayControl.Body>
-            <Grid x:Name="ContentGrid"
-                  Margin="{StaticResource MetadataContentPadding}"
-                  ClipToBounds="False"
-                  RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                <views:GenerationPreviewControl x:Name="PreviewEntry"
-                                                Grid.Row="0"
-                                                HorizontalAlignment="Left"
-                                                VerticalAlignment="Top"
-                                                PreviewSize="{StaticResource MetadataPreviewSize}"
-                                                DataContext="{Binding Item}"
-                                                PreviewPath="{Binding DisplayThumbnailPath}"
-                                                OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}"
-                                                ShowFailureDetailsCommand="{Binding #Root.DataContext.ShowFailureDetailsCommand}" />
-
-                <Grid Grid.Row="0"
-                      ClipToBounds="False"
-                      ColumnDefinitions="100,21,*,Auto">
-                    <StackPanel Grid.Column="2"
-                                Margin="0,2,11,0"
-                                Spacing="0">
-                        <Grid x:Name="DateEntry"
-                              Height="30"
-                              ColumnDefinitions="19,Auto,Auto">
-                            <Path Grid.Column="0"
-                                  Classes="metadata-outline-icon"
-                                  Data="{StaticResource MetadataCalendarIcon}" />
-                            <TextBlock Grid.Column="1"
-                                       Margin="6,0,0,0"
-                                       Classes="metadata-primary-text"
-                                       Text="{Binding CreatedDate}" />
-                            <TextBlock Grid.Column="2"
-                                       Margin="4,0,0,0"
-                                       VerticalAlignment="Center"
-                                       FontSize="15"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource MetadataMutedTextBrush}"
-                                       Text="{Binding CreatedTime}" />
-                        </Grid>
-
-                        <Grid x:Name="DurationEntry"
-                              Height="30"
-                              ColumnDefinitions="19,*">
-                            <Path Grid.Column="0"
-                                  Classes="metadata-outline-icon"
-                                  Data="{StaticResource MetadataClockIcon}" />
-                            <TextBlock Grid.Column="1"
-                                       Margin="6,0,0,0"
-                                       Classes="metadata-primary-text"
-                                       Text="{Binding GenerationDuration}" />
-                        </Grid>
-
-                        <Grid x:Name="StatusEntry"
-                              Height="32"
-                              Margin="-8,0,0,0">
-                            <Border Classes="metadata-status"
-                                    IsVisible="{Binding IsGenerated}"
-                                    BorderBrush="{DynamicResource SukiSuccessColor}"
-                                    BorderThickness="{StaticResource ShellBorderThickness}"
-                                    CornerRadius="{StaticResource MetadataStatusCornerRadius}">
-                                <Border.Background>
-                                    <SolidColorBrush Color="{DynamicResource SukiSuccessColor}"
-                                                     Opacity="0.14" />
-                                </Border.Background>
-                                <StackPanel Orientation="Horizontal"
-                                            Spacing="6">
-                                    <Path Width="14"
-                                          Height="14"
-                                          Classes="metadata-outline-icon"
-                                          Data="{StaticResource MetadataCheckIcon}"
-                                          Stroke="{DynamicResource SukiSuccessColor}" />
-                                    <TextBlock Classes="metadata-status-text"
-                                               Foreground="{DynamicResource SukiSuccessColor}"
-                                               Text="{Binding Status}" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Classes="metadata-status"
-                                    IsVisible="{Binding IsGenerating}"
-                                    BorderBrush="{DynamicResource SukiPrimaryColor120}"
-                                    BorderThickness="{StaticResource ShellBorderThickness}"
-                                    CornerRadius="{StaticResource MetadataStatusCornerRadius}">
-                                <Border.Background>
-                                    <SolidColorBrush Color="{DynamicResource SukiPrimaryColor}"
-                                                     Opacity="0.14" />
-                                </Border.Background>
-                                <StackPanel Orientation="Horizontal"
-                                            Spacing="6">
-                                    <Path Width="14"
-                                          Height="14"
-                                          Classes="metadata-outline-icon"
-                                          Data="{StaticResource MetadataClockIcon}"
-                                          Stroke="{DynamicResource SukiPrimaryColor120}" />
-                                    <TextBlock Classes="metadata-status-text"
-                                               Foreground="{DynamicResource SukiPrimaryColor120}"
-                                               Text="{Binding Status}" />
-                                </StackPanel>
-                            </Border>
-
-                            <Border Classes="metadata-status"
-                                    IsVisible="{Binding IsFailed}"
-                                    BorderBrush="{DynamicResource SukiDangerColor}"
-                                    BorderThickness="{StaticResource ShellBorderThickness}"
-                                    CornerRadius="{StaticResource MetadataStatusCornerRadius}">
-                                <Border.Background>
-                                    <SolidColorBrush Color="{DynamicResource SukiDangerColor}"
-                                                     Opacity="0.2" />
-                                </Border.Background>
-                                <StackPanel Orientation="Horizontal"
-                                            Spacing="6">
-                                    <PathIcon Width="14"
-                                              Height="14"
-                                              Foreground="{DynamicResource SukiDangerColor}"
-                                              Data="{StaticResource AppCloseIcon}" />
-                                    <TextBlock Classes="metadata-status-text"
-                                               Foreground="{DynamicResource SukiDangerColor}"
-                                               Text="{Binding Status}" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </StackPanel>
-
-                    <Border x:Name="PriceEntry"
-                            Grid.Column="3"
-                            Height="43"
-                            Padding="{StaticResource MetadataPricePadding}"
-                            Background="{DynamicResource GlassCardBrush}"
-                            BorderBrush="{DynamicResource MetadataBorderBrush}"
-                            BorderThickness="{StaticResource ShellBorderThickness}"
-                            CornerRadius="{StaticResource MetadataChipCornerRadius}">
-                        <StackPanel VerticalAlignment="Center"
-                                    Orientation="Horizontal"
-                                    Spacing="7">
-                            <TextBlock VerticalAlignment="Center"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource SukiText}"
-                                       Text="{Binding PriceCurrency}" />
-                            <TextBlock Classes="metadata-primary-text"
-                                       Text="{Binding PriceAmount}" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
-
-                <StackPanel x:Name="ParametersEntry"
-                            Grid.Row="1"
-                            Margin="0,21,0,0"
-                            Orientation="Horizontal"
-                            Spacing="10">
-                    <Border MaxWidth="{StaticResource MetadataModelChipMaxWidth}"
-                            Classes="metadata-chip"
-                            Background="{DynamicResource SukiPrimaryColor10}"
-                            BorderBrush="{DynamicResource SukiMenuBorderBrush}">
-                        <TextBlock Classes="metadata-compact-text"
-                                   TextTrimming="CharacterEllipsis"
-                                   Text="{Binding ModelDisplayName}" />
-                    </Border>
-
-                    <Border Width="{StaticResource MetadataResolutionChipWidth}"
-                            Classes="metadata-chip">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="7">
-                            <Path Classes="metadata-outline-icon"
-                                  Data="{StaticResource MetadataResolutionIcon}" />
-                            <TextBlock Classes="metadata-compact-text"
-                                       Text="{Binding Resolution}" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Width="{StaticResource MetadataAspectRatioChipWidth}"
-                            Classes="metadata-chip">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="7">
-                            <Path Classes="metadata-outline-icon"
-                                  Data="{StaticResource MetadataAspectRatioIcon}" />
-                            <TextBlock Classes="metadata-compact-text"
-                                       Text="{Binding AspectRatio}" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Width="{StaticResource MetadataAttachmentChipWidth}"
-                            Classes="metadata-chip">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="7">
-                            <Path Classes="metadata-outline-icon"
-                                  Data="{StaticResource MetadataAttachmentIcon}" />
-                            <TextBlock Classes="metadata-compact-text"
-                                       Text="{Binding AttachedImagesCount}" />
-                        </StackPanel>
-                    </Border>
+        <overlays:ModalOverlayControl.HeaderAccessory>
+            <Border Classes="metadata-status"
+                    Classes.generated="{Binding IsGenerated}"
+                    Classes.generating="{Binding IsGenerating}"
+                    Classes.failed="{Binding IsFailed}">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="6">
+                    <Ellipse Width="6"
+                             Height="6"
+                             VerticalAlignment="Center"
+                             Classes="metadata-status-dot" />
+                    <TextBlock Classes="metadata-status-text"
+                               Text="{Binding Status}" />
                 </StackPanel>
+            </Border>
+        </overlays:ModalOverlayControl.HeaderAccessory>
 
-                <Border x:Name="PromptEntry"
-                        Grid.Row="2"
-                        Height="{StaticResource MetadataPromptHeight}"
-                        Margin="0,21,0,0"
-                        Padding="{StaticResource MetadataPromptPadding}"
-                        Classes="metadata-copy-host"
-                        Background="{DynamicResource GlassCardBrush}"
-                        BorderBrush="{DynamicResource MetadataBorderBrush}"
-                        BorderThickness="{StaticResource ShellBorderThickness}"
-                        CornerRadius="{StaticResource MetadataBoxCornerRadius}">
-                    <Grid>
-                        <Grid RowDefinitions="Auto,*">
-                            <TextBlock FontSize="15"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource MetadataMutedTextBrush}"
-                                       Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Prompt}}" />
-                            <TextBox x:Name="PromptText"
-                                     Grid.Row="1"
-                                     Padding="{StaticResource ZeroThickness}"
-                                     VerticalContentAlignment="Top"
-                                     Classes="metadata-text"
-                                     AcceptsReturn="True"
-                                     Background="Transparent"
-                                     BorderThickness="{StaticResource ZeroThickness}"
-                                     CaretBrush="Transparent"
-                                     FontSize="16"
-                                     FontWeight="Normal"
-                                     Foreground="{DynamicResource SukiText}"
-                                     IsReadOnly="True"
-                                     LineHeight="24"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     TextWrapping="Wrap"
-                                     Text="{Binding Prompt}" />
-                        </Grid>
+        <overlays:ModalOverlayControl.Body>
+            <Grid Margin="{StaticResource MetadataContentPadding}"
+                  ClipToBounds="False"
+                  RowDefinitions="*,Auto"
+                  RowSpacing="14">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <Grid ClipToBounds="False"
+                          ColumnSpacing="24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition MaxWidth="300"
+                                              Width="0.75*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                        <Button x:Name="PromptCopyButton"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Top"
-                                Classes="Icon metadata-copy"
-                                Command="{Binding CopyPromptCommand}">
-                            <Path Width="15"
-                                  Height="15"
-                                  Classes="metadata-outline-icon"
-                                  Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                        </Button>
+                        <Panel x:Name="PreviewSlot"
+                               ClipToBounds="False"
+                               ZIndex="1">
+                            <views:GenerationPreviewControl x:Name="PreviewEntry"
+                                                            HorizontalAlignment="Left"
+                                                            VerticalAlignment="Top"
+                                                            Classes="metadata-preview"
+                                                            DataContext="{Binding Item}"
+                                                            PreviewPath="{Binding DisplayThumbnailPath}"
+                                                            PreviewSize="{Binding #PreviewSlot.Bounds.Width}"
+                                                            OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}"
+                                                            ShowFailureDetailsCommand="{Binding #Root.DataContext.ShowFailureDetailsCommand}" />
+                        </Panel>
+
+                        <StackPanel Grid.Column="1"
+                                    Spacing="14">
+                            <StackPanel Spacing="3">
+                                <TextBlock Classes="metadata-label"
+                                           Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Model}}" />
+                                <TextBlock Classes="metadata-model"
+                                           Text="{Binding ModelDisplayName}" />
+                            </StackPanel>
+
+                            <Border Classes="metadata-specs">
+                                <Grid ColumnDefinitions="1.25*,1.15*,*"
+                                      ColumnSpacing="14"
+                                      RowDefinitions="Auto,Auto,6,Auto,Auto"
+                                      RowSpacing="2">
+                                    <TextBlock Classes="metadata-label"
+                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.CreatedAt}}" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="metadata-label"
+                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.GenerationDuration}}" />
+                                    <TextBlock Grid.Column="2"
+                                               Classes="metadata-label"
+                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Price}}" />
+                                    <TextBlock x:Name="CreatedAtText"
+                                               Grid.Row="1"
+                                               Classes="metadata-value">
+                                        <Run Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy}'}" />
+                                        <Run Foreground="{StaticResource MetadataSecondaryTextBrush}"
+                                             Text="{Binding CreatedAt, StringFormat=' {0:HH:mm}'}" />
+                                    </TextBlock>
+                                    <TextBlock x:Name="DurationText"
+                                               Grid.Row="1"
+                                               Grid.Column="1"
+                                               Classes="metadata-value"
+                                               Text="{Binding GenerationDuration}" />
+                                    <TextBlock x:Name="PriceText"
+                                               Grid.Row="1"
+                                               Grid.Column="2"
+                                               Classes="metadata-value">
+                                        <Run Text="{Binding PriceCurrency}" /><Run Text="{Binding PriceAmount}" />
+                                    </TextBlock>
+
+                                    <TextBlock Grid.Row="3"
+                                               Classes="metadata-label"
+                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Resolution}}" />
+                                    <TextBlock Grid.Row="3"
+                                               Grid.Column="1"
+                                               Grid.ColumnSpan="2"
+                                               Classes="metadata-label"
+                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.AspectRatio}}" />
+                                    <TextBlock x:Name="ResolutionText"
+                                               Grid.Row="4"
+                                               Classes="metadata-value"
+                                               Text="{Binding Resolution}" />
+                                    <TextBlock x:Name="AspectRatioText"
+                                               Grid.Row="4"
+                                               Grid.Column="1"
+                                               Grid.ColumnSpan="2"
+                                               Classes="metadata-value"
+                                               Text="{Binding AspectRatio}" />
+                                </Grid>
+                            </Border>
+                            <Border x:Name="PromptEntry"
+                                    Classes="metadata-copy-host"
+                                    Background="Transparent">
+                                <Grid ColumnDefinitions="*,Auto"
+                                      RowDefinitions="Auto,*">
+                                    <TextBlock x:Name="PromptHeading"
+                                               VerticalAlignment="Center"
+                                               Classes="metadata-heading"
+                                               Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Prompt}}" />
+                                    <Button x:Name="PromptCopyButton"
+                                            Grid.Column="1"
+                                            Classes="Icon metadata-copy"
+                                            AutomationProperties.Name="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Copy}}"
+                                            Command="{Binding CopyPromptCommand}">
+                                        <Path Classes="metadata-outline-icon"
+                                              Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
+                                              Stroke="{Binding $parent[Button].Foreground}" />
+                                    </Button>
+                                    <TextBox x:Name="PromptText"
+                                             Grid.Row="1"
+                                             Grid.ColumnSpan="2"
+                                             MaxHeight="116"
+                                             Classes="metadata-text"
+                                             AcceptsReturn="True"
+                                             IsReadOnly="True"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                             TextWrapping="Wrap"
+                                             Text="{Binding Prompt}" />
+                                </Grid>
+                            </Border>
+
+                        </StackPanel>
                     </Grid>
-                </Border>
+                </ScrollViewer>
 
-                <Border x:Name="PathEntry"
-                        Grid.Row="3"
-                        Height="{StaticResource MetadataPathHeight}"
-                        Margin="0,14,0,0"
-                        Padding="{StaticResource MetadataPathPadding}"
-                        Classes="metadata-copy-host"
-                        Background="{DynamicResource GlassCardBrush}"
-                        BorderBrush="{DynamicResource MetadataBorderBrush}"
-                        BorderThickness="{StaticResource ShellBorderThickness}"
-                        CornerRadius="{StaticResource MetadataBoxCornerRadius}">
-                    <Grid>
-                        <Grid ColumnDefinitions="*,Auto">
-                            <TextBox x:Name="PathText"
-                                     Grid.Column="0"
-                                     Padding="{StaticResource ZeroThickness}"
-                                     VerticalAlignment="Center"
-                                     Classes="metadata-text"
-                                     Background="Transparent"
-                                     BorderThickness="{StaticResource ZeroThickness}"
-                                     CaretBrush="Transparent"
-                                     FontSize="14"
-                                     Foreground="{DynamicResource MetadataMutedTextBrush}"
-                                     IsReadOnly="True"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                     TextWrapping="NoWrap"
-                                     Text="{Binding ImagePath}" />
-                            <Button x:Name="PathCopyButton"
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Classes="Icon metadata-copy"
-                                    Command="{Binding CopyImagePathCommand}">
-                                <Path Width="15"
-                                      Height="15"
-                                      Classes="metadata-outline-icon"
-                                      Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
-                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </Border>
-
-                <Button x:Name="RepeatEntry"
-                        Grid.Row="4"
-                        Height="{StaticResource MetadataRepeatButtonHeight}"
-                        Margin="{StaticResource MetadataRepeatMargin}"
-                        Padding="{StaticResource ZeroThickness}"
-                        Background="{DynamicResource GlassCardBrush}"
-                        BorderBrush="{DynamicResource MetadataBorderBrush}"
-                        BorderThickness="{StaticResource ShellBorderThickness}"
-                        CornerRadius="{StaticResource MetadataBoxCornerRadius}"
-                        Command="{Binding RepeatCommand}"
-                        CommandParameter="{Binding Item}">
-                    <StackPanel HorizontalAlignment="Center"
-                                Orientation="Horizontal"
-                                Spacing="10">
-                        <Path Classes="metadata-outline-icon"
-                              Data="{StaticResource MetadataRepeatIcon}" />
-                        <TextBlock Classes="metadata-compact-text"
-                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Repeat}}" />
+                <Grid Grid.Row="1"
+                      ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center"
+                                Spacing="3">
+                        <TextBlock Classes="metadata-heading"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Attachments}}" />
+                        <TextBlock Classes="metadata-label"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.EmptyAttachments}}" />
                     </StackPanel>
-                </Button>
+                    <Button x:Name="RepeatEntry"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Classes="metadata-repeat"
+                            Command="{Binding RepeatCommand}"
+                            CommandParameter="{Binding Item}">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8">
+                            <Path Classes="metadata-outline-icon"
+                                  Data="{StaticResource MetadataRepeatIcon}"
+                                  Stroke="{Binding $parent[Button].Foreground}" />
+                            <TextBlock Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Repeat}}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
             </Grid>
         </overlays:ModalOverlayControl.Body>
     </overlays:ModalOverlayControl>

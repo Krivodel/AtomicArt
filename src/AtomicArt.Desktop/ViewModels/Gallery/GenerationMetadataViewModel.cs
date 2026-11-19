@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,20 +14,13 @@ namespace AtomicArt.Desktop.ViewModels.Gallery;
 public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
 {
     public GenerationItemViewModel Item { get; }
-    public string CreatedDate => Item.CreatedAtUtc
-        .ToLocalTime()
-        .ToString("d", CultureInfo.CurrentCulture);
-    public string CreatedTime => Item.CreatedAtUtc
-        .ToLocalTime()
-        .ToString("t", CultureInfo.CurrentCulture);
+    public DateTime CreatedAt => Item.CreatedAtUtc.ToLocalTime();
     public string Prompt => Item.Prompt;
     public string ModelDisplayName => Item.ModelDisplayName;
     public string Resolution => Item.Resolution;
     public string AspectRatio => GenerationAspectRatios.IsAuto(Item.AspectRatio)
         ? _textProvider.Get(GenerationLocalizationKeys.OptionsAuto)
         : Item.AspectRatio;
-    public string AttachedImagesCount =>
-        Item.AttachedImagesCount.ToString(CultureInfo.CurrentCulture);
     public string PriceCurrency => Item.Price is GenerationPriceDto price
         ? _priceFormatter.FormatCurrency(price)
         : string.Empty;
@@ -37,8 +29,6 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         : _textProvider.Get(GalleryLocalizationKeys.Metadata.Unavailable);
     public string GenerationDuration => _durationFormatter.Format(Item.GenerationDuration)
         ?? _textProvider.Get(GalleryLocalizationKeys.Metadata.Unavailable);
-    public string ImagePath => Item.ImagePath
-        ?? _textProvider.Get(GalleryLocalizationKeys.Metadata.NoFilePath);
     public string Status => Item.Status;
     public bool IsGenerated => Item.IsGenerated;
     public bool IsGenerating => Item.IsGenerating;
@@ -48,7 +38,6 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     public IRelayCommand ShowFailureDetailsCommand { get; }
     public IRelayCommand RepeatCommand { get; }
     public IAsyncRelayCommand CopyPromptCommand { get; }
-    public IAsyncRelayCommand CopyImagePathCommand { get; }
 
     private readonly ITextClipboardService _textClipboardService;
     private readonly IViewModelErrorHandler _errorHandler;
@@ -79,7 +68,6 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         _durationFormatter = durationFormatter;
         _textProvider = textProvider;
         CopyPromptCommand = new AsyncRelayCommand(CopyPromptAsync);
-        CopyImagePathCommand = new AsyncRelayCommand(CopyImagePathAsync, CanCopyImagePath);
         Item.PropertyChanged += OnItemPropertyChanged;
     }
 
@@ -121,13 +109,9 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
 
     public void RefreshLocalization()
     {
-        OnPropertyChanged(nameof(CreatedDate));
-        OnPropertyChanged(nameof(CreatedTime));
-        OnPropertyChanged(nameof(AttachedImagesCount));
         OnPropertyChanged(nameof(AspectRatio));
         OnPropertyChanged(nameof(PriceAmount));
         OnPropertyChanged(nameof(GenerationDuration));
-        OnPropertyChanged(nameof(ImagePath));
         OnPropertyChanged(nameof(Status));
     }
 
@@ -136,28 +120,11 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         Item.PropertyChanged -= OnItemPropertyChanged;
     }
 
-    private Task CopyPromptAsync(CancellationToken ct)
-    {
-        return CopyTextAsync(Prompt, nameof(CopyPromptAsync), ct);
-    }
-
-    private Task CopyImagePathAsync(CancellationToken ct)
-    {
-        string? imagePath = Item.ImagePath;
-
-        if (string.IsNullOrWhiteSpace(imagePath))
-        {
-            return Task.CompletedTask;
-        }
-
-        return CopyTextAsync(imagePath, nameof(CopyImagePathAsync), ct);
-    }
-
-    private async Task CopyTextAsync(string text, string operationName, CancellationToken ct)
+    private async Task CopyPromptAsync(CancellationToken ct)
     {
         try
         {
-            await _textClipboardService.SetTextAsync(text, ct);
+            await _textClipboardService.SetTextAsync(Prompt, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -165,13 +132,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            _errorHandler.Log(ex, operationName);
+            _errorHandler.Log(ex, nameof(CopyPromptAsync));
         }
-    }
-
-    private bool CanCopyImagePath()
-    {
-        return !string.IsNullOrWhiteSpace(Item.ImagePath);
     }
 
     private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -181,29 +143,22 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         if (string.IsNullOrWhiteSpace(e.PropertyName))
         {
             OnPropertyChanged(string.Empty);
-            CopyImagePathCommand.NotifyCanExecuteChanged();
             return;
         }
 
         switch (e.PropertyName)
         {
             case nameof(GenerationItemViewModel.CreatedAtUtc):
-                OnPropertyChanged(nameof(CreatedDate));
-                OnPropertyChanged(nameof(CreatedTime));
+                OnPropertyChanged(nameof(CreatedAt));
                 break;
             case nameof(GenerationItemViewModel.Price):
                 OnPropertyChanged(nameof(PriceCurrency));
                 OnPropertyChanged(nameof(PriceAmount));
                 break;
-            case nameof(GenerationItemViewModel.ImagePath):
-                OnPropertyChanged(nameof(ImagePath));
-                CopyImagePathCommand.NotifyCanExecuteChanged();
-                break;
             case nameof(GenerationItemViewModel.Prompt):
             case nameof(GenerationItemViewModel.ModelDisplayName):
             case nameof(GenerationItemViewModel.Resolution):
             case nameof(GenerationItemViewModel.AspectRatio):
-            case nameof(GenerationItemViewModel.AttachedImagesCount):
             case nameof(GenerationItemViewModel.GenerationDuration):
             case nameof(GenerationItemViewModel.Status):
             case nameof(GenerationItemViewModel.IsGenerated):

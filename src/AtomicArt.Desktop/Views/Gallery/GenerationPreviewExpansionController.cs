@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -23,10 +24,11 @@ internal sealed class GenerationPreviewExpansionController
     private readonly Image _previewImage;
     private readonly Border _previewTrigger;
     private readonly TranslateTransform _previewTranslation = new();
+    private readonly Transitions _sizeTransitions;
+    private IDisposable? _activeSizeTransitions;
     private CancellationTokenSource? _collapseCompletionCancellation;
     private IGenerationPreviewExpansionHost? _expansionHost;
     private Control? _overflowOwner;
-    private Size _collapsedPreviewSize;
     private KeyModifiers _currentKeyModifiers;
     private bool _isPointerInsidePreview;
     private bool _isPreviewExpanded;
@@ -45,7 +47,23 @@ internal sealed class GenerationPreviewExpansionController
         _previewImage = previewImage ?? throw new ArgumentNullException(nameof(previewImage));
         _previewTrigger = previewTrigger ?? throw new ArgumentNullException(nameof(previewTrigger));
 
-        InitializeAnimation();
+        CubicEaseOut easing = new();
+        _sizeTransitions =
+        [
+            new DoubleTransition
+            {
+                Property = Control.WidthProperty,
+                Duration = PreviewAnimationDuration,
+                Easing = easing
+            },
+            new DoubleTransition
+            {
+                Property = Control.HeightProperty,
+                Duration = PreviewAnimationDuration,
+                Easing = easing
+            }
+        ];
+        InitializePositionAndShadowAnimation(easing);
         _owner.AddHandler(
             InputElement.PointerMovedEvent,
             OnPreviewPointerMoved,
@@ -78,25 +96,9 @@ internal sealed class GenerationPreviewExpansionController
         return size is { Width: > 0d, Height: > 0d };
     }
 
-    private void InitializeAnimation()
+    private void InitializePositionAndShadowAnimation(CubicEaseOut easing)
     {
-        CubicEaseOut easing = new();
         _previewExpansionHost.RenderTransform = _previewTranslation;
-        _previewExpansionHost.Transitions =
-        [
-            new DoubleTransition
-            {
-                Property = Control.WidthProperty,
-                Duration = PreviewAnimationDuration,
-                Easing = easing
-            },
-            new DoubleTransition
-            {
-                Property = Control.HeightProperty,
-                Duration = PreviewAnimationDuration,
-                Easing = easing
-            }
-        ];
         _previewTranslation.Transitions =
         [
             new DoubleTransition
@@ -173,10 +175,8 @@ internal sealed class GenerationPreviewExpansionController
             previewBounds,
             viewportBounds);
 
-        _collapsedPreviewSize = previewSize;
         BeginPreviewExpansion(expansionHost, overflowOwner);
-        _previewExpansionHost.Width = expandedSize.Width;
-        _previewExpansionHost.Height = expandedSize.Height;
+        SetExpansionSize(expandedSize);
         _previewTranslation.X = translation.X;
         _previewTranslation.Y = translation.Y;
         _previewShadow.Opacity = 1d;
@@ -196,6 +196,10 @@ internal sealed class GenerationPreviewExpansionController
         }
 
         _isPreviewExpanded = true;
+        _activeSizeTransitions ??= _previewExpansionHost.SetValue(
+            Visual.TransitionsProperty,
+            _sizeTransitions,
+            BindingPriority.Style);
         expansionHost.EnableOverflow(overflowOwner, _previewExpansionHost);
         overflowOwner.Classes.Add(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
     }
@@ -214,8 +218,7 @@ internal sealed class GenerationPreviewExpansionController
             _expansionHost.BeginOverflowCollapse(_overflowOwner);
         }
 
-        _previewExpansionHost.Width = _collapsedPreviewSize.Width;
-        _previewExpansionHost.Height = _collapsedPreviewSize.Height;
+        SetExpansionSize(new Size(_owner.PreviewSize, _owner.PreviewSize));
         _previewTranslation.X = 0d;
         _previewTranslation.Y = 0d;
         _previewShadow.Opacity = 0d;
@@ -238,9 +241,7 @@ internal sealed class GenerationPreviewExpansionController
 
             if (!_isPreviewExpanded)
             {
-                RestoreOverflow();
-                _overflowOwner?.Classes.Remove(
-                    GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+                RestoreCollapsedPreviewImmediately();
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -268,17 +269,19 @@ internal sealed class GenerationPreviewExpansionController
     {
         _isPreviewExpanded = false;
         _overflowOwner?.Classes.Remove(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
-
-        if (HasPositiveSize(_collapsedPreviewSize))
-        {
-            _previewExpansionHost.Width = _collapsedPreviewSize.Width;
-            _previewExpansionHost.Height = _collapsedPreviewSize.Height;
-        }
-
+        _activeSizeTransitions?.Dispose();
+        _activeSizeTransitions = null;
+        SetExpansionSize(new Size(_owner.PreviewSize, _owner.PreviewSize));
         _previewTranslation.X = 0d;
         _previewTranslation.Y = 0d;
         _previewShadow.Opacity = 0d;
         RestoreOverflow();
+    }
+
+    private void SetExpansionSize(Size size)
+    {
+        _previewExpansionHost.SetCurrentValue(Control.WidthProperty, size.Width);
+        _previewExpansionHost.SetCurrentValue(Control.HeightProperty, size.Height);
     }
 
     private void RestoreOverflow()

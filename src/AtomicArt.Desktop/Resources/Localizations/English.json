@@ -101,18 +101,17 @@
       "Metadata": {
         "Title": "Properties",
         "CreatedAt": "Date",
-        "Prompt": "PROMPT",
+        "Prompt": "Prompt",
         "Model": "Model",
         "Resolution": "Resolution",
         "AspectRatio": "Aspect ratio",
-        "Attachments": "Attachments",
+        "Attachments": "References",
+        "EmptyAttachments": "Empty",
         "Price": "Price",
-        "GenerationDuration": "Generation time",
-        "ImagePath": "Path",
+        "GenerationDuration": "Duration",
         "Status": "Status",
-        "NoFilePath": "No file",
         "Unavailable": "Unavailable",
-        "Repeat": "Repeat"
+        "Repeat": "Reuse"
       },
       "Errors": {
         "FileRevealFailed": "Could not show the file in its folder."

@@ -52,15 +52,20 @@
 
                         <Grid Margin="{TemplateBinding Padding}"
                               RowDefinitions="Auto,*">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="overlay-title"
-                                           Text="{TemplateBinding Title}" />
-                                <Button Grid.Column="1"
-                                        Classes="Icon close-action"
-                                        Command="{TemplateBinding CloseCommand}">
-                                    <PathIcon Data="{StaticResource AppCloseIcon}" />
-                                </Button>
-                            </Grid>
+                            <Border x:Name="PART_Header">
+                                <Grid ColumnDefinitions="*,Auto,Auto">
+                                    <TextBlock Classes="overlay-title"
+                                               Text="{TemplateBinding Title}" />
+                                    <ContentPresenter Grid.Column="1"
+                                                      VerticalAlignment="Center"
+                                                      Content="{TemplateBinding HeaderAccessory}" />
+                                    <Button Grid.Column="2"
+                                            Classes="Icon close-action"
+                                            Command="{TemplateBinding CloseCommand}">
+                                        <PathIcon Data="{StaticResource AppCloseIcon}" />
+                                    </Button>
+                                </Grid>
+                            </Border>
 
                             <ContentControl Grid.Row="1"
                                             HorizontalContentAlignment="Stretch"

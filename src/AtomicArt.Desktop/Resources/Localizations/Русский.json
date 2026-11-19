@@ -101,18 +101,17 @@
       "Metadata": {
         "Title": "Свойства",
         "CreatedAt": "Дата",
-        "Prompt": "ПРОМПТ",
+        "Prompt": "Промпт",
         "Model": "Модель",
         "Resolution": "Разрешение",
-        "AspectRatio": "Соотношение",
-        "Attachments": "Вложения",
+        "AspectRatio": "Соотношение сторон",
+        "Attachments": "Референсы",
+        "EmptyAttachments": "Пусто",
         "Price": "Цена",
-        "GenerationDuration": "Время генерации",
-        "ImagePath": "Путь",
+        "GenerationDuration": "Длительность",
         "Status": "Статус",
-        "NoFilePath": "Нет файла",
         "Unavailable": "Недоступно",
-        "Repeat": "Повторить"
+        "Repeat": "Переиспользовать"
       },
       "Errors": {
         "FileRevealFailed": "Не удалось показать файл в папке."

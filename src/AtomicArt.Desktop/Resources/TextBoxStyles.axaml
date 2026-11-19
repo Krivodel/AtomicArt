@@ -33,6 +33,13 @@
                 Value="{StaticResource MetadataTextScrollInsets}" />
     </Style>
 
+    <Style Selector="TextBox.metadata-text /template/ DockPanel#PART_InnerDockPanel > Grid > ScrollViewer">
+        <Setter Property="Grid.Column"
+                Value="0" />
+        <Setter Property="Grid.ColumnSpan"
+                Value="3" />
+    </Style>
+
     <Style Selector="TextBox /template/ ScrollViewer /template/ ScrollContentPresenter#PART_ContentPresenter">
         <Setter Property="behaviors:VerticalFadeMaskBehavior.Insets"
                 Value="{DynamicResource TextControlThemePadding}" />

@@ -1,9 +1,13 @@
+using System.Globalization;
+
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 
 using CommunityToolkit.Mvvm.Input;
@@ -29,7 +33,7 @@ namespace AtomicArt.Desktop.Tests.Views.Gallery;
 public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlTestBase
 {
     [Fact]
-    public void Background_WhenShown_UsesPopupGradientWithoutBlur()
+    public void Background_WhenShown_UsesOpaqueMetadataPaletteWithoutBlur()
     {
         Dispatch(() =>
         {
@@ -45,23 +49,20 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                     window.CaptureRenderedFrame();
                     ModalOverlayControl panel = view.FindControl<ModalOverlayControl>("PanelRoot")
                         ?? throw new InvalidOperationException("Metadata panel was not found.");
-                    Border backgroundBase = panel
+                    Border header = panel
                         .GetVisualDescendants()
                         .OfType<Border>()
-                        .Single(control => control.Classes.Contains("opaque-background-base"));
-                    bool gradientFound = panel.TryFindResource(
-                        "PopupGradientBrush",
-                        out object? popupGradient);
-                    ISolidColorBrush backgroundBrush = backgroundBase.Background
-                        .Should()
-                        .BeAssignableTo<ISolidColorBrush>()
-                        .Subject;
+                        .Single(control => control.Name == "PART_Header");
+                    Border status = header
+                        .GetVisualDescendants()
+                        .OfType<Border>()
+                        .Single(control => control.Classes.Contains("metadata-status"));
 
-                    gradientFound.Should().BeTrue();
-                    panel.Background.Should().BeSameAs(popupGradient);
+                    AssertBrushColor(panel.Background, "#1B2435");
+                    AssertBrushColor(header.Background, "#202A3C");
+                    AssertBrushColor(status.Background, "#203B35");
                     panel.BlurRadius.Should().Be(0d);
-                    backgroundBrush.Color.A.Should().Be(byte.MaxValue);
-                    backgroundBrush.Opacity.Should().Be(1d);
+                    panel.BorderThickness.Should().Be(default(Thickness));
                 }
                 finally
                 {
@@ -75,8 +76,13 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
         });
     }
 
-    [Fact]
-    public void Layout_WhenShown_UsesSharedModalAtRenderedSize()
+    [Theory]
+    [InlineData(1024d, 768d, 832d)]
+    [InlineData(670d, 340d, 630d)]
+    public void Layout_WithLargeOrSmallWindow_KeepsPreviewAndRepeatInModal(
+        double windowWidth,
+        double windowHeight,
+        double panelWidth)
     {
         Dispatch(() =>
         {
@@ -85,7 +91,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             try
             {
                 GenerationMetadataOverlayView view = CreateView(imagePath);
-                Window window = Show(view, 750d, 780d);
+                Window window = Show(view, windowWidth, windowHeight);
 
                 try
                 {
@@ -94,18 +100,23 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                         ?? throw new InvalidOperationException("Metadata panel was not found.");
                     Button repeat = view.FindControl<Button>("RepeatEntry")
                         ?? throw new InvalidOperationException("Repeat button was not found.");
-                    TextBlock title = panel
-                        .GetVisualDescendants()
-                        .OfType<TextBlock>()
-                        .Single(control => control.Classes.Contains("overlay-title"));
+                    GenerationPreviewControl preview =
+                        view.FindControl<GenerationPreviewControl>("PreviewEntry")
+                        ?? throw new InvalidOperationException("Preview was not found.");
+                    TextBlock createdAt = view.FindControl<TextBlock>("CreatedAtText")
+                        ?? throw new InvalidOperationException("Date field was not found.");
                     Rect repeatBounds = GetBounds(repeat, panel);
-                    double contentBottom = panel.Bounds.Height - panel.Padding.Bottom;
 
-                    panel.Width.Should().Be(560d);
-                    panel.Height.Should().Be(588d);
-                    repeatBounds.Bottom.Should().BeLessThanOrEqualTo(contentBottom);
-                    title.FontWeight.Should().Be(FontWeight.Bold);
-                    view.GetVisualDescendants().OfType<LayoutTransformControl>().Should().BeEmpty();
+                    panel.Bounds.Width.Should().Be(panelWidth);
+                    panel.Bounds.Height.Should().BeLessThan(Math.Min(windowHeight, 480d));
+                    GetBounds(panel, view).Center.X.Should().BeApproximately(windowWidth / 2d, 1d);
+                    repeatBounds.Bottom.Should().BeLessThan(panel.Bounds.Height);
+                    repeatBounds.Right.Should().BeLessThan(panel.Bounds.Width);
+                    preview.Bounds.Width.Should().BeInRange(230d, 300d);
+                    preview.Bounds.Height.Should().Be(preview.Bounds.Width);
+                    double columnGap = GetBounds(createdAt, panel).Left - GetBounds(preview, panel).Right;
+                    columnGap.Should().Be(24d);
+                    AssertBrushColor(repeat.Background, "#B8D0FF");
                 }
                 finally
                 {
@@ -116,6 +127,81 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             {
                 File.Delete(imagePath);
             }
+        });
+    }
+
+    [Theory]
+    [InlineData(1024d)]
+    [InlineData(670d)]
+    public void MetadataFields_WithWideOrNarrowWindow_StayInOrder(double windowWidth)
+    {
+        Dispatch(() =>
+        {
+            GenerationMetadataOverlayView view = CreateView("result.png");
+            GenerationMetadataViewModel viewModel = (GenerationMetadataViewModel)view.DataContext!;
+            string localTime = viewModel.Item.CreatedAtUtc
+                .ToLocalTime()
+                .ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+
+            Show(view, windowWidth, 768d, _ =>
+            {
+                TextBlock date = view.FindControl<TextBlock>("CreatedAtText")
+                    ?? throw new InvalidOperationException("Date field was not found.");
+
+                TextBlock duration = view.FindControl<TextBlock>("DurationText")
+                    ?? throw new InvalidOperationException("Duration field was not found.");
+                TextBlock price = view.FindControl<TextBlock>("PriceText")
+                    ?? throw new InvalidOperationException("Price field was not found.");
+                TextBlock resolution = view.FindControl<TextBlock>("ResolutionText")
+                    ?? throw new InvalidOperationException("Resolution field was not found.");
+                TextBlock aspectRatio = view.FindControl<TextBlock>("AspectRatioText")
+                    ?? throw new InvalidOperationException("Aspect ratio field was not found.");
+                Run[] runs = date.Inlines!.OfType<Run>().ToArray();
+                Rect dateBounds = GetBounds(date, view);
+                Rect durationBounds = GetBounds(duration, view);
+                Rect priceBounds = GetBounds(price, view);
+                Rect resolutionBounds = GetBounds(resolution, view);
+                Rect aspectRatioBounds = GetBounds(aspectRatio, view);
+
+                string.Concat(runs.Select(run => run.Text)).Should().Be(localTime);
+                runs[1].Foreground.Should().NotBe(date.Foreground);
+                date.TextLayout.TextLines.Should().ContainSingle();
+                durationBounds.Top.Should().Be(dateBounds.Top);
+                durationBounds.Left.Should().BeGreaterThan(dateBounds.Left);
+                priceBounds.Top.Should().Be(dateBounds.Top);
+                priceBounds.Left.Should().BeGreaterThan(durationBounds.Left);
+                resolutionBounds.Top.Should().BeGreaterThan(dateBounds.Bottom);
+                resolutionBounds.Left.Should().Be(dateBounds.Left);
+                aspectRatioBounds.Top.Should().Be(resolutionBounds.Top);
+                aspectRatioBounds.Left.Should().Be(durationBounds.Left);
+            });
+        });
+    }
+
+    [Theory]
+    [InlineData(1024d)]
+    [InlineData(670d)]
+    public void ModelName_WithPrice_KeepsFullNameOnOneLine(double windowWidth)
+    {
+        Dispatch(() =>
+        {
+            const string ModelName = "GPT Image 2.5 Sunburst";
+            GenerationMetadataOverlayView view = CreateView("result.png");
+            GenerationMetadataViewModel viewModel = (GenerationMetadataViewModel)view.DataContext!;
+            viewModel.Item.ModelDisplayName = ModelName;
+
+            Show(view, windowWidth, 768d, _ =>
+            {
+                TextBlock model = view.GetVisualDescendants()
+                    .OfType<TextBlock>()
+                    .Single(text => text.Classes.Contains("metadata-model"));
+                TextBlock price = view.FindControl<TextBlock>("PriceText")
+                    ?? throw new InvalidOperationException("Price field was not found.");
+
+                model.Text.Should().Be(ModelName);
+                model.TextLayout.TextLines.Should().ContainSingle();
+                GetBounds(price, view).Top.Should().BeGreaterThan(GetBounds(model, view).Bottom);
+            });
         });
     }
 
@@ -138,6 +224,10 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                         .GetVisualDescendants()
                         .OfType<GenerationPreviewControl>()
                         .Single();
+                    using Bitmap bitmap = new(imagePath);
+                    Image previewImage = preview.FindControl<Image>("PreviewImage")
+                        ?? throw new InvalidOperationException("Preview image was not found.");
+                    previewImage.Source = bitmap;
                     Grid previewHost = preview.FindControl<Grid>("PreviewExpansionHost")
                         ?? throw new InvalidOperationException("Preview host was not found.");
                     Border prompt = view.FindControl<Border>("PromptEntry")
@@ -155,8 +245,8 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                         null);
                     window.CaptureRenderedFrame();
 
-                    previewHost.Width.Should().BeGreaterThan(100d);
-                    previewHost.Height.Should().BeGreaterThan(100d);
+                    previewHost.Width.Should().BeGreaterThan(preview.PreviewSize);
+                    previewHost.Height.Should().BeGreaterThan(preview.PreviewSize);
                     preview.ZIndex.Should().Be(
                         GenerationPreviewExpansionVisualMetrics.ActiveZIndex);
                     Rect expandedBounds = GetBounds(previewHost, view);
@@ -175,8 +265,15 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
         });
     }
 
+    private static void AssertBrushColor(IBrush? brush, string hex)
+    {
+        ISolidColorBrush solidBrush = brush.Should().BeAssignableTo<ISolidColorBrush>().Subject;
+        solidBrush.Color.Should().Be(Color.Parse(hex));
+        solidBrush.Opacity.Should().Be(1d);
+    }
+
     [Fact]
-    public void PromptText_WhenScrolled_UsesFullViewportWithMetadataInsets()
+    public void PromptText_WhenScrolled_UsesFullViewportAndHalfWheelStep()
     {
         Dispatch(() =>
         {
@@ -207,6 +304,11 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
                         promptTextBox,
                         window,
                         themePadding);
+                    ScrollViewer promptScrollViewer = promptTextBox.GetVisualDescendants()
+                        .OfType<ScrollViewer>()
+                        .Single();
+                    SmoothScrollBehavior.GetWheelMultiplier(promptScrollViewer)
+                        .Should().Be(48d);
                 }
                 finally
                 {
@@ -221,7 +323,7 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void PromptAndPathText_WhenShown_UseVerticalInsetsAndScrollEdgeFade()
+    public void PromptText_WhenShown_AlignsWithHeadingAndKeepsVerticalScrollFade()
     {
         Dispatch(() =>
         {
@@ -234,40 +336,24 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
 
                 try
                 {
-                    string[] textBoxNames = ["PromptText", "PathText"];
+                    TextBlock heading = view.FindControl<TextBlock>("PromptHeading")
+                        ?? throw new InvalidOperationException("Prompt heading was not found.");
+                    TextBox textBox = view.FindControl<TextBox>("PromptText")
+                        ?? throw new InvalidOperationException("Prompt text box was not found.");
+                    ScrollContentPresenter scrollPresenter = textBox
+                        .GetVisualDescendants()
+                        .OfType<ScrollContentPresenter>()
+                        .Single();
+                    Control textPresenter = TextBoxScrollContentAssertions.GetTextPresenter(textBox);
+                    textBox.TryFindResource("MetadataTextScrollInsets", out object? paddingResource)
+                        .Should().BeTrue();
+                    Thickness fadeInsets = paddingResource.Should().BeOfType<Thickness>().Subject;
 
-                    foreach (string textBoxName in textBoxNames)
-                    {
-                        TextBox textBox = view.FindControl<TextBox>(textBoxName)
-                            ?? throw new InvalidOperationException(
-                                $"Text box '{textBoxName}' was not found.");
-                        ScrollContentPresenter scrollPresenter = textBox
-                            .GetVisualDescendants()
-                            .OfType<ScrollContentPresenter>()
-                            .Single();
-                        textBox.TryFindResource(
-                                "MetadataTextScrollInsets",
-                                out object? paddingResource)
-                            .Should()
-                            .BeTrue();
-                        Thickness fadeInsets = paddingResource
-                            .Should()
-                            .BeOfType<Thickness>()
-                            .Subject;
-
-                        fadeInsets.Left.Should().Be(0d);
-                        fadeInsets.Right.Should().Be(0d);
-                        TextBoxScrollContentAssertions
-                            .GetTextPresenter(textBox)
-                            .Margin
-                            .Should()
-                            .Be(fadeInsets);
-                        VerticalFadeMaskBehavior.GetInsets(scrollPresenter)
-                            .Should()
-                            .Be(fadeInsets);
-                        scrollPresenter.OpacityMask.Should()
-                            .BeOfType<LinearGradientBrush>();
-                    }
+                    GetBounds(textPresenter, view).Left.Should().Be(GetBounds(heading, view).Left);
+                    GetBounds(textPresenter, view).Right.Should().Be(GetBounds(textBox, view).Right);
+                    textPresenter.Margin.Should().Be(fadeInsets);
+                    VerticalFadeMaskBehavior.GetInsets(scrollPresenter).Should().Be(fadeInsets);
+                    scrollPresenter.OpacityMask.Should().BeOfType<LinearGradientBrush>();
                 }
                 finally
                 {
@@ -278,6 +364,55 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             {
                 File.Delete(imagePath);
             }
+        });
+    }
+
+    [Fact]
+    public void PromptHeading_WhenHovered_RevealsCopyButton()
+    {
+        Dispatch(() =>
+        {
+            GenerationMetadataOverlayView view = CreateView("result.png");
+            TextBlock heading = view.FindControl<TextBlock>("PromptHeading")
+                ?? throw new InvalidOperationException("Prompt heading was not found.");
+            Button copy = view.FindControl<Button>("PromptCopyButton")
+                ?? throw new InvalidOperationException("Prompt copy button was not found.");
+            heading.Text = "Prompt";
+
+            Show(view, 1024d, 768d, window =>
+            {
+                copy.IsHitTestVisible.Should().BeFalse();
+
+                window.MouseMove(GetBounds(heading, window).Center, RawInputModifiers.None);
+
+                copy.IsHitTestVisible.Should().BeTrue();
+            });
+        });
+    }
+
+    [Fact]
+    public void Preview_WhenOpenedAndResized_UsesFinalSizeWithoutTransition()
+    {
+        Dispatch(() =>
+        {
+            GenerationMetadataOverlayView view = CreateView("result.png");
+            GenerationPreviewControl preview = view.FindControl<GenerationPreviewControl>("PreviewEntry")
+                ?? throw new InvalidOperationException("Preview was not found.");
+            Grid host = preview.FindControl<Grid>("PreviewExpansionHost")
+                ?? throw new InvalidOperationException("Preview expansion host was not found.");
+
+            Show(view, 1024d, 768d, window =>
+            {
+                Size openedSize = preview.Bounds.Size;
+                host.Transitions.Should().BeNull();
+                host.Bounds.Size.Should().Be(openedSize);
+
+                window.Width = 670d;
+                window.CaptureRenderedFrame();
+
+                preview.Bounds.Width.Should().BeLessThan(openedSize.Width);
+                host.Bounds.Size.Should().Be(preview.Bounds.Size);
+            });
         });
     }
 
