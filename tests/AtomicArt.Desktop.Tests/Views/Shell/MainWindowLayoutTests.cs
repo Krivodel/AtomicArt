@@ -768,19 +768,52 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 MainWindowLayoutTests.CreateDeletionConfirmationRequest(),
                 CancellationToken.None);
             window.CaptureRenderedFrame();
-            KeyEventArgs keyEventArgs = new()
-            {
-                RoutedEvent = InputElement.KeyDownEvent,
-                Key = Key.Escape,
-                PhysicalKey = PhysicalKey.Escape
-            };
-
-            window.RaiseEvent(keyEventArgs);
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
             bool result = await resultTask.WaitAsync(MainWindowLayoutTests.DialogCompletionTimeout);
 
             result.Should().BeFalse();
             viewModel.Gallery.IsSelectionMode.Should().BeTrue();
             item.IsSelected.Should().BeTrue();
+        });
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Escape_WhenOverlayInputHasFocus_ClosesOverlayBeforeExitingSelectionMode(bool openSettings)
+    {
+        await DispatchAsync(() =>
+        {
+            using MainWindowTestContext context = new(includeAllViewTemplates: true);
+            MainWindow window = context.Window;
+            window.Show();
+            MainWindowViewModel viewModel = window.DataContext.Should().BeOfType<MainWindowViewModel>().Subject;
+            viewModel.Gallery.AddGeneratedItems([GenerationItemDtoTestFactory.Create()], 0);
+            GenerationItemViewModel item = viewModel.Gallery.Items.Single();
+            viewModel.Gallery.ToggleSelectionCommand.Execute(item);
+            if (openSettings)
+            {
+                viewModel.OpenSettingsCommand.Execute(null);
+            }
+            else
+            {
+                viewModel.Gallery.OpenMetadataCommand.Execute(item);
+            }
+
+            window.CaptureRenderedFrame();
+            ModalOverlayPresenterControl overlay = window.GetVisualDescendants().OfType<ModalOverlayPresenterControl>()
+                .Single(presenter => presenter.IsOpen);
+            TextBox field = overlay.GetVisualDescendants().OfType<TextBox>().First(input => input.IsEffectivelyVisible);
+            field.Focus().Should().BeTrue();
+
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+
+            overlay.IsOpen.Should().BeFalse();
+            item.IsSelected.Should().BeTrue();
+
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+
+            viewModel.Gallery.IsSelectionMode.Should().BeFalse();
         });
     }
 
@@ -1227,21 +1260,19 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             messageArguments);
     }
 
-    private static void RegisterViewTemplates(MainWindow window, IServiceProvider serviceProvider)
+    private static void RegisterViewTemplates(
+        MainWindow window,
+        IServiceProvider serviceProvider,
+        bool includeAllViewTemplates)
     {
-        window.DataTemplates.Add(
-            new ViewModelViewTemplate(
-            [
-                new ViewTemplateRegistration(
-                    typeof(GalleryViewModel),
-                    serviceProvider.GetRequiredService<GalleryView>),
-                new ViewTemplateRegistration(
-                    typeof(IModelPanelViewModel),
-                    serviceProvider.GetRequiredService<GenerationPanelView>),
-                new ViewTemplateRegistration(
-                    typeof(ErrorDialogViewModel),
-                    serviceProvider.GetRequiredService<ErrorDialogOverlayView>)
-            ]));
+        IEnumerable<ViewTemplateRegistration> registrations = serviceProvider.GetServices<ViewTemplateRegistration>();
+        if (!includeAllViewTemplates)
+        {
+            Type[] viewModels = [typeof(GalleryViewModel), typeof(IModelPanelViewModel), typeof(ErrorDialogViewModel)];
+            registrations = registrations.Where(registration => viewModels.Contains(registration.ViewModelType));
+        }
+
+        window.DataTemplates.Add(new ViewModelViewTemplate(registrations.ToArray()));
     }
 
     private sealed class MainWindowTestContext : IDisposable
@@ -1255,7 +1286,8 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         public MainWindowTestContext(
             Action<ServiceCollection>? configureServices = null,
             GenerationPanelLayoutState? layoutState = null,
-            RecordingStateWriteScheduler? layoutScheduler = null)
+            RecordingStateWriteScheduler? layoutScheduler = null,
+            bool includeAllViewTemplates = false)
         {
             ServiceCollection services = new();
             services.AddSingleton(TestApiConfiguration.Create());
@@ -1276,7 +1308,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             TextProvider =
                 _serviceProvider.GetRequiredService<ILocalizationTextProvider>();
             Window = _serviceProvider.GetRequiredService<MainWindow>();
-            MainWindowLayoutTests.RegisterViewTemplates(Window, _serviceProvider);
+            MainWindowLayoutTests.RegisterViewTemplates(Window, _serviceProvider, includeAllViewTemplates);
         }
 
         public void Dispose()

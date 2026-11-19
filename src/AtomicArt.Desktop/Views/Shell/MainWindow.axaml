@@ -36,8 +36,6 @@
     </suki:SukiWindow.Styles>
 
     <suki:SukiWindow.KeyBindings>
-        <KeyBinding Gesture="Escape"
-                    Command="{Binding HandleEscapeCommand}" />
         <KeyBinding Gesture="Delete"
                     Command="{Binding Gallery.DeleteSelectedCommand}" />
     </suki:SukiWindow.KeyBindings>
@@ -192,7 +190,8 @@
                 <ContentControl Content="{Binding Dlss5}"
                                 IsVisible="{Binding Dlss5.IsOpen}" />
 
-                <overlays:ModalOverlayLayerControl ZIndex="10">
+                <overlays:ModalOverlayLayerControl ZIndex="10"
+                                                   EscapeFallbackCommand="{Binding HandleEscapeCommand}">
                     <overlays:ModalOverlayPresenterControl x:Name="SettingsOverlayPresenter"
                                                            Order="{StaticResource SettingsModalOverlayOrder}"
                                                            Body="{Binding Settings}"

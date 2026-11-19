@@ -12,6 +12,15 @@ namespace AtomicArt.Desktop.Controls.Overlays;
 
 public sealed class ModalOverlayLayerControl : Grid
 {
+    public ICommand? EscapeFallbackCommand
+    {
+        get => GetValue(EscapeFallbackCommandProperty);
+        set => SetValue(EscapeFallbackCommandProperty, value);
+    }
+
+    public static readonly StyledProperty<ICommand?> EscapeFallbackCommandProperty =
+        AvaloniaProperty.Register<ModalOverlayLayerControl, ICommand?>(nameof(EscapeFallbackCommand));
+
     private TopLevel? _topLevel;
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -103,14 +112,17 @@ public sealed class ModalOverlayLayerControl : Grid
             return;
         }
 
-        ICommand? closeCommand = GetTopmostOpenOverlay()?.CloseCommand;
+        ModalOverlayPresenterControl? overlay = GetTopmostOpenOverlay();
+        ICommand? command = overlay is null && e is { Key: Key.Escape, KeyModifiers: KeyModifiers.None }
+            ? EscapeFallbackCommand
+            : overlay?.CloseCommand;
 
-        if (closeCommand is null || !closeCommand.CanExecute(null))
+        if (command is null || !command.CanExecute(null))
         {
             return;
         }
 
-        closeCommand.Execute(null);
+        command.Execute(null);
         e.Handled = true;
     }
 }
