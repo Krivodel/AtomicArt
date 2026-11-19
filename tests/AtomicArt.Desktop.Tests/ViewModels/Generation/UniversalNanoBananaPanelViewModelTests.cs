@@ -2002,8 +2002,9 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         GalleryAttachedImageViewerSource source = item.Source.Should()
             .BeOfType<GalleryAttachedImageViewerSource>()
             .Which;
-        source.Image.FileName.Should().Be("attachment.png");
-        source.Image.Content.Should().Equal(PngBytes);
+        source.PanelId.Should().Be(viewModel.PanelId);
+        source.Attachment.Should().BeSameAs(attachedImage.State);
+        source.Attachment.FileName.Should().Be("attachment.png");
     }
 
     [Fact]
@@ -2384,7 +2385,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     {
         item.Source.Should().BeOfType<GalleryAttachedImageViewerSource>();
 
-        return ((GalleryAttachedImageViewerSource)item.Source).Image.FileName;
+        return ((GalleryAttachedImageViewerSource)item.Source).Attachment.FileName;
     }
 
     private static IReadOnlyList<AttachedImageDto> CreateAttachedImagesWithNull()

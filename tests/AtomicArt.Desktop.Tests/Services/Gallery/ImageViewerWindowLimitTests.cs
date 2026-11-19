@@ -10,17 +10,35 @@ using Pica.Viewer.Services;
 using Pica.Viewer.Views;
 using Xunit;
 
-using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
+using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
 public sealed class ImageViewerWindowLimitTests : DesktopControlTestBase
 {
+    [Fact]
+    public async Task OpenAsync_WithSavedAttachment_ClosingViewerKeepsAttachmentFile()
+    {
+        await DispatchAsync(async () =>
+        {
+            await using ViewerContext context = new(1);
+            await context.OpenAsync(temporary: false);
+            ImageViewerWindow window = context.Windows.Single();
+            window.CaptureRenderedFrame();
+
+            window.Close();
+            await window.CloseCleanupCompletion;
+
+            File.Exists(context.ImagePaths.Single()).Should().BeTrue();
+        });
+    }
+
     [Fact]
     public async Task OpenAsync_WhenLimitIsReached_ClosesOldestEvenIfItWasActivated()
     {
@@ -130,6 +148,7 @@ public sealed class ImageViewerWindowLimitTests : DesktopControlTestBase
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
 
         private readonly ServiceProvider _provider;
+        private readonly TemporaryDirectory _files = new(typeof(ImageViewerWindowLimitTests), nameof(ViewerContext));
 
         public ViewerContext(int limit)
         {
@@ -172,6 +191,13 @@ public sealed class ImageViewerWindowLimitTests : DesktopControlTestBase
             Limit = new ImageViewerWindowLimitService(definitions);
             Limit.SetLimit(limit);
             PicaViewerSessionTestDependencies dependencies = new();
+            dependencies.TrustedImageFileService
+                .Setup(service => service.GetTrustedImagePath(It.IsAny<string>(), "test-model"))
+                .Returns((string path, string _) => path);
+            dependencies.PanelAttachments
+                .Setup(store => store.ResolveExistingFilePath("test-panel", It.IsAny<PanelAttachmentState>()))
+                .Returns((string _, PanelAttachmentState attachment) => Path.Combine(
+                    _files.DirectoryPath, attachment.InternalFileName));
             Service = new ImageViewerService(
                 factory.Object,
                 new PicaViewerSessionFactory(dependencies.CreateDependencies(
@@ -181,12 +207,20 @@ public sealed class ImageViewerWindowLimitTests : DesktopControlTestBase
                 NullLogger<ImageViewerService>.Instance);
         }
 
-        public async Task OpenAsync()
+        public async Task OpenAsync(bool temporary = true)
         {
+            string path = Path.Combine(_files.DirectoryPath, Guid.NewGuid().ToString("N") + ".png");
+            await File.WriteAllBytesAsync(path, ImageBytes);
+            GalleryImageViewerSource source = temporary
+                ? new GalleryFileImageViewerSource("test-model", path, DeleteImageWhenClosed: true)
+                : new GalleryAttachedImageViewerSource("test-panel", new PanelAttachmentState
+                {
+                    FileName = "attachment.png",
+                    InternalFileName = Path.GetFileName(path)
+                });
             GalleryImageViewerItem[] items =
             [
-                new GalleryImageViewerItem(ImageId, new GalleryAttachedImageViewerSource(
-                    new AttachedImageDto("reference.png", GenerationImageContentTypes.Png, ImageBytes)))
+                new GalleryImageViewerItem(ImageId, source)
             ];
             GalleryImageViewerRequest request = new(new GalleryStaticImageViewerItemsSource(items), ImageId, null);
 
@@ -198,6 +232,7 @@ public sealed class ImageViewerWindowLimitTests : DesktopControlTestBase
             await Service.CloseAllAsync(CancellationToken.None);
             Service.Dispose();
             await _provider.DisposeAsync();
+            _files.Dispose();
         }
     }
 }

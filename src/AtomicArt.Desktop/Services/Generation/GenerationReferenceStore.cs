@@ -124,50 +124,56 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
         return new AttachedImageDto(reference.FileName, reference.ContentType, content);
     }
 
-    public Task<string?> GetExistingFilePathAsync(GenerationReference reference, CancellationToken ct)
+    public string? ResolveExistingFilePath(GenerationReference reference)
     {
-        return ReadFileAsync<string>(
-            reference,
-            (_, path, _) => Task.FromResult<string?>(path),
-            ct);
+        using FileStream? stream = OpenTrustedFile(reference, out string? trustedPath);
+        return stream is null ? null : trustedPath;
     }
 
-    public Task<TResult?> ReadAsync<TResult>(
+    public async Task<string?> GetExistingFilePathAsync(GenerationReference reference, CancellationToken ct)
+    {
+        using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
+            .ConfigureAwait(false);
+
+        return ResolveExistingFilePath(reference);
+    }
+
+    public async Task<TResult?> ReadAsync<TResult>(
         GenerationReference reference,
         Func<Stream, CancellationToken, Task<TResult?>> read,
         CancellationToken ct) where TResult : class
     {
         ArgumentNullException.ThrowIfNull(read);
-
-        return ReadFileAsync(reference, (stream, _, token) => read(stream, token), ct);
-    }
-
-    private async Task<TResult?> ReadFileAsync<TResult>(
-        GenerationReference reference,
-        Func<Stream, string, CancellationToken, Task<TResult?>> read,
-        CancellationToken ct) where TResult : class
-    {
-        ArgumentNullException.ThrowIfNull(reference);
         using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
             .ConfigureAwait(false);
-        string directory = GetDirectory();
-        string? path = GetPath(directory, reference);
-
-        if (path is null || !_streams.TryOpenExistingFileForRead(
-                path,
-                new string[] { directory },
-                _paths.RootDirectory,
-                TrustedPathFailureMessage,
-                out FileStream? stream,
-                out string? trustedPath) || stream is null)
+        FileStream? stream = OpenTrustedFile(reference, out _);
+        if (stream is null)
         {
             return null;
         }
 
         await using (stream.ConfigureAwait(false))
         {
-            return trustedPath is null ? null : await read(stream, trustedPath, ct).ConfigureAwait(false);
+            return await read(stream, ct).ConfigureAwait(false);
         }
+    }
+
+    private FileStream? OpenTrustedFile(GenerationReference reference, out string? trustedPath)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+        trustedPath = null;
+        string directory = GetDirectory();
+        string? path = GetPath(directory, reference);
+
+        return path is not null && _streams.TryOpenExistingFileForRead(
+                path,
+                new string[] { directory },
+                _paths.RootDirectory,
+                TrustedPathFailureMessage,
+                out FileStream? stream,
+                out trustedPath)
+            ? stream
+            : null;
     }
 
     public void Release(Guid runId)

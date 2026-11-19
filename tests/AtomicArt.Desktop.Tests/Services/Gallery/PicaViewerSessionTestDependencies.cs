@@ -7,6 +7,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Dlss5;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.State;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -19,6 +20,8 @@ internal sealed class PicaViewerSessionTestDependencies
     internal Mock<IWindowStateService> WindowStateService { get; } = new();
     internal Mock<IAnimatedGalleryOperations> GalleryOperations { get; } = new();
     internal Mock<IDlss5SourceOpener> Dlss5SourceOpener { get; } = new();
+    internal Mock<IPanelAttachmentFilePathResolver> PanelAttachments { get; } = new();
+    internal Mock<IGenerationReferenceStore> References { get; } = new();
 
     internal PicaViewerSession CreateSession(
         IGenerationImageFormatRegistry? formatRegistry = null)
@@ -39,6 +42,8 @@ internal sealed class PicaViewerSessionTestDependencies
             GalleryOperations.Object,
             new AtomicArtPicaActions(TestLocalizationTextProvider.Default),
             Dlss5SourceOpener.Object,
+            PanelAttachments.Object,
+            References.Object,
             NullLoggerFactory.Instance);
     }
 }

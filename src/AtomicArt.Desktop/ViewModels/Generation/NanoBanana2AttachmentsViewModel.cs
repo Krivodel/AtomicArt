@@ -11,9 +11,6 @@ namespace AtomicArt.Desktop.ViewModels.Generation;
 
 public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerationModelViewModel
 {
-    private const string ReadyAttachmentMissingStateMessage =
-        "Ready attachment has no persisted state.";
-
     private readonly INanoBanana2AttachmentValidator _attachmentValidator;
     private readonly IAttachedImagePreparationService _attachmentPreparationService;
     private readonly IPanelAttachmentStore _attachmentStore;
@@ -163,8 +160,7 @@ public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerat
             return;
         }
 
-        PanelAttachmentState state = attachedImage.State
-            ?? throw new InvalidOperationException(ReadyAttachmentMissingStateMessage);
+        PanelAttachmentState state = attachedImage.GetRequiredState();
         await _attachmentStore
             .DeleteAsync(panelId, state, ct);
         NotifyStateChanged(AttachmentStateChangeKind.Removed);
@@ -266,8 +262,7 @@ public sealed class NanoBanana2AttachmentsViewModel : ObservableObject, IGenerat
     public IReadOnlyList<PanelAttachmentState> GetAttachmentStates()
     {
         return GetReadyAttachedImages()
-            .Select(attachedImage => attachedImage.State
-                ?? throw new InvalidOperationException(ReadyAttachmentMissingStateMessage))
+            .Select(attachedImage => attachedImage.GetRequiredState())
             .ToList();
     }
 

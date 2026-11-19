@@ -11,6 +11,8 @@ public interface IGenerationReferenceStore
 
     Task<AttachedImageDto?> LoadAsync(GenerationReference reference, CancellationToken ct);
 
+    string? ResolveExistingFilePath(GenerationReference reference);
+
     Task<string?> GetExistingFilePathAsync(GenerationReference reference, CancellationToken ct);
 
     Task<TResult?> ReadAsync<TResult>(

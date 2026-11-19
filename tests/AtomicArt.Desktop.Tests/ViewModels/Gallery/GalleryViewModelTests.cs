@@ -821,13 +821,7 @@ public sealed class GalleryViewModelTests
         GenerationReference first = new("first", "first.png", GenerationImageContentTypes.Png);
         GenerationReference second = first with { };
         GenerationReference last = new("last", "last.png", GenerationImageContentTypes.Png);
-        AttachedImageDto firstImage = new(first.FileName, first.ContentType, new byte[] { 1, 2 });
-        AttachedImageDto lastImage = new(last.FileName, last.ContentType, new byte[] { 3, 4 });
-        Mock<IGenerationReferenceStore> store = new();
-        store.Setup(referenceStore => referenceStore.LoadAsync(first, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(firstImage);
-        store.Setup(referenceStore => referenceStore.LoadAsync(last, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(lastImage);
+        Mock<IGenerationReferenceStore> store = new(MockBehavior.Strict);
         RecordingImageViewerService viewer = new();
         using GalleryViewModel viewModel = GalleryViewModelTestFactory.CreateViewModel(
             imageViewerService: viewer, referenceStore: store.Object);
@@ -840,10 +834,11 @@ public sealed class GalleryViewModelTests
 
         GalleryImageViewerRequest request = viewer.LastRequest!;
         IReadOnlyList<GalleryImageViewerItem> items = request.ItemsSource.GetItems();
-        items.Select(item => ((GalleryAttachedImageViewerSource)item.Source).Image)
-            .Should().Equal(firstImage, firstImage, lastImage);
+        items.Select(item => ((GalleryReferenceImageViewerSource)item.Source).Reference)
+            .Should().Equal(first, second, last);
         items.Select(item => item.Id).Should().OnlyHaveUniqueItems();
         request.SelectedItemId.Should().Be(items[1].Id);
+        store.VerifyNoOtherCalls();
     }
 
     [Fact]

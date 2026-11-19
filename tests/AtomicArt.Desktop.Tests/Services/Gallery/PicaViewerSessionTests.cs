@@ -13,8 +13,10 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -55,44 +57,80 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
             string.Equals(action.Id, AtomicArtPicaActions.ImbaId, StringComparison.Ordinal));
     }
 
-    [Fact]
-    public async Task PrepareAsync_WithAttachedImage_MaterializesFileAndAttachAction()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PrepareAsync_WithSavedAttachment_UsesExistingFileAndKeepsItOnClose(bool fromHistory)
     {
+        using TemporaryDirectory files = new(typeof(PicaViewerSessionTests), nameof(PrepareAsync_WithSavedAttachment_UsesExistingFileAndKeepsItOnClose));
+        string path = Path.Combine(files.DirectoryPath, "stored-content.png");
+        await File.WriteAllBytesAsync(path, PngContent);
         PicaViewerSessionTestDependencies dependencies = new();
         AsyncRelayCommand<IReadOnlyList<AttachedImageDto>?> attachCommand = new(
             _ => Task.CompletedTask);
-        AttachedImageDto image = new(
-            "reference.png",
-            GenerationImageContentTypes.Png,
-            [1, 2, 3]);
-        GalleryImageViewerRequest request = PicaViewerSessionTests.CreateRequest(
-            new GalleryAttachedImageViewerSource(image),
-            attachCommand);
-        IGenerationImageFormatRegistry formatRegistry =
-            GenerationImageFormatRegistryTestFactory.Create();
-        string materializedPath;
+        const string FileName = "reference.png";
+        GalleryImageViewerSource source = fromHistory
+            ? CreateReferenceSource(dependencies, path, FileName)
+            : CreatePanelAttachmentSource(dependencies, path, FileName);
+        GalleryImageViewerRequest request = PicaViewerSessionTests.CreateRequest(source, attachCommand);
 
-        await using (PicaViewerSession session = dependencies.CreateSession(formatRegistry))
+        await using (PicaViewerSession session = dependencies.CreateSession())
         {
             await session.PrepareAsync(request, CancellationToken.None);
 
             PicaViewerRequest preparedRequest = PicaViewerSessionTests.GetPreparedRequest(session);
-            preparedRequest.Items.Should().ContainSingle();
-            preparedRequest.Items[0].FileName.Should().Be("reference.png");
-            preparedRequest.Items[0].IsTemporary.Should().BeTrue();
+            PicaImageItem item = preparedRequest.Items.Should().ContainSingle().Subject;
+            item.FilePath.Should().Be(path);
+            item.FileName.Should().Be(FileName);
+            item.IsTemporary.Should().BeFalse();
             preparedRequest.Actions.Should().Contain(action =>
                 string.Equals(action.Id, AtomicArtPicaActions.AttachId, StringComparison.Ordinal));
             preparedRequest.Actions.Should().Contain(action =>
                 string.Equals(action.Id, AtomicArtPicaActions.OpenDlss5Id, StringComparison.Ordinal));
             preparedRequest.Actions.Should().NotContain(action =>
                 string.Equals(action.Id, AtomicArtPicaActions.ImbaId, StringComparison.Ordinal));
-            materializedPath = preparedRequest.Items[0].FilePath;
-            File.Exists(materializedPath).Should().BeTrue();
-            byte[] materializedContent = await File.ReadAllBytesAsync(materializedPath);
-            materializedContent.Should().Equal(image.Content);
+            preparedRequest.Actions.Should().NotContain(action =>
+                string.Equals(action.Id, AtomicArtPicaActions.ShowInGalleryId, StringComparison.Ordinal));
         }
 
-        File.Exists(materializedPath).Should().BeFalse();
+        byte[] storedContent = await File.ReadAllBytesAsync(path);
+        storedContent.Should().Equal(PngContent);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_WithMissingNeighbour_KeepsSelectedReference()
+    {
+        const string StoredPath = "saved.png";
+        PicaViewerSessionTestDependencies dependencies = new();
+        GalleryImageViewerItem missing = new(
+            Guid.NewGuid(), new GalleryReferenceImageViewerSource(
+                new GenerationReference("missing", "missing.png", GenerationImageContentTypes.Png)));
+        GalleryImageViewerItem selected = new(ItemId, CreateReferenceSource(dependencies, StoredPath, "reference.png"));
+        GalleryImageViewerRequest request = new(
+            new GalleryStaticImageViewerItemsSource(new GalleryImageViewerItem[] { missing, selected }),
+            ItemId, AttachImagesCommand: null);
+        await using PicaViewerSession session = dependencies.CreateSession();
+
+        await session.PrepareAsync(request, CancellationToken.None);
+
+        PicaViewerRequest prepared = PicaViewerSessionTests.GetPreparedRequest(session);
+        prepared.Items.Should().ContainSingle().Which.Id.Should().Be(ItemId);
+    }
+
+    [Fact]
+    public async Task PrepareAsync_WithMissingSelectedReference_ReportsUnavailableFile()
+    {
+        PicaViewerSessionTestDependencies dependencies = new();
+        GalleryImageViewerRequest request = PicaViewerSessionTests.CreateRequest(
+            new GalleryReferenceImageViewerSource(
+                new GenerationReference("missing", "missing.png", GenerationImageContentTypes.Png)),
+            null);
+        await using PicaViewerSession session = dependencies.CreateSession();
+
+        Func<Task> prepare = () => session.PrepareAsync(request, CancellationToken.None);
+
+        await prepare.Should().ThrowAsync<FileNotFoundException>();
+        session.Request.Should().BeNull();
     }
 
     [Fact]
@@ -644,12 +682,8 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
             attachedImages = images;
             return Task.CompletedTask;
         });
-        AttachedImageDto image = new(
-            "reference.png",
-            GenerationImageContentTypes.Png,
-            [1, 2, 3]);
         GalleryImageViewerRequest request = PicaViewerSessionTests.CreateRequest(
-            new GalleryAttachedImageViewerSource(image),
+            CreatePanelAttachmentSource(dependencies, "stored.png", "reference.png"),
             attachCommand);
 
         await using PicaViewerSession session = dependencies.CreateSession();
@@ -708,6 +742,29 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
         dependencies.GalleryOperations.Verify(
             operations => operations.RevealAsync(PicaViewerSessionTests.ItemId, CancellationToken.None),
             Times.Once);
+    }
+
+    private static GalleryReferenceImageViewerSource CreateReferenceSource(
+        PicaViewerSessionTestDependencies dependencies, string path, string fileName)
+    {
+        GenerationReference reference = new("content-hash", fileName, GenerationImageContentTypes.Png);
+        dependencies.References
+            .Setup(store => store.ResolveExistingFilePath(reference))
+            .Returns(path);
+
+        return new GalleryReferenceImageViewerSource(reference);
+    }
+
+    private static GalleryAttachedImageViewerSource CreatePanelAttachmentSource(
+        PicaViewerSessionTestDependencies dependencies, string path, string fileName)
+    {
+        const string PanelId = "panel";
+        PanelAttachmentState attachment = new() { FileName = fileName };
+        dependencies.PanelAttachments
+            .Setup(store => store.ResolveExistingFilePath(PanelId, attachment))
+            .Returns(path);
+
+        return new GalleryAttachedImageViewerSource(PanelId, attachment);
     }
 
     private static GalleryImageViewerRequest CreateRequest(

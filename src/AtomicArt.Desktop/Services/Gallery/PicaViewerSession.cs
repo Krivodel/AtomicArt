@@ -31,7 +31,6 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
     private readonly Dictionary<Guid, Func<CancellationToken, Task>> _toggleFavoriteActions = [];
     private readonly Dictionary<Guid, Func<bool>> _getFavoriteStates = [];
     private readonly HashSet<Guid> _galleryItemIds = [];
-    private readonly string _sessionDirectory;
     private IAsyncRelayCommand<IReadOnlyList<AttachedImageDto>?>? _attachImagesCommand;
     private IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?>? _attachImageInputsCommand;
     private ImageViewerWindow? _window;
@@ -41,11 +40,6 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
     public PicaViewerSession(PicaViewerSessionDependencies dependencies)
     {
         _dependencies = dependencies ?? throw new ArgumentNullException(nameof(dependencies));
-        _sessionDirectory = Path.Combine(
-            Path.GetTempPath(),
-            AtomicArtPathNames.RootDirectory,
-            PicaProtocolConstants.ApplicationName,
-            Guid.NewGuid().ToString("N"));
     }
 
     public async Task PrepareAsync(GalleryImageViewerRequest sourceRequest, CancellationToken ct)
@@ -66,7 +60,17 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
 
         foreach (GalleryImageViewerItem sourceItem in sourceItems)
         {
-            PicaImageItem item = await MaterializeItemAsync(sourceItem, ct).ConfigureAwait(false);
+            PicaImageItem? item = await MaterializeItemAsync(sourceItem, ct).ConfigureAwait(false);
+            if (item is null)
+            {
+                if (sourceItem.Id == sourceRequest.SelectedItemId)
+                {
+                    throw new FileNotFoundException("The selected saved attachment is unavailable.");
+                }
+
+                continue;
+            }
+
             items.Add(item);
             _allowedImagePaths.Add(Path.GetFullPath(item.FilePath));
 
@@ -254,7 +258,7 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         byte[] content = await File.ReadAllBytesAsync(fullPath, ct).ConfigureAwait(false);
         await ExecuteAttachAsync(
             item.FileName,
-            GetContentType(item.FileName),
+            GetContentType(fullPath),
             content,
             ct).ConfigureAwait(false);
         _dependencies.Logger.LogInformation(
@@ -334,26 +338,6 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
             _window = null;
         }
 
-        if (Directory.Exists(_sessionDirectory))
-        {
-            try
-            {
-                Directory.Delete(_sessionDirectory, true);
-            }
-            catch (IOException exception)
-            {
-                _dependencies.Logger.LogWarning(
-                    exception,
-                    "Failed to delete embedded Pica temporary files.");
-            }
-            catch (UnauthorizedAccessException exception)
-            {
-                _dependencies.Logger.LogWarning(
-                    exception,
-                    "Access was denied while deleting embedded Pica temporary files.");
-            }
-        }
-
         foreach (string temporaryImagePath in _temporaryImagePaths)
         {
             try
@@ -407,15 +391,24 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         }
     }
 
-    private async Task<PicaImageItem> MaterializeItemAsync(
+    private async Task<PicaImageItem?> MaterializeItemAsync(
         GalleryImageViewerItem item,
         CancellationToken ct)
     {
         return item.Source switch
         {
             GalleryFileImageViewerSource fileSource => CreateFileItem(item.Id, fileSource),
-            GalleryAttachedImageViewerSource attachedSource =>
-                await CreateAttachedItemAsync(item.Id, attachedSource.Image, ct).ConfigureAwait(false),
+            GalleryAttachedImageViewerSource attachedSource => await CreateSavedAttachmentItemAsync(
+                item.Id,
+                attachedSource.Attachment.FileName,
+                () => _dependencies.PanelAttachments.ResolveExistingFilePath(
+                    attachedSource.PanelId, attachedSource.Attachment),
+                ct).ConfigureAwait(false),
+            GalleryReferenceImageViewerSource referenceSource => await CreateSavedAttachmentItemAsync(
+                item.Id,
+                referenceSource.Reference.FileName,
+                () => _dependencies.References.ResolveExistingFilePath(referenceSource.Reference),
+                ct).ConfigureAwait(false),
             GalleryBitmapImageViewerSource bitmapSource =>
                 CreateBitmapItem(item.Id, bitmapSource),
             _ => throw new NotSupportedException("The image source cannot be opened in Pica.")
@@ -471,20 +464,22 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         };
     }
 
-    private async Task<PicaImageItem> CreateAttachedItemAsync(
+    private async Task<PicaImageItem?> CreateSavedAttachmentItemAsync(
         Guid itemId,
-        AttachedImageDto image,
+        string fileName,
+        Func<string?> resolvePath,
         CancellationToken ct)
     {
-        Directory.CreateDirectory(_sessionDirectory);
-        string extension = GetExtension(image.FileName, image.ContentType);
-        string filePath = Path.Combine(_sessionDirectory, itemId.ToString("N") + extension);
-        await File.WriteAllBytesAsync(filePath, image.Content, ct).ConfigureAwait(false);
-
-        return new PicaImageItem(itemId, filePath, Path.GetFileName(image.FileName))
+        try
         {
-            IsTemporary = true
-        };
+            string? filePath = await Task.Run(resolvePath, ct).ConfigureAwait(false);
+            return filePath is null ? null : new PicaImageItem(itemId, filePath, Path.GetFileName(fileName));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            _dependencies.Logger.LogWarning(ex, "Saved attachment {ItemId} could not be opened.", itemId);
+            return null;
+        }
     }
 
     private bool CanDispatchAttach(PicaActionDefinition action)
@@ -614,27 +609,6 @@ internal sealed class PicaViewerSession : IViewerActionDispatcher, IAsyncDisposa
         {
             PicaViewerSession.DeleteFileIfExists(stagingPath);
         }
-    }
-
-    private string GetExtension(string fileName, string contentType)
-    {
-        if ((_dependencies.FormatRegistry.TryGetByContentType(
-                contentType,
-                out IGenerationImageFormat? contentFormat))
-            && (contentFormat is not null))
-        {
-            return contentFormat.Extension;
-        }
-
-        if ((_dependencies.FormatRegistry.TryGetByFileName(
-                fileName,
-                out IGenerationImageFormat? fileFormat))
-            && (fileFormat is not null))
-        {
-            return fileFormat.Extension;
-        }
-
-        return GenerationImageFileFormats.PngExtension;
     }
 
     private string GetContentType(string fileName)

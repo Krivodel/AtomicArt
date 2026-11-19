@@ -85,4 +85,9 @@ public sealed class AttachedImageViewModel : ObservableObject
             ContentType,
             (byte[])_content.Clone());
     }
+
+    internal PanelAttachmentState GetRequiredState()
+    {
+        return _state ?? throw new InvalidOperationException("Ready attachment has no persisted state.");
+    }
 }

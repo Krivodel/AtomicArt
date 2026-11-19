@@ -690,14 +690,13 @@ public sealed partial class GalleryViewModel :
         Guid? selectedItemId = null;
         foreach (GenerationReference savedReference in metadata.References)
         {
-            AttachedImageDto? image = await LoadReferenceAsync(savedReference, ct);
-            if (image is null)
+            if (savedReference is null)
             {
                 continue;
             }
 
             Guid itemId = Guid.NewGuid();
-            viewerItems.Add(new GalleryImageViewerItem(itemId, new GalleryAttachedImageViewerSource(image)));
+            viewerItems.Add(new GalleryImageViewerItem(itemId, new GalleryReferenceImageViewerSource(savedReference)));
             if (ReferenceEquals(savedReference, reference))
             {
                 selectedItemId ??= itemId;
@@ -715,7 +714,18 @@ public sealed partial class GalleryViewModel :
             selectedItemId.Value,
             AttachImagesCommand: null);
         await ExecuteUserOperationAsync(
-            operationCt => _imageViewerService.OpenAsync(request, operationCt),
+            async operationCt =>
+            {
+                try
+                {
+                    await _imageViewerService.OpenAsync(request, operationCt);
+                }
+                catch (FileNotFoundException)
+                {
+                    await _dialogService.ShowLocalizedErrorAsync(
+                        GalleryLocalizationKeys.Metadata.ReferenceUnavailable, operationCt);
+                }
+            },
             nameof(OpenReferenceAsync),
             ct);
     }

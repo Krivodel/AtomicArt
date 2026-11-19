@@ -606,11 +606,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             .ToList();
     }
 
-    private static GalleryImageViewerItem CreateAttachedImageViewerItem(AttachedImageViewModel image)
+    private GalleryImageViewerItem CreateAttachedImageViewerItem(AttachedImageViewModel image)
     {
         return new GalleryImageViewerItem(
             image.Id,
-            new GalleryAttachedImageViewerSource(image.ToDto()));
+            new GalleryAttachedImageViewerSource(PanelId, image.GetRequiredState()));
     }
 
     [RelayCommand]

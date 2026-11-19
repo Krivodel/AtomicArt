@@ -215,10 +215,16 @@ public sealed class PanelAttachmentStore :
         PanelAttachmentState attachment,
         CancellationToken ct)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(panelId);
-        ArgumentNullException.ThrowIfNull(attachment);
         using DataRootAccessLease accessLease =
             await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+
+        return ResolveExistingFilePath(panelId, attachment);
+    }
+
+    public string? ResolveExistingFilePath(string panelId, PanelAttachmentState attachment)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(panelId);
+        ArgumentNullException.ThrowIfNull(attachment);
 
         try
         {

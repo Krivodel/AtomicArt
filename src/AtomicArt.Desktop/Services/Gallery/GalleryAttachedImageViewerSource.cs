@@ -1,6 +1,7 @@
-using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation.State;
 
 namespace AtomicArt.Desktop.Services.Gallery;
 
 public sealed record GalleryAttachedImageViewerSource(
-    AttachedImageDto Image) : GalleryImageViewerSource;
+    string PanelId,
+    PanelAttachmentState Attachment) : GalleryImageViewerSource;
