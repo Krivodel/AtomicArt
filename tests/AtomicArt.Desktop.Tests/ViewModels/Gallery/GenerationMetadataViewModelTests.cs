@@ -3,6 +3,7 @@ using System.Text.Json;
 
 using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -170,18 +171,36 @@ public sealed class GenerationMetadataViewModelTests
     }
 
     [Fact]
-    public async Task CopyPromptCommand_WithPrompt_WritesExactText()
+    public async Task CopyPromptCommand_WithPrompt_WritesExactTextAndShowsFeedback()
     {
         GenerationItemDto item = CreateItem();
         RecordingTextClipboardService clipboardService = new();
-        GenerationMetadataViewModel viewModel = CreateMetadataViewModel(
+        using GenerationMetadataViewModel viewModel = CreateMetadataViewModel(
             item,
             clipboardService);
 
         await viewModel.CopyPromptCommand.ExecuteAsync(null);
 
         clipboardService.Text.Should().Be(viewModel.Prompt);
+        viewModel.IsPromptCopied.Should().BeTrue();
+    }
 
+    [Fact]
+    public async Task CopyPromptCommand_WhenFeedbackResetsBeforeWriteCompletes_DoesNotShowStaleFeedback()
+    {
+        GenerationItemDto item = CreateItem();
+        TaskCompletionSource write = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Mock<ITextClipboardService> clipboard = new();
+        clipboard.Setup(service => service.SetTextAsync(item.Prompt, It.IsAny<CancellationToken>()))
+            .Returns(write.Task);
+        using GenerationMetadataViewModel viewModel = CreateMetadataViewModel(item, clipboard.Object);
+
+        Task copy = viewModel.CopyPromptCommand.ExecuteAsync(null);
+        viewModel.ResetPromptCopyFeedback();
+        write.SetResult();
+        await copy;
+
+        viewModel.IsPromptCopied.Should().BeFalse();
     }
 
     [Fact]

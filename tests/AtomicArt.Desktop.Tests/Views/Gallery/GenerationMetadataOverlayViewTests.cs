@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using Avalonia;
 using Avalonia.Animation;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Controls.Presenters;
@@ -11,6 +13,7 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 using ShapePath = Avalonia.Controls.Shapes.Path;
@@ -876,25 +879,55 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public async Task PromptHeading_WhenHovered_RevealsCopyButton()
+    public async Task PromptCopyButton_AfterCopy_ShowsCheckUntilHidden()
     {
-        await DispatchAsync(() =>
+        await DispatchAsync(async () =>
         {
             GenerationMetadataOverlayView view = CreateView("result.png");
+            GenerationMetadataViewModel metadata = view.DataContext.Should().BeOfType<GenerationMetadataViewModel>().Subject;
             TextBlock heading = view.FindControl<TextBlock>("PromptHeading")
                 ?? throw new InvalidOperationException("Prompt heading was not found.");
             Button copy = view.FindControl<Button>("PromptCopyButton")
                 ?? throw new InvalidOperationException("Prompt copy button was not found.");
+            Panel icons = copy.Content.Should().BeOfType<Panel>().Subject;
+            ShapePath copyIcon = icons.Children.OfType<ShapePath>().Single();
+            PathIcon checkIcon = icons.Children.OfType<PathIcon>().Single();
             heading.Text = "Prompt";
+            copy.Transitions = null;
+            Window window = Show(view, 1024d, 768d);
 
-            Show(view, 1024d, 768d, window =>
+            try
             {
                 copy.IsHitTestVisible.Should().BeFalse();
-
-                window.MouseMove(GetBounds(heading, window).Center, RawInputModifiers.None);
-
+                Point headingPosition = GetBounds(heading, window).Center;
+                window.MouseMove(headingPosition, RawInputModifiers.None);
                 copy.IsHitTestVisible.Should().BeTrue();
-            });
+                copyIcon.IsVisible.Should().BeTrue();
+                checkIcon.IsVisible.Should().BeFalse();
+                copy.Command.Should().BeSameAs(metadata.CopyPromptCommand);
+
+                IInvokeProvider copyButtonAction = new ButtonAutomationPeer(copy);
+                copyButtonAction.Invoke();
+                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                Task copyTask = metadata.CopyPromptCommand.ExecutionTask
+                    ?? throw new InvalidOperationException("Invoking Copy must start the clipboard command.");
+                await copyTask;
+                copyIcon.IsVisible.Should().BeFalse();
+                checkIcon.IsVisible.Should().BeTrue();
+
+                window.MouseMove(headingPosition, RawInputModifiers.None);
+                checkIcon.IsVisible.Should().BeTrue();
+                window.MouseMove(new Point(1d, 1d), RawInputModifiers.None);
+                copy.Opacity.Should().Be(0d);
+                window.MouseMove(headingPosition, RawInputModifiers.None);
+                copy.IsHitTestVisible.Should().BeTrue();
+                copyIcon.IsVisible.Should().BeTrue();
+                checkIcon.IsVisible.Should().BeFalse();
+            }
+            finally
+            {
+                window.Close();
+            }
         });
     }
 

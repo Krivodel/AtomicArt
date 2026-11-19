@@ -32,6 +32,11 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     public bool IsGenerated => Item.IsGenerated;
     public bool IsGenerating => Item.IsGenerating;
     public bool IsFailed => Item.IsFailed;
+    public bool IsPromptCopied
+    {
+        get => _isPromptCopied;
+        private set => SetProperty(ref _isPromptCopied, value);
+    }
     public IRelayCommand CloseCommand { get; }
     public IRelayCommand OpenViewerCommand { get; }
     public IRelayCommand ShowFailureDetailsCommand { get; }
@@ -47,6 +52,8 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
     private readonly GenerationPriceFormatter _priceFormatter;
     private readonly GenerationDurationFormatter _durationFormatter;
     private readonly ILocalizationTextProvider _textProvider;
+    private int _promptCopyFeedbackVersion;
+    private bool _isPromptCopied;
 
     private GenerationMetadataViewModel(
         GenerationItemViewModel item,
@@ -128,6 +135,7 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         }
 
         OnPropertyChanging(nameof(Item));
+        ResetPromptCopyFeedback();
         Item.PropertyChanged -= OnItemPropertyChanged;
         Item = item;
         Item.PropertyChanged += OnItemPropertyChanged;
@@ -142,7 +150,14 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        ResetPromptCopyFeedback();
         Item.PropertyChanged -= OnItemPropertyChanged;
+    }
+
+    internal void ResetPromptCopyFeedback()
+    {
+        _promptCopyFeedbackVersion++;
+        IsPromptCopied = false;
     }
 
     private IEnumerable<GenerationMetadataField> EnumerateFields()
@@ -233,9 +248,16 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
 
     private async Task CopyPromptAsync(CancellationToken ct)
     {
+        int feedbackVersion = _promptCopyFeedbackVersion;
+
         try
         {
             await _textClipboardService.SetTextAsync(Prompt, ct);
+
+            if (feedbackVersion == _promptCopyFeedbackVersion && !ct.IsCancellationRequested)
+            {
+                IsPromptCopied = true;
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -255,6 +277,11 @@ public sealed class GenerationMetadataViewModel : ObservableObject, IDisposable
         {
             OnPropertyChanged(string.Empty);
             return;
+        }
+
+        if (e.PropertyName == nameof(GenerationItemViewModel.Prompt))
+        {
+            ResetPromptCopyFeedback();
         }
 
         switch (e.PropertyName)

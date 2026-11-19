@@ -152,9 +152,16 @@
                                                 Classes="Icon metadata-copy"
                                                 AutomationProperties.Name="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Copy}}"
                                                 Command="{Binding CopyPromptCommand}">
-                                            <Path Classes="metadata-outline-icon"
-                                                  Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
-                                                  Stroke="{Binding $parent[Button].Foreground}" />
+                                            <Panel IsHitTestVisible="False">
+                                                <Path Classes="metadata-outline-icon"
+                                                      IsVisible="{Binding !IsPromptCopied}"
+                                                      Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
+                                                      Stroke="{Binding $parent[Button].Foreground}" />
+                                                <PathIcon Width="{StaticResource MetadataIconSize}"
+                                                          Height="{StaticResource MetadataIconSize}"
+                                                          IsVisible="{Binding IsPromptCopied}"
+                                                          Data="{StaticResource AppCheckIcon}" />
+                                            </Panel>
                                         </Button>
                                         <TextBox x:Name="PromptText"
                                                  Grid.Row="1"

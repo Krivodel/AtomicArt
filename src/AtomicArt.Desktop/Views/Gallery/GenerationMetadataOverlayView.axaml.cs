@@ -32,6 +32,7 @@ public partial class GenerationMetadataOverlayView : UserControl
     public GenerationMetadataOverlayView()
     {
         InitializeComponent();
+        PromptCopyButton.PropertyChanged += OnPromptCopyButtonPropertyChanged;
         NavigationLayout.MaxWidth = PanelRoot.MaxWidth
             + NavigationTriggerWidthMultiplier * (PreviousNavigationColumn.MinWidth + NextNavigationColumn.MinWidth);
         _previewExpansionHost = new StandaloneGenerationPreviewExpansionHost(this);
@@ -136,6 +137,7 @@ public partial class GenerationMetadataOverlayView : UserControl
         if (_observedMetadata is not null)
         {
             _observedMetadata.PropertyChanging -= OnMetadataPropertyChanging;
+            _observedMetadata.ResetPromptCopyFeedback();
         }
 
         _observedMetadata = metadata;
@@ -145,6 +147,15 @@ public partial class GenerationMetadataOverlayView : UserControl
         }
 
         _navigationTransition?.Reset();
+    }
+
+    private void OnPromptCopyButtonPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == OpacityProperty && PromptCopyButton.Opacity == 0d
+            && DataContext is GenerationMetadataViewModel metadata)
+        {
+            metadata.ResetPromptCopyFeedback();
+        }
     }
 
     private void OnMetadataPropertyChanging(object? sender, PropertyChangingEventArgs e)
