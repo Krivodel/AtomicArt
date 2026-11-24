@@ -1,8 +1,8 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
         xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
-        xmlns:views="using:AtomicArt.Desktop.Views.Gallery">
+        xmlns:views="using:AtomicArt.Desktop.Views.Gallery"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Styles.Resources>
         <ControlTheme x:Key="MetadataNavigationButtonTheme"
                       TargetType="Button">
@@ -33,9 +33,9 @@
                             <Path x:Name="NavigationChevron"
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Center"
-                                  Stretch="None"
+                                  Data="{StaticResource MetadataNavigationIcon}"
                                   Fill="{TemplateBinding Foreground}"
-                                  Data="{StaticResource MetadataNavigationIcon}" />
+                                  Stretch="None" />
                         </Border>
                     </Grid>
                 </ControlTemplate>
@@ -97,6 +97,11 @@
             <Setter Property="Opacity"
                     Value="1" />
         </Style>
+    </Style>
+
+    <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ Border#PART_ShadowChrome">
+        <Setter Property="Background"
+                Value="Transparent" />
     </Style>
 
     <Style Selector="overlays|ModalOverlayControl.generation-metadata /template/ TextBlock.overlay-title">
@@ -254,6 +259,11 @@
                 Value="Round" />
         <Setter Property="StrokeJoin"
                 Value="Round" />
+    </Style>
+
+    <Style Selector="Button Path.metadata-outline-icon">
+        <Setter Property="Stroke"
+                Value="{Binding $parent[Button].Foreground}" />
     </Style>
 
     <Style Selector="Panel.metadata-reuse-host:not(.with-references)">

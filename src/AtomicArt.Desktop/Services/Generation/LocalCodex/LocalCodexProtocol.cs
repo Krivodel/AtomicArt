@@ -7,6 +7,7 @@ namespace AtomicArt.Desktop.Services.Generation.LocalCodex;
 internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
 {
     private const string ModelProvider = "openai";
+
     private int _requestId;
 
     public async Task InitializeAsync(CancellationToken ct)
@@ -19,6 +20,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
 
         JsonElement result = await RequestAsync("account/read", new { refreshToken = false }, ct)
             .ConfigureAwait(false);
+
         if (!result.TryGetProperty("account", out JsonElement account)
             || account.ValueKind != JsonValueKind.Object
             || account.GetProperty("type").GetString() != "chatgpt")
@@ -40,6 +42,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
         {
             JsonElement page = await RequestAsync("model/list", new { modelProvider = ModelProvider, cursor }, ct)
                 .ConfigureAwait(false);
+
             foreach (JsonElement entry in page.GetProperty("data").EnumerateArray())
             {
                 if (GetOptionalString(entry, "model") is not { } id)
@@ -48,12 +51,13 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
                 }
 
                 IReadOnlyList<string> efforts = entry.TryGetProperty("supportedReasoningEfforts", out JsonElement choices)
-                    && choices.ValueKind == JsonValueKind.Array
-                    ? choices.EnumerateArray().Select(choice => GetOptionalString(choice, "reasoningEffort"))
-                        .OfType<string>().Distinct(StringComparer.Ordinal).ToArray()
-                    : Array.Empty<string>();
+                                            && choices.ValueKind == JsonValueKind.Array
+                                            ? choices.EnumerateArray().Select(choice => LocalCodexProtocol.GetOptionalString(choice, "reasoningEffort"))
+                                                .OfType<string>().Distinct(StringComparer.Ordinal).ToArray()
+                                            : Array.Empty<string>();
                 models.TryAdd(id, new LocalCodexTextModel(id, GetOptionalString(entry, "displayName") ?? id,
                     efforts, GetOptionalString(entry, "defaultReasoningEffort")));
+
                 if (entry.TryGetProperty("isDefault", out JsonElement isDefault) && isDefault.ValueKind == JsonValueKind.True)
                 {
                     defaultModel ??= id;
@@ -61,6 +65,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
             }
 
             cursor = GetOptionalString(page, "nextCursor");
+
             if (cursor is not null && !cursors.Add(cursor))
             {
                 throw new InvalidDataException("Codex returned a repeated model catalog cursor.");
@@ -71,12 +76,20 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
         JsonElement configuration = await RequestAsync("config/read", new { includeLayers = false }, ct).ConfigureAwait(false);
         JsonElement config = configuration.GetProperty("config");
         string? configuredModel = GetOptionalString(config, "model");
+
         return (models.Values.ToArray(), configuredModel ?? defaultModel, GetOptionalString(config, "model_reasoning_effort"));
     }
 
-    public async Task<(string ThreadId, string? ModelId, JsonElement Image)> GenerateAsync(
-        string workspace, IReadOnlyList<object> inputs, LocalCodexTurnOptions? options, CancellationToken ct)
+    public async Task<(string ThreadId, string? ModelId, JsonElement Image, string Text)> GenerateAsync(
+        string workspace, IReadOnlyList<object> inputs, LocalCodexTurnOptions? options, CancellationToken ct,
+        GenerationChatHistory? history = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(workspace);
+        ArgumentNullException.ThrowIfNull(inputs);
+
+        const string ImageInstructions = "Use the built-in image generator once for the user's image request. "
+            + "Use attached images as references when supplied. Only generate the image. Do not run commands, "
+            + "call external tools, or modify files.";
         JsonElement start = await RequestAsync("thread/start", new
         {
             cwd = workspace,
@@ -85,9 +98,10 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
             sandbox = "read-only",
             modelProvider = ModelProvider,
             model = options?.ModelId,
-            developerInstructions = "Use the built-in image generator once for the user's image request. "
-                + "Use attached images as references when supplied. Only generate the image. Do not run commands, "
-                + "call external tools, or modify files."
+            developerInstructions = history is { Messages.Count: > 0 }
+                ? ImageInstructions + " The input contains the earlier conversation in order. Use it as context. "
+                    + "Generate an image for the final user message only."
+                : ImageInstructions
         }, ct).ConfigureAwait(false);
         string threadId = GetId(start.GetProperty("thread"));
         string? modelId = GetOptionalString(start, "model") ?? options?.ModelId;
@@ -102,6 +116,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
         }).ConfigureAwait(false);
         string turnId = GetId(turn.GetProperty("turn"));
         JsonElement image = default;
+        List<string> answers = [];
         bool limitReached = false;
 
         while (true)
@@ -109,6 +124,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
             JsonElement message = pending.TryDequeue(out JsonElement notification)
                 ? notification
                 : await ReadAsync(ct).ConfigureAwait(false);
+
             if (!message.TryGetProperty("method", out JsonElement method)
                 || !message.TryGetProperty("params", out JsonElement parameters)
                 || !parameters.TryGetProperty("threadId", out JsonElement eventThreadId)
@@ -121,7 +137,8 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
             {
                 case "item/completed" when parameters.GetProperty("turnId").GetString() == turnId:
                     JsonElement item = parameters.GetProperty("item");
-                    if (item.GetProperty("type").GetString() == "imageGeneration")
+                    string? itemType = item.GetProperty("type").GetString();
+                    if (itemType == "imageGeneration")
                     {
                         if (image.ValueKind == JsonValueKind.Undefined
                             && item.GetProperty("status").GetString() == "completed")
@@ -130,6 +147,10 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
                         }
 
                         limitReached |= IsUsageLimit(item, "failure", "type");
+                    }
+                    else if (itemType == "agentMessage" && LocalCodexProtocol.GetOptionalString(item, "text") is { } answer)
+                    {
+                        answers.Add(answer);
                     }
 
                     break;
@@ -143,7 +164,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
                     if (completed.GetProperty("status").GetString() == "completed"
                         && image.ValueKind != JsonValueKind.Undefined)
                     {
-                        return (threadId, modelId, image);
+                        return (threadId, modelId, image, string.Join("\n\n", answers));
                     }
 
                     limitReached |= IsUsageLimit(completed, "error", "codexErrorInfo");
@@ -153,54 +174,6 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
                         false);
             }
         }
-    }
-
-    private async Task<JsonElement> RequestAsync(
-        string method, object parameters, CancellationToken ct, Action<JsonElement>? onNotification = null)
-    {
-        int id = ++_requestId;
-        await SendAsync(new { id, method, @params = parameters }, ct).ConfigureAwait(false);
-
-        while (true)
-        {
-            JsonElement message = await ReadAsync(ct).ConfigureAwait(false);
-            if (!message.TryGetProperty("id", out JsonElement replyId)
-                || replyId.ValueKind != JsonValueKind.Number
-                || replyId.GetInt32() != id)
-            {
-                onNotification?.Invoke(message);
-                continue;
-            }
-
-            return message.TryGetProperty("result", out JsonElement result)
-                ? result
-                : throw new InvalidDataException($"Codex rejected {method}.");
-        }
-    }
-
-    private async Task<JsonElement> ReadAsync(CancellationToken ct)
-    {
-        while (true)
-        {
-            string line = await input.ReadLineAsync(ct).ConfigureAwait(false)
-                ?? throw new EndOfStreamException("Codex closed the App Server connection.");
-            JsonElement message = JsonSerializer.Deserialize<JsonElement>(line);
-            if (message.TryGetProperty("id", out JsonElement id) && message.TryGetProperty("method", out _))
-            {
-                await SendAsync(new { id, error = new { code = -32601, message = "Unsupported request" } }, ct)
-                    .ConfigureAwait(false);
-                continue;
-            }
-
-            return message;
-        }
-    }
-
-    private async Task SendAsync(object message, CancellationToken ct)
-    {
-        string line = JsonSerializer.Serialize(message);
-        await output.WriteLineAsync(line.AsMemory(), ct).ConfigureAwait(false);
-        await output.FlushAsync(ct).ConfigureAwait(false);
     }
 
     private static string GetId(JsonElement value)
@@ -225,5 +198,55 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
             && error.TryGetProperty(codeProperty, out JsonElement code)
             && code.ValueKind == JsonValueKind.String
             && code.GetString() == "usageLimitExceeded";
+    }
+
+    private async Task<JsonElement> RequestAsync(
+        string method, object parameters, CancellationToken ct, Action<JsonElement>? onNotification = null)
+    {
+        int id = ++_requestId;
+        await SendAsync(new { id, method, @params = parameters }, ct).ConfigureAwait(false);
+
+        while (true)
+        {
+            JsonElement message = await ReadAsync(ct).ConfigureAwait(false);
+
+            if (!message.TryGetProperty("id", out JsonElement replyId)
+                || replyId.ValueKind != JsonValueKind.Number
+                || replyId.GetInt32() != id)
+            {
+                onNotification?.Invoke(message);
+                continue;
+            }
+
+            return message.TryGetProperty("result", out JsonElement result)
+                                ? result
+                                : throw new InvalidDataException($"Codex rejected {method}.");
+        }
+    }
+
+    private async Task<JsonElement> ReadAsync(CancellationToken ct)
+    {
+        while (true)
+        {
+            string line = await input.ReadLineAsync(ct).ConfigureAwait(false)
+                ?? throw new EndOfStreamException("Codex closed the App Server connection.");
+            JsonElement message = JsonSerializer.Deserialize<JsonElement>(line);
+
+            if (message.TryGetProperty("id", out JsonElement id) && message.TryGetProperty("method", out _))
+            {
+                await SendAsync(new { id, error = new { code = -32601, message = "Unsupported request" } }, ct)
+                    .ConfigureAwait(false);
+                continue;
+            }
+
+            return message;
+        }
+    }
+
+    private async Task SendAsync(object message, CancellationToken ct)
+    {
+        string line = JsonSerializer.Serialize(message);
+        await output.WriteLineAsync(line.AsMemory(), ct).ConfigureAwait(false);
+        await output.FlushAsync(ct).ConfigureAwait(false);
     }
 }

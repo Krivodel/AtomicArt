@@ -1,9 +1,5 @@
-using AtomicArt.Desktop.Models;
-
 namespace AtomicArt.Desktop.Services;
 
-public interface IPromptTextSizeSettingDefinition : IDisplaySettingDefinition
+public interface IPromptTextSizeSettingDefinition : ITextSizeSettingDefinition
 {
-    double DefaultValue { get; }
-    IReadOnlyList<NumericSettingOption> Options { get; }
 }

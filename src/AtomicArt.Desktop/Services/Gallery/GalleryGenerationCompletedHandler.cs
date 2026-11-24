@@ -20,6 +20,7 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
     private readonly IGalleryStateService _galleryStateService;
     private readonly IGalleryFileOrderSynchronizer _fileOrderSynchronizer;
     private readonly ILogger<GalleryGenerationCompletedHandler> _logger;
+    private readonly IGenerationReferenceStore _referenceStore;
 
     public GalleryGenerationCompletedHandler(
         ITrustedImageFileService trustedImageFileService,
@@ -30,7 +31,8 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         IGalleryLifecycleViewState viewState,
         IGalleryStateService galleryStateService,
         IGalleryFileOrderSynchronizer fileOrderSynchronizer,
-        ILogger<GalleryGenerationCompletedHandler> logger)
+        ILogger<GalleryGenerationCompletedHandler> logger,
+        IGenerationReferenceStore referenceStore)
     {
         ArgumentNullException.ThrowIfNull(trustedImageFileService);
         ArgumentNullException.ThrowIfNull(generationResultStorage);
@@ -41,6 +43,7 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         ArgumentNullException.ThrowIfNull(galleryStateService);
         ArgumentNullException.ThrowIfNull(fileOrderSynchronizer);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(referenceStore);
 
         _trustedImageFileService = trustedImageFileService;
         _generationResultStorage = generationResultStorage;
@@ -51,6 +54,26 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         _galleryStateService = galleryStateService;
         _fileOrderSynchronizer = fileOrderSynchronizer;
         _logger = logger;
+        _referenceStore = referenceStore;
+    }
+
+    public async Task HandleAsync(GenerationLifecycleEvent lifecycleEvent, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(lifecycleEvent);
+
+        try
+        {
+            await ApplyResultsAsync(lifecycleEvent, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (lifecycleEvent.ChatResult?.StorageLeaseId is Guid storageLeaseId)
+            {
+                _referenceStore.Release(storageLeaseId);
+            }
+
+            lifecycleEvent.ChatRun?.Complete(lifecycleEvent.ChatResult);
+        }
     }
 
     private bool IsGenerated(GenerationItemDto item)
@@ -59,10 +82,8 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
             == GenerationResultContentPolicy.SaveValidatedContent;
     }
 
-    public async Task HandleAsync(GenerationLifecycleEvent lifecycleEvent, CancellationToken ct)
+    private async Task ApplyResultsAsync(GenerationLifecycleEvent lifecycleEvent, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(lifecycleEvent);
-
         if (lifecycleEvent.Batch is null)
         {
             _logger.LogWarning(
@@ -82,25 +103,25 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         foreach (GenerationItemDto item in lifecycleEvent.Batch.Items)
         {
             GalleryCompletedItemUpdate itemUpdate = await CreateItemUpdateAsync(
-                    lifecycleEvent.Batch.BatchId,
-                    item,
-                    ct)
+                lifecycleEvent.Batch.BatchId,
+                item,
+                ct)
                 .ConfigureAwait(false);
-            itemUpdates.Add(itemUpdate);
+            itemUpdates.Add(itemUpdate with { ChatResult = lifecycleEvent.ChatResult });
         }
 
         await _viewState
-            .ApplyCompletedAsync(lifecycleEvent.CorrelationId, itemUpdates, ct)
-            .ConfigureAwait(false);
+                    .ApplyCompletedAsync(lifecycleEvent.CorrelationId, itemUpdates, ct)
+                    .ConfigureAwait(false);
         await GalleryStateSnapshotSaver.SynchronizeFilesAndSaveAsync(
-                _viewState,
-                _galleryStateService,
-                _fileOrderSynchronizer,
-                snapshot => _logger.LogInformation(
-                    "Gallery applied completed batch {BatchId}; snapshot contains {ItemCount} items",
-                    lifecycleEvent.Batch.BatchId,
-                    snapshot.Count),
-                ct)
+            _viewState,
+            _galleryStateService,
+            _fileOrderSynchronizer,
+            snapshot => _logger.LogInformation(
+                "Gallery applied completed batch {BatchId}; snapshot contains {ItemCount} items",
+                lifecycleEvent.Batch.BatchId,
+                snapshot.Count),
+            ct)
             .ConfigureAwait(false);
     }
 
@@ -118,10 +139,10 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
         string? trustedImagePath = GetTrustedImagePathOrDefault(item);
         string? thumbnailPath = IsGenerated(item)
             ? await SaveThumbnailAndGetPathOrDefaultAsync(
-                    batchId,
-                    item,
-                    trustedImagePath,
-                    ct)
+                batchId,
+                item,
+                trustedImagePath,
+                ct)
                 .ConfigureAwait(false)
             : null;
 
@@ -184,10 +205,10 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
             expectedResultPath,
             item.ModelId);
         string? thumbnailPath = await SaveThumbnailAndGetPathOrDefaultAsync(
-                batchId,
-                item,
-                trustedImagePath,
-                ct)
+            batchId,
+            item,
+            trustedImagePath,
+            ct)
             .ConfigureAwait(false);
         _logger.LogInformation(
             "Gallery stored generated item {ItemId} from batch {BatchId}; thumbnail available: {HasThumbnail}",
@@ -260,6 +281,7 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
             or UnauthorizedAccessException)
         {
             LogThumbnailFallback(ex, batchId, item.Id);
+
             return null;
         }
     }

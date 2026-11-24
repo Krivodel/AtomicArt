@@ -1,6 +1,7 @@
-using Avalonia.Controls;
-using Avalonia.Threading;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Threading;
 
 using AtomicArt.Desktop.Services.UiAnimation;
 
@@ -35,6 +36,7 @@ internal sealed class SmoothScrollState
     private bool _isDisposed;
     private bool _isFrameRequested;
     private bool _isRunning;
+    private Orientation? _trackEnd;
     private int _frameRequestVersion;
 
     internal SmoothScrollState(ScrollViewer scrollViewer)
@@ -59,14 +61,17 @@ internal sealed class SmoothScrollState
         return _scrollViewer.Offset;
     }
 
-    internal void Start(Vector targetOffset, TimeSpan duration)
+    internal void Start(Vector targetOffset, TimeSpan duration, Orientation? trackEnd = null)
     {
         _targetOffset = targetOffset;
+        _trackEnd = trackEnd;
+        UpdateTargetBounds();
         _duration = duration > TimeSpan.Zero ? duration : TimeSpan.Zero;
 
         if (_duration == TimeSpan.Zero)
         {
             CompleteAtTarget();
+
             return;
         }
 
@@ -75,6 +80,14 @@ internal sealed class SmoothScrollState
             _isRunning = true;
             _hasFrameTime = false;
             RequestNextFrame();
+        }
+    }
+
+    internal void InterruptScrollToEnd()
+    {
+        if (_isRunning && _trackEnd is not null)
+        {
+            Complete();
         }
     }
 
@@ -151,6 +164,7 @@ internal sealed class SmoothScrollState
         {
             _lastFrameTime = frameTime;
             _hasFrameTime = true;
+
             return FallbackFrameInterval;
         }
 
@@ -163,34 +177,6 @@ internal sealed class SmoothScrollState
         }
 
         return delta;
-    }
-
-    private void OnAnimationFrame(TimeSpan frameTime, int frameRequestVersion)
-    {
-        if (frameRequestVersion != _frameRequestVersion)
-        {
-            return;
-        }
-
-        _isFrameRequested = false;
-
-        if (!_isRunning || _isDisposed)
-        {
-            return;
-        }
-
-        Step(frameTime);
-        RequestNextFrame();
-    }
-
-    private void OnFallbackTick(object? sender, EventArgs e)
-    {
-        if (!_isRunning || _isDisposed)
-        {
-            return;
-        }
-
-        Step(_lastFrameTime + FallbackFrameInterval);
     }
 
     private void RequestNextFrame()
@@ -209,6 +195,7 @@ internal sealed class SmoothScrollState
             int frameRequestVersion = ++_frameRequestVersion;
             frameScheduler.RequestAnimationFrame(
                 frameTime => OnAnimationFrame(frameTime, frameRequestVersion));
+
             return;
         }
 
@@ -234,6 +221,7 @@ internal sealed class SmoothScrollState
 
     private void Step(TimeSpan frameTime)
     {
+        UpdateTargetBounds();
         TimeSpan delta = ClampDelta(GetDelta(frameTime));
         double smoothSeconds = Math.Max(
             MinimumSmoothSeconds,
@@ -264,5 +252,41 @@ internal sealed class SmoothScrollState
         {
             Complete();
         }
+    }
+
+    private void UpdateTargetBounds()
+    {
+        Vector maximum = _scrollViewer.ScrollBarMaximum;
+        _targetOffset = new Vector(
+            _trackEnd == Orientation.Horizontal ? maximum.X : Math.Clamp(_targetOffset.X, 0d, maximum.X),
+            _trackEnd == Orientation.Vertical ? maximum.Y : Math.Clamp(_targetOffset.Y, 0d, maximum.Y));
+    }
+
+    private void OnAnimationFrame(TimeSpan frameTime, int frameRequestVersion)
+    {
+        if (frameRequestVersion != _frameRequestVersion)
+        {
+            return;
+        }
+
+        _isFrameRequested = false;
+
+        if (!_isRunning || _isDisposed)
+        {
+            return;
+        }
+
+        Step(frameTime);
+        RequestNextFrame();
+    }
+
+    private void OnFallbackTick(object? sender, EventArgs e)
+    {
+        if (!_isRunning || _isDisposed)
+        {
+            return;
+        }
+
+        Step(_lastFrameTime + FallbackFrameInterval);
     }
 }

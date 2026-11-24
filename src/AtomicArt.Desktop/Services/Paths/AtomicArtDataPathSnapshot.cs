@@ -9,6 +9,7 @@ internal sealed class AtomicArtDataPathSnapshot
     internal string SecretsDirectory { get; }
     internal string ThumbnailsDirectory { get; }
     internal string StateDirectory { get; }
+    internal string ChatsDirectory { get; }
     internal string StateAttachmentsDirectory { get; }
     internal string ModulesDirectory { get; }
 
@@ -25,6 +26,7 @@ internal sealed class AtomicArtDataPathSnapshot
             rootDirectory,
             AtomicArtPathNames.ThumbnailsDirectory);
         StateDirectory = AtomicArtDataPathSnapshot.CreateChildPath(rootDirectory, AtomicArtPathNames.StateDirectory);
+        ChatsDirectory = AtomicArtDataPathSnapshot.CreateChildPath(rootDirectory, AtomicArtPathNames.ChatsDirectory);
         StateAttachmentsDirectory = AtomicArtDataPathSnapshot.CreateChildPath(
             StateDirectory,
             AtomicArtPathNames.StateAttachmentsDirectory);
@@ -53,6 +55,7 @@ internal sealed class AtomicArtDataPathSnapshot
             || (string.Equals(fullPath, SecretsDirectory, StringComparison.OrdinalIgnoreCase))
             || (string.Equals(fullPath, ThumbnailsDirectory, StringComparison.OrdinalIgnoreCase))
             || (string.Equals(fullPath, StateDirectory, StringComparison.OrdinalIgnoreCase))
+            || (string.Equals(fullPath, ChatsDirectory, StringComparison.OrdinalIgnoreCase))
             || (string.Equals(fullPath, ModulesDirectory, StringComparison.OrdinalIgnoreCase))
             || (string.Equals(
                 fullPath,

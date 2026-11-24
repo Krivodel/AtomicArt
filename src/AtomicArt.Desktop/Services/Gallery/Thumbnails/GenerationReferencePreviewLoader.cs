@@ -1,18 +1,21 @@
-using Avalonia.Media.Imaging;
 using Microsoft.Extensions.Logging;
+
+using Avalonia.Media.Imaging;
 
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Imaging;
 
 namespace AtomicArt.Desktop.Services.Gallery.Thumbnails;
 
-public sealed class GenerationReferencePreviewLoader
+public sealed class GenerationReferencePreviewLoader : IDisposable
 {
     private const int MaximumPreviewPixels = 96;
+    private const long MaximumCacheBytes = 64L * 1024 * 1024;
+    private const int MaximumConcurrentDecodes = 2;
 
     private readonly IGenerationReferenceStore _references;
     private readonly ILogger<GenerationReferencePreviewLoader> _logger;
-    private readonly SemaphoreSlim _decodeSlots = new(2, 2);
+    private readonly PreviewBitmapCache<PreviewKey, GenerationReferencePreviewLoader> _cache;
 
     public GenerationReferencePreviewLoader(
         IGenerationReferenceStore references,
@@ -20,31 +23,42 @@ public sealed class GenerationReferencePreviewLoader
     {
         _references = references ?? throw new ArgumentNullException(nameof(references));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _cache = new PreviewBitmapCache<PreviewKey, GenerationReferencePreviewLoader>(
+            DecodeAsync, logger, MaximumCacheBytes, maximumConcurrentLoads: MaximumConcurrentDecodes);
     }
 
-    public async Task<Bitmap?> LoadAsync(GenerationReference reference, CancellationToken ct)
+    public void Dispose()
+    {
+        _cache.Dispose();
+    }
+
+    internal Task<GalleryPreviewBitmapLease?> AcquireAsync(
+        GenerationReference reference, CancellationToken ct, int? maximumPreviewPixels = null)
     {
         ArgumentNullException.ThrowIfNull(reference);
-        await _decodeSlots.WaitAsync(ct).ConfigureAwait(false);
 
+        return _cache.AcquireAsync(new PreviewKey(reference, maximumPreviewPixels ?? MaximumPreviewPixels), ct);
+    }
+
+    private async Task<Bitmap?> DecodeAsync(PreviewKey preview, CancellationToken ct)
+    {
         try
         {
-            return await _references.ReadAsync<Bitmap>(
-                reference,
-                async (stream, token) => await Task.Run(
-                    () => PreviewBitmapDecoder.Decode(stream, MaximumPreviewPixels, token, MaximumPreviewPixels),
-                    token).ConfigureAwait(false),
-                ct).ConfigureAwait(false);
+            return await Task.Run(
+                () => _references.ReadAsync<Bitmap>(
+                    preview.Reference,
+                    (stream, token) => Task.FromResult<Bitmap?>(
+                        PreviewBitmapDecoder.Decode(stream, preview.PixelLimit, token, preview.PixelLimit)),
+                    ct), ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException
             or ArgumentException or InvalidOperationException or NotSupportedException)
         {
             _logger.LogDebug(ex, "Could not load a generation reference preview.");
+
             return null;
         }
-        finally
-        {
-            _decodeSlots.Release();
-        }
     }
+
+    private readonly record struct PreviewKey(GenerationReference Reference, int PixelLimit);
 }

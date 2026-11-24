@@ -236,7 +236,7 @@
                 Value="Center" />
     </Style>
 
-    <Style Selector="Button.Icon:pointerover">
+    <Style Selector="Button.Icon:pointerover, Button.Icon.drag-hover">
         <Setter Property="Background"
                 Value="{DynamicResource SukiPrimaryColor5}" />
     </Style>
@@ -350,7 +350,7 @@
                 Value="{StaticResource AttachmentRemoveButtonCornerRadius}" />
     </Style>
 
-    <Style Selector="Border.attachment-preview:pointerover Button.remove-attachment">
+    <Style Selector="Border.attachment-preview:pointerover Button.remove-attachment.can-remove">
         <Setter Property="IsVisible"
                 Value="True" />
     </Style>
@@ -377,8 +377,8 @@
         <Setter Property="Transitions">
             <Setter.Value>
                 <Transitions>
-                    <DoubleTransition Property="Opacity"
-                                      Duration="0:0:0.15" />
+                    <DoubleTransition Duration="0:0:0.15"
+                                      Property="Opacity" />
                 </Transitions>
             </Setter.Value>
         </Setter>
@@ -433,8 +433,8 @@
                 Value="False" />
         <Setter Property="Transitions">
             <Transitions>
-                <DoubleTransition Property="Opacity"
-                                  Duration="0:0:0.14" />
+                <DoubleTransition Duration="0:0:0.14"
+                                  Property="Opacity" />
             </Transitions>
         </Setter>
     </Style>

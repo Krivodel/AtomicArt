@@ -52,10 +52,12 @@ internal sealed class AnimatedGallerySceneController
         {
             AttachScene();
             RegisterSceneOperations();
+
             return;
         }
 
         TopLevel? topLevel = TopLevel.GetTopLevel(_owner);
+
         if (topLevel is null)
         {
             return;
@@ -71,6 +73,7 @@ internal sealed class AnimatedGallerySceneController
         _sceneItems.Clear();
 
         IEnumerable<object>? items = _owner.Items?.Cast<object>();
+
         if (items is null)
         {
             return;
@@ -91,6 +94,7 @@ internal sealed class AnimatedGallerySceneController
 
         _cancelResizeAnimation();
         EnsureScene();
+
         if (_scene is null)
         {
             return;
@@ -110,6 +114,7 @@ internal sealed class AnimatedGallerySceneController
         }
 
         EnsureScene();
+
         if (_scene is null)
         {
             return;
@@ -210,8 +215,8 @@ internal sealed class AnimatedGallerySceneController
             bool isSelected = item is IGalleryItemViewModel { IsSelected: true };
 
             if (!context.CardControls.TryGetValue(
-                    _owner.GetItemId(item),
-                    out Control? control))
+                _owner.GetItemId(item),
+                out Control? control))
             {
                 continue;
             }
@@ -310,7 +315,8 @@ internal sealed class AnimatedGallerySceneController
             _owner.SaveAsCommand,
             _owner.LoadOpenWithApplicationsCommand,
             _owner.OpenWithApplicationCommand,
-            _owner.ChooseApplicationCommand);
+            _owner.ChooseApplicationCommand,
+            _owner.OpenChatCommand);
     }
 
     private void ApplyCurrentSelectionMode(Control control)

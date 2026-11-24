@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media;
-
+using Avalonia.VisualTree;
 using FluentAssertions;
 using SkiaSharp;
 using Xunit;
@@ -17,6 +17,47 @@ public sealed class BlurBackdropControlTests : AnimatedGalleryControlTestBase
     private const int BlurredStripeX = 100;
     private const int CenterY = 50;
     private const int OutsideBlurY = 5;
+
+    [Fact]
+    public async Task SnapshotBackdrop_WhenToggled_AnimatesBlurInBothDirections()
+    {
+        await Common.DesktopControlTestBase.DispatchAsync(async () =>
+        {
+            AnimatedBlurBackdropControl overlay = new()
+            {
+                BlurRadius = 120d,
+                UseSnapshot = true
+            };
+            Window window = Common.DesktopControlTestBase.Show(overlay, 200d, 100d);
+
+            try
+            {
+                BlurBackdropControl blur = overlay.GetVisualDescendants().OfType<BlurBackdropControl>().Single();
+
+                foreach (bool active in new[] { true, false })
+                {
+                    double target = active ? 1d : 0d;
+                    bool sawIntermediate = false;
+                    overlay.IsActive = active;
+
+                    for (int frame = 0; frame < 60 && blur.Intensity != target; frame++)
+                    {
+                        await Task.Delay(16);
+                        window.CaptureRenderedFrame()?.Dispose();
+                        sawIntermediate |= blur.Intensity is > 0d and < 1d;
+                    }
+
+                    sawIntermediate.Should().BeTrue();
+                    blur.Intensity.Should().Be(target);
+                    blur.IsDynamic.Should().BeFalse();
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
 
     [Fact]
     public void Render_WithHighContrastBackdrop_BlursCenterWithoutDarkeningEdges()
@@ -74,12 +115,14 @@ public sealed class BlurBackdropControlTests : AnimatedGalleryControlTestBase
         });
     }
 
-    [Fact]
-    public void Render_WithLargeBlurRadius_BlursDownsampledBackdropAcrossBounds()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Render_WithLargeBlurRadius_BlursDownsampledBackdropAcrossBounds(bool useSnapshot)
     {
         Dispatch(() =>
         {
-            Canvas root = CreateBackdrop(1d, 120d);
+            Canvas root = BlurBackdropControlTests.CreateBackdrop(1d, 120d, useSnapshot);
             Window window = Show(root, 200d, 100d);
 
             try
@@ -177,7 +220,8 @@ public sealed class BlurBackdropControlTests : AnimatedGalleryControlTestBase
 
     private static Canvas CreateBackdrop(
         double blurIntensity,
-        double blurRadius)
+        double blurRadius,
+        bool useSnapshot = false)
     {
         Canvas root = new()
         {
@@ -194,7 +238,8 @@ public sealed class BlurBackdropControlTests : AnimatedGalleryControlTestBase
             Width = 160d,
             Height = 80d,
             BlurRadius = blurRadius,
-            Intensity = blurIntensity
+            Intensity = blurIntensity,
+            UseSnapshot = useSnapshot
         };
 
         Canvas.SetLeft(stripe, 98d);

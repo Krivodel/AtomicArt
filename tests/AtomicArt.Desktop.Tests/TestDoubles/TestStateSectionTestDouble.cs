@@ -8,6 +8,7 @@ internal abstract class TestStateSectionTestDouble : IStateSection
 {
     public const string DefaultValue = "default";
 
+    public StateStorageArea StorageArea => StateStorageArea.Application;
     public string Key => "test";
     public string FileName => OwnedFileName;
     public int SchemaVersion => 1;

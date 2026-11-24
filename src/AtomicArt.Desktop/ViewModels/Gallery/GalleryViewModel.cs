@@ -51,6 +51,7 @@ public sealed partial class GalleryViewModel :
             previous?.Dispose();
         }
     }
+    public IAsyncRelayCommand<GenerationItemViewModel?>? OpenChatCommand { get; private set; }
 
     private const int SingleItemDeletionCount = 1;
 
@@ -217,8 +218,7 @@ public sealed partial class GalleryViewModel :
             sourceRootDirectory,
             destinationRootDirectory,
             ct);
-        IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
-        await _galleryStateService.SaveAsync(snapshot, ct);
+        await SaveCurrentStateAsync(ct);
     }
 
     public void Receive(LocalizationChangedMessage message)
@@ -258,6 +258,18 @@ public sealed partial class GalleryViewModel :
         }
 
         _lifecycleController.Dispose();
+    }
+
+    internal Task SaveCurrentStateAsync(CancellationToken ct)
+    {
+        return _galleryStateService.SaveLatestAsync(_viewStateController.CreateStateSnapshotAsync, ct);
+    }
+
+    internal void ConfigureChat(GenerationChatViewModel chat)
+    {
+        ArgumentNullException.ThrowIfNull(chat);
+        OpenChatCommand = chat.OpenCommand;
+        OnPropertyChanged(nameof(OpenChatCommand));
     }
 
     private static GenerationPanelPreset CreateGenerationPanelPreset(
@@ -485,6 +497,7 @@ public sealed partial class GalleryViewModel :
         {
             metadata.SelectItem(item);
             NavigateMetadataCommand.NotifyCanExecuteChanged();
+
             return;
         }
 
@@ -525,22 +538,10 @@ public sealed partial class GalleryViewModel :
 
         int currentIndex = Items.IndexOf(SelectedMetadata.Item);
         int adjacentIndex = currentIndex + (int)direction;
+
         return currentIndex >= 0 && adjacentIndex >= 0 && adjacentIndex < Items.Count
-            ? Items[adjacentIndex]
-            : null;
-    }
-
-    partial void OnIsMetadataOpenChanged(bool value)
-    {
-        NavigateMetadataCommand.NotifyCanExecuteChanged();
-    }
-
-    private void OnMetadataItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        if (IsMetadataOpen)
-        {
-            NavigateMetadataCommand.NotifyCanExecuteChanged();
-        }
+                    ? Items[adjacentIndex]
+                    : null;
     }
 
     [RelayCommand(CanExecute = nameof(CanRunCommand))]
@@ -568,9 +569,9 @@ public sealed partial class GalleryViewModel :
                     SingleItemDeletionCount,
                     async deletionCt =>
                     {
-                        CancelGenerationIfActive(item);
-                        await DeleteItemAsync(item, deletionCt);
-                    },
+                CancelGenerationIfActive(item);
+                await DeleteItemAsync(item, deletionCt);
+            },
                     operationCt);
             },
             nameof(DeleteOrCancelAsync),
@@ -599,10 +600,8 @@ public sealed partial class GalleryViewModel :
         }
 
         item.IsFavorite = !item.IsFavorite;
-        IReadOnlyList<GalleryItemState> snapshot =
-            _itemsController.CreateStateSnapshot();
         await ExecuteUserOperationAsync(
-            operationCt => _galleryStateService.SaveAsync(snapshot, operationCt),
+            SaveCurrentStateAsync,
             nameof(ToggleFavoriteAsync),
             ct);
     }
@@ -673,12 +672,14 @@ public sealed partial class GalleryViewModel :
     private async Task ReuseGenerationAsync(GenerationItemViewModel? item, CancellationToken ct)
     {
         IGenerationPanelPresetTarget? target = _generationPanelPresetTarget;
+
         if ((item is null) || (target is null))
         {
             return;
         }
 
         GenerationPanelPreset preset = GalleryViewModel.CreateGenerationPanelPreset(item);
+
         if (!target.CanApplyPreset(preset))
         {
             return;
@@ -689,13 +690,16 @@ public sealed partial class GalleryViewModel :
             if (item.References is not null)
             {
                 List<AttachedImageDto> images = [];
+
                 foreach (GenerationReference reference in item.References)
                 {
                     AttachedImageDto? image = await LoadReferenceAsync(reference, ct);
+
                     if (image is null)
                     {
                         await _dialogService.ShowLocalizedErrorAsync(
                             GalleryLocalizationKeys.Metadata.ReferenceUnavailable, ct);
+
                         return;
                     }
 
@@ -732,6 +736,7 @@ public sealed partial class GalleryViewModel :
     private async Task OpenReferenceAsync(GenerationReference? reference, CancellationToken ct)
     {
         GenerationMetadataViewModel? metadata = SelectedMetadata;
+
         if (reference is null || metadata is null)
         {
             return;
@@ -739,6 +744,7 @@ public sealed partial class GalleryViewModel :
 
         List<GalleryImageViewerItem> viewerItems = [];
         Guid? selectedItemId = null;
+
         foreach (GenerationReference savedReference in metadata.References)
         {
             if (savedReference is null)
@@ -748,6 +754,7 @@ public sealed partial class GalleryViewModel :
 
             Guid itemId = Guid.NewGuid();
             viewerItems.Add(new GalleryImageViewerItem(itemId, new GalleryReferenceImageViewerSource(savedReference)));
+
             if (ReferenceEquals(savedReference, reference))
             {
                 selectedItemId ??= itemId;
@@ -757,6 +764,7 @@ public sealed partial class GalleryViewModel :
         if (selectedItemId is null)
         {
             await _dialogService.ShowLocalizedErrorAsync(GalleryLocalizationKeys.Metadata.ReferenceUnavailable, ct);
+
             return;
         }
 
@@ -795,6 +803,7 @@ public sealed partial class GalleryViewModel :
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
             _errorHandler.Log(ex, nameof(LoadReferenceAsync));
+
             return null;
         }
     }
@@ -885,6 +894,7 @@ public sealed partial class GalleryViewModel :
     private async Task OpenDlss5Async(GenerationItemViewModel? item, CancellationToken ct)
     {
         Dlss5SessionViewModel? dlss5 = _dlss5;
+
         if ((item?.ImagePath is null) || (dlss5 is null) || (!CanOpenDlss5(item)))
         {
             return;
@@ -954,8 +964,7 @@ public sealed partial class GalleryViewModel :
         _itemsController.Delete(item);
         await _viewStateController.RemoveAsync(removedItemId, ct);
         await _deletionService.DeleteFilesAsync(deletionRequest, ct);
-        IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
-        await _galleryStateService.SaveAsync(snapshot, ct);
+        await SaveCurrentStateAsync(ct);
     }
 
     private async Task DeleteItemsAsync(
@@ -980,8 +989,7 @@ public sealed partial class GalleryViewModel :
         _selectionController.Exit();
         await _viewStateController.RemoveItemsAsync(items, ct);
         await _deletionService.DeleteFilesAsync(deletionRequests, ct);
-        IReadOnlyList<GalleryItemState> snapshot = _itemsController.CreateStateSnapshot();
-        await _galleryStateService.SaveAsync(snapshot, ct);
+        await SaveCurrentStateAsync(ct);
     }
 
     private void CancelGenerationIfActive(GenerationItemViewModel item)
@@ -1121,6 +1129,19 @@ public sealed partial class GalleryViewModel :
         SelectAllCommand.NotifyCanExecuteChanged();
         ExitSelectionModeCommand.NotifyCanExecuteChanged();
         DeleteSelectedCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsMetadataOpenChanged(bool value)
+    {
+        NavigateMetadataCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnMetadataItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (IsMetadataOpen)
+        {
+            NavigateMetadataCommand.NotifyCanExecuteChanged();
+        }
     }
 
     partial void OnIsLoadingChanged(bool value)

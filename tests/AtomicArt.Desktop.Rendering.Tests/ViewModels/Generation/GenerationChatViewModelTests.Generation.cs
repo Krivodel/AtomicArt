@@ -1,0 +1,74 @@
+using FluentAssertions;
+using Moq;
+using Xunit;
+
+using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
+using AtomicArt.Desktop.Tests.ViewModels.Generation;
+using AtomicArt.Desktop.ViewModels.Gallery;
+using AtomicArt.Desktop.ViewModels.Generation;
+
+namespace AtomicArt.Desktop.Rendering.Tests.ViewModels.Generation;
+
+public sealed partial class GenerationChatViewModelTests
+{
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task GenerateCommand_WithChat_ContinuesOnlyExpandedHistory(bool expanded, bool pending)
+    {
+        using ChatContext context = new();
+        GenerationItemViewModel source = await context.RestoreSourceAsync();
+        await context.Chat.OpenCommand.ExecuteAsync(source);
+
+        if (pending)
+        {
+            await GenerationChatViewModelTests.SubmitParallelAsync(context.Chat);
+        }
+
+        if (!expanded)
+        {
+            context.Chat.Collapse();
+        }
+
+        Mock<IGenerationRunDispatcher> dispatcher = new();
+        GenerationRunRequest? captured = null;
+        dispatcher.Setup(service => service.EnqueueAsync(It.IsAny<GenerationRunRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<GenerationRunRequest, CancellationToken>((request, _) => captured = request)
+            .Returns(Task.CompletedTask);
+        LocalCodexSettings settings = new();
+        using UniversalNanoBananaPanelViewModel panel = UniversalNanoBananaPanelViewModelTests.CreateViewModel(
+            imageModelOptionCatalog: new ImageModelOptionCatalog(settings), dispatcher: dispatcher.Object,
+            localCodexSettings: settings);
+        panel.ConnectChat(context.Chat);
+        panel.Prompt = "A new image";
+
+        panel.GenerateCommand.CanExecute(null).Should().BeTrue();
+        await panel.GenerateCommand.ExecuteAsync(null);
+
+        GenerationRunRequest request = captured ?? throw new InvalidOperationException(panel.ErrorMessage);
+        (request.ChatRun is not null).Should().Be(expanded);
+        (request.StartSnapshot.ChatHistory is not null).Should().Be(expanded);
+        context.Chat.HasChat.Should().Be(expanded);
+        panel.Prompt.Should().Be("A new image");
+    }
+
+    [Fact]
+    public async Task OpenCommand_WithMessagesAcrossDates_ShowsOneSeparatorPerLocalDay()
+    {
+        using ChatContext context = new();
+        GenerationChatMessage[] messages =
+        [
+            new GenerationChatMessage(false, "Old", new DateTime(2025, 11, 24), Array.Empty<GenerationReference>()),
+            new GenerationChatMessage(true, "Same day", new DateTime(2025, 11, 24, 15, 0, 0), Array.Empty<GenerationReference>()),
+            new GenerationChatMessage(false, "Today", new DateTime(2026, 11, 24), Array.Empty<GenerationReference>())
+        ];
+        GenerationItemViewModel source = await context.RestoreSavedChatAsync(new GenerationChatHistory(messages, includesCardTurn: true));
+
+        await context.Chat.OpenCommand.ExecuteAsync(source);
+
+        context.Chat.Messages.Select(message => message.DateLabel).Should().Equal("November 24, 2025", null, "November 24");
+    }
+}

@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:i18n="https://codewf.com"
-             xmlns:generation="using:AtomicArt.Desktop.Controls.Generation"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:generation="using:AtomicArt.Desktop.Controls.Generation"
+             xmlns:i18n="https://codewf.com"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationPreviewControl"
              x:Name="Root"
              x:DataType="gallery:GenerationItemViewModel"
@@ -28,13 +28,13 @@
                     CornerRadius="{StaticResource GenerationCardCornerRadius}">
                 <Image x:Name="PreviewImage"
                        Classes="generation-card-image"
-                       RenderOptions.BitmapInterpolationMode="MediumQuality"
-                       IsVisible="{Binding ShowsGeneratedImage}" />
+                       IsVisible="{Binding ShowsGeneratedImage}"
+                       RenderOptions.BitmapInterpolationMode="MediumQuality" />
             </Border>
         </Grid>
 
         <generation:AttachmentPixelLoadingControl x:Name="PixelLoadingIndicator"
-                                                  GridSize="16"
+                                                  GridSize="{StaticResource GenerationPixelLoadingGridSize}"
                                                   AnimationSeed="{Binding Id}"
                                                   IsActive="{Binding ShowsGenerationProgress}" />
 
@@ -51,9 +51,9 @@
         </Border>
 
         <Border x:Name="PreviewDragSource"
+                IsVisible="{Binding !IsFailed}"
                 Background="Transparent"
                 Cursor="Hand"
-                IsVisible="{Binding !IsFailed}"
                 PointerCaptureLost="OnPreviewDragSourcePointerCaptureLost"
                 PointerMoved="OnPreviewDragSourcePointerMoved"
                 PointerPressed="OnPreviewDragSourcePointerPressed"

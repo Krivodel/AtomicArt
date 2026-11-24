@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 
+using Microsoft.Extensions.Logging;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -14,10 +16,12 @@ using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.ViewModels;
 using AtomicArt.Desktop.Views.Dlss5;
+using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Desktop.Views.Updates;
 
 namespace AtomicArt.Desktop.Views.Shell;
@@ -75,7 +79,10 @@ public partial class MainWindow : SukiWindow
         ISukiDialogManager dialogManager,
         ApplicationUpdateToastPresenter updateToastPresenter,
         Dlss5OperationToastPresenter dlss5ToastPresenter,
-        GenerationPanelLayoutTracker generationPanelLayoutTracker) : this()
+        GenerationPanelLayoutTracker generationPanelLayoutTracker,
+        IGenerationReferenceDragService referenceDragService,
+        GenerationReferencePreviewLoader referencePreviewLoader,
+        ILogger<GenerationChatView> chatLogger) : this()
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         ArgumentNullException.ThrowIfNull(trayService);
@@ -87,12 +94,17 @@ public partial class MainWindow : SukiWindow
         ArgumentNullException.ThrowIfNull(updateToastPresenter);
         ArgumentNullException.ThrowIfNull(dlss5ToastPresenter);
         ArgumentNullException.ThrowIfNull(generationPanelLayoutTracker);
+        ArgumentNullException.ThrowIfNull(referenceDragService);
+        ArgumentNullException.ThrowIfNull(referencePreviewLoader);
+        ArgumentNullException.ThrowIfNull(chatLogger);
 
         _trayService = trayService;
         _confirmationDialogPresenter = confirmationDialogPresenter;
         _updateToastPresenter = updateToastPresenter;
         _dlss5ToastPresenter = dlss5ToastPresenter;
         _generationPanelLayoutTracker = generationPanelLayoutTracker;
+        GenerationChat.PreviewLoader = referencePreviewLoader;
+        GenerationChat.PresentationLogger = chatLogger;
         DataContext = viewModel;
         ConfirmationDialogHost.Manager = dialogManager;
         UpdateToastHost.Manager = updateToastPresenter.Manager;
@@ -103,6 +115,7 @@ public partial class MainWindow : SukiWindow
         AttachmentImageDragBehavior.SetDragService(
             this,
             attachmentImageDragService);
+        AttachmentImageDragBehavior.SetReferenceDragService(this, referenceDragService);
     }
 
     protected override void OnClosing(WindowClosingEventArgs eventArgs)
@@ -123,13 +136,14 @@ public partial class MainWindow : SukiWindow
         _generationPanelLayoutTracker = null;
         Opened -= OnOpenedAsync;
         PropertyChanged -= OnWindowPropertyChanged;
+
         if (DataContext is MainWindowViewModel viewModel)
         {
             viewModel.OpenRouterBalance.Dispose();
         }
 
         SettingsOverlayPresenter.PropertyChanged -=
-            OnSettingsOverlayPresenterPropertyChanged;
+                    OnSettingsOverlayPresenterPropertyChanged;
         RemoveHandler(KeyDownEvent, OnConfirmationDismissKeyDown);
         _confirmationDialogPresenter?.Dismiss();
         _confirmationDialogPresenter = null;
@@ -154,15 +168,15 @@ public partial class MainWindow : SukiWindow
         }
 
         return (string.Equals(
-                (visual as TextBox)?.Name,
-                PromptTextBoxName,
-                StringComparison.Ordinal))
-            || (visual.GetVisualAncestors()
-                .OfType<TextBox>()
-                .Any(textBox => string.Equals(
-                    textBox.Name,
-                    PromptTextBoxName,
-                    StringComparison.Ordinal)));
+            (visual as TextBox)?.Name,
+            PromptTextBoxName,
+            StringComparison.Ordinal))
+                    || (visual.GetVisualAncestors()
+                        .OfType<TextBox>()
+                        .Any(textBox => string.Equals(
+                            textBox.Name,
+                            PromptTextBoxName,
+                            StringComparison.Ordinal)));
     }
 
     private void InitializeGenerationPanelMinimumHeight()
@@ -174,6 +188,7 @@ public partial class MainWindow : SukiWindow
 
         RowDefinition generationPanelRow = GenerationPanelRowDefinition;
         double generationPanelHeight = generationPanelRow.ActualHeight;
+
         if (generationPanelHeight <= 0d)
         {
             generationPanelHeight = GenerationPanelHost.Bounds.Height;
@@ -213,6 +228,7 @@ public partial class MainWindow : SukiWindow
         }
 
         IPlatformHandle? handle = TryGetPlatformHandle();
+
         if ((handle is null)
             || (!string.Equals(handle.HandleDescriptor, NativeWindowHandleDescriptor, StringComparison.Ordinal)))
         {
@@ -222,10 +238,31 @@ public partial class MainWindow : SukiWindow
         if (WindowState == WindowState.FullScreen)
         {
             _ = MainWindow.RemoveWindowProperty(handle.Handle, NonRudeWindowPropertyName);
+
             return;
         }
 
         _ = MainWindow.SetWindowProperty(handle.Handle, NonRudeWindowPropertyName, MainWindow.EnabledWindowPropertyValue);
+    }
+
+    private void UpdateBalanceWindowActivity()
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.OpenRouterBalance.SetWindowActive(
+                IsActive && IsVisible && (WindowState != WindowState.Minimized));
+        }
+    }
+
+    private void OnChatBackdropPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Control backdrop
+            && e.GetCurrentPoint(backdrop).Properties.PointerUpdateKind == PointerUpdateKind.LeftButtonPressed
+            && DataContext is MainWindowViewModel { Chat: { IsExpanded: true } chat })
+        {
+            e.Handled = true;
+            chat.CollapseCommand.Execute(null);
+        }
     }
 
     private void OnGenerationPanelPointerPressed(
@@ -235,19 +272,20 @@ public partial class MainWindow : SukiWindow
         _ = sender;
 
         if ((eventArgs.GetCurrentPoint(GenerationPanelContent).Properties.PointerUpdateKind
-            != PointerUpdateKind.RightButtonPressed)
+                    != PointerUpdateKind.RightButtonPressed)
             || (MainWindow.IsPromptTextBoxSource(eventArgs.Source)))
         {
             return;
         }
 
         if (GenerationPanelContent.Resources[GenerationPanelContextFlyoutKey]
-            is not AnimatedContextMenuFlyout contextFlyout)
+                    is not AnimatedContextMenuFlyout contextFlyout)
         {
             return;
         }
 
         eventArgs.Handled = true;
+
         foreach (MenuItem menuItem in contextFlyout.Items.OfType<MenuItem>())
         {
             menuItem.DataContext = DataContext;
@@ -262,6 +300,7 @@ public partial class MainWindow : SukiWindow
         _ = eventArgs;
 
         InitializeGenerationPanelMinimumHeight();
+
         if (_isGenerationPanelMinimumHeightInitialized)
         {
             Loaded -= OnLoaded;
@@ -298,15 +337,6 @@ public partial class MainWindow : SukiWindow
             && (IsLoaded))
         {
             FocusPromptInput();
-        }
-    }
-
-    private void UpdateBalanceWindowActivity()
-    {
-        if (DataContext is MainWindowViewModel viewModel)
-        {
-            viewModel.OpenRouterBalance.SetWindowActive(
-                IsActive && IsVisible && (WindowState != WindowState.Minimized));
         }
     }
 

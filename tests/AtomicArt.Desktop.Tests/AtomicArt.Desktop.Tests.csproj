@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <InternalsVisibleTo Include="AtomicArt.Desktop.Rendering.Tests" />
     <Compile Include="..\..\src\AtomicArt.Desktop\GlobalUsings.cs" Link="GlobalUsings.cs" />
   </ItemGroup>
   <ItemGroup>

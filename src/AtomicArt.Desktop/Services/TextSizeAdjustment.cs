@@ -1,6 +1,6 @@
 namespace AtomicArt.Desktop.Services;
 
-public enum PromptTextSizeAdjustment
+public enum TextSizeAdjustment
 {
     Decrease,
     Increase

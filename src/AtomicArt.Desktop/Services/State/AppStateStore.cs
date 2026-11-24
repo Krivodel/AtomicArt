@@ -49,12 +49,12 @@ public sealed class AppStateStore : IAppStateStore
 
         try
         {
-            string[] trustedDirectories = [Path.GetFullPath(_pathProvider.StateDirectory)];
+            string[] trustedDirectories = [Path.GetFullPath(GetStateDirectory(section))];
 
             if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
                 path,
                 trustedDirectories,
-                _pathProvider.StateDirectory,
+                GetStateDirectory(section),
                 TrustedPathFailureMessage,
                 out FileStream? stream,
                 out string? _))
@@ -62,6 +62,7 @@ public sealed class AppStateStore : IAppStateStore
                 _logger.LogDebug(
                     "State section {SectionKey} has no trusted saved file; default state will be used.",
                     section.Key);
+
                 return GetDefaultPayload<TState>(section);
             }
 
@@ -70,6 +71,7 @@ public sealed class AppStateStore : IAppStateStore
                 _logger.LogDebug(
                     "State section {SectionKey} file was unavailable; default state will be used.",
                     section.Key);
+
                 return GetDefaultPayload<TState>(section);
             }
 
@@ -111,6 +113,7 @@ public sealed class AppStateStore : IAppStateStore
                         "State section {SectionKey} loaded with schema version {SchemaVersion}.",
                         section.Key,
                         envelope.SchemaVersion);
+
                     return typedPayload;
                 }
 
@@ -177,11 +180,11 @@ public sealed class AppStateStore : IAppStateStore
             await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
         TrustedPathGuard.EnsureTrustedDirectoryExists(
             _pathProvider,
-            _pathProvider.StateDirectory,
+            GetStateDirectory(section),
             TrustedPathFailureMessage);
         string path = GetStatePath(section);
         TrustedPathGuard.EnsureTrustedWriteTarget(
-            _pathProvider.StateDirectory,
+            GetStateDirectory(section),
             path,
             TrustedPathFailureMessage);
         SemaphoreSlim writeLock = _writeLocks.GetOrAdd(path, CreateWriteLock);
@@ -202,70 +205,23 @@ public sealed class AppStateStore : IAppStateStore
         }
     }
 
-    private async Task SaveLockedAsync(
-        IStateSection section,
-        object state,
-        string path,
-        CancellationToken ct)
+    public async Task DeleteAsync(IStateSection section, CancellationToken ct)
     {
-        string tempPath = AtomicFileWriteTempPath.CreateHidden(
-            _pathProvider.StateDirectory,
-            Path.GetFileName(section.FileName));
-        bool stateFileReplaced = false;
+        ArgumentNullException.ThrowIfNull(section);
+        using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+        string path = GetStatePath(section);
+        SemaphoreSlim writeLock = _writeLocks.GetOrAdd(path, CreateWriteLock);
+        await writeLock.WaitAsync(ct).ConfigureAwait(false);
 
         try
         {
-            TrustedPathGuard.EnsureTrustedWriteTarget(
-                _pathProvider.StateDirectory,
-                tempPath,
-                TrustedPathFailureMessage);
-            StateEnvelope<object> envelope = new StateEnvelope<object>
-            {
-                SchemaVersion = section.SchemaVersion,
-                SavedAtUtc = DateTimeOffset.UtcNow,
-                Payload = state
-            };
-
-            await using (FileStream stream = _trustedFileStreamFactory.CreateNewFileForWrite(
-                _pathProvider.StateDirectory,
-                tempPath,
-                TrustedPathFailureMessage))
-            {
-                await JsonSerializer.SerializeAsync(stream, envelope, JsonOptions, ct)
-                    .ConfigureAwait(false);
-                await stream.FlushAsync(ct).ConfigureAwait(false);
-            }
-
-            TrustedPathGuard.ReplaceTrustedFile(
-                _pathProvider.StateDirectory,
-                tempPath,
-                path,
-                TrustedPathFailureMessage);
-
-            stateFileReplaced = true;
+            TrustedPathGuard.EnsureTrustedWriteTarget(GetStateDirectory(section), path, TrustedPathFailureMessage);
+            FileDeletion.DeleteIfExists(path);
         }
         finally
         {
-            if (!stateFileReplaced)
-            {
-                DeleteTempFile(tempPath);
-            }
+            writeLock.Release();
         }
-    }
-
-    private string GetStatePath(IStateSection section)
-    {
-        ValidateSectionFileName(section);
-
-        string stateRoot = Path.GetFullPath(_pathProvider.StateDirectory);
-        string statePath = Path.GetFullPath(Path.Combine(stateRoot, section.FileName));
-
-        TrustedPathGuard.EnsureInsideDirectory(
-            stateRoot,
-            statePath,
-            $"State section '{section.Key}' file name must stay inside the state directory.");
-
-        return statePath;
     }
 
     private static SemaphoreSlim CreateWriteLock(string path)
@@ -311,6 +267,82 @@ public sealed class AppStateStore : IAppStateStore
             throw new InvalidOperationException(
                 $"State section '{section.Key}' file name must be a safe file name.");
         }
+    }
+
+    private async Task SaveLockedAsync(
+        IStateSection section,
+        object state,
+        string path,
+        CancellationToken ct)
+    {
+        string tempPath = AtomicFileWriteTempPath.CreateHidden(
+            GetStateDirectory(section),
+            Path.GetFileName(section.FileName));
+        bool stateFileReplaced = false;
+
+        try
+        {
+            TrustedPathGuard.EnsureTrustedWriteTarget(
+                GetStateDirectory(section),
+                tempPath,
+                TrustedPathFailureMessage);
+            StateEnvelope<object> envelope = new StateEnvelope<object>
+            {
+                SchemaVersion = section.SchemaVersion,
+                SavedAtUtc = DateTimeOffset.UtcNow,
+                Payload = state
+            };
+
+            await using (FileStream stream = _trustedFileStreamFactory.CreateNewFileForWrite(
+                GetStateDirectory(section),
+                tempPath,
+                TrustedPathFailureMessage))
+            {
+                await JsonSerializer.SerializeAsync(stream, envelope, JsonOptions, ct)
+                    .ConfigureAwait(false);
+                await stream.FlushAsync(ct).ConfigureAwait(false);
+            }
+
+            TrustedPathGuard.ReplaceTrustedFile(
+                GetStateDirectory(section),
+                tempPath,
+                path,
+                TrustedPathFailureMessage);
+
+            stateFileReplaced = true;
+        }
+        finally
+        {
+            if (!stateFileReplaced)
+            {
+                DeleteTempFile(tempPath);
+            }
+        }
+    }
+
+    private string GetStateDirectory(IStateSection section)
+    {
+        return section.StorageArea switch
+        {
+            StateStorageArea.Application => _pathProvider.StateDirectory,
+            StateStorageArea.Chats => _pathProvider.ChatsDirectory,
+            _ => throw new InvalidOperationException("The state storage area is unsupported.")
+        };
+    }
+
+    private string GetStatePath(IStateSection section)
+    {
+        ValidateSectionFileName(section);
+
+        string stateRoot = Path.GetFullPath(GetStateDirectory(section));
+        string statePath = Path.GetFullPath(Path.Combine(stateRoot, section.FileName));
+
+        TrustedPathGuard.EnsureInsideDirectory(
+            stateRoot,
+            statePath,
+            $"State section '{section.Key}' file name must stay inside the state directory.");
+
+        return statePath;
     }
 
     private void DeleteTempFile(string tempPath)

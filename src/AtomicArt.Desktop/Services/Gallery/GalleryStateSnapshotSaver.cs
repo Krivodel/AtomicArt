@@ -45,18 +45,21 @@ internal static class GalleryStateSnapshotSaver
         ArgumentNullException.ThrowIfNull(viewState);
         ArgumentNullException.ThrowIfNull(galleryStateService);
 
-        IReadOnlyList<GalleryItemState> snapshot = await viewState
-            .CreateStateSnapshotAsync(ct)
-            .ConfigureAwait(false);
-
         if (fileOrderSynchronizer is not null)
         {
+            IReadOnlyList<GalleryItemState> order = await viewState.CreateStateSnapshotAsync(ct).ConfigureAwait(false);
             await fileOrderSynchronizer
-                .SynchronizeAsync(snapshot, ct)
+                .SynchronizeAsync(order, ct)
                 .ConfigureAwait(false);
         }
 
-        await galleryStateService.SaveAsync(snapshot, ct).ConfigureAwait(false);
+        IReadOnlyList<GalleryItemState> snapshot = [];
+        await galleryStateService.SaveLatestAsync(async token =>
+        {
+            snapshot = await viewState.CreateStateSnapshotAsync(token).ConfigureAwait(false);
+
+            return snapshot;
+        }, ct).ConfigureAwait(false);
         stateSaved?.Invoke(snapshot);
     }
 }

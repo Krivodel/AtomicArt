@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Media;
 using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
-
 using SkiaSharp;
 
 namespace AtomicArt.Desktop.Controls.Overlays;
@@ -13,19 +12,23 @@ internal sealed class BackdropBlurDrawOperation : ICustomDrawOperation
 
     private readonly int _captureRevision;
     private readonly bool _isDynamic;
+    private readonly bool _useSnapshot;
     private readonly float _sigma;
     private SKImage? _backgroundSnapshot;
+    private SKImage? _blurredSnapshot;
 
     internal BackdropBlurDrawOperation(
         Rect bounds,
         float sigma,
         bool isDynamic,
-        int captureRevision)
+        int captureRevision,
+        bool useSnapshot = false)
     {
         Bounds = bounds;
         _sigma = sigma;
         _isDynamic = isDynamic;
         _captureRevision = captureRevision;
+        _useSnapshot = useSnapshot && !isDynamic;
     }
 
     public bool HitTest(Point point)
@@ -41,16 +44,18 @@ internal sealed class BackdropBlurDrawOperation : ICustomDrawOperation
         }
 
         return other is BackdropBlurDrawOperation operation
-            && !operation._isDynamic
-            && operation.Bounds == Bounds
-            && operation._sigma == _sigma
-            && operation._captureRevision == _captureRevision;
+                    && !operation._isDynamic
+                    && operation._useSnapshot == _useSnapshot
+                    && operation.Bounds == Bounds
+                    && operation._sigma == _sigma
+                    && operation._captureRevision == _captureRevision;
     }
 
     public void Render(ImmediateDrawingContext context)
     {
         ISkiaSharpApiLeaseFeature? leaseFeature =
             context.TryGetFeature<ISkiaSharpApiLeaseFeature>();
+
         if (leaseFeature is null)
         {
             return;
@@ -58,12 +63,22 @@ internal sealed class BackdropBlurDrawOperation : ICustomDrawOperation
 
         using ISkiaSharpApiLease lease = leaseFeature.Lease();
         SKSurface? surface = lease.SkSurface;
+
         if (surface is null)
         {
             return;
         }
 
         SKCanvas canvas = lease.SkCanvas;
+        SKRect drawBounds = BackdropBlurDrawOperation.ToSkRect(Bounds);
+
+        if (_blurredSnapshot is { } cached)
+        {
+            BackdropBlurDrawOperation.DrawSnapshot(canvas, cached, drawBounds);
+
+            return;
+        }
+
         if (!canvas.TotalMatrix.TryInvert(out SKMatrix invertedTransform))
         {
             return;
@@ -76,6 +91,7 @@ internal sealed class BackdropBlurDrawOperation : ICustomDrawOperation
         }
 
         SKImage? backgroundSnapshot = _backgroundSnapshot;
+
         if (backgroundSnapshot is null)
         {
             return;
@@ -86,7 +102,6 @@ internal sealed class BackdropBlurDrawOperation : ICustomDrawOperation
             SKShaderTileMode.Clamp,
             SKShaderTileMode.Clamp,
             invertedTransform);
-        SKRect drawBounds = ToSkRect(Bounds);
         using SKImageFilter blurFilter =
             BackdropBlurImageFilterFactory.Create(
                 backdropShader,
@@ -98,6 +113,59 @@ internal sealed class BackdropBlurDrawOperation : ICustomDrawOperation
             ImageFilter = blurFilter
         };
 
+        if (_useSnapshot)
+        {
+            _blurredSnapshot = BackdropBlurDrawOperation.CaptureBlurredSnapshot(lease.GrContext, blurPaint, drawBounds);
+
+            if (_blurredSnapshot is { } blurred)
+            {
+                _backgroundSnapshot?.Dispose();
+                _backgroundSnapshot = null;
+                BackdropBlurDrawOperation.DrawSnapshot(canvas, blurred, drawBounds);
+
+                return;
+            }
+        }
+
+        BackdropBlurDrawOperation.DrawBackdrop(canvas, blurPaint, drawBounds);
+    }
+
+    public void Dispose()
+    {
+        _backgroundSnapshot?.Dispose();
+        _backgroundSnapshot = null;
+        _blurredSnapshot?.Dispose();
+        _blurredSnapshot = null;
+    }
+
+    private static SKImage? CaptureBlurredSnapshot(GRContext? context, SKPaint paint, SKRect bounds)
+    {
+        const float SnapshotScale = 0.25f;
+        SKImageInfo size = new(
+            Math.Max(1, (int)Math.Ceiling(bounds.Width * SnapshotScale)),
+            Math.Max(1, (int)Math.Ceiling(bounds.Height * SnapshotScale)));
+        using SKSurface? snapshot = context is null
+            ? SKSurface.Create(size)
+            : SKSurface.Create(context, budgeted: true, size);
+
+        if (snapshot is null)
+        {
+            return null;
+        }
+
+        snapshot.Canvas.Scale(size.Width / bounds.Width, size.Height / bounds.Height);
+        BackdropBlurDrawOperation.DrawBackdrop(snapshot.Canvas, paint, bounds);
+
+        return snapshot.Snapshot();
+    }
+
+    private static void DrawSnapshot(SKCanvas canvas, SKImage snapshot, SKRect bounds)
+    {
+        canvas.DrawImage(snapshot, bounds, new SKSamplingOptions(SKFilterMode.Linear));
+    }
+
+    private static void DrawBackdrop(SKCanvas canvas, SKPaint paint, SKRect drawBounds)
+    {
         int saveCount = canvas.Save();
 
         try
@@ -106,18 +174,12 @@ internal sealed class BackdropBlurDrawOperation : ICustomDrawOperation
                 drawBounds,
                 SKClipOperation.Intersect,
                 antialias: false);
-            canvas.DrawRect(drawBounds, blurPaint);
+            canvas.DrawRect(drawBounds, paint);
         }
         finally
         {
             canvas.RestoreToCount(saveCount);
         }
-    }
-
-    public void Dispose()
-    {
-        _backgroundSnapshot?.Dispose();
-        _backgroundSnapshot = null;
     }
 
     private static SKRect ToSkRect(Rect bounds)

@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "culture": "en-US",
   "strings": {
+    "GenerationChat": {
+      "Chat": "Chat",
+      "History": "Chat history",
+      "Collapse": "Collapse chat",
+      "Edit": "Edit message",
+      "Save": "Save",
+      "ChooseVariant": "Choose",
+      "OpenImage": "Open image",
+      "RemoveImage": "Remove image",
+      "Message": "Message",
+      "Date": "{0:MMMM d}",
+      "DateWithYear": "{0:MMMM d, yyyy}"
+    },
     "Common": {
       "Error": "Error",
       "Copy": "Copy",
@@ -207,6 +220,7 @@
       "Appearance": {
         "ScaleLabel": "Scale",
         "PromptTextSizeLabel": "Prompt text size",
+        "ChatTextSizeLabel": "Chat text size",
         "ConfirmDeletionLabel": "Confirm deletion"
       },
       "ImageViewer": {

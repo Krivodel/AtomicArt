@@ -17,6 +17,11 @@ public static class AttachmentImageDragBehavior
             "DragService",
             typeof(AttachmentImageDragBehavior),
             inherits: true);
+    public static readonly AttachedProperty<IGenerationReferenceDragService?> ReferenceDragServiceProperty =
+        AvaloniaProperty.RegisterAttached<Control, IGenerationReferenceDragService?>(
+            "ReferenceDragService",
+            typeof(AttachmentImageDragBehavior),
+            inherits: true);
 
     public static Control? GetDragBoundary(Control control)
     {
@@ -26,6 +31,11 @@ public static class AttachmentImageDragBehavior
     public static IAttachmentImageDragService? GetDragService(Control control)
     {
         return AttachedPropertyValueAccessor.Get(control, DragServiceProperty);
+    }
+
+    public static IGenerationReferenceDragService? GetReferenceDragService(Control control)
+    {
+        return AttachedPropertyValueAccessor.Get(control, ReferenceDragServiceProperty);
     }
 
     public static void SetDragBoundary(Control control, Control? value)
@@ -38,5 +48,10 @@ public static class AttachmentImageDragBehavior
         IAttachmentImageDragService? value)
     {
         AttachedPropertyValueAccessor.Set(control, DragServiceProperty, value);
+    }
+
+    public static void SetReferenceDragService(Control control, IGenerationReferenceDragService? value)
+    {
+        AttachedPropertyValueAccessor.Set(control, ReferenceDragServiceProperty, value);
     }
 }

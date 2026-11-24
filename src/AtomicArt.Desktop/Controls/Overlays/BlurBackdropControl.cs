@@ -24,6 +24,11 @@ public sealed class BlurBackdropControl : Control
         get => GetValue(IsDynamicProperty);
         set => SetValue(IsDynamicProperty, value);
     }
+    public bool UseSnapshot
+    {
+        get => GetValue(UseSnapshotProperty);
+        set => SetValue(UseSnapshotProperty, value);
+    }
 
     public static readonly StyledProperty<double> BlurRadiusProperty =
         AvaloniaProperty.Register<BlurBackdropControl, double>(nameof(BlurRadius));
@@ -33,6 +38,8 @@ public sealed class BlurBackdropControl : Control
             defaultValue: 1d);
     public static readonly StyledProperty<bool> IsDynamicProperty =
         AvaloniaProperty.Register<BlurBackdropControl, bool>(nameof(IsDynamic));
+    public static readonly StyledProperty<bool> UseSnapshotProperty =
+        AvaloniaProperty.Register<BlurBackdropControl, bool>(nameof(UseSnapshot));
 
     private const double BlurRadiusToSigmaDivisor = 3d;
 
@@ -47,7 +54,8 @@ public sealed class BlurBackdropControl : Control
         AffectsRender<BlurBackdropControl>(
             BlurRadiusProperty,
             IsDynamicProperty,
-            IntensityProperty);
+            IntensityProperty,
+            UseSnapshotProperty);
     }
 
     public BlurBackdropControl()
@@ -63,6 +71,7 @@ public sealed class BlurBackdropControl : Control
 
         double normalizedRadius = NormalizeBlurRadius(BlurRadius)
             * NormalizeIntensity(Intensity);
+
         if ((normalizedRadius <= 0d)
             || (Bounds.Width <= 0d)
             || (Bounds.Height <= 0d))
@@ -77,7 +86,14 @@ public sealed class BlurBackdropControl : Control
                 bounds,
                 sigma,
                 IsDynamic,
-                _captureRevision));
+                _captureRevision,
+                UseSnapshot && Intensity >= 1d));
+    }
+
+    internal void RefreshCapture()
+    {
+        _captureRevision++;
+        InvalidateVisual();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -129,12 +145,6 @@ public sealed class BlurBackdropControl : Control
             : 0d;
     }
 
-    private void RefreshCapture()
-    {
-        _captureRevision++;
-        InvalidateVisual();
-    }
-
     private void RestartDynamicFrames()
     {
         StopDynamicFrames();
@@ -157,6 +167,7 @@ public sealed class BlurBackdropControl : Control
         }
 
         IUiFrameScheduler? frameScheduler = _frameScheduler;
+
         if (frameScheduler is null)
         {
             return;
@@ -175,6 +186,7 @@ public sealed class BlurBackdropControl : Control
         }
 
         _isFramePending = false;
+
         if (!IsDynamic
             || !_presentationObserver.IsPresented
             || (VisualRoot is null))
@@ -191,6 +203,7 @@ public sealed class BlurBackdropControl : Control
         if (!isPresented)
         {
             StopDynamicFrames();
+
             return;
         }
 

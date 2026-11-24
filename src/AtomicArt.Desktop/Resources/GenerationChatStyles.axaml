@@ -1,0 +1,132 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:system="using:System"
+        xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <system:TimeSpan x:Key="GenerationChatMessageArrivalDuration">0:0:0.42</system:TimeSpan>
+        <system:TimeSpan x:Key="GenerationChatEditorFadeDuration">0:0:0.28</system:TimeSpan>
+        <x:Double x:Key="GenerationChatBubbleMaxWidth">470</x:Double>
+        <Thickness x:Key="GenerationChatChoiceMargin">6</Thickness>
+        <x:Double x:Key="GenerationChatItemSpacing">6</x:Double>
+        <Thickness x:Key="GenerationChatHeaderPadding">8</Thickness>
+        <Thickness x:Key="GenerationChatContentMargin">12,5,12,8</Thickness>
+        <Thickness x:Key="GenerationChatBubblePadding">10,8</Thickness>
+        <Thickness x:Key="GenerationChatReferencesPadding">10,0,10,8</Thickness>
+        <Thickness x:Key="GenerationChatEditorActionsMargin">0,6,0,0</Thickness>
+        <Thickness x:Key="GenerationChatDateMargin">0,8,0,12</Thickness>
+        <Thickness x:Key="GenerationChatHistoryMargin">0,12,0,8</Thickness>
+        <CornerRadius x:Key="GenerationChatAssistantCorners">6,12,12,12</CornerRadius>
+        <CornerRadius x:Key="GenerationChatUserCorners">12,6,12,12</CornerRadius>
+        <SolidColorBrush x:Key="GenerationChatUserBackgroundBrush"
+                         Color="{StaticResource GenerationChatUserBackgroundColor}" />
+    </Styles.Resources>
+
+    <Style Selector="Border.generation-chat-history">
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPopupBackground}" />
+        <Setter Property="BoxShadow"
+                Value="{DynamicResource FloatingSurfaceShadow}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource ShellCornerRadius}" />
+        <Setter Property="Margin"
+                Value="{StaticResource GenerationChatHistoryMargin}" />
+        <Setter Property="ClipToBounds"
+                Value="False" />
+        <Setter Property="Opacity"
+                Value="0" />
+        <Setter Property="RenderTransform"
+                Value="translateY(56px)" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                  Easing="{StaticResource TransientOverlayEasing}"
+                                  Property="Opacity" />
+                <TransformOperationsTransition Duration="{StaticResource TransientOverlayFadeDuration}"
+                                               Easing="{StaticResource TransientOverlayEasing}"
+                                               Property="RenderTransform" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Border.generation-chat-history.expanded">
+        <Setter Property="Opacity"
+                Value="1" />
+        <Setter Property="RenderTransform"
+                Value="translateY(0px)" />
+    </Style>
+    <Style Selector="Border.generation-chat-header">
+        <Setter Property="Background"
+                Value="{StaticResource MetadataHeaderBrush}" />
+        <Setter Property="Padding"
+                Value="{StaticResource GenerationChatHeaderPadding}" />
+    </Style>
+    <Style Selector="Border.generation-chat-bubble">
+        <Setter Property="Background"
+                Value="{StaticResource MetadataHeaderBrush}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource GenerationChatAssistantCorners}" />
+        <Setter Property="ClipToBounds"
+                Value="True" />
+    </Style>
+    <Style Selector="Grid.generation-chat-message">
+        <Setter Property="HorizontalAlignment"
+                Value="Left" />
+        <Setter Property="MaxWidth"
+                Value="{StaticResource GenerationChatBubbleMaxWidth}" />
+    </Style>
+    <Style Selector="Grid.generation-chat-message.user">
+        <Setter Property="HorizontalAlignment"
+                Value="Right" />
+    </Style>
+    <Style Selector="Grid.generation-chat-message.user Border.generation-chat-bubble">
+        <Setter Property="Background"
+                Value="{StaticResource GenerationChatUserBackgroundBrush}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource GenerationChatUserCorners}" />
+    </Style>
+    <Style Selector="Button.generation-chat-action, Button.generation-chat-choose">
+        <Setter Property="Height"
+                Value="{StaticResource TitleButtonSize}" />
+        <Setter Property="MinWidth"
+                Value="{StaticResource ZeroSize}" />
+        <Setter Property="MinHeight"
+                Value="{StaticResource ZeroSize}" />
+    </Style>
+    <Style Selector="Button.generation-chat-action">
+        <Setter Property="Width"
+                Value="{StaticResource TitleButtonSize}" />
+    </Style>
+    <Style Selector="ItemsControl.generation-chat-images UniformGrid">
+        <Setter Property="Columns"
+                Value="2" />
+        <Setter Property="RowSpacing"
+                Value="{StaticResource GenerationChatItemSpacing}" />
+        <Setter Property="ColumnSpacing"
+                Value="{StaticResource GenerationChatItemSpacing}" />
+    </Style>
+    <Style Selector="ItemsControl.generation-chat-images.single UniformGrid">
+        <Setter Property="Columns"
+                Value="1" />
+    </Style>
+    <Style Selector="TextBox.generation-chat-editor">
+        <Setter Property="Background"
+                Value="Transparent" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="Padding"
+                Value="{StaticResource GenerationChatBubblePadding}" />
+        <Setter Property="MinHeight"
+                Value="{StaticResource ZeroSize}" />
+    </Style>
+    <Style Selector="TextBox.generation-chat-editor /template/ TextPresenter#PART_TextPresenter,
+                     TextBox.generation-chat-editor /template/ TextBlock#PART_Placeholder">
+        <Setter Property="Margin"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+    <Style Selector="TextBox.generation-chat-editor /template/ ScrollViewer /template/ ScrollContentPresenter#PART_ContentPresenter">
+        <Setter Property="behaviors:ScrollFadeMaskBehavior.IsEnabled"
+                Value="False" />
+        <Setter Property="Margin"
+                Value="{StaticResource ZeroThickness}" />
+    </Style>
+
+</Styles>

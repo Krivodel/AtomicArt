@@ -1,10 +1,5 @@
 namespace AtomicArt.Desktop.Services;
 
-public interface IPromptTextSizeController
+public interface IPromptTextSizeController : ITextSizeController
 {
-    double CurrentTextSize { get; }
-
-    event EventHandler? TextSizeChanged;
-
-    Task AdjustAsync(PromptTextSizeAdjustment adjustment, CancellationToken ct);
 }

@@ -5,6 +5,7 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
@@ -12,51 +13,18 @@ using Avalonia.VisualTree;
 using AtomicArt.Desktop.Behaviors;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Imaging;
 using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Generation;
+using AtomicArt.Desktop.Views.Gallery;
 
 namespace AtomicArt.Desktop.Controls.Generation;
 
 public partial class AnimatedAttachmentListControl : UserControl
 {
-    public static readonly StyledProperty<IEnumerable<AttachedImageViewModel>?> ItemsProperty =
-        AvaloniaProperty.Register<AnimatedAttachmentListControl, IEnumerable<AttachedImageViewModel>?>(
-            nameof(Items));
-    public static readonly StyledProperty<ICommand?> RemoveAttachmentCommandProperty =
-        AvaloniaProperty.Register<AnimatedAttachmentListControl, ICommand?>(
-            nameof(RemoveAttachmentCommand));
-    public static readonly StyledProperty<ICommand?> ReorderAttachmentCommandProperty =
-        AvaloniaProperty.Register<AnimatedAttachmentListControl, ICommand?>(
-            nameof(ReorderAttachmentCommand));
-    public static readonly StyledProperty<ICommand?> OpenAttachmentCommandProperty =
-        AvaloniaProperty.Register<AnimatedAttachmentListControl, ICommand?>(
-            nameof(OpenAttachmentCommand));
-    public static readonly StyledProperty<string?> PanelIdProperty =
-        AvaloniaProperty.Register<AnimatedAttachmentListControl, string?>(
-            nameof(PanelId));
-
-    private const double DefaultPreviewSize = 56d;
-    private const double DefaultPreviewGap = 8d;
-    private const double MovementTolerance = 0.5d;
-    private const double ExternalDragActivationDistance = 24d;
-    private const int SpawnDurationMilliseconds = 280;
-    private const int MoveDurationMilliseconds = 260;
-    private const int RemoveDurationMilliseconds = 300;
-    private const int ImageRevealDurationMilliseconds = 520;
-    private const int SpawnOrderDelayMilliseconds = 24;
-    private const int AttachmentPreviewShortSidePixels = 128;
-
-    private readonly CollectionChangedSubscription _itemsSubscription;
-    private readonly Dictionary<Guid, AttachmentVisualEntry> _entries = [];
-    private readonly List<AttachmentVisualEntry> _removingEntries = [];
-    private UiAnimationScheduler? _animationScheduler;
-    private AttachmentDragCandidate? _dragCandidate;
-    private AttachmentDragState? _dragState;
-    private bool _isAttached;
-
     public IEnumerable<AttachedImageViewModel>? Items
     {
         get => GetValue(ItemsProperty);
@@ -82,58 +50,55 @@ public partial class AnimatedAttachmentListControl : UserControl
         get => GetValue(PanelIdProperty);
         set => SetValue(PanelIdProperty, value);
     }
+    public GenerationReferencePreviewLoader? ReferencePreviewLoader
+    {
+        get => GetValue(ReferencePreviewLoaderProperty);
+        set => SetValue(ReferencePreviewLoaderProperty, value);
+    }
+
+    public static readonly StyledProperty<IEnumerable<AttachedImageViewModel>?> ItemsProperty =
+        AvaloniaProperty.Register<AnimatedAttachmentListControl, IEnumerable<AttachedImageViewModel>?>(
+            nameof(Items));
+    public static readonly StyledProperty<ICommand?> RemoveAttachmentCommandProperty =
+        AvaloniaProperty.Register<AnimatedAttachmentListControl, ICommand?>(
+            nameof(RemoveAttachmentCommand));
+    public static readonly StyledProperty<ICommand?> ReorderAttachmentCommandProperty =
+        AvaloniaProperty.Register<AnimatedAttachmentListControl, ICommand?>(
+            nameof(ReorderAttachmentCommand));
+    public static readonly StyledProperty<ICommand?> OpenAttachmentCommandProperty =
+        AvaloniaProperty.Register<AnimatedAttachmentListControl, ICommand?>(
+            nameof(OpenAttachmentCommand));
+    public static readonly StyledProperty<string?> PanelIdProperty =
+        AvaloniaProperty.Register<AnimatedAttachmentListControl, string?>(
+            nameof(PanelId));
+    public static readonly StyledProperty<GenerationReferencePreviewLoader?> ReferencePreviewLoaderProperty =
+        AvaloniaProperty.Register<AnimatedAttachmentListControl, GenerationReferencePreviewLoader?>(
+            nameof(ReferencePreviewLoader));
+
+    private const double DefaultPreviewSize = 56d;
+    private const double DefaultPreviewGap = 8d;
+    private const double MovementTolerance = 0.5d;
+    private const double ExternalDragActivationDistance = 24d;
+    private const int SpawnDurationMilliseconds = 280;
+    private const int MoveDurationMilliseconds = 260;
+    private const int RemoveDurationMilliseconds = 300;
+    private const int ImageRevealDurationMilliseconds = 520;
+    private const int SpawnOrderDelayMilliseconds = 24;
+    private const int AttachmentPreviewShortSidePixels = 128;
+
+    private readonly CollectionChangedSubscription _itemsSubscription;
+    private readonly Dictionary<Guid, AttachmentVisualEntry> _entries = [];
+    private readonly List<AttachmentVisualEntry> _removingEntries = [];
+    private UiAnimationScheduler? _animationScheduler;
+    private AttachmentDragCandidate? _dragCandidate;
+    private AttachmentDragState? _dragState;
+    private bool _isAttached;
 
     public AnimatedAttachmentListControl()
     {
         _itemsSubscription = new CollectionChangedSubscription(OnItemsCollectionChanged);
         InitializeComponent();
         UpdatePanelSize(0);
-    }
-
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnAttachedToVisualTree(e);
-
-        _isAttached = true;
-        EnsureAnimationScheduler();
-        _itemsSubscription.ReplaceSource(Items);
-        SynchronizeItems(AttachmentMutationMode.Instant);
-    }
-
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        _isAttached = false;
-        CancelDrag();
-        _itemsSubscription.Clear();
-        CancelAllAnimations();
-
-        foreach (AttachmentVisualEntry entry in _entries.Values.Concat(_removingEntries))
-        {
-            entry.DisposeVisual();
-        }
-
-        AttachmentPanel.Children.Clear();
-        AttachmentOverlayCanvas.Children.Clear();
-        _entries.Clear();
-        _removingEntries.Clear();
-
-        base.OnDetachedFromVisualTree(e);
-    }
-
-    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
-    {
-        base.OnPropertyChanged(change);
-
-        if (change.Property == ItemsProperty)
-        {
-            HandleItemsChanged();
-            return;
-        }
-
-        if (change.Property == RemoveAttachmentCommandProperty)
-        {
-            UpdateRemoveCommands();
-        }
     }
 
     internal static int CalculateTargetIndex(
@@ -161,14 +126,85 @@ public partial class AnimatedAttachmentListControl : UserControl
         }
 
         double outsideX = pointerPosition.X < 0d
-            ? -pointerPosition.X
-            : Math.Max(0d, pointerPosition.X - panelSize.Width);
+                    ? -pointerPosition.X
+                    : Math.Max(0d, pointerPosition.X - panelSize.Width);
         double outsideY = pointerPosition.Y < 0d
             ? -pointerPosition.Y
             : Math.Max(0d, pointerPosition.Y - panelSize.Height);
 
         return Math.Sqrt((outsideX * outsideX) + (outsideY * outsideY))
-            >= ExternalDragActivationDistance;
+                    >= ExternalDragActivationDistance;
+    }
+
+    internal static List<MotionFrame> CreateRemoveFrames(Guid itemId)
+    {
+        AttachmentMotion motion = AnimatedAttachmentListControl.CreateAttachmentMotion(itemId, 18d, 16);
+        List<MotionFrame> frames =
+            [
+                MotionFrame.Identity,
+                new MotionFrame(motion.X * 0.36d, motion.Y * 0.36d, 0.97d, motion.Rotate * 0.35d, 0.72d),
+                new MotionFrame(motion.X, motion.Y, 0.88d, motion.Rotate, 0d)
+            ];
+
+        return frames;
+    }
+
+    internal static List<MotionFrame> CreateSpawnFrames(Guid itemId)
+    {
+        AttachmentMotion motion = AnimatedAttachmentListControl.CreateAttachmentMotion(itemId, 8d, 10);
+        List<MotionFrame> frames =
+            [
+                new MotionFrame(-motion.X, -motion.Y, 0.94d, -motion.Rotate * 0.35d, 0d),
+                MotionFrame.Identity
+            ];
+
+        return frames;
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        _isAttached = true;
+        EnsureAnimationScheduler();
+        _itemsSubscription.ReplaceSource(Items);
+        SynchronizeItems(AttachmentMutationMode.Instant);
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        _isAttached = false;
+        CancelDrag();
+        _itemsSubscription.Clear();
+        CancelAllAnimations();
+
+        foreach (AttachmentVisualEntry entry in _entries.Values.Concat(_removingEntries))
+        {
+            entry.DisposeVisual();
+        }
+
+        AttachmentPanel.Children.Clear();
+        _entries.Clear();
+        _removingEntries.Clear();
+
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == ItemsProperty)
+        {
+            HandleItemsChanged();
+
+            return;
+        }
+
+        if (change.Property == RemoveAttachmentCommandProperty)
+        {
+            UpdateRemoveCommands();
+        }
     }
 
     private static Bitmap CreatePreviewBitmap(AttachedImageViewModel item)
@@ -179,31 +215,6 @@ public partial class AnimatedAttachmentListControl : UserControl
             stream,
             AttachmentPreviewShortSidePixels,
             CancellationToken.None);
-    }
-
-    internal static List<MotionFrame> CreateRemoveFrames(Guid itemId)
-    {
-        AttachmentMotion motion = CreateAttachmentMotion(itemId, 18d, 16);
-        List<MotionFrame> frames =
-        [
-            MotionFrame.Identity,
-            new(motion.X * 0.36d, motion.Y * 0.36d, 0.97d, motion.Rotate * 0.35d, 0.72d),
-            new(motion.X, motion.Y, 0.88d, motion.Rotate, 0d)
-        ];
-
-        return frames;
-    }
-
-    internal static List<MotionFrame> CreateSpawnFrames(Guid itemId)
-    {
-        AttachmentMotion motion = CreateAttachmentMotion(itemId, 8d, 10);
-        List<MotionFrame> frames =
-        [
-            new(-motion.X, -motion.Y, 0.94d, -motion.Rotate * 0.35d, 0d),
-            MotionFrame.Identity
-        ];
-
-        return frames;
     }
 
     private static AttachmentMotion CreateAttachmentMotion(
@@ -225,6 +236,7 @@ public partial class AnimatedAttachmentListControl : UserControl
     private static double GetCurrentX(Control control)
     {
         double left = Canvas.GetLeft(control);
+
         if (double.IsNaN(left))
         {
             left = 0d;
@@ -236,8 +248,8 @@ public partial class AnimatedAttachmentListControl : UserControl
         }
 
         TranslateTransform? translate = transformGroup.Children
-            .OfType<TranslateTransform>()
-            .SingleOrDefault();
+                    .OfType<TranslateTransform>()
+                    .SingleOrDefault();
 
         return left + (translate?.X ?? 0d);
     }
@@ -246,10 +258,10 @@ public partial class AnimatedAttachmentListControl : UserControl
         AttachmentVisualEntry entry)
     {
         Control[] controls =
-        [
-            entry.Control,
-            entry.Image
-        ];
+            [
+                entry.Control,
+                entry.Image
+            ];
 
         return controls;
     }
@@ -278,29 +290,32 @@ public partial class AnimatedAttachmentListControl : UserControl
             ease);
     }
 
+    private static bool IsRemoveButtonEvent(object? source)
+    {
+        if (source is Button)
+        {
+            return true;
+        }
+
+        if (source is not Visual visual)
+        {
+            return false;
+        }
+
+        return visual.GetVisualAncestors().OfType<Button>().Any();
+    }
+
     private void HandleItemsChanged()
     {
         if (_isAttached)
         {
             _itemsSubscription.ReplaceSource(Items);
             SynchronizeItems(AttachmentMutationMode.Animated);
+
             return;
         }
 
         _itemsSubscription.Clear();
-    }
-
-    private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        _ = sender;
-
-        bool shouldScrollToEnd = ShouldScrollToEndAfterCollectionChanged(e);
-        SynchronizeItems(AttachmentMutationMode.Animated);
-
-        if (shouldScrollToEnd)
-        {
-            ScrollToEnd();
-        }
     }
 
     private void SynchronizeItems(AttachmentMutationMode mode)
@@ -367,6 +382,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         if (mode == AttachmentMutationMode.Instant || _animationScheduler is null)
         {
             MotionFrameApplier.Apply(entry.Control, MotionFrame.Identity);
+
             return;
         }
 
@@ -393,6 +409,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             || Math.Abs(offsetX) < MovementTolerance)
         {
             MotionFrameApplier.Apply(entry.Control, MotionFrame.Identity);
+
             return;
         }
 
@@ -401,8 +418,8 @@ public partial class AnimatedAttachmentListControl : UserControl
             entry.Control,
             new List<MotionFrame>
             {
-                new(offsetX, 0d, 1d, 0d, 1d),
-                MotionFrame.Identity
+        new MotionFrame(offsetX, 0d, 1d, 0d, 1d),
+        MotionFrame.Identity
             },
             MoveDurationMilliseconds,
             0,
@@ -415,19 +432,20 @@ public partial class AnimatedAttachmentListControl : UserControl
     {
         entry.Unsubscribe();
         double currentX = GetCurrentX(entry.Control);
-        double overlayX = currentX - AttachmentScrollViewer.Offset.X;
-        AttachmentPanel.Children.Remove(entry.Control);
 
         if (mode == AttachmentMutationMode.Instant
             || _animationScheduler is null)
         {
+            AttachmentPanel.Children.Remove(entry.Control);
             entry.DisposeVisual();
+
             return;
         }
 
-        AttachmentOverlayCanvas.Children.Add(entry.Control);
         _removingEntries.Add(entry);
-        SetEntryPosition(entry.Control, overlayX);
+        entry.Control.IsHitTestVisible = false;
+        entry.Control.ZIndex = 1;
+        AnimatedAttachmentListControl.SetEntryPosition(entry.Control, currentX);
         MotionFrameApplier.Apply(entry.Control, MotionFrame.Identity);
 
         _animationScheduler.Cancel(GetEntryAnimationControls(entry));
@@ -443,17 +461,23 @@ public partial class AnimatedAttachmentListControl : UserControl
 
     private AttachmentVisualEntry CreateEntry(AttachedImageViewModel item)
     {
-        Image image = new()
+        Image image = item.SavedReference is { } reference
+            ? new GenerationReferencePreviewControl { Reference = reference, LoadInViewport = true }
+            : new Image { IsVisible = item.IsReady };
+
+        if (image is GenerationReferencePreviewControl referencePreview)
         {
-            IsVisible = item.IsReady,
-            Stretch = Stretch.UniformToFill
-        };
+            referencePreview.Bind(GenerationReferencePreviewControl.LoaderProperty,
+                this.GetObservable(ReferencePreviewLoaderProperty));
+        }
+
+        image.Stretch = Stretch.UniformToFill;
         RenderOptions.SetBitmapInterpolationMode(
             image,
             BitmapInterpolationMode.MediumQuality);
         AttachmentPixelLoadingControl loadingIndicator = new();
 
-        if (item.IsReady)
+        if (item.IsReady || item.SavedReference is not null)
         {
             loadingIndicator.ShowCompleted();
         }
@@ -463,11 +487,11 @@ public partial class AnimatedAttachmentListControl : UserControl
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
             Content = UiGlyphs.Delete,
-            Command = RemoveAttachmentCommand,
             CommandParameter = item
         };
         removeButton.Classes.Add("remove-attachment");
         removeButton.Classes.Add("danger");
+        UpdateRemoveCommand(removeButton);
 
         Grid content = new();
         content.Children.Add(image);
@@ -509,127 +533,11 @@ public partial class AnimatedAttachmentListControl : UserControl
         return entry;
     }
 
-    private async void OnAttachmentPropertyChanged(
-        AttachmentVisualEntry entry,
-        object? sender,
-        PropertyChangedEventArgs e)
-    {
-        _ = sender;
-
-        if (!string.Equals(
-                e.PropertyName,
-                nameof(AttachedImageViewModel.IsReady),
-                StringComparison.Ordinal)
-            || !entry.Item.IsReady)
-        {
-            return;
-        }
-
-        Bitmap bitmap = await Task.Run(() => CreatePreviewBitmap(entry.Item));
-
-        if (!_entries.TryGetValue(entry.Item.Id, out AttachmentVisualEntry? activeEntry)
-            || !ReferenceEquals(activeEntry, entry))
-        {
-            bitmap.Dispose();
-            return;
-        }
-
-        entry.SetBitmap(bitmap);
-        RevealReadyImage(entry);
-        entry.LoadingIndicator.Complete();
-    }
-
-    private void OnAttachmentPointerPressed(
-        AttachmentVisualEntry entry,
-        object? sender,
-        PointerPressedEventArgs e)
-    {
-        _ = sender;
-
-        if (IsRemoveButtonEvent(e.Source))
-        {
-            return;
-        }
-
-        PointerPoint pointerPoint = e.GetCurrentPoint(AttachmentPanel);
-        if (!pointerPoint.Properties.IsLeftButtonPressed)
-        {
-            return;
-        }
-
-        int sourceIndex = GetItemIndex(entry.Item);
-        if (sourceIndex < 0)
-        {
-            return;
-        }
-
-        e.Pointer.Capture(entry.Control);
-        _dragCandidate = new AttachmentDragCandidate(
-            e,
-            entry,
-            pointerPoint.Position,
-            pointerPoint.Position.X - GetCurrentX(entry.Control),
-            sourceIndex,
-            sourceIndex);
-        e.Handled = true;
-    }
-
-    private async void OnAttachmentPointerMoved(object? sender, PointerEventArgs e)
-    {
-        _ = sender;
-
-        PointerPoint pointerPoint = e.GetCurrentPoint(AttachmentPanel);
-        if (!pointerPoint.Properties.IsLeftButtonPressed)
-        {
-            CancelDrag();
-            return;
-        }
-
-        AttachmentDragState? dragState = _dragState;
-        if (dragState is not null)
-        {
-            if (await TryStartExternalDragAsync(dragState, e))
-            {
-                return;
-            }
-
-            UpdateActiveDrag(dragState, pointerPoint);
-            e.Handled = true;
-            return;
-        }
-
-        AttachmentDragCandidate? dragCandidate = _dragCandidate;
-        if (dragCandidate is null)
-        {
-            return;
-        }
-
-        if (!PointerDragThreshold.IsReached(dragCandidate.Origin, pointerPoint.Position))
-        {
-            e.Handled = true;
-            return;
-        }
-
-        BeginDrag(dragCandidate);
-        dragState = _dragState;
-        if (dragState is not null)
-        {
-            if (await TryStartExternalDragAsync(dragState, e))
-            {
-                return;
-            }
-
-            UpdateActiveDrag(dragState, pointerPoint);
-        }
-
-        e.Handled = true;
-    }
-
     private void UpdateActiveDrag(AttachmentDragState dragState, PointerPoint pointerPoint)
     {
         double slotWidth = GetSlotWidth();
         double draggedX = pointerPoint.Position.X - dragState.PointerOffsetX;
-        int targetIndex = CalculateTargetIndex(
+        int targetIndex = AnimatedAttachmentListControl.CalculateTargetIndex(
             draggedX + (slotWidth / 2d),
             _entries.Count,
             slotWidth);
@@ -651,44 +559,32 @@ public partial class AnimatedAttachmentListControl : UserControl
         AttachmentDragState dragState,
         PointerEventArgs e)
     {
-        Control dragBoundary =
-            AttachmentImageDragBehavior.GetDragBoundary(this)
-            ?? AttachmentPanel;
+        AttachedImageViewModel item = dragState.Entry.Item;
+        Control dragBoundary = item.SavedReference is not null
+            ? this
+            : AttachmentImageDragBehavior.GetDragBoundary(this) ?? AttachmentPanel;
         Point pointerPosition = e.GetPosition(dragBoundary);
 
-        string? panelId = PanelId;
-        PanelAttachmentState? attachmentState = dragState.Entry.Item.State;
-
-        if (!dragState.Entry.Item.IsReady
-            || string.IsNullOrWhiteSpace(panelId)
-            || attachmentState is null
-            || !IsExternalDragThresholdReached(
-                pointerPosition,
-                dragBoundary.Bounds.Size))
+        if ((!item.IsReady && item.SavedReference is null)
+            || !AnimatedAttachmentListControl.IsExternalDragThresholdReached(pointerPosition, dragBoundary.Bounds.Size))
         {
             return false;
         }
 
-        IAttachmentImageDragService? dragService =
-            AttachmentImageDragBehavior.GetDragService(this);
+        Func<Task>? startDrag = CreateExternalDrag(dragState);
 
-        if (dragService is null)
+        if (startDrag is null)
         {
             return false;
         }
 
+        _dragCandidate = null;
         CompleteDrag(AttachmentDragCompletion.Cancel);
         e.Handled = true;
 
         try
         {
-            await dragService.DragAsync(
-                this,
-                dragState.PointerPressedEventArgs,
-                panelId,
-                attachmentState,
-                dragState.Entry.PreviewBitmap,
-                CancellationToken.None);
+            await startDrag();
         }
         finally
         {
@@ -698,68 +594,38 @@ public partial class AnimatedAttachmentListControl : UserControl
         return true;
     }
 
-    private void OnAttachmentPointerReleased(object? sender, PointerReleasedEventArgs e)
+    private Func<Task>? CreateExternalDrag(AttachmentDragState dragState)
     {
-        _ = sender;
+        AttachedImageViewModel item = dragState.Entry.Item;
+        PointerPressedEventArgs pressed = dragState.PointerPressedEventArgs;
 
-        if (_dragState is null && _dragCandidate is null)
+        if (item.SavedReference is { } reference
+            && AttachmentImageDragBehavior.GetReferenceDragService(this) is { } referenceService)
         {
-            return;
+            return () => referenceService.DragAsync(dragState.Entry.Control, pressed, reference, CancellationToken.None);
         }
 
-        if (_dragState is not null)
-        {
-            CompleteDrag(AttachmentDragCompletion.Commit);
-        }
-        else
-        {
-            if (_dragCandidate is not { } dragCandidate)
-            {
-                return;
-            }
+        string? panelId = PanelId;
 
-            if (dragCandidate.Entry.Item.IsReady)
-            {
-                ExecuteOpenAttachmentCommand(dragCandidate.Entry.Item);
-            }
-
-            _dragCandidate = null;
+        if (!string.IsNullOrWhiteSpace(panelId)
+            && item.State is { } attachmentState
+            && AttachmentImageDragBehavior.GetDragService(this) is { } attachmentService)
+        {
+            return () => attachmentService.DragAsync(this, pressed, panelId, attachmentState,
+                dragState.Entry.PreviewBitmap, CancellationToken.None);
         }
 
-        e.Pointer.Capture(null);
-        e.Handled = true;
+        return null;
     }
 
     private void ExecuteOpenAttachmentCommand(AttachedImageViewModel item)
     {
         ICommand? command = OpenAttachmentCommand;
+
         if (command?.CanExecute(item) == true)
         {
             command.Execute(item);
         }
-    }
-
-    private void OnAttachmentPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        CompleteDrag(AttachmentDragCompletion.Cancel);
-    }
-
-    private static bool IsRemoveButtonEvent(object? source)
-    {
-        if (source is Button)
-        {
-            return true;
-        }
-
-        if (source is not Visual visual)
-        {
-            return false;
-        }
-
-        return visual.GetVisualAncestors().OfType<Button>().Any();
     }
 
     private void BeginDrag(AttachmentDragCandidate dragCandidate)
@@ -786,6 +652,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         for (int index = 0; index < orderedItems.Count; index++)
         {
             AttachedImageViewModel item = orderedItems[index];
+
             if (ReferenceEquals(item, draggedItem))
             {
                 continue;
@@ -805,6 +672,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         List<AttachedImageViewModel> orderedItems = Items?.ToList()
             ?? [];
         int sourceIndex = orderedItems.IndexOf(draggedItem);
+
         if (sourceIndex < 0)
         {
             return orderedItems;
@@ -828,6 +696,7 @@ public partial class AnimatedAttachmentListControl : UserControl
     private void CompleteDrag(AttachmentDragCompletion completion)
     {
         AttachmentDragState? dragState = _dragState;
+
         if (dragState is null)
         {
             return;
@@ -843,9 +712,11 @@ public partial class AnimatedAttachmentListControl : UserControl
             AttachedImageReorderRequest request = new(
                 dragState.Entry.Item,
                 dragState.TargetIndex);
+
             if (ReorderAttachmentCommand.CanExecute(request))
             {
                 ReorderAttachmentCommand.Execute(request);
+
                 return;
             }
         }
@@ -867,9 +738,10 @@ public partial class AnimatedAttachmentListControl : UserControl
 
     private void CompleteRemoveAnimation(AttachmentVisualEntry entry)
     {
-        AttachmentOverlayCanvas.Children.Remove(entry.Control);
+        AttachmentPanel.Children.Remove(entry.Control);
         _removingEntries.Remove(entry);
         entry.DisposeVisual();
+        UpdatePanelSize(_entries.Count);
     }
 
     private void RevealReadyImage(AttachmentVisualEntry entry)
@@ -887,6 +759,7 @@ public partial class AnimatedAttachmentListControl : UserControl
             MotionFrameApplier.Apply(
                 entry.Image,
                 MotionFrame.Identity);
+
             return;
         }
 
@@ -907,16 +780,24 @@ public partial class AnimatedAttachmentListControl : UserControl
     {
         foreach (AttachmentVisualEntry entry in _entries.Values)
         {
-            entry.RemoveButton.Command = RemoveAttachmentCommand;
+            UpdateRemoveCommand(entry.RemoveButton);
         }
+    }
+
+    private void UpdateRemoveCommand(Button button)
+    {
+        button.Command = RemoveAttachmentCommand;
+        button.Classes.Set("can-remove", RemoveAttachmentCommand is not null);
     }
 
     private void UpdatePanelSize(int count)
     {
         double previewSize = GetPreviewSize();
-        AttachmentPanel.Width = count > 0 ? count * GetSlotWidth() : 0d;
+        double liveWidth = count * GetSlotWidth();
+        double removingWidth = _removingEntries.Select(entry => Canvas.GetLeft(entry.Control) + GetSlotWidth())
+            .DefaultIfEmpty(0d).Max();
+        AttachmentPanel.Width = Math.Max(liveWidth, removingWidth);
         AttachmentPanel.Height = previewSize;
-        AttachmentOverlayCanvas.Height = previewSize;
     }
 
     private bool ShouldScrollToEndAfterCollectionChanged(NotifyCollectionChangedEventArgs e)
@@ -938,28 +819,8 @@ public partial class AnimatedAttachmentListControl : UserControl
 
     private void ScrollToEnd()
     {
-        double targetOffsetX = GetHorizontalScrollEndOffset();
-
-        if (targetOffsetX <= AttachmentScrollViewer.Offset.X + MovementTolerance)
-        {
-            return;
-        }
-
-        SmoothScrollBehavior.ScrollToOffset(
-            AttachmentScrollViewer,
-            new Vector(targetOffsetX, AttachmentScrollViewer.Offset.Y));
-    }
-
-    private double GetHorizontalScrollEndOffset()
-    {
-        double viewportWidth = AttachmentScrollViewer.Viewport.Width;
-
-        if (viewportWidth <= 0d)
-        {
-            viewportWidth = AttachmentScrollViewer.Bounds.Width;
-        }
-
-        return Math.Max(0d, AttachmentPanel.Width - viewportWidth);
+        SmoothScrollBehavior.ScrollToEnd(AttachmentScrollViewer,
+            SmoothScrollBehavior.GetDuration(AttachmentScrollViewer), Orientation.Horizontal);
     }
 
     private double GetSlotWidth()
@@ -997,6 +858,7 @@ public partial class AnimatedAttachmentListControl : UserControl
         }
 
         TopLevel? topLevel = TopLevel.GetTopLevel(this);
+
         if (topLevel is null)
         {
             return;
@@ -1013,10 +875,206 @@ public partial class AnimatedAttachmentListControl : UserControl
         }
 
         List<Control> controls = _entries.Values
-            .Concat(_removingEntries)
-            .SelectMany(GetEntryAnimationControls)
-            .ToList();
+                    .Concat(_removingEntries)
+                    .SelectMany(GetEntryAnimationControls)
+                    .ToList();
         _animationScheduler.Cancel(controls);
+    }
+
+    private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        _ = sender;
+
+        bool shouldScrollToEnd = ShouldScrollToEndAfterCollectionChanged(e);
+        SynchronizeItems(AttachmentMutationMode.Animated);
+
+        if (shouldScrollToEnd)
+        {
+            ScrollToEnd();
+        }
+    }
+
+    private async void OnAttachmentPropertyChanged(
+        AttachmentVisualEntry entry,
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        _ = sender;
+
+        if (!string.Equals(
+            e.PropertyName,
+            nameof(AttachedImageViewModel.IsReady),
+            StringComparison.Ordinal)
+            || !entry.Item.IsReady)
+        {
+            return;
+        }
+
+        Bitmap bitmap = await Task.Run(() => AnimatedAttachmentListControl.CreatePreviewBitmap(entry.Item));
+
+        if (!_entries.TryGetValue(entry.Item.Id, out AttachmentVisualEntry? activeEntry)
+            || !object.ReferenceEquals(activeEntry, entry))
+        {
+            bitmap.Dispose();
+
+            return;
+        }
+
+        entry.SetBitmap(bitmap);
+        RevealReadyImage(entry);
+        entry.LoadingIndicator.Complete();
+    }
+
+    private void OnAttachmentPointerPressed(
+        AttachmentVisualEntry entry,
+        object? sender,
+        PointerPressedEventArgs e)
+    {
+        _ = sender;
+
+        if (AnimatedAttachmentListControl.IsRemoveButtonEvent(e.Source))
+        {
+            return;
+        }
+
+        PointerPoint pointerPoint = e.GetCurrentPoint(AttachmentPanel);
+
+        if (!pointerPoint.Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        int sourceIndex = GetItemIndex(entry.Item);
+
+        if (sourceIndex < 0)
+        {
+            return;
+        }
+
+        e.Pointer.Capture(entry.Control);
+        _dragCandidate = new AttachmentDragCandidate(
+            e,
+            entry,
+            pointerPoint.Position,
+            pointerPoint.Position.X - AnimatedAttachmentListControl.GetCurrentX(entry.Control),
+            sourceIndex,
+            sourceIndex);
+        e.Handled = true;
+    }
+
+    private async void OnAttachmentPointerMoved(object? sender, PointerEventArgs e)
+    {
+        _ = sender;
+
+        AttachedImageViewModel? item = _dragState?.Entry.Item ?? _dragCandidate?.Entry.Item;
+
+        if (item?.SavedReference is null && ReorderAttachmentCommand is null && string.IsNullOrEmpty(PanelId))
+        {
+            return;
+        }
+
+        PointerPoint pointerPoint = e.GetCurrentPoint(AttachmentPanel);
+
+        if (!pointerPoint.Properties.IsLeftButtonPressed)
+        {
+            CancelDrag();
+
+            return;
+        }
+
+        AttachmentDragState? dragState = _dragState;
+
+        if (dragState is not null)
+        {
+            if (await TryStartExternalDragAsync(dragState, e))
+            {
+                return;
+            }
+
+            UpdateActiveDrag(dragState, pointerPoint);
+            e.Handled = true;
+
+            return;
+        }
+
+        AttachmentDragCandidate? dragCandidate = _dragCandidate;
+
+        if (dragCandidate is null)
+        {
+            return;
+        }
+
+        if (!PointerDragThreshold.IsReached(dragCandidate.Origin, pointerPoint.Position))
+        {
+            e.Handled = true;
+
+            return;
+        }
+
+        if (ReorderAttachmentCommand is null)
+        {
+            AttachmentDragState external = new(dragCandidate.PointerPressedEventArgs, dragCandidate.Entry,
+                dragCandidate.PointerOffsetX, dragCandidate.SourceIndex, dragCandidate.SourceIndex);
+            await TryStartExternalDragAsync(external, e);
+            e.Handled = true;
+            return;
+        }
+
+        BeginDrag(dragCandidate);
+        dragState = _dragState;
+
+        if (dragState is not null)
+        {
+            if (await TryStartExternalDragAsync(dragState, e))
+            {
+                return;
+            }
+
+            UpdateActiveDrag(dragState, pointerPoint);
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnAttachmentPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _ = sender;
+
+        if (_dragState is null && _dragCandidate is null)
+        {
+            return;
+        }
+
+        if (_dragState is not null)
+        {
+            CompleteDrag(AttachmentDragCompletion.Commit);
+        }
+        else
+        {
+            if (_dragCandidate is not { } dragCandidate)
+            {
+                return;
+            }
+
+            if ((dragCandidate.Entry.Item.IsReady || dragCandidate.Entry.Item.SavedReference is not null)
+                && !PointerDragThreshold.IsReached(dragCandidate.Origin, e.GetPosition(AttachmentPanel)))
+            {
+                ExecuteOpenAttachmentCommand(dragCandidate.Entry.Item);
+            }
+
+            _dragCandidate = null;
+        }
+
+        e.Pointer.Capture(null);
+        e.Handled = true;
+    }
+
+    private void OnAttachmentPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        CompleteDrag(AttachmentDragCompletion.Cancel);
     }
 
     private enum AttachmentMutationMode

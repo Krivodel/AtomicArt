@@ -70,6 +70,11 @@ public partial class GenerationCardControl :
         get => GetValue(GenerationCardControl.OpenMetadataCommandProperty);
         set => SetValue(GenerationCardControl.OpenMetadataCommandProperty, value);
     }
+    public IRelayCommand? OpenChatCommand
+    {
+        get => GetValue(OpenChatCommandProperty);
+        set => SetValue(OpenChatCommandProperty, value);
+    }
     public IRelayCommand? DeleteOrCancelCommand
     {
         get => GetValue(GenerationCardControl.DeleteOrCancelCommandProperty);
@@ -136,6 +141,8 @@ public partial class GenerationCardControl :
     public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(OpenMetadataCommand));
+    public static readonly StyledProperty<IRelayCommand?> OpenChatCommandProperty =
+        AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(nameof(OpenChatCommand));
     public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
         AvaloniaProperty.Register<GenerationCardControl, IRelayCommand?>(
             nameof(DeleteOrCancelCommand));
@@ -164,6 +171,8 @@ public partial class GenerationCardControl :
         set => GenerationPreview.ExpansionHost = value;
     }
 
+    private const string ChatMenuItemKey = "GenerationCardChatMenuItem";
+
     private readonly OpenWithApplicationIconStore _openWithIcons = new();
     private PromptDragCandidate? _promptDragCandidate;
     private bool _isPromptDragActive;
@@ -175,6 +184,7 @@ public partial class GenerationCardControl :
         GenerationPreview.OverflowOwner = this;
         AttachPromptDragHandlers();
         OpenWithMenuItem.PropertyChanged += OnOpenWithMenuItemPropertyChanged;
+
         if (GenerationCardContainer.ContextFlyout is AnimatedContextMenuFlyout contextFlyout)
         {
             contextFlyout.Opening += OnContextFlyoutOpening;
@@ -258,6 +268,31 @@ public partial class GenerationCardControl :
             previewSourceScheduler);
     }
 
+    internal void UpdateChatMenuItem(MenuFlyout flyout)
+    {
+        ArgumentNullException.ThrowIfNull(flyout);
+
+        if (Resources[ChatMenuItemKey] is not MenuItem chatItem)
+        {
+            return;
+        }
+
+        if (DataContext is not GenerationItemViewModel { SupportsChat: true } item || OpenChatCommand is null)
+        {
+            flyout.Items.Remove(chatItem);
+
+            return;
+        }
+
+        chatItem.Command = OpenChatCommand;
+        chatItem.CommandParameter = item;
+
+        if (!flyout.Items.Contains(chatItem))
+        {
+            flyout.Items.Insert(0, chatItem);
+        }
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         _openWithLoadVersion++;
@@ -331,9 +366,9 @@ public partial class GenerationCardControl :
         _ = sender;
 
         if ((eventArgs.GetCurrentPoint(GenerationCardContainer)
-                .Properties.PointerUpdateKind == PointerUpdateKind.RightButtonPressed)
+                        .Properties.PointerUpdateKind == PointerUpdateKind.RightButtonPressed)
             && (GenerationCardContainer.ContextFlyout
-                is AnimatedContextMenuFlyout contextFlyout))
+                        is AnimatedContextMenuFlyout contextFlyout))
         {
             eventArgs.Handled = true;
             contextFlyout.ShowAt(GenerationCardContainer, true);
@@ -342,10 +377,14 @@ public partial class GenerationCardControl :
 
     private void OnContextFlyoutOpening(object? sender, EventArgs eventArgs)
     {
-        _ = sender;
         _ = eventArgs;
         OpenWithMenuItem.IsEnabled =
             LoadOpenWithApplicationsCommand?.CanExecute(DataContext) == true;
+
+        if (sender is MenuFlyout flyout)
+        {
+            UpdateChatMenuItem(flyout);
+        }
     }
 
     private async void OnOpenWithSubmenuOpened(
@@ -423,7 +462,7 @@ public partial class GenerationCardControl :
         }
 
         KeyModifiers modifiers = PreviewExpansionHost?.CurrentKeyModifiers
-            ?? KeyModifiers.None;
+                    ?? KeyModifiers.None;
         IRelayCommand? command = GenerationCardControl.ResolveFileRevealCommand(
             modifiers,
             RevealInFolderCommand,
@@ -446,7 +485,7 @@ public partial class GenerationCardControl :
         }
 
         KeyModifiers modifiers = PreviewExpansionHost?.CurrentKeyModifiers
-            ?? KeyModifiers.None;
+                    ?? KeyModifiers.None;
         IRelayCommand? command = GenerationCardControl.ResolveSelectionCommand(
             modifiers,
             ToggleSelectionCommand,
@@ -471,6 +510,7 @@ public partial class GenerationCardControl :
         }
 
         PointerPoint pointerPoint = eventArgs.GetCurrentPoint(this);
+
         if (!pointerPoint.Properties.IsLeftButtonPressed)
         {
             return;
@@ -490,21 +530,24 @@ public partial class GenerationCardControl :
         _ = sender;
 
         PromptDragCandidate? dragCandidate = _promptDragCandidate;
+
         if (dragCandidate is null)
         {
             return;
         }
 
         PointerPoint pointerPoint = eventArgs.GetCurrentPoint(this);
+
         if (!pointerPoint.Properties.IsLeftButtonPressed)
         {
             _promptDragCandidate = null;
+
             return;
         }
 
         if ((!PointerDragThreshold.IsReached(
-                dragCandidate.Origin,
-                pointerPoint.Position))
+            dragCandidate.Origin,
+            pointerPoint.Position))
             || (string.IsNullOrWhiteSpace(dragCandidate.Prompt)))
         {
             return;

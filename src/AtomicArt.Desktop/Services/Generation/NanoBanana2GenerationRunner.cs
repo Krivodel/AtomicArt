@@ -38,18 +38,36 @@ public sealed class NanoBanana2GenerationRunner : INanoBanana2GenerationRunner, 
             GenerationCount = 1
         };
 
-        for (int generationIndex = 0; generationIndex < parameters.GenerationCount; generationIndex++)
-        {
-            ImageGenerationRequestDto request = _requestBuilder.CreateValidatedRequest(singleGenerationParameters);
-            GenerationStartSnapshot startSnapshot = _requestBuilder.CreateStartSnapshot(
-                request,
-                singleGenerationParameters);
-            GenerationRunRequest runRequest = new(request, startSnapshot, providerCredential,
-                singleGenerationParameters.CodexTurnOptions);
+        int generationIndex = 0;
 
-            await _runDispatcher
-                .EnqueueAsync(runRequest, ct)
-                .ConfigureAwait(false);
+        try
+        {
+            for (; generationIndex < parameters.GenerationCount; generationIndex++)
+            {
+                ImageGenerationRequestDto request = _requestBuilder.CreateValidatedRequest(singleGenerationParameters);
+                GenerationStartSnapshot startSnapshot = _requestBuilder.CreateStartSnapshot(
+                    request,
+                    singleGenerationParameters) with
+                { ChatHistory = parameters.ChatBatch?.History };
+                GenerationRunRequest runRequest = new(request, startSnapshot, providerCredential,
+                    singleGenerationParameters.CodexTurnOptions)
+                {
+                    ChatRun = parameters.ChatBatch?.Runs[generationIndex],
+                    ChatReferences = parameters.ChatBatch?.UserMessage.Images
+                };
+
+                await _runDispatcher.EnqueueAsync(runRequest, ct).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            if (parameters.ChatBatch is { } chat)
+            {
+                foreach (GenerationChatRun run in chat.Runs.Skip(generationIndex))
+                {
+                    run.Complete(null);
+                }
+            }
         }
     }
 }

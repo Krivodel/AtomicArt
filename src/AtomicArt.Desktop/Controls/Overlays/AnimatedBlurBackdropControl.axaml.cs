@@ -20,6 +20,11 @@ public partial class AnimatedBlurBackdropControl : UserControl
         get => GetValue(IsActiveProperty);
         set => SetValue(IsActiveProperty, value);
     }
+    public bool UseSnapshot
+    {
+        get => GetValue(UseSnapshotProperty);
+        set => SetValue(UseSnapshotProperty, value);
+    }
 
     public static readonly StyledProperty<CornerRadius> BackdropCornerRadiusProperty =
         AvaloniaProperty.Register<AnimatedBlurBackdropControl, CornerRadius>(
@@ -29,16 +34,32 @@ public partial class AnimatedBlurBackdropControl : UserControl
             nameof(BlurRadius));
     public static readonly StyledProperty<bool> IsActiveProperty =
         AvaloniaProperty.Register<AnimatedBlurBackdropControl, bool>(nameof(IsActive));
+    public static readonly StyledProperty<bool> UseSnapshotProperty =
+        AvaloniaProperty.Register<AnimatedBlurBackdropControl, bool>(nameof(UseSnapshot));
 
     static AnimatedBlurBackdropControl()
     {
         IsActiveProperty.Changed.AddClassHandler<AnimatedBlurBackdropControl>(
+            OnIsActiveChanged);
+        UseSnapshotProperty.Changed.AddClassHandler<AnimatedBlurBackdropControl>(
             OnIsActiveChanged);
     }
 
     public AnimatedBlurBackdropControl()
     {
         InitializeComponent();
+    }
+
+    private void UpdateVisualState()
+    {
+        Opacity = IsActive ? 1d : 0d;
+        BackdropBlur.IsDynamic = IsActive && !UseSnapshot;
+        BackdropBlur.Intensity = IsActive ? 1d : 0d;
+
+        if (IsActive && UseSnapshot)
+        {
+            BackdropBlur.RefreshCapture();
+        }
     }
 
     private static void OnIsActiveChanged(
@@ -48,11 +69,5 @@ public partial class AnimatedBlurBackdropControl : UserControl
         _ = args;
 
         control.UpdateVisualState();
-    }
-
-    private void UpdateVisualState()
-    {
-        Opacity = IsActive ? 1d : 0d;
-        BackdropBlur.Intensity = IsActive ? 1d : 0d;
     }
 }

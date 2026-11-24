@@ -20,6 +20,7 @@ using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.UiAnimation;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Services.Generation;
@@ -71,9 +72,9 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void PointerMoved_WhenReadyAttachmentLeavesPanel_StartsExternalDragWithoutReordering()
+    public async Task PointerMoved_WhenReadyAttachmentLeavesPanel_StartsExternalDragWithoutReordering()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(() =>
         {
             AttachedImageViewModel item = CreateItem("reference.png");
             ObservableCollection<AttachedImageViewModel> items = [item];
@@ -130,9 +131,9 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void PointerMoved_WhenAttachmentLeavesListButStaysInsideBoundary_KeepsInternalDrag()
+    public async Task PointerMoved_WhenAttachmentLeavesListButStaysInsideBoundary_KeepsInternalDrag()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(() =>
         {
             AttachedImageViewModel item = CreateItem("reference.png");
             ObservableCollection<AttachedImageViewModel> items = [item];
@@ -173,9 +174,9 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void PointerReleased_WhenReadyAttachmentStaysInsidePanel_CommitsReordering()
+    public async Task PointerReleased_WhenReadyAttachmentStaysInsidePanel_CommitsReordering()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(() =>
         {
             AttachedImageViewModel firstItem = CreateItem("first.png");
             ObservableCollection<AttachedImageViewModel> items =
@@ -219,6 +220,45 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     }
 
     [Fact]
+    public async Task PointerMoved_WithoutReorderCommand_KeepsThumbnailsStillAndDoesNotOpenImage()
+    {
+        await DesktopControlTestBase.DispatchAsync(() =>
+        {
+            ObservableCollection<AttachedImageViewModel> items =
+            [
+                AnimatedAttachmentListControlTests.CreateItem("first.png"),
+                AnimatedAttachmentListControlTests.CreateItem("second.png")
+            ];
+            int opened = 0;
+            AnimatedAttachmentListControl control = new()
+            {
+                Items = items,
+                OpenAttachmentCommand = new RelayCommand<AttachedImageViewModel?>(_ => opened++)
+            };
+            Window window = AnimatedGalleryControlTestBase.Show(control, 160d, AttachmentViewportHeight);
+
+            try
+            {
+                Canvas panel = AnimatedAttachmentListControlTests.GetAttachmentPanel(control);
+                Control first = panel.Children.OfType<Control>().First();
+                Point origin = first.TranslatePoint(default, control) ?? throw new InvalidOperationException();
+
+                window.MouseDown(new Point(28d, 28d), MouseButton.Left);
+                window.MouseMove(new Point(100d, 28d), RawInputModifiers.LeftMouseButton);
+
+                (first.TranslatePoint(default, control) ?? throw new InvalidOperationException()).Should().Be(origin);
+                window.MouseUp(new Point(100d, 28d), MouseButton.Left);
+                opened.Should().Be(0);
+                items[0].FileName.Should().Be("first.png");
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public void CreateRemoveFrames_WithDifferentItemIds_CanChooseDifferentHorizontalDirections()
     {
         Guid rightId = CreateGuid(firstByte: 0);
@@ -245,9 +285,9 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void Layout_WhenSingleAttachmentHasWideViewport_KeepsAttachmentPanelLeftAligned()
+    public async Task Layout_WhenSingleAttachmentHasWideViewport_KeepsAttachmentPanelLeftAligned()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(() =>
         {
             ObservableCollection<AttachedImageViewModel> items = [CreateItem("first.png")];
 
@@ -264,9 +304,9 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void Layout_WithLoadingAndReadyAttachments_HasNoPreviewBorder()
+    public async Task Layout_WithLoadingAndReadyAttachments_HasNoPreviewBorder()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(() =>
         {
             ObservableCollection<AttachedImageViewModel> items =
             [
@@ -290,9 +330,9 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void Image_WhenEntryIsCreated_UsesMediumBitmapInterpolation()
+    public async Task Image_WhenEntryIsCreated_UsesMediumBitmapInterpolation()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(() =>
         {
             ObservableCollection<AttachedImageViewModel> items = [CreateItem("ready.png")];
 
@@ -310,49 +350,10 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
         });
     }
 
-    [Theory]
-    [InlineData(1024, 512, 256, 128)]
-    [InlineData(512, 1024, 128, 256)]
-    public void Image_WhenAttachmentIsLarge_UsesReducedPreviewAndPreservesOriginalContent(
-        int sourceWidth,
-        int sourceHeight,
-        int expectedPreviewWidth,
-        int expectedPreviewHeight)
-    {
-        Dispatch(() =>
-        {
-            byte[] originalContent = GalleryThumbnailTestImages.CreatePngBytes(
-                sourceWidth,
-                sourceHeight);
-            AttachedImageDto dto = new(
-                "large.png",
-                GenerationImageContentTypes.Png,
-                originalContent);
-            AttachedImageViewModel item = new(dto, CreateState(dto));
-            ObservableCollection<AttachedImageViewModel> items = [item];
-
-            ShowAttachments(items, 160d, (control, _) =>
-            {
-                Image image = control
-                    .GetVisualDescendants()
-                    .OfType<Image>()
-                    .Single();
-                Bitmap preview = image.Source
-                    .Should()
-                    .BeOfType<Bitmap>()
-                    .Subject;
-
-                preview.PixelSize.Should().Be(
-                    new PixelSize(expectedPreviewWidth, expectedPreviewHeight));
-                item.ToDto().Content.Should().Equal(originalContent);
-            });
-        });
-    }
-
     [Fact]
-    public void CollectionChanged_WhenInsertedAtFront_ShiftsExistingAttachmentRightAndAnimatesNewAttachment()
+    public async Task CollectionChanged_WhenInsertedAtFront_ShiftsExistingAttachmentRightAndAnimatesNewAttachment()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(() =>
         {
             AttachedImageViewModel firstItem = CreateItem("first.png");
             ObservableCollection<AttachedImageViewModel> items = [firstItem];
@@ -363,7 +364,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                 Control firstControl = panel.Children.OfType<Control>().Single();
 
                 items.Insert(0, CreateItem("second.png"));
-                window.CaptureRenderedFrame();
+                window.UpdateLayout();
 
                 panel.Children.OfType<Control>().Should().HaveCount(2);
                 Canvas.GetLeft(firstControl).Should().Be(AttachmentSlotWidth);
@@ -390,16 +391,16 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void CollectionChanged_WhenAppendedPastViewport_ScrollsToEnd()
+    public async Task CollectionChanged_WhenAppendedPastViewport_ScrollsToEnd()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(async () =>
         {
             ObservableCollection<AttachedImageViewModel> items = CreateReadyItems(
                 "first.png",
                 "second.png",
                 "third.png");
 
-            ShowAttachments(items, 160d, (control, window) =>
+            await AnimatedAttachmentListControlTests.ShowAttachmentsAsync(items, 160d, async (control, window) =>
             {
                 ScrollViewer scrollViewer = GetAttachmentScrollViewer(control);
                 Canvas panel = GetAttachmentPanel(control);
@@ -409,6 +410,7 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
                 for (int i = 0; i < 30; i++)
                 {
                     window.CaptureRenderedFrame();
+                    await Task.Delay(16);
                 }
 
                 double expectedOffsetX = Math.Max(0d, panel.Width - scrollViewer.Viewport.Width);
@@ -418,9 +420,9 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
     }
 
     [Fact]
-    public void CollectionChanged_WhenRemovedTwiceBeforeAnimationCompletes_LeavesEachRemovedAttachmentInOverlay()
+    public async Task CollectionChanged_WhenRemovedTwiceBeforeAnimationCompletes_KeepsEachPreviewUntilFadeEnds()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(() =>
         {
             ObservableCollection<AttachedImageViewModel> items = CreateReadyItems(
                 "first.png",
@@ -430,27 +432,26 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
             ShowAttachments(items, 260d, (control, window) =>
             {
                 Canvas panel = GetAttachmentPanel(control);
-                Canvas overlay = GetOverlayCanvas(control);
 
                 items.RemoveAt(0);
                 window.CaptureRenderedFrame();
 
-                panel.Children.OfType<Control>().Should().HaveCount(2);
-                overlay.Children.OfType<Control>().Should().ContainSingle();
+                panel.Children.OfType<Control>().Should().HaveCount(3);
+                panel.Children.OfType<Control>().Count(child => !child.IsHitTestVisible).Should().Be(1);
 
                 items.RemoveAt(0);
                 window.CaptureRenderedFrame();
 
-                panel.Children.OfType<Control>().Should().ContainSingle();
-                overlay.Children.OfType<Control>().Should().HaveCount(2);
+                panel.Children.OfType<Control>().Should().HaveCount(3);
+                panel.Children.OfType<Control>().Count(child => !child.IsHitTestVisible).Should().Be(2);
             });
         });
     }
 
     [Fact]
-    public void CollectionChanged_WhenLoadingAttachmentIsRemoved_UsesAnimatedRemovalPath()
+    public async Task CollectionChanged_WhenLoadingAttachmentIsRemoved_UsesAnimatedRemovalPath()
     {
-        Dispatch(() =>
+        await DesktopControlTestBase.DispatchAsync(() =>
         {
             ObservableCollection<AttachedImageViewModel> items =
             [
@@ -460,13 +461,12 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
             ShowAttachments(items, 160d, (control, window) =>
             {
                 Canvas panel = GetAttachmentPanel(control);
-                Canvas overlay = GetOverlayCanvas(control);
 
                 items.Clear();
                 window.CaptureRenderedFrame();
 
-                panel.Children.OfType<Control>().Should().BeEmpty();
-                overlay.Children.OfType<Control>().Should().ContainSingle();
+                panel.Children.OfType<Control>().Should().ContainSingle();
+                panel.Children.OfType<Control>().Single().IsHitTestVisible.Should().BeFalse();
             });
         });
     }
@@ -584,14 +584,6 @@ public sealed class AnimatedAttachmentListControlTests : AnimatedGalleryControlT
         return GetRootGrid(control)
             .Children
             .OfType<ScrollViewer>()
-            .Single();
-    }
-
-    private static Canvas GetOverlayCanvas(AnimatedAttachmentListControl control)
-    {
-        return GetRootGrid(control)
-            .Children
-            .OfType<Canvas>()
             .Single();
     }
 

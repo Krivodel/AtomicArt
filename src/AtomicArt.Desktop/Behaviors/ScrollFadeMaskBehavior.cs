@@ -7,6 +7,9 @@ namespace AtomicArt.Desktop.Behaviors;
 
 public static class ScrollFadeMaskBehavior
 {
+    public static readonly AttachedProperty<bool> IsEnabledProperty =
+        AvaloniaProperty.RegisterAttached<ScrollContentPresenter, bool>(
+            "IsEnabled", typeof(ScrollFadeMaskBehavior), defaultValue: true);
     public static readonly AttachedProperty<Thickness> InsetsProperty =
         AvaloniaProperty.RegisterAttached<ScrollContentPresenter, Thickness>(
             "Insets",
@@ -28,9 +31,20 @@ public static class ScrollFadeMaskBehavior
 
     static ScrollFadeMaskBehavior()
     {
+        IsEnabledProperty.Changed.AddClassHandler<ScrollContentPresenter>(OnSettingChanged);
         InsetsProperty.Changed.AddClassHandler<ScrollContentPresenter>(OnSettingChanged);
         OrientationProperty.Changed.AddClassHandler<ScrollContentPresenter>(OnSettingChanged);
         FadeWhenClippedProperty.Changed.AddClassHandler<ScrollContentPresenter>(OnSettingChanged);
+    }
+
+    public static bool GetIsEnabled(ScrollContentPresenter scrollPresenter)
+    {
+        return AttachedPropertyValueAccessor.Get(scrollPresenter, IsEnabledProperty);
+    }
+
+    public static void SetIsEnabled(ScrollContentPresenter scrollPresenter, bool value)
+    {
+        AttachedPropertyValueAccessor.Set(scrollPresenter, IsEnabledProperty, value);
     }
 
     public static Thickness GetInsets(ScrollContentPresenter scrollPresenter)
@@ -135,6 +149,20 @@ public static class ScrollFadeMaskBehavior
         ScrollContentPresenter scrollPresenter,
         AvaloniaPropertyChangedEventArgs _)
     {
+        if (!ScrollFadeMaskBehavior.GetIsEnabled(scrollPresenter))
+        {
+            LinearGradientBrush? mask = scrollPresenter.GetValue(MaskProperty);
+
+            if (object.ReferenceEquals(scrollPresenter.OpacityMask, mask))
+            {
+                scrollPresenter.OpacityMask = null;
+            }
+
+            scrollPresenter.ClearValue(MaskProperty);
+            scrollPresenter.PropertyChanged -= OnScrollPresenterPropertyChanged;
+            return;
+        }
+
         Attach(scrollPresenter);
         UpdateMask(scrollPresenter);
     }

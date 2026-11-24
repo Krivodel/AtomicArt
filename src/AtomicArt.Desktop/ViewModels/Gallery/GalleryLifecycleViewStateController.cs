@@ -159,7 +159,8 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
             placeholders[index].UpdateFromResult(
                 itemUpdate.Item,
                 itemUpdate.TrustedImagePath,
-                itemUpdate.ThumbnailPath);
+                itemUpdate.ThumbnailPath,
+                itemUpdate.ChatResult);
         }
 
         _itemsController.MarkFailedPlaceholders(

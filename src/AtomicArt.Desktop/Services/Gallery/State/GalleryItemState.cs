@@ -29,6 +29,14 @@ public sealed class GalleryItemState : IGalleryItemStateSource
     public int AttachedImagesCount { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<GenerationReference>? References { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? ChatId { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? ChatReferenceHashes { get; init; }
+    [JsonIgnore]
+    public GenerationChatHistory? ChatHistory { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GenerationChatResult? ChatResult { get; init; }
     public bool IsFavorite { get; init; }
     public Guid? CorrelationId { get; init; }
     public int? GenerationOrdinal { get; init; }

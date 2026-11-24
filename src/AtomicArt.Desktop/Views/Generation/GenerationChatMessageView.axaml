@@ -1,0 +1,221 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:animation="using:AtomicArt.Desktop.Services.UiAnimation"
+             xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+             xmlns:galleryViews="using:AtomicArt.Desktop.Views.Gallery"
+             xmlns:generation="using:AtomicArt.Desktop.ViewModels.Generation"
+             xmlns:i18n="https://codewf.com"
+             xmlns:picaResources="using:Pica.Viewer.Resources"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:views="using:AtomicArt.Desktop.Views.Generation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AtomicArt.Desktop.Views.Generation.GenerationChatMessageView"
+             x:Name="MessageView"
+             x:DataType="generation:GenerationChatMessageViewModel"
+             ClipToBounds="True"
+             Foreground="{StaticResource MetadataTextBrush}"
+             IsEditing="{Binding IsEditing}"
+             behaviors:ClipboardPasteBehavior.IsEnabled="{Binding IsEditing}"
+             behaviors:ImageAttachmentBehavior.MaxInputBytes="{Binding AttachmentInputByteLimit}"
+             behaviors:ImageDropBehavior.IsEnabled="{Binding IsEditing}"
+             behaviors:ImageDropBehavior.Overlay="{Binding #MessageDropOverlay}"
+             behaviors:ImageDropBehavior.TargetKind="ImageAttachment"
+             behaviors:ImageAttachmentBehavior.AttachImagesCommand="{Binding AttachImageInputsCommand}"
+             behaviors:ImageAttachmentBehavior.ErrorCommand="{Binding HandleAttachmentErrorCommand}">
+    <views:GenerationChatReveal ClipToBounds="True"
+                                Progress="{Binding #MessageView.ArrivalProgress}">
+        <StackPanel>
+            <TextBlock Margin="{StaticResource GenerationChatDateMargin}"
+                       HorizontalAlignment="Center"
+                       Classes="panel-label"
+                       IsVisible="{Binding HasDateLabel}"
+                       Foreground="{StaticResource MetadataSecondaryTextBrush}"
+                       Text="{Binding DateLabel}" />
+            <Grid Classes="generation-chat-message"
+                  Classes.user="{Binding !IsAssistant}"
+                  Background="Transparent"
+                  Opacity="{Binding #MessageView.ArrivalProgress}">
+                <views:GenerationChatMessagePanel EditorProgress="{Binding #MessageView.EditorProgress}"
+                                                  StretchBubble="{Binding IsAssistant}">
+                    <Border Classes="generation-chat-bubble">
+                        <StackPanel>
+                            <views:GenerationChatReveal ClipToBounds="True"
+                                                        ContentVisible="{Binding ShowsText}"
+                                                        Progress="1"
+                                                        ResizeDuration="{StaticResource GenerationChatEditorFadeDuration}">
+                                <Grid>
+                                    <TextBox x:Name="MessageEditor"
+                                             Classes="generation-chat-editor"
+                                             AcceptsReturn="True"
+                                             AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Message}}"
+                                             FontSize="{Binding $parent[views:GenerationChatView].((generation:GenerationChatViewModel)DataContext).TextSize}"
+                                             IsReadOnly="{Binding !IsEditing}"
+                                             Text="{Binding DisplayText}"
+                                             TextWrapping="Wrap"
+                                             behaviors:TextBoxFocusBehavior.AutoFocus="{Binding IsEditing}"
+                                             behaviors:TextBoxFocusBehavior.CaretAtEnd="True" />
+                                </Grid>
+                            </views:GenerationChatReveal>
+                            <views:GenerationChatReveal ClipToBounds="True"
+                                                        IsHitTestVisible="{Binding ShowsReferenceStrip}"
+                                                        IsResizeAnimationEnabled="{Binding !#MessageView.IsLayoutAnimating}"
+                                                        Progress="{Binding #MessageView.ReferenceRevealProgress}"
+                                                        ResizeDuration="{StaticResource GenerationChatEditorFadeDuration}">
+                                <views:GenerationAttachmentStripView Margin="{StaticResource GenerationChatReferencesPadding}"
+                                                                     ActionsProgress="{Binding #MessageView.EditorProgress}"
+                                                                     KeepActionsVisible="{Binding #MessageView.IsEditorPresented}"
+                                                                     PreviewLoader="{Binding $parent[views:GenerationChatView].PreviewLoader}" />
+                            </views:GenerationChatReveal>
+                            <views:GenerationChatReveal IsResizeAnimationEnabled="{Binding !#MessageView.IsLayoutAnimating}"
+                                                        Progress="1"
+                                                        ResizeDuration="{StaticResource GenerationChatEditorFadeDuration}">
+                                <TransitioningContentControl HorizontalContentAlignment="Stretch"
+                                                             VerticalContentAlignment="Top"
+                                                             IsVisible="{Binding IsAssistant}"
+                                                             Content="{Binding ImageSet}">
+                                    <TransitioningContentControl.PageTransition>
+                                        <animation:UiCrossFadeTransition Duration="{StaticResource GenerationChatEditorFadeDuration}" />
+                                    </TransitioningContentControl.PageTransition>
+                                    <TransitioningContentControl.ContentTemplate>
+                                        <DataTemplate x:DataType="generation:GenerationChatImageSet">
+                                            <ItemsControl Classes="generation-chat-images"
+                                                          Classes.single="{Binding IsSingleImage}"
+                                                          IsHitTestVisible="{Binding IsCurrent}"
+                                                          ItemsSource="{Binding Images}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <UniformGrid />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="generation:GenerationChatImageViewModel">
+                                                        <StackPanel HorizontalAlignment="Stretch"
+                                                                    VerticalAlignment="Top"
+                                                                    Classes="generation-chat-variant"
+                                                                    Background="Transparent">
+                                                            <views:GenerationChatImageFrame Preview="{Binding #ResultPreview.Source}"
+                                                                                            PreviewAspectRatio="{Binding PreviewAspectRatio, Mode=TwoWay}">
+                                                                <Grid>
+                                                                    <galleryViews:GenerationReferencePreviewControl x:Name="ResultPreview"
+                                                                                                                    IsHitTestVisible="False"
+                                                                                                                    LoadInViewport="True"
+                                                                                                                    Loader="{Binding $parent[views:GenerationChatView].PreviewLoader}"
+                                                                                                                    MaximumPreviewPixels="960"
+                                                                                                                    Reference="{Binding Reference}"
+                                                                                                                    Stretch="Uniform" />
+                                                                    <galleryViews:GenerationReferenceButton HorizontalAlignment="Stretch"
+                                                                                                            VerticalAlignment="Stretch"
+                                                                                                            Theme="{StaticResource MetadataReferenceButtonTheme}"
+                                                                                                            IsVisible="{Binding Reference, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                                                            AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.OpenImage}}"
+                                                                                                            DragReference="{Binding Reference}"
+                                                                                                            Command="{Binding #MessageView.((generation:GenerationChatMessageViewModel)DataContext).OpenResultCommand}"
+                                                                                                            CommandParameter="{Binding}" />
+                                                                    <controls:AttachmentPixelLoadingControl AnimationSeed="{Binding Id}"
+                                                                                                            GridSize="{StaticResource GenerationPixelLoadingGridSize}"
+                                                                                                            IsHitTestVisible="False">
+                                                                        <controls:AttachmentPixelLoadingControl.IsActive>
+                                                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                                                <Binding Path="IsPending" />
+                                                                                <Binding Path="$parent[views:GenerationChatView].IsPresented" />
+                                                                                <Binding Path="#ResultPreview.IsNearViewport" />
+                                                                            </MultiBinding>
+                                                                        </controls:AttachmentPixelLoadingControl.IsActive>
+                                                                    </controls:AttachmentPixelLoadingControl>
+                                                                    <TextBlock HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"
+                                                                               Classes="danger-text"
+                                                                               IsVisible="{Binding IsFailed}"
+                                                                               Text="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Error}}" />
+                                                                    <Button HorizontalAlignment="Right"
+                                                                            VerticalAlignment="Top"
+                                                                            Classes="Icon"
+                                                                            IsVisible="{Binding #MessageView.IsEditing}"
+                                                                            AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.RemoveImage}}"
+                                                                            Command="{Binding #MessageView.((generation:GenerationChatMessageViewModel)DataContext).RemoveResultCommand}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <PathIcon Data="{StaticResource AppCloseIcon}" />
+                                                                    </Button>
+                                                                </Grid>
+                                                            </views:GenerationChatImageFrame>
+                                                            <views:GenerationChatReveal Classes="generation-chat-choice"
+                                                                                        IsVisible="{Binding CanChoose}"
+                                                                                        ClipToBounds="True"
+                                                                                        Opacity="{Binding #MessageView.ToolsOpacity}"
+                                                                                        Progress="{Binding #MessageView.ToolsRevealProgress}">
+                                                                <Button Margin="{StaticResource GenerationChatChoiceMargin}"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        Classes="metadata-repeat generation-chat-choose"
+                                                                        Content="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ChooseVariant}}"
+                                                                        Command="{Binding $parent[views:GenerationChatView].((generation:GenerationChatViewModel)DataContext).ChooseVariantCommand}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </views:GenerationChatReveal>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </DataTemplate>
+                                    </TransitioningContentControl.ContentTemplate>
+                                </TransitioningContentControl>
+                            </views:GenerationChatReveal>
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel x:Name="MessageTools"
+                                HorizontalAlignment="Right"
+                                Classes="generation-chat-tools"
+                                Opacity="{Binding #MessageView.ToolsOpacity}"
+                                Orientation="Horizontal">
+                        <StackPanel.IsHitTestVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="!#MessageView.IsEditorPresented" />
+                                <Binding Path="#MessageView.IsPointerOver" />
+                            </MultiBinding>
+                        </StackPanel.IsHitTestVisible>
+                        <TextBlock Margin="0,0,4,0"
+                                   VerticalAlignment="Center"
+                                   Classes="panel-label"
+                                   Foreground="{StaticResource MetadataSecondaryTextBrush}"
+                                   Text="{Binding TimeText}" />
+                        <Button Classes="Icon generation-chat-action"
+                                IsEnabled="{Binding Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                AutomationProperties.Name="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Copy}}"
+                                Command="{Binding CopyCommand}">
+                            <Panel IsHitTestVisible="False">
+                                <Path Classes="metadata-outline-icon"
+                                      IsVisible="{Binding !IsCopied}"
+                                      Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}" />
+                                <PathIcon Width="{StaticResource MetadataIconSize}"
+                                          Height="{StaticResource MetadataIconSize}"
+                                          IsVisible="{Binding IsCopied}"
+                                          Data="{StaticResource AppCheckIcon}" />
+                            </Panel>
+                        </Button>
+                        <Button Classes="Icon generation-chat-action"
+                                AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Edit}}"
+                                Command="{Binding EditCommand}">
+                            <Path Classes="metadata-outline-icon"
+                                  Data="{StaticResource MetadataRepeatIcon}" />
+                        </Button>
+                    </StackPanel>
+                    <WrapPanel Margin="{StaticResource GenerationChatEditorActionsMargin}"
+                               HorizontalAlignment="Right"
+                               IsHitTestVisible="{Binding IsEditing}"
+                               ItemSpacing="{StaticResource GenerationChatItemSpacing}"
+                               Opacity="{Binding #MessageView.EditorProgress}"
+                               Orientation="Horizontal">
+                        <Button Classes="danger"
+                                Content="{i18n:I18n {x:Static resources:CommonLocalizationKeys.Cancel}}"
+                                Command="{Binding CancelCommand}" />
+                        <Button Classes="metadata-repeat"
+                                Content="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Save}}"
+                                Command="{Binding SaveCommand}" />
+                    </WrapPanel>
+                </views:GenerationChatMessagePanel>
+                <controls:ImageDropOverlayControl x:Name="MessageDropOverlay"
+                                                  BackdropCornerRadius="{StaticResource ShellCornerRadius}"
+                                                  IsAttachmentLimitReached="{Binding IsAttachmentLimitReached}" />
+            </Grid>
+        </StackPanel>
+    </views:GenerationChatReveal>
+</UserControl>

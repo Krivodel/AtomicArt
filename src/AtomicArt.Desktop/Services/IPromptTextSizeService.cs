@@ -1,10 +1,5 @@
 namespace AtomicArt.Desktop.Services;
 
-public interface IPromptTextSizeService
+public interface IPromptTextSizeService : ITextSizeService
 {
-    double CurrentTextSize { get; }
-
-    event EventHandler? TextSizeChanged;
-
-    void SetTextSize(double textSize);
 }

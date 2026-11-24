@@ -16,4 +16,5 @@ public sealed record NanoBanana2GenerationParameters(
     string? Quality = null,
     bool IncludeTemperature = true,
     string? Complexity = null,
-    LocalCodexTurnOptions? CodexTurnOptions = null);
+    LocalCodexTurnOptions? CodexTurnOptions = null,
+    GenerationChatBatch? ChatBatch = null);

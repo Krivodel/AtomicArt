@@ -84,6 +84,7 @@ internal sealed class GenerationCardControlFactory : IGalleryCardControlFactory
         generationCard.RevealInNewFolderWindowCommand =
             commands.RevealInNewFolderWindow;
         generationCard.OpenMetadataCommand = commands.OpenMetadata;
+        generationCard.OpenChatCommand = commands.OpenChat;
         generationCard.DeleteOrCancelCommand = commands.DeleteOrCancel;
         generationCard.ToggleFavoriteCommand = commands.ToggleFavorite;
         generationCard.OpenDlss5Command = commands.OpenDlss5;

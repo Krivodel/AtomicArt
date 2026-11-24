@@ -17,4 +17,5 @@ internal sealed record GalleryCardCommands(
     IRelayCommand? SaveAs = null,
     IRelayCommand? LoadOpenWithApplications = null,
     IRelayCommand? OpenWithApplication = null,
-    IRelayCommand? ChooseApplication = null);
+    IRelayCommand? ChooseApplication = null,
+    IRelayCommand? OpenChat = null);

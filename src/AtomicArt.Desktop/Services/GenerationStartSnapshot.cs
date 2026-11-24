@@ -13,6 +13,7 @@ public sealed record GenerationStartSnapshot
     public int GenerationCount { get; }
     public int AttachedImagesCount { get; }
     public IReadOnlyList<GenerationReference>? References { get; init; }
+    public GenerationChatHistory? ChatHistory { get; init; }
     public DateTime RequestedAtUtc { get; }
 
     public GenerationStartSnapshot(

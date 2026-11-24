@@ -11,10 +11,10 @@ namespace AtomicArt.Desktop.Tests.Services;
 public sealed class PromptTextSizeControllerTests
 {
     [Theory]
-    [InlineData(PromptTextSizeAdjustment.Decrease, 13d)]
-    [InlineData(PromptTextSizeAdjustment.Increase, 15d)]
+    [InlineData(TextSizeAdjustment.Decrease, 13d)]
+    [InlineData(TextSizeAdjustment.Increase, 15d)]
     public async Task AdjustAsync_WithAdjacentOption_AppliesAndSavesValue(
-        PromptTextSizeAdjustment adjustment,
+        TextSizeAdjustment adjustment,
         double expectedTextSize)
     {
         TestContext context = new();
@@ -29,10 +29,10 @@ public sealed class PromptTextSizeControllerTests
     }
 
     [Theory]
-    [InlineData(PromptTextSizeAdjustment.Decrease, true)]
-    [InlineData(PromptTextSizeAdjustment.Increase, false)]
+    [InlineData(TextSizeAdjustment.Decrease, true)]
+    [InlineData(TextSizeAdjustment.Increase, false)]
     public async Task AdjustAsync_AtBoundary_DoesNotApplyOrSave(
-        PromptTextSizeAdjustment adjustment,
+        TextSizeAdjustment adjustment,
         bool useFirstOption)
     {
         TestContext context = new();
@@ -62,7 +62,7 @@ public sealed class PromptTextSizeControllerTests
             ?? throw new InvalidOperationException("Numeric setting view model was not created.");
 
         await context.Controller.AdjustAsync(
-            PromptTextSizeAdjustment.Increase,
+            TextSizeAdjustment.Increase,
             CancellationToken.None);
 
         viewModel.SelectedOption.Should().NotBeNull();

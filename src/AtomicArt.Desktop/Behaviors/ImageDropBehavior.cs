@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -43,6 +45,9 @@ public static class ImageDropBehavior
         AvaloniaProperty.RegisterAttached<Control, IAsyncRelayCommand<object?>?>(
             "UseDlss5ResultCommand",
             typeof(ImageDropBehavior));
+
+    private static readonly ConditionalWeakTable<DragEventArgs, object> HandledAttachments = new();
+    private static readonly object AttachmentMarker = new();
 
     static ImageDropBehavior()
     {
@@ -133,9 +138,9 @@ public static class ImageDropBehavior
             return AtomicArtImageDragData.GetDlss5ResultOrDefault(dataTransfer) is not null;
         }
 
-        if (targetKind != ImageDropTargetKind.ExternalFiles
-            || isAtomicArtImage
-            || isAtomicArtPrompt)
+        if (isAtomicArtPrompt
+            || (targetKind != ImageDropTargetKind.ImageAttachment
+                && (targetKind != ImageDropTargetKind.ExternalFiles || isAtomicArtImage)))
         {
             return false;
         }
@@ -146,6 +151,17 @@ public static class ImageDropBehavior
             || dataTransfer.Contains(DataFormat.Bitmap)
             || ImageDataTransferUriExtractor.ContainsPotentialImageUri(
                 dataTransfer);
+    }
+
+    internal static void MarkHandled(DragEventArgs e, ImageDropTargetKind targetKind)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+        e.Handled = true;
+
+        if (targetKind == ImageDropTargetKind.ImageAttachment)
+        {
+            HandledAttachments.GetValue(e, _ => AttachmentMarker);
+        }
     }
 
     private static void UpdateDragState(object? sender, DragEventArgs e)
@@ -179,7 +195,7 @@ public static class ImageDropBehavior
             e.DragEffects = IsAttachmentLimitReached(control)
                 ? DragDropEffects.None
                 : DragDropEffects.Copy;
-            e.Handled = true;
+            ImageDropBehavior.MarkHandled(e, targetKind);
             return;
         }
 
@@ -206,10 +222,10 @@ public static class ImageDropBehavior
         DragEventArgs e,
         ImageDropTargetKind targetKind)
     {
-        return e.Handled
-            && targetKind == ImageDropTargetKind.ExternalFiles
-            && (AtomicArtImageDragData.IsAtomicArtImage(e.DataTransfer)
-                || AtomicArtPromptDragData.IsPrompt(e.DataTransfer));
+        return HandledAttachments.TryGetValue(e, out _)
+            || (e.Handled && targetKind == ImageDropTargetKind.ExternalFiles
+                && (AtomicArtImageDragData.IsAtomicArtImage(e.DataTransfer)
+                    || AtomicArtPromptDragData.IsPrompt(e.DataTransfer)));
     }
 
     private static bool IsInsideDropArea(Control control, DragEventArgs e)
@@ -315,7 +331,7 @@ public static class ImageDropBehavior
             return;
         }
 
-        e.Handled = true;
+        ImageDropBehavior.MarkHandled(e, targetKind);
 
         if (targetKind == ImageDropTargetKind.Dlss5Result)
         {

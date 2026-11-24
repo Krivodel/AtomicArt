@@ -1,15 +1,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:i18n="https://codewf.com"
              xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+             xmlns:codex="using:AtomicArt.Desktop.Services.Generation.LocalCodex"
              xmlns:contracts="using:AtomicArt.Contracts.Generation"
              xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
              xmlns:converters="using:Avalonia.Data.Converters"
              xmlns:generation="using:AtomicArt.Desktop.ViewModels.Generation"
+             xmlns:i18n="https://codewf.com"
              xmlns:models="using:AtomicArt.Desktop.Services"
-             xmlns:codex="using:AtomicArt.Desktop.Services.Generation.LocalCodex"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:system="clr-namespace:System;assembly=System.Runtime"
+             xmlns:views="using:AtomicArt.Desktop.Views.Generation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AtomicArt.Desktop.Views.Generation.NanoBanana2PanelView"
              x:DataType="generation:UniversalNanoBananaPanelViewModel">
     <Grid x:Name="PanelRoot">
@@ -86,23 +87,23 @@
                 <ComboBox x:Name="ResolutionComboBox"
                           Grid.Column="2"
                           MinWidth="{StaticResource GenerationOptionComboMinWidth}"
-                          IsEnabled="{Binding HasLoadedCatalog}"
                           IsVisible="{Binding !IsLocalCodexSelected}"
+                          IsEnabled="{Binding HasLoadedCatalog}"
                           ItemsSource="{Binding Resolutions}"
                           SelectedItem="{Binding SelectedResolution}" />
 
                 <Grid x:Name="GenerationOptionsSlot"
                       Grid.Column="3"
-                      IsVisible="{Binding !IsLocalCodexSelected}"
                       Margin="{StaticResource GenerationAdvancedOptionsMargin}"
+                      IsVisible="{Binding !IsLocalCodexSelected}"
                       ClipToBounds="True">
                     <Border x:Name="GenerationSettingsButtonHost"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Center">
                         <Button x:Name="TemperatureButton"
                                 Classes="Icon generation-option"
-                                Click="OnTemperatureButtonClick"
-                                IsEnabled="{Binding HasLoadedCatalog}">
+                                IsEnabled="{Binding HasLoadedCatalog}"
+                                Click="OnTemperatureButtonClick">
                             <Button.IsVisible>
                                 <MultiBinding Converter="{x:Static converters:BoolConverters.And}">
                                     <Binding Path="SupportsGenerationOptions" />
@@ -117,20 +118,20 @@
                     <ContentControl x:Name="InlineGenerationOptionsHost"
                                     HorizontalAlignment="Left"
                                     VerticalAlignment="Center"
+                                    HorizontalContentAlignment="Left"
                                     IsVisible="False"
                                     ClipToBounds="True"
-                                    HorizontalContentAlignment="Left"
                                     IsHitTestVisible="False" />
                 </Grid>
 
                 <Popup x:Name="TemperaturePopup"
                        Grid.Column="3"
+                       IsVisible="{Binding SupportsGenerationOptions}"
+                       Closed="OnTemperaturePopupClosed"
                        InheritsTransform="True"
                        IsLightDismissEnabled="False"
-                       IsVisible="{Binding SupportsGenerationOptions}"
-                       Placement="Bottom"
-                       Closed="OnTemperaturePopupClosed"
                        Opened="OnTemperaturePopupOpened"
+                       Placement="Bottom"
                        PlacementTarget="{Binding #TemperatureButton}">
                     <ThemeVariantScope RequestedThemeVariant="{Binding #PanelRoot.ActualThemeVariant}">
                         <FlyoutPresenter Padding="0">
@@ -146,12 +147,12 @@
                                             Classes="generation-advanced-options"
                                             Spacing="12">
                                     <Grid VerticalAlignment="Center"
+                                          IsVisible="{Binding SupportsTemperature}"
                                           ColumnDefinitions="Auto,Auto,*"
-                                          RowDefinitions="Auto,Auto"
-                                          IsVisible="{Binding SupportsTemperature}">
+                                          RowDefinitions="Auto,Auto">
                                         <Button Grid.Row="0"
-                                                Grid.RowSpan="2"
                                                 Grid.Column="0"
+                                                Grid.RowSpan="2"
                                                 Classes="generation-option-reset"
                                                 Theme="{StaticResource GenerationOptionResetButtonTheme}"
                                                 Command="{Binding ResetTemperatureCommand}">
@@ -177,9 +178,9 @@
                                         <controls:GenerationOptionSelector.Selector>
                                             <ComboBox x:Name="QualityComboBox"
                                                       HorizontalAlignment="Stretch"
-                                                      MaxDropDownHeight="300"
                                                       Classes.gpt-quality="{Binding UsesGptImageQuality}"
                                                       AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Quality.Label}}"
+                                                      MaxDropDownHeight="300"
                                                       ItemsSource="{Binding QualityLevels}"
                                                       SelectedItem="{Binding SelectedQualityOption, Mode=TwoWay}">
                                                 <ComboBox.ItemTemplate>
@@ -248,30 +249,8 @@
                 </ComboBox>
             </Grid>
 
-            <Grid Grid.Row="1"
-                  Margin="{StaticResource GenerationPanelInnerSpacing}"
-                  ColumnDefinitions="Auto,Auto,*">
-                <Button Grid.Column="0"
-                        Classes="attach-image"
-                        IsEnabled="{Binding HasLoadedCatalog}"
-                        Command="{Binding PickImageCommand}">
-                    <PathIcon Data="{StaticResource AppAddIcon}" />
-                </Button>
-                <TextBlock Grid.Column="1"
-                           Margin="{StaticResource AttachmentListMargin}"
-                           MinWidth="36"
-                           VerticalAlignment="Center"
-                           Classes="panel-label"
-                           Text="{Binding AttachmentCounterText}" />
-                <Grid Grid.Column="2"
-                      Margin="{StaticResource AttachmentListMargin}">
-                    <controls:AnimatedAttachmentListControl Items="{Binding AttachedImages}"
-                                                            OpenAttachmentCommand="{Binding OpenAttachmentCommand}"
-                                                            PanelId="{Binding PanelId}"
-                                                            RemoveAttachmentCommand="{Binding RemoveAttachmentCommand}"
-                                                            ReorderAttachmentCommand="{Binding ReorderAttachmentCommand}" />
-                </Grid>
-            </Grid>
+            <views:GenerationAttachmentStripView Grid.Row="1"
+                                                 Margin="{StaticResource GenerationPanelInnerSpacing}" />
 
             <TextBox x:Name="PromptTextBox"
                      Grid.Row="2"
@@ -281,15 +260,16 @@
                      Classes="prompt-input"
                      IsEnabled="{Binding HasLoadedCatalog}"
                      AcceptsReturn="True"
-                     behaviors:ClipboardPasteBehavior.IsEnabled="True"
-                     behaviors:TextBoxFocusBehavior.AutoFocus="{Binding HasLoadedCatalog}"
+                     IsReadOnly="{Binding IsChatPromptLocked}"
                      LostFocus="OnPromptLostFocus"
                      PlaceholderText="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Prompt.Placeholder}}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                      TextWrapping="Wrap"
+                     behaviors:ClipboardPasteBehavior.IsEnabled="True"
                      FontSize="{Binding PromptTextSize}"
                      Text="{Binding Prompt}"
-                     behaviors:PromptTextSizeWheelBehavior.AdjustCommand="{Binding AdjustPromptTextSizeCommand}" />
+                     behaviors:TextBoxFocusBehavior.AutoFocus="{Binding HasLoadedCatalog}"
+                     behaviors:TextSizeWheelBehavior.AdjustCommand="{Binding AdjustPromptTextSizeCommand}" />
 
             <TextBlock Grid.Row="3"
                        Margin="{StaticResource GenerationPanelInnerSpacing}"
@@ -297,38 +277,54 @@
                        IsVisible="{Binding HasErrorMessage}"
                        Text="{Binding ErrorMessage}" />
 
-            <Button Grid.Row="4"
-                    Margin="{StaticResource GenerationPanelInnerSpacing}"
-                    HorizontalAlignment="Stretch"
-                    Content="{Binding Quote.GenerateButtonText}"
-                    Command="{Binding GenerateCommand}" />
+            <Grid Grid.Row="4"
+                  Margin="{StaticResource GenerationPanelInnerSpacing}"
+                  ColumnDefinitions="*,Auto">
+                <Button Grid.Column="0"
+                        HorizontalAlignment="Stretch"
+                        Content="{Binding Quote.GenerateButtonText}"
+                        Command="{Binding GenerateCommand}" />
+                <Button Grid.Column="1"
+                        Width="{StaticResource GenerationOptionButtonSize}"
+                        Height="{StaticResource GenerationOptionButtonSize}"
+                        Margin="{StaticResource AttachmentListMargin}"
+                        VerticalAlignment="Stretch"
+                        Classes="Icon"
+                        IsVisible="{Binding Chat.HasChat, FallbackValue=False}"
+                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.History}}"
+                        Command="{Binding Chat.ToggleCommand}"
+                        behaviors:DragHoverBehavior.Command="{Binding Chat.ExpandCommand}">
+                    <Path Classes="metadata-outline-icon"
+                          Data="{StaticResource AppChatIcon}" />
+                </Button>
+            </Grid>
         </Grid>
 
         <Popup x:Name="AspectRatioHintPopup"
-               PlacementTarget="{Binding #PanelRoot}"
+               IsHitTestVisible="True"
+               IsLightDismissEnabled="False"
                Placement="Top"
                VerticalOffset="-12"
-               IsLightDismissEnabled="False"
-               IsHitTestVisible="True">
+               PlacementTarget="{Binding #PanelRoot}">
             <Grid Background="Transparent"
                   PointerPressed="OnAspectRatioHintPointerPressed">
                 <Border x:Name="AspectRatioHintHost"
                         Margin="28"
-                        Opacity="0"
                         Background="Transparent"
+                        Opacity="0"
                         RenderTransformOrigin="50%,50%">
                     <Border x:Name="AspectRatioHintShape"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                             Classes="image-preview-shadow"
-                             Background="{DynamicResource SukiPopupBackground}"
-                             CornerRadius="{StaticResource OverlayCornerRadius}">
+                            Classes="image-preview-shadow"
+                            Background="{DynamicResource SukiPopupBackground}"
+                            CornerRadius="{StaticResource OverlayCornerRadius}">
                         <Border x:Name="AspectRatioHintBorder"
                                 ClipToBounds="True"
                                 CornerRadius="{StaticResource OverlayCornerRadius}">
-                            <Image Source="avares://AtomicArt/Assets/AspectRatioHint.png"
-                                   Stretch="UniformToFill"
-                                   RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                            <Image RenderOptions.BitmapInterpolationMode="MediumQuality"
+                                   Source="avares://AtomicArt/Assets/AspectRatioHint.png"
+                                   Stretch="UniformToFill" />
                         </Border>
                     </Border>
                 </Border>
@@ -339,9 +335,9 @@
                 Height="1"
                 Margin="0,-2,0,0"
                 VerticalAlignment="Top"
+                IsVisible="{Binding IsCatalogLoading}"
                 ClipToBounds="True"
-                IsHitTestVisible="False"
-                IsVisible="{Binding IsCatalogLoading}">
+                IsHitTestVisible="False">
             <Border x:Name="CatalogLoadingIndicatorBar"
                     Height="1"
                     Background="{DynamicResource SukiAccentColor}" />

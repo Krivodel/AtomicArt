@@ -10,6 +10,7 @@ internal static class AtomicArtPathNames
     internal const string SecretsDirectory = "Secrets";
     internal const string ThumbnailsDirectory = "Thumbnails";
     internal const string StateDirectory = "State";
+    internal const string ChatsDirectory = "Chats";
     internal const string StateAttachmentsDirectory = "Attachments";
     internal const string StateAttachmentsRelativePath =
         StateDirectory + "/" + StateAttachmentsDirectory;

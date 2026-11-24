@@ -23,9 +23,15 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
         PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.Started, startSnapshot, null, null);
     }
 
-    public void PublishCompleted(Guid correlationId, GenerationBatchDto batch)
+    public void PublishCompleted(Guid correlationId, GenerationBatchDto batch, GenerationChatResult? chatResult = null,
+        GenerationChatRun? chatRun = null)
     {
-        PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.Completed, null, batch, null);
+        _lifecycleEventHub.Publish(new GenerationLifecycleEvent(
+            correlationId, GenerationLifecycleStatus.Completed, null, batch, null)
+        {
+            ChatResult = chatResult,
+            ChatRun = chatRun
+        });
     }
 
     public void PublishStartFailed(Guid correlationId)

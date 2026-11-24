@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Generation"
+             xmlns:generation="using:AtomicArt.Desktop.ViewModels.Generation"
+             xmlns:views="using:AtomicArt.Desktop.Views.Generation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AtomicArt.Desktop.Views.Generation.GenerationAttachmentStripView"
+             x:Name="Strip"
+             x:DataType="generation:IGenerationAttachmentStrip">
+    <Grid ColumnDefinitions="Auto,*">
+        <views:GenerationChatReveal ClipToBounds="True"
+                                    IsHitTestVisible="{Binding #AttachmentActions.IsVisible}"
+                                    Opacity="{Binding #Strip.ActionsProgress}"
+                                    Orientation="Horizontal"
+                                    Progress="{Binding #Strip.ActionsProgress}">
+            <Grid ColumnDefinitions="Auto,Auto,Auto">
+                <Button x:Name="AttachmentActions"
+                        Grid.Column="0"
+                        Classes="attach-image"
+                        Command="{Binding PickImage}">
+                    <Button.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                            <Binding Path="ShowsAttachmentActions" />
+                            <Binding Path="#Strip.KeepActionsVisible" />
+                        </MultiBinding>
+                    </Button.IsVisible>
+                    <PathIcon Data="{StaticResource AppAddIcon}" />
+                </Button>
+                <TextBlock Grid.Column="1"
+                           MinWidth="{StaticResource GenerationAttachmentCounterMinWidth}"
+                           Margin="{StaticResource AttachmentListMargin}"
+                           VerticalAlignment="Center"
+                           Classes="panel-label"
+                           IsVisible="{Binding #AttachmentActions.IsVisible}"
+                           Text="{Binding AttachmentCounterText}">
+                </TextBlock>
+                <Border Grid.Column="2"
+                        Margin="{StaticResource AttachmentListMargin}"
+                        IsVisible="{Binding #AttachmentActions.IsVisible}" />
+            </Grid>
+        </views:GenerationChatReveal>
+        <controls:AnimatedAttachmentListControl Grid.Column="1"
+                                                Margin="{StaticResource ZeroThickness}"
+                                                IsVisible="{Binding ShowsAttachmentStrip}"
+                                                Items="{Binding AttachedImages}"
+                                                PanelId="{Binding PanelId}"
+                                                ReferencePreviewLoader="{Binding #Strip.PreviewLoader}"
+                                                OpenAttachmentCommand="{Binding OpenAttachment}"
+                                                RemoveAttachmentCommand="{Binding RemoveAttachment}"
+                                                ReorderAttachmentCommand="{Binding ReorderAttachment}" />
+    </Grid>
+</UserControl>

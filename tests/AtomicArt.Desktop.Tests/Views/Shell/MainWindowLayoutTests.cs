@@ -29,6 +29,7 @@ using AtomicArt.Desktop.Services.OpenRouter;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Updates;
 using AtomicArt.Desktop.Services.Windowing;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.Services.Generation;
@@ -131,8 +132,9 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 ?? throw new InvalidOperationException("Balance text is not attached.")).X + text.Bounds.Width;
             Control titleBar = window.GetVisualDescendants().OfType<Control>()
                 .Single(control => control.Name == TitleBarName);
+
             foreach (Button button in titleBar.GetVisualDescendants().OfType<Button>()
-                .Where(button => button.IsEffectivelyVisible))
+                                .Where(button => button.IsEffectivelyVisible))
             {
                 double buttonLeft = (button.TranslatePoint(default, window)
                     ?? throw new InvalidOperationException("Title button is not attached.")).X;
@@ -211,12 +213,12 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
 
                 previousRight = origin.X + button.Bounds.Width;
                 Point[] hitPoints =
-                [
-                    new Point(ButtonWidth / 2d, EdgeInset),
-                    new Point(ButtonWidth / 2d, TitleBarHeight - EdgeInset),
-                    new Point(EdgeInset, TitleBarHeight / 2d),
-                    new Point(ButtonWidth - EdgeInset, TitleBarHeight / 2d)
-                ];
+                    [
+                        new Point(ButtonWidth / 2d, EdgeInset),
+                        new Point(ButtonWidth / 2d, TitleBarHeight - EdgeInset),
+                        new Point(EdgeInset, TitleBarHeight / 2d),
+                        new Point(ButtonWidth - EdgeInset, TitleBarHeight / 2d)
+                    ];
 
                 foreach (Point hitPoint in hitPoints)
                 {
@@ -480,8 +482,8 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 .BeOfType<AnimatedContextMenuFlyout>()
                 .Subject;
             Point paddingPoint = panelContent.TranslatePoint(
-                    new Point(2d, 2d),
-                    window)
+                new Point(2d, 2d),
+                window)
                 ?? throw new InvalidOperationException("Generation panel padding position was not found.");
 
             window.MouseDown(paddingPoint, MouseButton.Right);
@@ -535,8 +537,8 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                     "ResolutionComboBox",
                     StringComparison.Ordinal));
             Point comboBoxPoint = resolutionComboBox.TranslatePoint(
-                    new Point(resolutionComboBox.Bounds.Width / 2d, resolutionComboBox.Bounds.Height / 2d),
-                    window)
+                new Point(resolutionComboBox.Bounds.Width / 2d, resolutionComboBox.Bounds.Height / 2d),
+                window)
                 ?? throw new InvalidOperationException("Resolution combo box position was not found.");
             int openedCount = 0;
             menuFlyout.Opened += OnMenuFlyoutOpened;
@@ -738,8 +740,8 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             }
 
             Button cancelButton = dialog.ActionButtons
-                .OfType<Button>()
-                .First();
+                                .OfType<Button>()
+                                .First();
             cancelButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             bool result = await resultTask.WaitAsync(MainWindowLayoutTests.DialogCompletionTimeout);
 
@@ -791,6 +793,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             viewModel.Gallery.AddGeneratedItems([GenerationItemDtoTestFactory.Create()], 0);
             GenerationItemViewModel item = viewModel.Gallery.Items.Single();
             viewModel.Gallery.ToggleSelectionCommand.Execute(item);
+
             if (openSettings)
             {
                 viewModel.OpenSettingsCommand.Execute(null);
@@ -903,6 +906,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         {
             RecordingStateWriteScheduler scheduler = new();
             GenerationPanelLayoutState saved;
+
             using (MainWindowTestContext context = new(layoutScheduler: scheduler))
             {
                 MainWindow window = context.Window;
@@ -1266,6 +1270,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         bool includeAllViewTemplates)
     {
         IEnumerable<ViewTemplateRegistration> registrations = serviceProvider.GetServices<ViewTemplateRegistration>();
+
         if (!includeAllViewTemplates)
         {
             Type[] viewModels = [typeof(GalleryViewModel), typeof(IModelPanelViewModel), typeof(ErrorDialogViewModel)];
@@ -1291,10 +1296,10 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         {
             ServiceCollection services = new();
             services.AddSingleton(TestApiConfiguration.Create());
-            services.AddDesktopServices();
+            services.AddIsolatedDesktopServices();
             Mock<IAppStateStore> stateStore = new();
             stateStore.Setup(store => store.LoadAsync<GenerationPanelLayoutState>(
-                    It.IsAny<IStateSection>(), It.IsAny<CancellationToken>()))
+                It.IsAny<IStateSection>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(layoutState ?? new GenerationPanelLayoutState());
             services.AddTransient<GenerationPanelLayoutTracker>(provider => new GenerationPanelLayoutTracker(
                 stateStore.Object,

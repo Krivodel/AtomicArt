@@ -2,6 +2,8 @@ namespace AtomicArt.Desktop.Services.State;
 
 public interface IAppStateStore
 {
+    Task DeleteAsync(IStateSection section, CancellationToken ct);
+
     Task<TState> LoadAsync<TState>(IStateSection section, CancellationToken ct);
 
     Task SaveAsync<TState>(IStateSection section, TState state, CancellationToken ct)

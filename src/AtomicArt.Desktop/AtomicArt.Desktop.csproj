@@ -26,6 +26,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="AtomicArt.Desktop.Rendering.Tests" />
     <AvaloniaResource Include="Assets\AppIcon.ico" />
     <AvaloniaResource Include="Assets\AspectRatioHint.png" />
     <AvaloniaResource Include="Assets\DropIcon.png" />

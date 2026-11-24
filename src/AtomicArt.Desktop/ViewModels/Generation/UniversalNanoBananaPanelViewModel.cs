@@ -10,10 +10,10 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Models;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Generation.State;
-using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.State;
 
@@ -47,7 +47,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         Array.Empty<GenerationOptionViewModel>();
     public bool SupportsComplexity => ComplexityLevels.Count > 0;
     public bool UsesGptImageQuality => string.Equals(
-            SelectedModel?.Provider, GenerationProviderIds.OpenRouter, StringComparison.Ordinal)
+        SelectedModel?.Provider, GenerationProviderIds.OpenRouter, StringComparison.Ordinal)
         && IsGptImageModel(SelectedModel?.ProviderModelId);
     public bool SupportsGenerationOptions => SupportsTemperature || SupportsQuality || SupportsComplexity;
     public IReadOnlyList<GenerationModelThinkingLevelMetadataDto> ThinkingLevels =>
@@ -100,6 +100,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     }
 
     public event EventHandler<PropertyChangedEventArgs>? SelectionValueReset;
+
     public event EventHandler? PresetAvailabilityChanged;
 
     private const string SelectedModelNotInitializedMessage =
@@ -109,10 +110,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         FindParameter(GenerationParameterNames.Quality);
     private GenerationModelParameterMetadataDto? ComplexityParameter =>
         FindParameter(GenerationParameterNames.Complexity);
-
     private bool CanRunCommand => HasLoadedCatalog
                                   && !IsAttaching
                                   && (!IsLocalCodexSelected || _codexModelLoad is null)
+                                  && Chat?.IsLoading != true
+                                  && (Chat?.IsExpanded != true || Chat.CanSubmit)
                                   && !string.IsNullOrWhiteSpace(Prompt);
     private bool CanLoadModelCatalog => !IsLoading && !IsCatalogLoading && !_imageModelOptionCatalog.IsLoaded;
     private bool CanPickImage => !IsLoading
@@ -240,10 +242,12 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _providerCredentialResolver = providerCredentialResolver;
         _codexAppServer = codexAppServer;
         _codexSettings = codexSettings;
+
         if (_codexSettings is not null)
         {
             _codexSettings.OptionsChanged += OnCodexOptionsChanged;
         }
+
         _modelScope = modelScope;
         _attachmentsViewModel = attachmentsViewModel;
         _generationRunner = generationRunner;
@@ -289,7 +293,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
 
         if (preset.References is not null && !await _attachmentsViewModel.TryReplaceAsync(
-                PanelId, model, preset.References, ct))
+            PanelId, model, preset.References, ct))
         {
             return false;
         }
@@ -331,6 +335,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
         RefreshPricePreviewUnlessSuppressed();
         await SavePanelStateAsync(nameof(TryApplyPresetAsync), ct);
+
         return true;
     }
 
@@ -385,12 +390,15 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     public void Dispose()
     {
+        DisconnectChat();
+
         if (_isDisposed)
         {
             return;
         }
 
         _isDisposed = true;
+
         if (_codexSettings is not null)
         {
             _codexSettings.OptionsChanged -= OnCodexOptionsChanged;
@@ -418,6 +426,29 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         {
             NotifyCatalogStateChanged();
         }
+    }
+
+    private static bool IsGptImageModel(string? providerModelId)
+    {
+        return GenerationProviderModelIds.IsGptImageModel(providerModelId);
+    }
+
+    private static GenerationModelThinkingLevelMetadataDto? ResolveThinkingLevelOption(
+        string? value,
+        ImageModelOption selectedModel)
+    {
+        string? resolvedValue = GenerationPanelOptionCompatibility.ResolveThinkingLevel(
+            value,
+            selectedModel.Thinking)
+            .Value;
+
+        if (resolvedValue is null || selectedModel.Thinking is null)
+        {
+            return null;
+        }
+
+        return selectedModel.Thinking.Levels.Single(level =>
+                    string.Equals(level.Value, resolvedValue, StringComparison.Ordinal));
     }
 
     private ImageModelOption? FindAvailableModelOrDefault(string modelId)
@@ -475,6 +506,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             if (IsCurrentCatalogLoad(operationId, endpointRevision))
             {
                 _errorHandler.Log(ex, nameof(LoadModelCatalogAsync));
+
                 if (!IsLocalCodexSelected)
                 {
                     SetLocalizedErrorMessage(GenerationUiLocalizationKeys.Errors.ModelCatalogLoadFailed);
@@ -504,7 +536,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     [RelayCommand]
     private async Task AdjustPromptTextSizeAsync(
-        PromptTextSizeAdjustment adjustment,
+        TextSizeAdjustment adjustment,
         CancellationToken ct)
     {
         await ExecuteOperationAsync(
@@ -650,15 +682,20 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         await SavePanelStateAsync(nameof(CommitPromptAsync), ct);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanReplacePrompt))]
     private void ReplacePrompt(string? prompt)
     {
-        if (prompt is null)
+        if (prompt is null || IsChatPromptLocked)
         {
             return;
         }
 
         Prompt = prompt;
+    }
+
+    private bool CanReplacePrompt(string? prompt)
+    {
+        return prompt is not null && !IsChatPromptLocked;
     }
 
     [RelayCommand]
@@ -690,6 +727,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         if (IsLocalCodexSelected)
         {
             ResetCodexReasoningEffort();
+
             return;
         }
 
@@ -722,6 +760,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 if (credentialResolution.MissingCredentialMessageKey is not null)
                 {
                     SetLocalizedErrorMessage(credentialResolution.MissingCredentialMessageKey);
+
                     return;
                 }
 
@@ -735,16 +774,30 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 if (string.IsNullOrWhiteSpace(storedCredential))
                 {
                     SetLocalizedErrorMessage(GenerationUiLocalizationKeys.Errors.GoogleApiKeyMissing);
+
                     return;
                 }
 
                 providerCredential = storedCredential.Trim();
             }
 
-            await _generationRunner.RunAsync(
-                parameters,
-                providerCredential,
-                ct);
+            if (Chat is { IsExpanded: true } && Chat.IsForModel(selectedModel.Id))
+            {
+                long conversationVersion = Chat.ConversationVersion;
+                await Chat.SubmitAsync(parameters,
+                    (chatParameters, token) => _generationRunner.RunAsync(chatParameters, providerCredential, token), ct);
+
+                if (Chat.ConversationVersion == conversationVersion && !IsChatPromptLocked
+                    && string.Equals(Prompt, parameters.Prompt, StringComparison.Ordinal))
+                {
+                    Prompt = string.Empty;
+                }
+            }
+            else
+            {
+                Chat?.Detach();
+                await _generationRunner.RunAsync(parameters, providerCredential, ct);
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -773,12 +826,13 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         {
             SetLocalizedErrorMessage(
                 GenerationUiLocalizationKeys.Attachments.Failed);
+
             return;
         }
 
         IReadOnlyList<ImageAttachmentInput>? inputs = images?
-            .Select(ImageAttachmentInput.FromImage)
-            .ToList();
+                    .Select(ImageAttachmentInput.FromImage)
+                    .ToList();
         await AttachImageInputsCoreAsync(inputs, ct);
     }
 
@@ -791,6 +845,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             SetLocalizedErrorMessage(
                 GenerationUiLocalizationKeys.Errors.ModelCatalogLoadFailed);
             DisposeInputs(inputs);
+
             return;
         }
 
@@ -799,6 +854,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             SetLocalizedErrorMessage(
                 GenerationUiLocalizationKeys.Attachments.NoSlots);
             DisposeInputs(inputs);
+
             return;
         }
 
@@ -867,11 +923,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             ct);
     }
 
-    private static bool IsGptImageModel(string? providerModelId)
-    {
-        return GenerationProviderModelIds.IsGptImageModel(providerModelId);
-    }
-
     private string ResolveQuality(string? quality)
     {
         if (!SupportsQuality)
@@ -892,7 +943,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             quality,
             supportedValues,
             defaultValue)
-            .Value;
+                    .Value;
     }
 
     private void UpdateQualityOptions()
@@ -924,14 +975,14 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
 
         return allowedValues
-            .Where(value => value.ValueKind == JsonValueKind.String
-                && !string.IsNullOrWhiteSpace(value.GetString()))
-            .Select(value => GenerationParameterText.NormalizeOptionValue(value.GetString()))
-            .Select(value => new GenerationOptionViewModel(
-                value,
-                GenerationParameterText.GetOptionLocalizationKey(parameter, value),
-                _textProvider))
-            .ToArray();
+                    .Where(value => value.ValueKind == JsonValueKind.String
+                        && !string.IsNullOrWhiteSpace(value.GetString()))
+                    .Select(value => GenerationParameterText.NormalizeOptionValue(value.GetString()))
+                    .Select(value => new GenerationOptionViewModel(
+                        value,
+                        GenerationParameterText.GetOptionLocalizationKey(parameter, value),
+                        _textProvider))
+                    .ToArray();
     }
 
     private void UpdateComplexityOptions()
@@ -998,7 +1049,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         return new NanoBanana2GenerationParameters(
             selectedModel,
             DisplayName,
-            Prompt,
+            IsChatPromptLocked ? Chat?.RepeatPrompt ?? Prompt : Prompt,
             SelectedAspectRatio,
             SelectedResolution,
             Temperature,
@@ -1038,133 +1089,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     private void SetOperationErrorMessage(string? errorMessage)
     {
         ErrorMessage = errorMessage;
-    }
-
-    private void OnSelectedModelChanged(ImageModelOption? value)
-    {
-        EnsureCodexModelsLoaded();
-        if (value is null)
-        {
-            ResetSelectedModelValues();
-            return;
-        }
-
-        string previousAspectRatio = SelectedAspectRatio;
-        string previousResolution = SelectedResolution;
-        double? previousTemperature = _hasTemperatureValue ? Temperature : null;
-        string? previousThinkingLevel = SelectedThinkingLevel?.Value
-            ?? _rememberedThinkingLevelValue;
-        int previousGenerationCount = GenerationCount;
-
-        UpdateAspectRatioOptions(value);
-
-        bool wasPanelStateSaveSuppressed = _suppressPanelStateSave;
-        bool wasPricePreviewRefreshSuppressed = _suppressPricePreviewRefresh;
-
-        try
-        {
-            _suppressPricePreviewRefresh = true;
-            _suppressPanelStateSave = true;
-            UpdateQualityOptions();
-            if (SupportsQuality)
-            {
-                SelectedQuality = ResolveQuality(SelectedQuality);
-            }
-
-            SynchronizeSelectedQualityOption();
-            UpdateComplexityOptions();
-            NotifySelectedModelMetadataChanged();
-
-            ApplyCompatibleSelectionValues(
-                value,
-                previousAspectRatio,
-                previousResolution,
-                previousTemperature,
-                previousThinkingLevel,
-                previousGenerationCount);
-        }
-        finally
-        {
-            _suppressPanelStateSave = wasPanelStateSaveSuppressed;
-            _suppressPricePreviewRefresh = wasPricePreviewRefreshSuppressed;
-        }
-
-        PickImageCommand.NotifyCanExecuteChanged();
-        AttachImagesCommand.NotifyCanExecuteChanged();
-        AttachImageInputsCommand.NotifyCanExecuteChanged();
-        GenerateCommand.NotifyCanExecuteChanged();
-        RefreshPricePreviewUnlessSuppressed();
-        SchedulePanelStateSave(nameof(OnSelectedModelChanged));
-    }
-
-    partial void OnSelectedAspectRatioChanged(string value)
-    {
-        SynchronizeSelectedAspectRatioOption(value);
-        RefreshPricePreviewUnlessSuppressed();
-        SchedulePanelStateSave(nameof(OnSelectedAspectRatioChanged));
-    }
-
-    partial void OnSelectedResolutionChanged(string value)
-    {
-        RefreshPricePreviewUnlessSuppressed();
-        SchedulePanelStateSave(nameof(OnSelectedResolutionChanged));
-    }
-
-    partial void OnGenerationCountChanged(int value)
-    {
-        RefreshPricePreviewUnlessSuppressed();
-        SchedulePanelStateSave(nameof(OnGenerationCountChanged));
-    }
-
-    partial void OnTemperatureChanged(double value)
-    {
-        OnPropertyChanged(nameof(TemperatureText));
-        SchedulePanelStateSave(nameof(OnTemperatureChanged));
-    }
-
-    partial void OnSelectedQualityChanged(string value)
-    {
-        SynchronizeSelectedQualityOption();
-        SchedulePanelStateSave(nameof(OnSelectedQualityChanged));
-    }
-
-    partial void OnSelectedComplexityChanged(string? value)
-    {
-        SynchronizeSelectedComplexityOption();
-        SchedulePanelStateSave(nameof(OnSelectedComplexityChanged));
-    }
-
-    partial void OnSelectedComplexityOptionChanged(GenerationOptionViewModel? value)
-    {
-        if (value is not null)
-        {
-            SelectedComplexity = value.Value;
-        }
-    }
-
-    partial void OnSelectedQualityOptionChanged(GenerationOptionViewModel? value)
-    {
-        if (value is not null)
-        {
-            SelectedQuality = value.Value;
-        }
-    }
-
-    partial void OnSelectedThinkingLevelChanged(GenerationModelThinkingLevelMetadataDto? value)
-    {
-        if (value is not null)
-        {
-            _rememberedThinkingLevelValue = value.Value;
-        }
-
-        SchedulePanelStateSave(nameof(OnSelectedThinkingLevelChanged));
-    }
-
-    partial void OnPromptChanged(string value)
-    {
-        RefreshPricePreviewUnlessSuppressed();
-        GenerateCommand.NotifyCanExecuteChanged();
-        SchedulePromptStateSave();
     }
 
     private void RefreshPricePreview()
@@ -1498,8 +1422,8 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
             previousAspectRatio,
             previousResolution);
         double temperature = GenerationPanelOptionCompatibility.ResolveTemperature(
-                previousTemperature,
-                selectedModel.Temperature)
+            previousTemperature,
+            selectedModel.Temperature)
             .Value;
         GenerationModelThinkingLevelMetadataDto? thinkingLevel = ResolveThinkingLevelOption(
             previousThinkingLevel,
@@ -1601,24 +1525,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         NotifyCatalogStateChanged();
     }
 
-    private static GenerationModelThinkingLevelMetadataDto? ResolveThinkingLevelOption(
-        string? value,
-        ImageModelOption selectedModel)
-    {
-        string? resolvedValue = GenerationPanelOptionCompatibility.ResolveThinkingLevel(
-                value,
-                selectedModel.Thinking)
-            .Value;
-
-        if (resolvedValue is null || selectedModel.Thinking is null)
-        {
-            return null;
-        }
-
-        return selectedModel.Thinking.Levels.Single(level =>
-            string.Equals(level.Value, resolvedValue, StringComparison.Ordinal));
-    }
-
     private void NotifyCatalogStateChanged()
     {
         OnPropertyChanged(nameof(HasLoadedCatalog));
@@ -1663,6 +1569,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         if (model is null)
         {
             SynchronizeSelectedAspectRatioOption(string.Empty);
+
             return;
         }
 
@@ -1709,6 +1616,148 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
     }
 
+    private void OnSelectedModelChanged(ImageModelOption? value)
+    {
+        RefreshChatPrompt();
+        if (Chat?.HasChat == true && !Chat.IsForModel(value?.Id))
+        {
+            Chat.Detach();
+        }
+
+        EnsureCodexModelsLoaded();
+
+        if (value is null)
+        {
+            ResetSelectedModelValues();
+
+            return;
+        }
+
+        string previousAspectRatio = SelectedAspectRatio;
+        string previousResolution = SelectedResolution;
+        double? previousTemperature = _hasTemperatureValue ? Temperature : null;
+        string? previousThinkingLevel = SelectedThinkingLevel?.Value
+            ?? _rememberedThinkingLevelValue;
+        int previousGenerationCount = GenerationCount;
+
+        UpdateAspectRatioOptions(value);
+
+        bool wasPanelStateSaveSuppressed = _suppressPanelStateSave;
+        bool wasPricePreviewRefreshSuppressed = _suppressPricePreviewRefresh;
+
+        try
+        {
+            _suppressPricePreviewRefresh = true;
+            _suppressPanelStateSave = true;
+            UpdateQualityOptions();
+
+            if (SupportsQuality)
+            {
+                SelectedQuality = ResolveQuality(SelectedQuality);
+            }
+
+            SynchronizeSelectedQualityOption();
+            UpdateComplexityOptions();
+            NotifySelectedModelMetadataChanged();
+
+            ApplyCompatibleSelectionValues(
+                value,
+                previousAspectRatio,
+                previousResolution,
+                previousTemperature,
+                previousThinkingLevel,
+                previousGenerationCount);
+        }
+        finally
+        {
+            _suppressPanelStateSave = wasPanelStateSaveSuppressed;
+            _suppressPricePreviewRefresh = wasPricePreviewRefreshSuppressed;
+        }
+
+        PickImageCommand.NotifyCanExecuteChanged();
+        AttachImagesCommand.NotifyCanExecuteChanged();
+        AttachImageInputsCommand.NotifyCanExecuteChanged();
+        GenerateCommand.NotifyCanExecuteChanged();
+        RefreshPricePreviewUnlessSuppressed();
+        SchedulePanelStateSave(nameof(OnSelectedModelChanged));
+    }
+
+    partial void OnSelectedAspectRatioChanged(string value)
+    {
+        SynchronizeSelectedAspectRatioOption(value);
+        RefreshPricePreviewUnlessSuppressed();
+        SchedulePanelStateSave(nameof(OnSelectedAspectRatioChanged));
+    }
+
+    partial void OnSelectedResolutionChanged(string value)
+    {
+        RefreshPricePreviewUnlessSuppressed();
+        SchedulePanelStateSave(nameof(OnSelectedResolutionChanged));
+    }
+
+    partial void OnGenerationCountChanged(int value)
+    {
+        RefreshPricePreviewUnlessSuppressed();
+        SchedulePanelStateSave(nameof(OnGenerationCountChanged));
+    }
+
+    partial void OnTemperatureChanged(double value)
+    {
+        OnPropertyChanged(nameof(TemperatureText));
+        SchedulePanelStateSave(nameof(OnTemperatureChanged));
+    }
+
+    partial void OnSelectedQualityChanged(string value)
+    {
+        SynchronizeSelectedQualityOption();
+        SchedulePanelStateSave(nameof(OnSelectedQualityChanged));
+    }
+
+    partial void OnSelectedComplexityChanged(string? value)
+    {
+        SynchronizeSelectedComplexityOption();
+        SchedulePanelStateSave(nameof(OnSelectedComplexityChanged));
+    }
+
+    partial void OnSelectedComplexityOptionChanged(GenerationOptionViewModel? value)
+    {
+        if (value is not null)
+        {
+            SelectedComplexity = value.Value;
+        }
+    }
+
+    partial void OnSelectedQualityOptionChanged(GenerationOptionViewModel? value)
+    {
+        if (value is not null)
+        {
+            SelectedQuality = value.Value;
+        }
+    }
+
+    partial void OnSelectedThinkingLevelChanged(GenerationModelThinkingLevelMetadataDto? value)
+    {
+        if (value is not null)
+        {
+            _rememberedThinkingLevelValue = value.Value;
+        }
+
+        SchedulePanelStateSave(nameof(OnSelectedThinkingLevelChanged));
+    }
+
+    partial void OnPromptChanged(string value)
+    {
+        if (IsChatPromptLocked && Chat?.RepeatPrompt is { } prompt && !string.Equals(value, prompt, StringComparison.Ordinal))
+        {
+            Prompt = prompt;
+            return;
+        }
+
+        RefreshPricePreviewUnlessSuppressed();
+        GenerateCommand.NotifyCanExecuteChanged();
+        SchedulePromptStateSave();
+    }
+
     private void OnAttachmentStateChanged(object? sender, AttachmentStateChangedEventArgs e)
     {
         _ = sender;
@@ -1733,6 +1782,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 IsAttachmentLimitReached
                     ? GenerationUiLocalizationKeys.Attachments.NoSlots
                     : GenerationUiLocalizationKeys.Attachments.Failed);
+
             return;
         }
 

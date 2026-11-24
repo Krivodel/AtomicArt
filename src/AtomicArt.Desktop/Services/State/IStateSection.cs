@@ -4,6 +4,7 @@ namespace AtomicArt.Desktop.Services.State;
 
 public interface IStateSection
 {
+    StateStorageArea StorageArea { get; }
     string Key { get; }
     string FileName { get; }
     int SchemaVersion { get; }

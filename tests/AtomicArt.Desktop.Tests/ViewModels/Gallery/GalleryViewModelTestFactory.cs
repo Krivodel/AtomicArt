@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using Pica.Viewer.Services;
 
 using CommunityToolkit.Mvvm.Messaging;
+using Moq;
+using Pica.Viewer.Services;
 
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
@@ -104,21 +104,22 @@ internal static class GalleryViewModelTestFactory
             galleryOperations,
             itemsController);
         IGalleryLifecycleEventHandler[] lifecycleEventHandlers =
-        [
-            new GalleryGenerationCompletedHandler(
-                trustedService,
-                resultStorage,
-                thumbnailStorage,
-                contentValidator,
-                statusRegistry,
-                viewStateController,
-                galleryState,
-                new NoOpGalleryFileOrderSynchronizer(),
-                NullLogger<GalleryGenerationCompletedHandler>.Instance),
-            new GalleryGenerationFailedHandler(viewStateController, galleryState),
-            new GalleryGenerationStartedHandler(viewStateController, galleryState, references),
-            new GalleryGenerationStartFailedHandler(viewStateController)
-        ];
+            [
+                new GalleryGenerationCompletedHandler(
+                    trustedService,
+                    resultStorage,
+                    thumbnailStorage,
+                    contentValidator,
+                    statusRegistry,
+                    viewStateController,
+                    galleryState,
+                    new NoOpGalleryFileOrderSynchronizer(),
+                    NullLogger<GalleryGenerationCompletedHandler>.Instance,
+                    references),
+                new GalleryGenerationFailedHandler(viewStateController, galleryState),
+                new GalleryGenerationStartedHandler(viewStateController, galleryState, references),
+                new GalleryGenerationStartFailedHandler(viewStateController)
+            ];
         GalleryLifecycleController lifecycleController = new(
             generationLifecycleEventHub,
             viewStateController,

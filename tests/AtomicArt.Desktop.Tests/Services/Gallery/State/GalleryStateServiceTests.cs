@@ -70,6 +70,7 @@ public sealed class GalleryStateServiceTests
     public async Task SaveAsync_WithSharedReferences_KeepsFilesUntilTheLastEntryIsRemoved()
     {
         string root = TestDirectories.GetUniqueDirectoryPath(typeof(GalleryStateServiceTests));
+
         try
         {
             AtomicArtDataPathProvider paths = new(root);
@@ -98,6 +99,59 @@ public sealed class GalleryStateServiceTests
             await reopened.SaveAsync(Array.Empty<GalleryItemState>(), CancellationToken.None);
 
             Directory.GetFiles(GenerationReferenceStoreTests.GetHistoryDirectory(root)).Should().BeEmpty();
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(root);
+        }
+    }
+
+    [Fact]
+    public async Task SaveAsync_AfterDeletingSourceCard_RestoresBranchAndKeepsSharedImages()
+    {
+        string root = TestDirectories.GetUniqueDirectoryPath(typeof(GalleryStateServiceTests));
+
+        try
+        {
+            AtomicArtDataPathProvider paths = new(root);
+            GenerationReferenceStore references = GenerationReferenceStoreTests.CreateStore(root);
+            IAppStateStore stateStore = GalleryStateServiceTests.CreateRealStore(paths);
+            GalleryStateService service = GalleryStateServiceTests.CreateService(
+                stateStore, new PassthroughTrustedImageFileService(), paths, references);
+            AttachedImageDto generated = new(
+                "source.png", GenerationImageContentTypes.Png, GalleryThumbnailTestImages.CreatePngBytes(120, 80));
+            Guid lease = Guid.NewGuid();
+            IReadOnlyList<GenerationReference> stored = await references.SaveAsync(
+                lease, new AttachedImageDto[] { generated, generated }, CancellationToken.None);
+            GalleryItemState original = GalleryItemStateTestFactory.CreateGenerated(
+                chatResult: new GenerationChatResult("Original reply", stored[0]));
+            GenerationChatHistory history = new(
+                new GenerationChatMessage[] { new GenerationChatMessage(false, "Source prompt", CreatedAtUtc, Array.Empty<GenerationReference>()), new GenerationChatMessage(true, "Edited reply", CompletedAtUtc, new GenerationReference[] { stored[1] }) });
+            GalleryItemState branch = GalleryItemStateTestFactory.CreateGenerated(chatHistory: history);
+            await service.SaveAsync(new GalleryItemState[] { original, branch }, CancellationToken.None);
+            references.Release(lease);
+            await service.SaveAsync(new GalleryItemState[] { branch }, CancellationToken.None);
+
+            GalleryStateService reopened = GalleryStateServiceTests.CreateService(
+                stateStore, new PassthroughTrustedImageFileService(), paths, references);
+            GalleryState restored = await reopened.LoadAsync(CancellationToken.None);
+
+            GalleryItemState item = restored.Items.Should().ContainSingle().Subject;
+            item.Id.Should().Be(branch.Id);
+            item.ChatHistory.Should().BeNull();
+            item.ChatId.Should().Be(history.Id);
+            GenerationChatStore chats = new(stateStore, NullLogger<GenerationChatStore>.Instance, paths, new DataRootAccessCoordinator());
+            (await chats.LoadAsync(history.Id, CancellationToken.None)).Should().BeEquivalentTo(history);
+            string galleryJson = await File.ReadAllTextAsync(Path.Combine(paths.StateDirectory, "gallery.json"));
+            galleryJson.Should().NotContain("Edited reply").And.NotContain("Source prompt").And.NotContain("chatHistory");
+            Directory.GetFiles(paths.ChatsDirectory, "*.json").Should().ContainSingle();
+            (await references.LoadAsync(stored[1], CancellationToken.None)).Should().BeEquivalentTo(generated);
+            Directory.GetFiles(GenerationReferenceStoreTests.GetHistoryDirectory(root)).Should().ContainSingle();
+
+            await reopened.SaveAsync(Array.Empty<GalleryItemState>(), CancellationToken.None);
+
+            Directory.GetFiles(GenerationReferenceStoreTests.GetHistoryDirectory(root)).Should().BeEmpty();
+            Directory.GetFiles(paths.ChatsDirectory, "*.json").Should().BeEmpty();
         }
         finally
         {
@@ -190,11 +244,92 @@ public sealed class GalleryStateServiceTests
         loadedState.Items[0].ImagePath.Should().Be(imagePath);
     }
 
+    [Fact]
+    public async Task SaveAsync_WhenGalleryWriteFails_KeepsPreviousHistoryAndRemovesOrphanOnRestore()
+    {
+        string root = TestDirectories.GetUniqueDirectoryPath(typeof(GalleryStateServiceTests));
+
+        try
+        {
+            AtomicArtDataPathProvider paths = new(root);
+            IAppStateStore state = GalleryStateServiceTests.CreateRealStore(paths);
+            GenerationChatStore chats = new(state, NullLogger<GenerationChatStore>.Instance, paths, new DataRootAccessCoordinator());
+            Mock<IAppStateStore> galleryStore = new();
+            bool fail = false;
+            galleryStore.Setup(store => store.SaveAsync(It.IsAny<IStateSection>(), It.IsAny<GalleryState>(),
+                It.IsAny<CancellationToken>()))
+                .Returns((IStateSection section, GalleryState snapshot, CancellationToken ct) => fail
+                    ? Task.FromException(new IOException("Simulated gallery write failure"))
+                    : state.SaveAsync(section, snapshot, ct));
+            GalleryStateService service = GalleryStateServiceTests.CreateService(galleryStore.Object,
+                new PassthroughTrustedImageFileService(), paths, chats: chats);
+            GenerationChatHistory original = new(new GenerationChatMessage[]
+                { new GenerationChatMessage(false, "Original text", CreatedAtUtc, Array.Empty<GenerationReference>()) }, true);
+            GenerationChatHistory edited = new(new GenerationChatMessage[]
+                { new GenerationChatMessage(false, "Edited text", CreatedAtUtc, Array.Empty<GenerationReference>()) }, true);
+            GalleryItemState item = GalleryItemStateTestFactory.CreateGenerated(imagePath: null, chatHistory: original);
+            await service.SaveAsync(new GalleryItemState[] { item }, CancellationToken.None);
+            string originalFile = Path.Combine(paths.ChatsDirectory, string.Concat(original.Id.ToString("N"), ".json"));
+            string before = await File.ReadAllTextAsync(originalFile);
+            fail = true;
+
+            Func<Task> save = () => service.SaveAsync(new GalleryItemState[]
+                { GalleryItemStateTestFactory.CreateGenerated(id: item.Id, imagePath: null, chatHistory: edited) }, CancellationToken.None);
+            await save.Should().ThrowAsync<IOException>();
+
+            (await File.ReadAllTextAsync(originalFile)).Should().Be(before);
+            Directory.GetFiles(paths.ChatsDirectory, "*.json").Should().HaveCount(2);
+            GalleryStateService restored = GalleryStateServiceTests.CreateService(state, new PassthroughTrustedImageFileService(), paths, chats: chats);
+            GalleryState gallery = await restored.LoadAsync(CancellationToken.None);
+            gallery.Items.Single().ChatId.Should().Be(original.Id);
+            (await chats.LoadAsync(original.Id, CancellationToken.None)).Messages.Single().Text.Should().Be("Original text");
+            Directory.GetFiles(paths.ChatsDirectory, "*.json").Should().ContainSingle();
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(root);
+        }
+    }
+
+    [Fact]
+    public async Task SaveAsync_WithOneChangedChat_DoesNotRewriteOtherChatFiles()
+    {
+        string root = TestDirectories.GetUniqueDirectoryPath(typeof(GalleryStateServiceTests));
+
+        try
+        {
+            AtomicArtDataPathProvider paths = new(root);
+            GalleryStateService service = GalleryStateServiceTests.CreateService(GalleryStateServiceTests.CreateRealStore(paths), new PassthroughTrustedImageFileService(), paths);
+            GenerationChatHistory history = new(new GenerationChatMessage[]
+                { new GenerationChatMessage(false, "Unchanged dialogue", CreatedAtUtc, Array.Empty<GenerationReference>()) }, true);
+            GenerationChatHistory edited = new(new GenerationChatMessage[]
+                { new GenerationChatMessage(false, "Edited dialogue", CreatedAtUtc, Array.Empty<GenerationReference>()) }, true);
+            GalleryItemState first = GalleryItemStateTestFactory.CreateGenerated(imagePath: null, chatHistory: history);
+            GalleryItemState other = GalleryItemStateTestFactory.CreateGenerated(imagePath: null, chatHistory: edited);
+            await service.SaveAsync(new GalleryItemState[] { first, other }, CancellationToken.None);
+            string path = Path.Combine(paths.ChatsDirectory, string.Concat(history.Id.ToString("N"), ".json"));
+            byte[] before = await File.ReadAllBytesAsync(path);
+            GenerationChatHistory next = new(Array.Empty<GenerationChatMessage>(), true);
+
+            await service.SaveAsync(new GalleryItemState[] { first,
+                GalleryItemStateTestFactory.CreateGenerated(id: other.Id, imagePath: null, chatHistory: next) }, CancellationToken.None);
+
+            (await File.ReadAllBytesAsync(path)).Should().Equal(before);
+            Directory.GetFiles(paths.ChatsDirectory, "*.json").Should().HaveCount(2);
+            File.Exists(Path.Combine(paths.ChatsDirectory, string.Concat(edited.Id.ToString("N"), ".json"))).Should().BeFalse();
+        }
+        finally
+        {
+            TestDirectories.DeleteIfExists(root);
+        }
+    }
+
     private static GalleryStateService CreateService(
         IAppStateStore stateStore,
         ITrustedImageFileService trustedImageFileService,
         AtomicArtDataPathProvider? pathProvider = null,
-        IGenerationReferenceStore? references = null)
+        IGenerationReferenceStore? references = null,
+        IGenerationChatStore? chats = null)
     {
         AtomicArtDataPathProvider resolvedPathProvider = pathProvider ?? CreatePathProvider();
         GalleryStatePathConverter pathConverter = new(
@@ -208,7 +343,8 @@ public sealed class GalleryStateServiceTests
             new DataRootAccessCoordinator(),
             pathConverter,
             new GalleryStateSection(),
-            NullLogger<GalleryStateService>.Instance);
+            NullLogger<GalleryStateService>.Instance,
+            chats ?? new GenerationChatStore(stateStore, NullLogger<GenerationChatStore>.Instance, resolvedPathProvider, new DataRootAccessCoordinator()));
     }
 
     private static GalleryStateService CreateLoadService(

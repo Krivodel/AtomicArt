@@ -2,36 +2,35 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Services;
 
 namespace AtomicArt.Desktop.Behaviors;
 
-public static class PromptTextSizeWheelBehavior
+public static class TextSizeWheelBehavior
 {
-    public static readonly AttachedProperty<IAsyncRelayCommand<PromptTextSizeAdjustment>?>
+    public static readonly AttachedProperty<IAsyncRelayCommand<TextSizeAdjustment>?>
         AdjustCommandProperty =
             AvaloniaProperty.RegisterAttached<
                 Control,
-                IAsyncRelayCommand<PromptTextSizeAdjustment>?>(
-                "AdjustCommand",
-                typeof(PromptTextSizeWheelBehavior));
+                IAsyncRelayCommand<TextSizeAdjustment>?>(
+                    "AdjustCommand",
+                    typeof(TextSizeWheelBehavior));
 
-    static PromptTextSizeWheelBehavior()
+    static TextSizeWheelBehavior()
     {
         AdjustCommandProperty.Changed.AddClassHandler<Control>(OnAdjustCommandChanged);
     }
 
-    public static IAsyncRelayCommand<PromptTextSizeAdjustment>? GetAdjustCommand(Control control)
+    public static IAsyncRelayCommand<TextSizeAdjustment>? GetAdjustCommand(Control control)
     {
         return AttachedPropertyValueAccessor.Get(control, AdjustCommandProperty);
     }
 
     public static void SetAdjustCommand(
         Control control,
-        IAsyncRelayCommand<PromptTextSizeAdjustment>? value)
+        IAsyncRelayCommand<TextSizeAdjustment>? value)
     {
         AttachedPropertyValueAccessor.Set(control, AdjustCommandProperty, value);
     }
@@ -61,10 +60,10 @@ public static class PromptTextSizeWheelBehavior
             return;
         }
 
-        PromptTextSizeAdjustment adjustment = e.Delta.Y > 0d
-            ? PromptTextSizeAdjustment.Increase
-            : PromptTextSizeAdjustment.Decrease;
-        IAsyncRelayCommand<PromptTextSizeAdjustment>? command = GetAdjustCommand(control);
+        TextSizeAdjustment adjustment = e.Delta.Y > 0d
+                    ? TextSizeAdjustment.Increase
+                    : TextSizeAdjustment.Decrease;
+        IAsyncRelayCommand<TextSizeAdjustment>? command = TextSizeWheelBehavior.GetAdjustCommand(control);
 
         if (command?.CanExecute(adjustment) == true)
         {

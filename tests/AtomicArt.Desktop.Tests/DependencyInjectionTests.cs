@@ -23,6 +23,7 @@ using AtomicArt.Desktop.Services.Settings;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Services.Windowing;
 using AtomicArt.Desktop.Services.Windows;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels;
@@ -154,13 +155,13 @@ public sealed class DependencyInjectionTests
         GenerationPricePreviewEstimator estimator =
             serviceProvider.GetRequiredService<GenerationPricePreviewEstimator>();
         string[] removedServiceTypeNames =
-        [
-            "IGenerationQuoteApiClient",
-            "GenerationQuoteApiClient",
-            "INanoBanana2QuoteRefreshController",
-            "NanoBanana2QuoteRefreshController",
-            "NanoBanana2QuoteRefresher"
-        ];
+            [
+                "IGenerationQuoteApiClient",
+                "GenerationQuoteApiClient",
+                "INanoBanana2QuoteRefreshController",
+                "NanoBanana2QuoteRefreshController",
+                "NanoBanana2QuoteRefresher"
+            ];
 
         estimator.Should().NotBeNull();
         bool containsRemovedQuoteService = services.Any(descriptor =>
@@ -294,24 +295,24 @@ public sealed class DependencyInjectionTests
     {
         using ServiceProvider serviceProvider = DependencyInjectionTests.CreateServiceProvider();
         Type[] expectedViewModelTypes =
-        [
-            typeof(GalleryViewModel),
-            typeof(Dlss5SessionViewModel),
-            typeof(IModelPanelViewModel),
-            typeof(SettingsViewModel),
-            typeof(ErrorDialogViewModel),
-            typeof(DataRootSettingViewModel),
-            typeof(ApiBaseAddressSettingViewModel),
-            typeof(SecretSettingViewModel),
-            typeof(NumericSettingViewModel),
-            typeof(ImageViewerWindowLimitSettingViewModel),
-            typeof(BooleanSettingViewModel),
-            typeof(GenerationModelVisibilitySettingViewModel),
-            typeof(LocalCodexSettingViewModel),
-            typeof(LanguageSettingViewModel),
-            typeof(GpuResourceCacheSettingViewModel),
-            typeof(GenerationMetadataViewModel)
-        ];
+            [
+                typeof(GalleryViewModel),
+                typeof(Dlss5SessionViewModel),
+                typeof(IModelPanelViewModel),
+                typeof(SettingsViewModel),
+                typeof(ErrorDialogViewModel),
+                typeof(DataRootSettingViewModel),
+                typeof(ApiBaseAddressSettingViewModel),
+                typeof(SecretSettingViewModel),
+                typeof(NumericSettingViewModel),
+                typeof(ImageViewerWindowLimitSettingViewModel),
+                typeof(BooleanSettingViewModel),
+                typeof(GenerationModelVisibilitySettingViewModel),
+                typeof(LocalCodexSettingViewModel),
+                typeof(LanguageSettingViewModel),
+                typeof(GpuResourceCacheSettingViewModel),
+                typeof(GenerationMetadataViewModel)
+            ];
 
         IReadOnlyList<Type> viewModelTypes = serviceProvider
             .GetServices<ViewTemplateRegistration>()
@@ -498,7 +499,7 @@ public sealed class DependencyInjectionTests
         limit.Limit.Should().Be(3);
         settings.Where(item => item.Section == SettingsSections.Appearance).OrderBy(item => item.Order)
             .Select(item => item.Key).SkipWhile(key => key != PromptTextSizeSettingDefinition.KeyValue)
-            .Take(2).Should().Equal(PromptTextSizeSettingDefinition.KeyValue, definition.Key);
+            .Take(3).Should().Equal(PromptTextSizeSettingDefinition.KeyValue, ChatTextSizeSettingDefinition.KeyValue, definition.Key);
     }
 
     [Fact]
@@ -722,11 +723,7 @@ public sealed class DependencyInjectionTests
     {
         ServiceCollection services = new();
         services.AddSingleton(TestApiConfiguration.Create());
-        services.AddDesktopServices();
-        if (dataRoot is not null)
-        {
-            services.AddSingleton<IAtomicArtDataPathProvider>(new AtomicArtDataPathProvider(dataRoot));
-        }
+        services.AddIsolatedDesktopServices(dataRoot);
 
         return services;
     }

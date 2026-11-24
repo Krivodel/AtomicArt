@@ -74,6 +74,11 @@ public partial class AnimatedGalleryControl : UserControl
         get => GetValue(AnimatedGalleryControl.OpenMetadataCommandProperty);
         set => SetValue(AnimatedGalleryControl.OpenMetadataCommandProperty, value);
     }
+    public IRelayCommand? OpenChatCommand
+    {
+        get => GetValue(OpenChatCommandProperty);
+        set => SetValue(OpenChatCommandProperty, value);
+    }
     public IRelayCommand? DeleteOrCancelCommand
     {
         get => GetValue(AnimatedGalleryControl.DeleteOrCancelCommandProperty);
@@ -143,6 +148,8 @@ public partial class AnimatedGalleryControl : UserControl
     public static readonly StyledProperty<IRelayCommand?> OpenMetadataCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(OpenMetadataCommand));
+    public static readonly StyledProperty<IRelayCommand?> OpenChatCommandProperty =
+        AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(nameof(OpenChatCommand));
     public static readonly StyledProperty<IRelayCommand?> DeleteOrCancelCommandProperty =
         AvaloniaProperty.Register<AnimatedGalleryControl, IRelayCommand?>(
             nameof(DeleteOrCancelCommand));
@@ -171,6 +178,7 @@ public partial class AnimatedGalleryControl : UserControl
     internal IGenerationPreviewExpansionHost PreviewExpansionHost { get; }
 
     internal event EventHandler? PreviewPointerStateChanged;
+
     internal event EventHandler? PreviewModifiersChanged;
 
     private const int OpacityMaskGradientStopCount = 2;
@@ -272,6 +280,7 @@ public partial class AnimatedGalleryControl : UserControl
         if (!_previewOverflowCards.Add(card))
         {
             card.ZIndex = GenerationPreviewExpansionVisualMetrics.ActiveZIndex;
+
             return;
         }
 
@@ -361,18 +370,21 @@ public partial class AnimatedGalleryControl : UserControl
         if (change.Property == AnimatedGalleryControl.ItemsProperty)
         {
             HandleItemsChanged();
+
             return;
         }
 
         if (change.Property == AnimatedGalleryControl.OperationsProperty)
         {
             HandleOperationsChanged();
+
             return;
         }
 
         if (AnimatedGalleryControl.IsCommandProperty(change.Property))
         {
             _sceneController.UpdateCardCommands();
+
             return;
         }
 
@@ -386,6 +398,7 @@ public partial class AnimatedGalleryControl : UserControl
             _sceneController.UpdateCardSelectionMode();
             ScheduleSelectionVisualRefresh();
             RaisePreviewPointerStateChanged();
+
             return;
         }
 
@@ -408,6 +421,7 @@ public partial class AnimatedGalleryControl : UserControl
                || (property == AnimatedGalleryControl.OpenViewerCommandProperty)
                || (property == AnimatedGalleryControl.ShowFailureDetailsCommandProperty)
                || (property == AnimatedGalleryControl.OpenMetadataCommandProperty)
+               || (property == AnimatedGalleryControl.OpenChatCommandProperty)
                || (property == AnimatedGalleryControl.DeleteOrCancelCommandProperty)
                || (property == AnimatedGalleryControl.ToggleFavoriteCommandProperty)
                || (property == AnimatedGalleryControl.OpenDlss5CommandProperty)
@@ -497,13 +511,14 @@ public partial class AnimatedGalleryControl : UserControl
         }
 
         double height = GalleryScrollViewer.Bounds.Height;
+
         if (height <= 0d)
         {
             return;
         }
 
         opacityMask.GradientStops[BottomOpacityMaskGradientStopIndex].Offset =
-            AnimatedGalleryControl.CalculateBottomFadeStartOffset(height);
+                    AnimatedGalleryControl.CalculateBottomFadeStartOffset(height);
     }
 
     private void ResetPreviewOverflow()
@@ -536,6 +551,7 @@ public partial class AnimatedGalleryControl : UserControl
             path.Add(current);
 
             Visual? parent = current.GetVisualParent();
+
             if (ReferenceEquals(parent, GalleryScrollViewer))
             {
                 return path;
@@ -552,6 +568,7 @@ public partial class AnimatedGalleryControl : UserControl
         if (_previewClipStates.TryGetValue(visual, out PreviewClipState? existingState))
         {
             existingState.ReferenceCount++;
+
             return;
         }
 
@@ -683,9 +700,9 @@ public partial class AnimatedGalleryControl : UserControl
 
         if ((!string.IsNullOrEmpty(eventArgs.PropertyName))
             && (!string.Equals(
-                eventArgs.PropertyName,
-                nameof(IGalleryItemViewModel.IsSelected),
-                StringComparison.Ordinal)))
+                    eventArgs.PropertyName,
+                    nameof(IGalleryItemViewModel.IsSelected),
+                    StringComparison.Ordinal)))
         {
             return;
         }
@@ -701,7 +718,7 @@ public partial class AnimatedGalleryControl : UserControl
         _previewPointerModifiers = eventArgs.KeyModifiers;
 
         if (GenerationPreviewExpansionController.HasExpansionModifier(
-                _previewPointerModifiers))
+            _previewPointerModifiers))
         {
             SchedulePreviewPointerStateChanged();
         }

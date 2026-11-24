@@ -74,6 +74,7 @@ public static class SettingsLocalizationKeys
         public const string ScaleLabel = "Settings.Appearance.ScaleLabel";
         public const string PromptTextSizeLabel =
             "Settings.Appearance.PromptTextSizeLabel";
+        public const string ChatTextSizeLabel = "Settings.Appearance.ChatTextSizeLabel";
         public const string ConfirmDeletionLabel =
             "Settings.Appearance.ConfirmDeletionLabel";
     }

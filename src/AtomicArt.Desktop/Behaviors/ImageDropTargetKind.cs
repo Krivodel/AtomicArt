@@ -4,5 +4,6 @@ public enum ImageDropTargetKind
 {
     ExternalFiles,
     GalleryImage,
-    Dlss5Result
+    Dlss5Result,
+    ImageAttachment
 }

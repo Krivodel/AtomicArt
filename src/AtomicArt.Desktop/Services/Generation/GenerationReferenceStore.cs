@@ -43,12 +43,158 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
     {
         ArgumentNullException.ThrowIfNull(images);
         ct.ThrowIfCancellationRequested();
+
         if (images.Count == 0)
         {
             return Task.FromResult<IReadOnlyList<GenerationReference>>(Array.Empty<GenerationReference>());
         }
 
         return Task.Run(() => SaveCoreAsync(runId, images, ct), ct);
+    }
+
+    public Task<AttachedImageDto?> LoadAsync(GenerationReference reference, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+
+        return ReadAsync<AttachedImageDto>(
+            reference,
+            (stream, token) => ReadImageAsync(reference, stream, token),
+            ct);
+    }
+
+    public string? ResolveExistingFilePath(GenerationReference reference)
+    {
+        using FileStream? stream = OpenTrustedFile(reference, out string? trustedPath);
+
+        return stream is null ? null : trustedPath;
+    }
+
+    public async Task<string?> GetExistingFilePathAsync(GenerationReference reference, CancellationToken ct)
+    {
+        using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
+            .ConfigureAwait(false);
+
+        return ResolveExistingFilePath(reference);
+    }
+
+    public async Task<TResult?> ReadAsync<TResult>(
+        GenerationReference reference,
+        Func<Stream, CancellationToken, Task<TResult?>> read,
+        CancellationToken ct) where TResult : class
+    {
+        ArgumentNullException.ThrowIfNull(read);
+        using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
+            .ConfigureAwait(false);
+        FileStream? stream = OpenTrustedFile(reference, out _);
+
+        if (stream is null)
+        {
+            return null;
+        }
+
+        await using (stream.ConfigureAwait(false))
+        {
+            return await read(stream, ct).ConfigureAwait(false);
+        }
+    }
+
+    public void Release(Guid runId)
+    {
+        lock (_pendingLock)
+        {
+            _pendingHashes.Remove(runId);
+        }
+    }
+
+    public async Task RetainAsync(Guid runId, IEnumerable<GenerationReference> references, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(references);
+        await _writeLock.WaitAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            Retain(runId, references);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    public async Task PruneAsync(IReadOnlySet<string> retainedHashes, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(retainedHashes);
+        await _writeLock.WaitAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
+                .ConfigureAwait(false);
+            string directory = GetDirectory();
+
+            if (!Directory.Exists(directory))
+            {
+                return;
+            }
+
+            TrustedPathGuard.EnsureTrustedWriteTarget(_paths.StateAttachmentsDirectory, directory, TrustedPathFailureMessage);
+            HashSet<string> pendingHashes;
+
+            lock (_pendingLock)
+            {
+                pendingHashes = _pendingHashes.Values.SelectMany(hashes => hashes).ToHashSet(StringComparer.Ordinal);
+            }
+
+            foreach (string path in Directory.EnumerateFiles(directory))
+            {
+                ct.ThrowIfCancellationRequested();
+                string hash = Path.GetFileNameWithoutExtension(path);
+
+                if (!IsHash(hash) || !_formats.TryGetByFileName(path, out _)
+                    || retainedHashes.Contains(hash) || pendingHashes.Contains(hash))
+                {
+                    continue;
+                }
+
+                TrustedPathGuard.EnsureTrustedWriteTarget(directory, path, TrustedPathFailureMessage);
+                FileDeletion.DeleteIfExists(path);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Could not clean unused generation references.");
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    private static async Task<AttachedImageDto?> ReadImageAsync(
+        GenerationReference reference,
+        Stream stream,
+        CancellationToken ct)
+    {
+        if (stream.Length <= 0 || stream.Length > Array.MaxLength)
+        {
+            return null;
+        }
+
+        byte[] content = new byte[(int)stream.Length];
+        await stream.ReadExactlyAsync(content, ct).ConfigureAwait(false);
+
+        if (!string.Equals(reference.Hash, Convert.ToHexStringLower(SHA256.HashData(content)), StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return new AttachedImageDto(reference.FileName, reference.ContentType, content);
+    }
+
+    private static bool IsHash(string? hash)
+    {
+        return hash is { Length: HashLength }
+            && hash.All(character => character is (>= '0' and <= '9') or (>= 'a' and <= 'f'));
     }
 
     private async Task<IReadOnlyList<GenerationReference>> SaveCoreAsync(
@@ -81,80 +227,13 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
                 references[index] = reference;
             }
 
-            lock (_pendingLock)
-            {
-                _pendingHashes.Add(runId, references.Select(reference => reference.Hash)
-                    .ToHashSet(StringComparer.Ordinal));
-            }
+            Retain(runId, references);
 
             return references;
         }
         finally
         {
             _writeLock.Release();
-        }
-    }
-
-    public Task<AttachedImageDto?> LoadAsync(GenerationReference reference, CancellationToken ct)
-    {
-        ArgumentNullException.ThrowIfNull(reference);
-        return ReadAsync<AttachedImageDto>(
-            reference,
-            (stream, token) => ReadImageAsync(reference, stream, token),
-            ct);
-    }
-
-    private static async Task<AttachedImageDto?> ReadImageAsync(
-        GenerationReference reference,
-        Stream stream,
-        CancellationToken ct)
-    {
-        if (stream.Length <= 0 || stream.Length > Array.MaxLength)
-        {
-            return null;
-        }
-
-        byte[] content = new byte[(int)stream.Length];
-        await stream.ReadExactlyAsync(content, ct).ConfigureAwait(false);
-        if (!string.Equals(reference.Hash, Convert.ToHexStringLower(SHA256.HashData(content)), StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        return new AttachedImageDto(reference.FileName, reference.ContentType, content);
-    }
-
-    public string? ResolveExistingFilePath(GenerationReference reference)
-    {
-        using FileStream? stream = OpenTrustedFile(reference, out string? trustedPath);
-        return stream is null ? null : trustedPath;
-    }
-
-    public async Task<string?> GetExistingFilePathAsync(GenerationReference reference, CancellationToken ct)
-    {
-        using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
-            .ConfigureAwait(false);
-
-        return ResolveExistingFilePath(reference);
-    }
-
-    public async Task<TResult?> ReadAsync<TResult>(
-        GenerationReference reference,
-        Func<Stream, CancellationToken, Task<TResult?>> read,
-        CancellationToken ct) where TResult : class
-    {
-        ArgumentNullException.ThrowIfNull(read);
-        using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
-            .ConfigureAwait(false);
-        FileStream? stream = OpenTrustedFile(reference, out _);
-        if (stream is null)
-        {
-            return null;
-        }
-
-        await using (stream.ConfigureAwait(false))
-        {
-            return await read(stream, ct).ConfigureAwait(false);
         }
     }
 
@@ -166,67 +245,27 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
         string? path = GetPath(directory, reference);
 
         return path is not null && _streams.TryOpenExistingFileForRead(
-                path,
-                new string[] { directory },
-                _paths.RootDirectory,
-                TrustedPathFailureMessage,
-                out FileStream? stream,
-                out trustedPath)
+            path,
+            new string[] { directory },
+            _paths.RootDirectory,
+            TrustedPathFailureMessage,
+            out FileStream? stream,
+            out trustedPath)
             ? stream
             : null;
     }
 
-    public void Release(Guid runId)
+    private void Retain(Guid runId, IEnumerable<GenerationReference> references)
     {
         lock (_pendingLock)
         {
-            _pendingHashes.Remove(runId);
-        }
-    }
-
-    public async Task PruneAsync(IReadOnlySet<string> retainedHashes, CancellationToken ct)
-    {
-        ArgumentNullException.ThrowIfNull(retainedHashes);
-        await _writeLock.WaitAsync(ct).ConfigureAwait(false);
-
-        try
-        {
-            using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
-                .ConfigureAwait(false);
-            string directory = GetDirectory();
-            if (!Directory.Exists(directory))
+            if (!_pendingHashes.TryGetValue(runId, out HashSet<string>? hashes))
             {
-                return;
+                hashes = new HashSet<string>(StringComparer.Ordinal);
+                _pendingHashes.Add(runId, hashes);
             }
 
-            TrustedPathGuard.EnsureTrustedWriteTarget(_paths.StateAttachmentsDirectory, directory, TrustedPathFailureMessage);
-            HashSet<string> pendingHashes;
-            lock (_pendingLock)
-            {
-                pendingHashes = _pendingHashes.Values.SelectMany(hashes => hashes).ToHashSet(StringComparer.Ordinal);
-            }
-
-            foreach (string path in Directory.EnumerateFiles(directory))
-            {
-                ct.ThrowIfCancellationRequested();
-                string hash = Path.GetFileNameWithoutExtension(path);
-                if (!IsHash(hash) || !_formats.TryGetByFileName(path, out _)
-                    || retainedHashes.Contains(hash) || pendingHashes.Contains(hash))
-                {
-                    continue;
-                }
-
-                TrustedPathGuard.EnsureTrustedWriteTarget(directory, path, TrustedPathFailureMessage);
-                FileDeletion.DeleteIfExists(path);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _logger.LogWarning(ex, "Could not clean unused generation references.");
-        }
-        finally
-        {
-            _writeLock.Release();
+            hashes.UnionWith(references.Select(reference => reference.Hash));
         }
     }
 
@@ -247,21 +286,17 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
             : null;
     }
 
-    private static bool IsHash(string? hash)
-    {
-        return hash is { Length: HashLength }
-            && hash.All(character => character is (>= '0' and <= '9') or (>= 'a' and <= 'f'));
-    }
-
     private async Task WriteAsync(string directory, string path, byte[] content, CancellationToken ct)
     {
         TrustedPathGuard.EnsureTrustedWriteTarget(directory, path, TrustedPathFailureMessage);
+
         if (File.Exists(path))
         {
             return;
         }
 
         string tempPath = AtomicFileWriteTempPath.CreateSibling(directory, Path.GetFileName(path));
+
         try
         {
             await using (FileStream stream = _streams.CreateNewFileForWrite(directory, tempPath, TrustedPathFailureMessage))

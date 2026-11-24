@@ -8,6 +8,7 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Localization;
 using AtomicArt.Desktop.Services.Paths;
 
@@ -24,6 +25,11 @@ public sealed partial class GenerationItemViewModel :
     public string? FailureCode { get; private set; }
     public GenerationRequestSettings? RequestSettings { get; private init; }
     public IReadOnlyList<GenerationReference>? References { get; private init; }
+    public Guid? ChatId { get; private set; }
+    public IReadOnlyList<string>? ChatReferenceHashes { get; private set; }
+    public GenerationChatHistory? ChatHistory { get; internal set; }
+    public GenerationChatResult? ChatResult { get; private set; }
+    public bool SupportsChat => LocalCodexImageModel.Matches(ModelId);
     public string DisplayImagePath => ImagePath ?? string.Empty;
     public string DisplayThumbnailPath => ThumbnailPath ?? string.Empty;
     public bool HasDisplayImagePath => !string.IsNullOrWhiteSpace(DisplayImagePath);
@@ -36,13 +42,14 @@ public sealed partial class GenerationItemViewModel :
     public bool ShowsEmptyPreview => !ShowsGeneratedImage && !ShowsGenerationProgress && !IsFailed;
     public string FavoriteActionLocalizationKey =>
         GalleryLocalizationKeys.Actions.GetImbaActionKey(IsFavorite);
+
     internal IReadOnlyList<OpenWithApplication> OpenWithApplications { get; set; } =
         Array.Empty<OpenWithApplication>();
+
     private IGenerationItemStatusDescriptor StatusDescriptor => _statusDescriptorRegistry.Get(StatusKind);
 
     private readonly IGenerationItemStatusDescriptorRegistry _statusDescriptorRegistry;
     private readonly ILocalizationTextProvider _textProvider;
-
     [ObservableProperty]
     private Guid _id;
     [ObservableProperty]
@@ -138,6 +145,9 @@ public sealed partial class GenerationItemViewModel :
         AspectRatio = start.AspectRatio;
         RequestSettings = start.RequestSettings;
         References = start.References;
+        ChatHistory = start.ChatHistory is { } history
+            ? new GenerationChatHistory(history.Messages, history.IncludesCardTurn)
+            : null;
         CreatedAtUtc = start.RequestedAtUtc;
         GalleryOrderTimestampUtc = galleryOrderTimestampUtc;
         CompletedAtUtc = null;
@@ -203,6 +213,10 @@ public sealed partial class GenerationItemViewModel :
             FailureCode = normalizedState.FailureCode,
             RequestSettings = normalizedState.RequestSettings,
             References = normalizedState.References,
+            ChatId = normalizedState.ChatId,
+            ChatReferenceHashes = normalizedState.ChatReferenceHashes,
+            ChatHistory = normalizedState.ChatHistory,
+            ChatResult = normalizedState.ChatResult,
             IsFavorite = normalizedState.IsFavorite
         };
 
@@ -217,10 +231,12 @@ public sealed partial class GenerationItemViewModel :
     public void UpdateFromResult(
         GenerationItemDto item,
         string? imagePath,
-        string? thumbnailPath)
+        string? thumbnailPath,
+        GenerationChatResult? chatResult = null)
     {
         ArgumentNullException.ThrowIfNull(item);
 
+        ChatResult = chatResult;
         ApplyResultMetadata(item);
         ImagePath = imagePath;
         ThumbnailPath = thumbnailPath;
@@ -258,6 +274,7 @@ public sealed partial class GenerationItemViewModel :
             ElapsedText = FormatElapsed(
                 totalSeconds,
                 CommonLocalizationKeys.TimeUnits.SecondShort);
+
             return;
         }
 
@@ -268,6 +285,7 @@ public sealed partial class GenerationItemViewModel :
             ElapsedText = FormatElapsed(
                 totalMinutes,
                 CommonLocalizationKeys.TimeUnits.MinuteShort);
+
             return;
         }
 
@@ -278,6 +296,7 @@ public sealed partial class GenerationItemViewModel :
             ElapsedText = FormatElapsed(
                 totalHours,
                 CommonLocalizationKeys.TimeUnits.HourShort);
+
             return;
         }
 
@@ -294,6 +313,7 @@ public sealed partial class GenerationItemViewModel :
             ElapsedText = FormatElapsed(
                 totalDays,
                 CommonLocalizationKeys.TimeUnits.DayShort);
+
             return;
         }
 
@@ -302,6 +322,7 @@ public sealed partial class GenerationItemViewModel :
             ElapsedText = FormatElapsed(
                 fullMonths,
                 CommonLocalizationKeys.TimeUnits.MonthShort);
+
             return;
         }
 

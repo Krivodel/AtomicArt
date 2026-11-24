@@ -9,6 +9,7 @@ public interface IAtomicArtDataPathProvider
     string SecretsDirectory { get; }
     string ThumbnailsDirectory { get; }
     string StateDirectory { get; }
+    string ChatsDirectory { get; }
     string StateAttachmentsDirectory { get; }
     string ModulesDirectory { get; }
 

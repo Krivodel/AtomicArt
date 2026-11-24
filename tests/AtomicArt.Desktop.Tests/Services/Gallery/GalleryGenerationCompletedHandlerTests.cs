@@ -11,12 +11,11 @@ using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
+using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.Tests.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Gallery;
-
-using static AtomicArt.Desktop.Tests.Common.DesktopTestDirectories;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery;
 
@@ -68,7 +67,8 @@ public sealed class GalleryGenerationCompletedHandlerTests
             viewStateController,
             galleryStateService,
             fileOrderSynchronizer,
-            NullLogger<GalleryGenerationCompletedHandler>.Instance);
+            NullLogger<GalleryGenerationCompletedHandler>.Instance,
+            Mock.Of<IGenerationReferenceStore>());
         GenerationImageContentDto content = new(
             GenerationImageContentTypes.Png,
             Convert.ToBase64String(GenerationImageTestData.ValidPngBytes));
@@ -261,7 +261,8 @@ public sealed class GalleryGenerationCompletedHandlerTests
             viewStateMock.Object,
             new RecordingGalleryStateService(),
             new NoOpGalleryFileOrderSynchronizer(),
-            NullLogger<GalleryGenerationCompletedHandler>.Instance);
+            NullLogger<GalleryGenerationCompletedHandler>.Instance,
+            Mock.Of<IGenerationReferenceStore>());
     }
 
     private static GenerationLifecycleEvent CreateCompletedEvent(GenerationItemDto item)
@@ -391,9 +392,9 @@ public sealed class GalleryGenerationCompletedHandlerTests
 
     private sealed class RecordingGalleryThumbnailStorage : IGalleryThumbnailStorage
     {
-        private readonly string? _thumbnailPath;
-
         public string? FullImagePath { get; private set; }
+
+        private readonly string? _thumbnailPath;
 
         public RecordingGalleryThumbnailStorage(string? thumbnailPath)
         {
@@ -420,5 +421,4 @@ public sealed class GalleryGenerationCompletedHandlerTests
             return Task.CompletedTask;
         }
     }
-
 }

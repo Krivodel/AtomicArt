@@ -31,6 +31,7 @@
     <Color x:Key="MetadataGeneratingSurfaceColor">#2C3958</Color>
     <Color x:Key="MetadataFailedColor">#FFB4A8</Color>
     <Color x:Key="MetadataFailedSurfaceColor">#493137</Color>
+    <Color x:Key="GenerationChatUserBackgroundColor">#203454</Color>
     <Color x:Key="GptQualityLowColor">#FF0000</Color>
     <Color x:Key="GptQualityMediumColor">#FF8040</Color>
     <Color x:Key="GptQualityHighColor">#00FF40</Color>

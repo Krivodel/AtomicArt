@@ -5,6 +5,7 @@ namespace AtomicArt.Desktop.Services.State;
 public abstract class StateSection<TPayload> : IStateSection
     where TPayload : class, new()
 {
+    public virtual StateStorageArea StorageArea => StateStorageArea.Application;
     public string Key => _key;
     public string FileName => _fileName;
     public int SchemaVersion => _schemaVersion;

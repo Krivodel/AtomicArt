@@ -54,6 +54,7 @@ public sealed class StateWriteSchedulerTests
 
     private sealed class OtherTestStateSection : IStateSection
     {
+        public StateStorageArea StorageArea => StateStorageArea.Application;
         public string Key => "other-test";
         public string FileName => "other-test.json";
         public int SchemaVersion => 1;

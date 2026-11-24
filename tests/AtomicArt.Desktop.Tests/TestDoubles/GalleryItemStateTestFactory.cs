@@ -26,14 +26,18 @@ internal static class GalleryItemStateTestFactory
         int attachedImagesCount = 0,
         bool isFavorite = false,
         GenerationRequestSettings? requestSettings = null,
-        IReadOnlyList<GenerationReference>? references = null)
+        IReadOnlyList<GenerationReference>? references = null,
+        GenerationChatHistory? chatHistory = null,
+        GenerationChatResult? chatResult = null,
+        string? modelId = null,
+        Guid? chatId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
 
         return new GalleryItemState
         {
             Id = id ?? Guid.NewGuid(),
-            ModelId = ApiModelMetadataTestCatalog.NanoBanana2ModelId,
+            ModelId = modelId ?? ApiModelMetadataTestCatalog.NanoBanana2ModelId,
             ModelDisplayName = ApiModelMetadataTestCatalog.NanoBanana2DisplayName,
             Prompt = prompt,
             AspectRatio = GenerationAspectRatios.Auto,
@@ -50,6 +54,9 @@ internal static class GalleryItemStateTestFactory
             Usage = usage,
             AttachedImagesCount = attachedImagesCount,
             References = references,
+            ChatId = chatId,
+            ChatHistory = chatHistory,
+            ChatResult = chatResult,
             IsFavorite = isFavorite
         };
     }

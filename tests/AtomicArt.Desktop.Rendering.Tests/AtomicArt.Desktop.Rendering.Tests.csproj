@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Compile Include="..\..\src\AtomicArt.Desktop\GlobalUsings.cs" Link="GlobalUsings.cs" />
+    <ProjectReference Include="..\AtomicArt.Desktop.Tests\AtomicArt.Desktop.Tests.csproj" />
+    <PackageReference Include="Avalonia.HarfBuzz" />
+  </ItemGroup>
+</Project>

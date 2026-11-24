@@ -1,4 +1,5 @@
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Services;
 
@@ -9,6 +10,9 @@ public sealed record GenerationLifecycleEvent
     public GenerationStartSnapshot? Start { get; }
     public GenerationBatchDto? Batch { get; }
     public string? FailureCode { get; }
+    public GenerationChatResult? ChatResult { get; init; }
+
+    internal GenerationChatRun? ChatRun { get; init; }
 
     public GenerationLifecycleEvent(
         Guid correlationId,

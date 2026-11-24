@@ -1,10 +1,14 @@
 using System.Globalization;
 using System.Reflection;
-using System.Text.Json;
 using System.Text;
+using System.Text.Json;
 
 using CommunityToolkit.Mvvm.Messaging;
 using FluentAssertions;
+using BuiltInLocalizationCatalog = Krivodeling.Localization.Avalonia.BuiltInLocalizationCatalog;
+using LocalizationConstants = Krivodeling.Localization.Avalonia.LocalizationConstants;
+using LocalizationLangPlugin = Krivodeling.Localization.Avalonia.LocalizationLangPlugin;
+using LocalizationTextResolver = Krivodeling.Localization.Avalonia.LocalizationTextResolver;
 using Lang.Avalonia;
 using Xunit;
 
@@ -15,10 +19,6 @@ using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Tests.Common;
-using BuiltInLocalizationCatalog = Krivodeling.Localization.Avalonia.BuiltInLocalizationCatalog;
-using LocalizationConstants = Krivodeling.Localization.Avalonia.LocalizationConstants;
-using LocalizationLangPlugin = Krivodeling.Localization.Avalonia.LocalizationLangPlugin;
-using LocalizationTextResolver = Krivodeling.Localization.Avalonia.LocalizationTextResolver;
 
 namespace AtomicArt.Desktop.Tests.Services.Localization;
 
@@ -431,16 +431,17 @@ public sealed class LocalizationServiceTests : IDisposable
     {
         HashSet<string> keys = new(StringComparer.Ordinal);
         Type[] keyOwners =
-        [
-            typeof(CommonLocalizationKeys),
-            typeof(ShellLocalizationKeys),
-            typeof(GenerationUiLocalizationKeys),
-            typeof(GalleryLocalizationKeys),
-            typeof(Dlss5LocalizationKeys),
-            typeof(SettingsLocalizationKeys),
-            typeof(UpdateLocalizationKeys),
-            typeof(GenerationLocalizationKeys)
-        ];
+            [
+                typeof(CommonLocalizationKeys),
+                typeof(ShellLocalizationKeys),
+                typeof(GenerationUiLocalizationKeys),
+                typeof(GenerationChatLocalizationKeys),
+                typeof(GalleryLocalizationKeys),
+                typeof(Dlss5LocalizationKeys),
+                typeof(SettingsLocalizationKeys),
+                typeof(UpdateLocalizationKeys),
+                typeof(GenerationLocalizationKeys)
+            ];
 
         foreach (Type keyOwner in keyOwners)
         {
@@ -455,7 +456,7 @@ public sealed class LocalizationServiceTests : IDisposable
         ISet<string> keys)
     {
         foreach (FieldInfo field in type.GetFields(
-                     BindingFlags.Public | BindingFlags.Static))
+            BindingFlags.Public | BindingFlags.Static))
         {
             if ((field.IsLiteral)
                 && (field.FieldType == typeof(string))

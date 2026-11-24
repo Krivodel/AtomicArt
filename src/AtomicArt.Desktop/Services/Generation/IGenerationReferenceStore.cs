@@ -22,5 +22,7 @@ public interface IGenerationReferenceStore
 
     void Release(Guid runId);
 
+    Task RetainAsync(Guid runId, IEnumerable<GenerationReference> references, CancellationToken ct);
+
     Task PruneAsync(IReadOnlySet<string> retainedHashes, CancellationToken ct);
 }

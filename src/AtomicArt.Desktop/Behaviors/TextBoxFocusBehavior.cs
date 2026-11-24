@@ -15,6 +15,8 @@ public static class TextBoxFocusBehavior
         AvaloniaProperty.RegisterAttached<TextBox, bool>(
             "FocusOnClear",
             typeof(TextBoxFocusBehavior));
+    public static readonly AttachedProperty<bool> CaretAtEndProperty =
+        AvaloniaProperty.RegisterAttached<TextBox, bool>("CaretAtEnd", typeof(TextBoxFocusBehavior));
 
     static TextBoxFocusBehavior()
     {
@@ -29,6 +31,16 @@ public static class TextBoxFocusBehavior
         return AttachedPropertyValueAccessor.Get(
             textBox,
             AutoFocusProperty);
+    }
+
+    public static bool GetCaretAtEnd(TextBox textBox)
+    {
+        return AttachedPropertyValueAccessor.Get(textBox, CaretAtEndProperty);
+    }
+
+    public static void SetCaretAtEnd(TextBox textBox, bool value)
+    {
+        AttachedPropertyValueAccessor.Set(textBox, CaretAtEndProperty, value);
     }
 
     public static void SetAutoFocus(TextBox textBox, bool value)
@@ -77,6 +89,14 @@ public static class TextBoxFocusBehavior
             && textBox.IsEnabled)
         {
             textBox.Focus();
+
+            if (TextBoxFocusBehavior.GetCaretAtEnd(textBox))
+            {
+                int end = textBox.Text?.Length ?? 0;
+                textBox.SelectionStart = end;
+                textBox.SelectionEnd = end;
+                textBox.CaretIndex = end;
+            }
         }
     }
 

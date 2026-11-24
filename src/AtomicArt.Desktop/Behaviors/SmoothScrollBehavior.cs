@@ -1,7 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia;
+using Avalonia.Layout;
 
 namespace AtomicArt.Desktop.Behaviors;
 
@@ -73,17 +74,27 @@ public static class SmoothScrollBehavior
     public static void ScrollToOffset(ScrollViewer scrollViewer, Vector targetOffset)
     {
         ArgumentNullException.ThrowIfNull(scrollViewer);
+        SmoothScrollBehavior.StartScroll(scrollViewer, targetOffset, SmoothScrollBehavior.GetDuration(scrollViewer));
+    }
 
-        EnsureLifecycleAttached(scrollViewer);
-        EnsureAttached(scrollViewer);
-        SmoothScrollState? state = GetState(scrollViewer);
+    internal static void ScrollToEnd(ScrollViewer scrollViewer, TimeSpan duration)
+    {
+        SmoothScrollBehavior.ScrollToEnd(scrollViewer, duration, Orientation.Vertical);
+    }
 
-        if (state is null)
-        {
-            return;
-        }
+    internal static void ScrollToEnd(ScrollViewer scrollViewer, TimeSpan duration, Orientation orientation)
+    {
+        ArgumentNullException.ThrowIfNull(scrollViewer);
+        Vector target = orientation == Orientation.Horizontal
+            ? new Vector(scrollViewer.ScrollBarMaximum.X, scrollViewer.Offset.Y)
+            : new Vector(scrollViewer.Offset.X, scrollViewer.ScrollBarMaximum.Y);
+        SmoothScrollBehavior.StartScroll(scrollViewer, target, duration, orientation);
+    }
 
-        state.Start(targetOffset, GetDuration(scrollViewer));
+    internal static void CancelScrollToEnd(ScrollViewer scrollViewer)
+    {
+        ArgumentNullException.ThrowIfNull(scrollViewer);
+        SmoothScrollBehavior.GetState(scrollViewer)?.InterruptScrollToEnd();
     }
 
     internal static bool HasState(ScrollViewer scrollViewer)
@@ -91,6 +102,14 @@ public static class SmoothScrollBehavior
         ArgumentNullException.ThrowIfNull(scrollViewer);
 
         return GetState(scrollViewer) is not null;
+    }
+
+    private static void StartScroll(
+        ScrollViewer scrollViewer, Vector targetOffset, TimeSpan duration, Orientation? trackEnd = null)
+    {
+        SmoothScrollBehavior.EnsureLifecycleAttached(scrollViewer);
+        SmoothScrollBehavior.EnsureAttached(scrollViewer);
+        SmoothScrollBehavior.GetState(scrollViewer)?.Start(targetOffset, duration, trackEnd);
     }
 
     private static void EnsureAttached(ScrollViewer scrollViewer)
@@ -215,6 +234,7 @@ public static class SmoothScrollBehavior
         {
             EnsureLifecycleAttached(scrollViewer);
             EnsureAttached(scrollViewer);
+
             return;
         }
 

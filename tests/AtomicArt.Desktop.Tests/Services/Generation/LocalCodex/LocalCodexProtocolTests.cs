@@ -38,7 +38,9 @@ public sealed class LocalCodexProtocolTests
     {
         using StringReader reader = new(TurnStart + """
             {"method":"item/completed","params":{"threadId":"thread-1","turnId":"other","item":{"type":"imageGeneration","status":"completed","result":"other"}}}
+            {"method":"item/completed","params":{"threadId":"thread-1","turnId":"other","item":{"type":"agentMessage","text":"Different turn"}}}
             {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"imageGeneration","status":"completed","result":"actual"}}}
+            {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"agentMessage","text":"Updated the reflection."}}}
             {"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"completed"}}}
             """);
         using StringWriter writer = new();
@@ -46,12 +48,13 @@ public sealed class LocalCodexProtocolTests
         const string ReferencePath = "reference.png";
         LocalCodexTurnOptions options = new("gpt-6.2-astra", "GPT-6.2 Astra", "high");
 
-        (string threadId, string? modelId, JsonElement image) = await protocol.GenerateAsync(
+        (string threadId, string? modelId, JsonElement image, string text) = await protocol.GenerateAsync(
             Path.GetTempPath(), new object[] { new { type = "localImage", path = ReferencePath } }, options, CancellationToken.None);
 
         threadId.Should().Be("thread-1");
         modelId.Should().Be(options.ModelId);
         image.GetProperty("result").GetString().Should().Be("actual");
+        text.Should().Be("Updated the reflection.");
         string[] requests = writer.ToString().Split(Environment.NewLine);
         using JsonDocument startRequest = JsonDocument.Parse(requests[0]);
         startRequest.RootElement.GetProperty("params").GetProperty("model").GetString().Should().Be(options.ModelId);

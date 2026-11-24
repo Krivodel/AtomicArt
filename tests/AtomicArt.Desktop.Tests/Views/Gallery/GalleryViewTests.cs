@@ -20,6 +20,7 @@ using AtomicArt.Desktop.Controls.Overlays;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.State;
+using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Controls.Gallery;
 using AtomicArt.Desktop.Tests.Services;
 using AtomicArt.Desktop.Tests.TestDoubles;
@@ -184,7 +185,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
         Dispatch(() =>
         {
             ServiceCollection services = new();
-            services.AddDesktopServices();
+            services.AddIsolatedDesktopServices();
             using ServiceProvider serviceProvider = services.BuildServiceProvider();
             GalleryViewScenario scenario = GalleryViewTests.CreateGalleryViewScenario(serviceProvider);
             Window window = Show(scenario.View);
@@ -325,16 +326,16 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 Canvas overlayCanvas = GetOverlayCanvas(gallery);
                 GalleryLayoutService galleryLayout = new();
                 galleryLayout.TryGetOverlayRect(
-                        cardRoot,
-                        overlayCanvas,
-                        out Rect expectedCardSurfaceRect)
+                    cardRoot,
+                    overlayCanvas,
+                    out Rect expectedCardSurfaceRect)
                     .Should()
                     .BeTrue();
                 galleryLayout.TryGetCardSurface(
-                        card,
-                        overlayCanvas,
-                        out Rect cardSurfaceRect,
-                        out CornerRadius cardSurfaceCornerRadius)
+                    card,
+                    overlayCanvas,
+                    out Rect cardSurfaceRect,
+                    out CornerRadius cardSurfaceCornerRadius)
                     .Should()
                     .BeTrue();
                 cardSurfaceRect.Should().Be(expectedCardSurfaceRect);
@@ -403,7 +404,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
             try
             {
                 GenerationCardControl card = GetGalleryPanel(
-                        GalleryViewTests.GetGalleryControl(scenario.View))
+                    GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .Single();
@@ -479,7 +480,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 window.CaptureRenderedFrame();
 
                 IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
-                        GalleryViewTests.GetGalleryControl(scenario.View))
+                    GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .ToList();
@@ -561,7 +562,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 window.CaptureRenderedFrame();
 
                 IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
-                        GalleryViewTests.GetGalleryControl(scenario.View))
+                    GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .ToList();
@@ -620,7 +621,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 window.CaptureRenderedFrame();
 
                 IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
-                        GalleryViewTests.GetGalleryControl(scenario.View))
+                    GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .ToList();
@@ -674,7 +675,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
                 window.CaptureRenderedFrame();
 
                 IReadOnlyList<GenerationCardControl> cards = GetGalleryPanel(
-                        GalleryViewTests.GetGalleryControl(scenario.View))
+                    GalleryViewTests.GetGalleryControl(scenario.View))
                     .Children
                     .OfType<GenerationCardControl>()
                     .ToList();
@@ -899,7 +900,7 @@ public sealed class GalleryViewTests : AnimatedGalleryControlTestBase
     {
         ServiceCollection services = new();
         services.AddSingleton(TestApiConfiguration.Create());
-        services.AddDesktopServices();
+        services.AddIsolatedDesktopServices();
 
         if (appStateBootstrapper is not null)
         {

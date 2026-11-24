@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
 
 namespace AtomicArt.Desktop.ViewModels.Generation;
@@ -11,8 +12,9 @@ public sealed class AttachedImageViewModel : ObservableObject
     public string FileName => _fileName;
     public string ContentType => _contentType;
     public PanelAttachmentState? State => _state;
+    public GenerationReference? SavedReference { get; }
     public bool IsLoading => _isLoading;
-    public bool IsReady => !_isLoading && _state is not null && _content is not null;
+    public bool IsReady => !_isLoading && _content is not null;
     public byte[] Content => _content is null
         ? []
         : (byte[])_content.Clone();
@@ -25,10 +27,9 @@ public sealed class AttachedImageViewModel : ObservableObject
 
     public AttachedImageViewModel(
         AttachedImageDto attachedImage,
-        PanelAttachmentState state)
+        PanelAttachmentState? state = null)
     {
         ArgumentNullException.ThrowIfNull(attachedImage);
-        ArgumentNullException.ThrowIfNull(state);
         ArgumentException.ThrowIfNullOrWhiteSpace(attachedImage.FileName);
         ArgumentException.ThrowIfNullOrWhiteSpace(attachedImage.ContentType);
         ArgumentNullException.ThrowIfNull(attachedImage.Content);
@@ -38,6 +39,16 @@ public sealed class AttachedImageViewModel : ObservableObject
         _contentType = attachedImage.ContentType;
         _state = state;
         _content = (byte[])attachedImage.Content.Clone();
+    }
+
+    internal AttachedImageViewModel(GenerationReference reference)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+
+        Id = Guid.NewGuid();
+        _fileName = reference.FileName;
+        _contentType = reference.ContentType;
+        SavedReference = reference;
     }
 
     private AttachedImageViewModel(string fileName)

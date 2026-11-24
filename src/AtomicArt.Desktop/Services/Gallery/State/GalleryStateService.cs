@@ -10,6 +10,7 @@ public sealed class GalleryStateService : IGalleryStateService
 {
     private readonly IAppStateStore _stateStore;
     private readonly IGenerationReferenceStore _referenceStore;
+    private readonly IGenerationChatStore _chats;
     private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly GalleryStatePathConverter _pathConverter;
     private readonly GalleryStateSection _section;
@@ -23,9 +24,11 @@ public sealed class GalleryStateService : IGalleryStateService
         IDataRootAccessCoordinator accessCoordinator,
         GalleryStatePathConverter pathConverter,
         GalleryStateSection section,
-        ILogger<GalleryStateService> logger)
+        ILogger<GalleryStateService> logger,
+        IGenerationChatStore chats)
     {
         _stateStore = stateStore ?? throw new ArgumentNullException(nameof(stateStore));
+        _chats = chats ?? throw new ArgumentNullException(nameof(chats));
         _referenceStore = referenceStore ?? throw new ArgumentNullException(nameof(referenceStore));
         _accessCoordinator = accessCoordinator
             ?? throw new ArgumentNullException(nameof(accessCoordinator));
@@ -46,13 +49,15 @@ public sealed class GalleryStateService : IGalleryStateService
                 _logger.LogDebug(
                     "Returning cached gallery state with {ItemCount} items",
                     _currentState.Items.Count);
+
                 return _currentState;
             }
 
             GalleryState loadedState = await _stateStore
-                .LoadAsync<GalleryState>(_section, ct)
-                .ConfigureAwait(false);
+                                .LoadAsync<GalleryState>(_section, ct)
+                                .ConfigureAwait(false);
             GalleryState normalizedState;
+
             using (DataRootAccessLease accessLease =
                 await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false))
             {
@@ -61,6 +66,7 @@ public sealed class GalleryStateService : IGalleryStateService
 
             if (loadedState.HasSavedPayload)
             {
+                await _chats.PruneAsync(GalleryStateService.GetChatIds(normalizedState), ct).ConfigureAwait(false);
                 await _referenceStore.PruneAsync(GetReferenceHashes(normalizedState), ct).ConfigureAwait(false);
             }
 
@@ -77,16 +83,24 @@ public sealed class GalleryStateService : IGalleryStateService
         }
     }
 
-    public async Task SaveAsync(IReadOnlyList<GalleryItemState> items, CancellationToken ct)
+    public Task SaveAsync(IReadOnlyList<GalleryItemState> items, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(items);
 
+        return SaveLatestAsync(_ => Task.FromResult(items), ct);
+    }
+
+    public async Task SaveLatestAsync(Func<CancellationToken, Task<IReadOnlyList<GalleryItemState>>> getItems, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(getItems);
         await _stateLock.WaitAsync(ct).ConfigureAwait(false);
 
         try
         {
+            IReadOnlyList<GalleryItemState> items = await getItems(ct).ConfigureAwait(false);
             GalleryState runtimeState;
             GalleryState storageState;
+
             using (DataRootAccessLease accessLease =
                 await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false))
             {
@@ -94,10 +108,20 @@ public sealed class GalleryStateService : IGalleryStateService
                 storageState = CreateStorageState(runtimeState);
             }
 
+            foreach (GalleryItemState item in runtimeState.Items)
+            {
+                if (item.ChatId is Guid id && item.ChatHistory is { } history)
+                {
+                    await _chats.SaveAsync(id, history, ct).ConfigureAwait(false);
+                }
+            }
+
             await _stateStore.SaveAsync(_section, storageState, ct).ConfigureAwait(false);
+            await _chats.PruneAsync(GalleryStateService.GetChatIds(runtimeState), CancellationToken.None).ConfigureAwait(false);
             HashSet<string> previousHashes = GetReferenceHashes(_currentState);
             HashSet<string> retainedHashes = GetReferenceHashes(runtimeState);
             _currentState = runtimeState;
+
             if (!previousHashes.IsSubsetOf(retainedHashes))
             {
                 await _referenceStore.PruneAsync(retainedHashes, CancellationToken.None).ConfigureAwait(false);
@@ -113,13 +137,25 @@ public sealed class GalleryStateService : IGalleryStateService
         }
     }
 
+    private static HashSet<Guid> GetChatIds(GalleryState? state)
+    {
+        return (state?.Items ?? Array.Empty<GalleryItemState>()).Select(item => item.ChatId).OfType<Guid>().ToHashSet();
+    }
+
     private static HashSet<string> GetReferenceHashes(GalleryState? state)
     {
-        return (state?.Items ?? Array.Empty<GalleryItemState>())
-            .SelectMany(item => item.References ?? Array.Empty<GenerationReference>())
-            .Where(reference => reference is not null)
-            .Select(reference => reference.Hash)
+        return (state?.Items ?? Array.Empty<GalleryItemState>()).SelectMany(GetReferenceHashes)
             .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static IEnumerable<string> GetReferenceHashes(GalleryItemState item)
+    {
+        IEnumerable<string> hashes = (item.References ?? Array.Empty<GenerationReference>()).Select(reference => reference.Hash)
+            .Concat(item.ChatHistory?.ReferenceHashes ?? item.ChatReferenceHashes ?? Array.Empty<string>());
+
+        return item.ChatHistory?.IncludesCardTurn != true && item.ChatResult?.Image is { } result
+            ? hashes.Append(result.Hash)
+            : hashes;
     }
 
     private static GalleryState NormalizeState(

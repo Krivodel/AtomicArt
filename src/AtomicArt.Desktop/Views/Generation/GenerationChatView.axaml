@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:behaviors="using:AtomicArt.Desktop.Behaviors"
+             xmlns:generation="using:AtomicArt.Desktop.ViewModels.Generation"
+             xmlns:i18n="https://codewf.com"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:views="using:AtomicArt.Desktop.Views.Generation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AtomicArt.Desktop.Views.Generation.GenerationChatView"
+             x:Name="ChatView"
+             x:DataType="generation:GenerationChatViewModel"
+             ClipToBounds="False"
+             behaviors:TextSizeWheelBehavior.AdjustCommand="{Binding AdjustTextSizeCommand}">
+    <Border x:Name="HistoryChrome"
+            Classes="generation-chat-history"
+            Classes.expanded="{Binding #ChatView.IsPresented}">
+        <Border ClipToBounds="True"
+                CornerRadius="{Binding #HistoryChrome.CornerRadius}">
+            <Grid RowDefinitions="Auto,*">
+                <Border Grid.Row="0"
+                        Classes="generation-chat-header">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Grid Grid.Column="0"
+                              Width="{StaticResource TitleButtonSize}"
+                              Height="{StaticResource TitleButtonSize}"
+                              HorizontalAlignment="Left">
+                            <Path HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Classes="gallery-outline-icon"
+                                  Data="{StaticResource AppChatIcon}"
+                                  Stroke="{StaticResource MetadataTextBrush}" />
+                        </Grid>
+                        <Button Grid.Column="1"
+                                Width="{StaticResource TitleButtonSize}"
+                                Height="{StaticResource TitleButtonSize}"
+                                Padding="{StaticResource ZeroThickness}"
+                                Classes="Icon"
+                                AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Collapse}}"
+                                Command="{Binding CollapseCommand}">
+                            <PathIcon Data="{StaticResource AppCloseIcon}" />
+                        </Button>
+                    </Grid>
+                </Border>
+                <ItemsControl x:Name="ChatItems"
+                              Grid.Row="1"
+                              ItemsSource="{Binding Messages}">
+                    <ItemsControl.Template>
+                        <ControlTemplate x:DataType="ItemsControl">
+                            <ScrollViewer x:Name="ChatScrollViewer"
+                                          BringIntoViewOnFocusChange="False"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                                <ItemsPresenter Margin="{StaticResource GenerationChatContentMargin}"
+                                                ItemsPanel="{TemplateBinding ItemsPanel}" />
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="generation:GenerationChatMessageViewModel">
+                            <views:GenerationChatMessageView />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Border x:Name="PreviousBranch"
+                        Grid.Row="1"
+                        IsVisible="False"
+                        Background="{DynamicResource SukiPopupBackground}"
+                        IsHitTestVisible="False">
+                    <Image x:Name="PreviousBranchImage"
+                           Stretch="Fill" />
+                </Border>
+            </Grid>
+        </Border>
+    </Border>
+</UserControl>

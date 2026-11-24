@@ -171,6 +171,12 @@ internal static class GalleryItemStateMapper
             FailureCode = ResolveFailureCode(source, status),
             AttachedImagesCount = Math.Max(0, source.AttachedImagesCount),
             References = source.References?.ToArray(),
+            ChatId = source.ChatHistory?.Id ?? source.ChatId,
+            ChatReferenceHashes = source.ChatHistory is { } history
+                ? history.ReferenceHashes
+                : source.ChatReferenceHashes,
+            ChatHistory = source.ChatHistory,
+            ChatResult = source.ChatResult is { } chatResult ? chatResult with { StorageLeaseId = null } : null,
             IsFavorite = source.IsFavorite,
             CorrelationId = ResolveGeneratingValue(source, status, source => source.CorrelationId),
             GenerationOrdinal = ResolveGeneratingValue(source, status, source => source.GenerationOrdinal)
@@ -186,15 +192,15 @@ internal static class GalleryItemStateMapper
         }
 
         Dictionary<string, GenerationSavedParameter> parameters = settings.Parameters
-            .Where(parameter =>
-                !string.IsNullOrWhiteSpace(parameter.Key)
-                && parameter.Value?.Value.ValueKind is
-                    JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False)
-            .ToDictionary(parameter => parameter.Key, parameter => parameter.Value, StringComparer.Ordinal);
+                    .Where(parameter =>
+                        !string.IsNullOrWhiteSpace(parameter.Key)
+                        && parameter.Value?.Value.ValueKind is
+                            JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False)
+                    .ToDictionary(parameter => parameter.Key, parameter => parameter.Value, StringComparer.Ordinal);
 
         return parameters.Count == 0 && settings.CodexTextModelId is null
-            ? null
-            : settings with { Parameters = parameters };
+                    ? null
+                    : settings with { Parameters = parameters };
     }
 
     private static GenerationItemStatus ResolveStatus(

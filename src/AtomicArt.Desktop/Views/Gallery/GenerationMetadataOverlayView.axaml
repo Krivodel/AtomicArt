@@ -1,13 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:i18n="https://codewf.com"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:generation="using:AtomicArt.Desktop.Services.Generation"
+             xmlns:i18n="https://codewf.com"
+             xmlns:models="using:AtomicArt.Desktop.Models"
              xmlns:overlays="using:AtomicArt.Desktop.Controls.Overlays"
              xmlns:picaResources="using:Pica.Viewer.Resources"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
-             xmlns:generation="using:AtomicArt.Desktop.Services.Generation"
-             xmlns:models="using:AtomicArt.Desktop.Models"
              xmlns:views="using:AtomicArt.Desktop.Views.Gallery"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationMetadataOverlayView"
              x:Name="Root"
              x:DataType="gallery:GenerationMetadataViewModel"
@@ -58,9 +58,9 @@
                                       CloseCommand="{Binding CloseCommand}">
             <overlays:ModalOverlayControl.HeaderAccessory>
                 <Border Classes="metadata-status"
+                        Classes.failed="{Binding IsFailed}"
                         Classes.generated="{Binding IsGenerated}"
-                        Classes.generating="{Binding IsGenerating}"
-                        Classes.failed="{Binding IsFailed}">
+                        Classes.generating="{Binding IsGenerating}">
                     <StackPanel Orientation="Horizontal"
                                 Spacing="6">
                         <Ellipse Width="6"
@@ -84,8 +84,8 @@
                         <Grid ClipToBounds="False"
                               ColumnSpacing="24">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition MaxWidth="300"
-                                                  Width="0.75*" />
+                                <ColumnDefinition Width="0.75*"
+                                                  MaxWidth="300" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
@@ -97,9 +97,9 @@
                                                                 VerticalAlignment="Top"
                                                                 Classes="metadata-preview"
                                                                 DataContext="{Binding Item}"
+                                                                OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}"
                                                                 PreviewPath="{Binding DisplayThumbnailPath}"
                                                                 PreviewSize="{Binding #PreviewSlot.Bounds.Width}"
-                                                                OpenViewerCommand="{Binding #Root.DataContext.OpenViewerCommand}"
                                                                 ShowFailureDetailsCommand="{Binding #Root.DataContext.ShowFailureDetailsCommand}" />
                             </Panel>
 
@@ -121,9 +121,9 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="gallery:GenerationMetadataRow">
-                                                <Grid Grid.IsSharedSizeScope="True"
-                                                      ColumnDefinitions="1.25*,1.15*,*"
-                                                      ColumnSpacing="14">
+                                                <Grid ColumnDefinitions="1.25*,1.15*,*"
+                                                      ColumnSpacing="14"
+                                                      Grid.IsSharedSizeScope="True">
                                                     <ContentControl ContentTemplate="{StaticResource MetadataFieldTemplate}"
                                                                     Content="{Binding First}" />
                                                     <ContentControl Grid.Column="1"
@@ -155,8 +155,7 @@
                                             <Panel IsHitTestVisible="False">
                                                 <Path Classes="metadata-outline-icon"
                                                       IsVisible="{Binding !IsPromptCopied}"
-                                                      Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}"
-                                                      Stroke="{Binding $parent[Button].Foreground}" />
+                                                      Data="{x:Static picaResources:ViewerActionIconGeometry.Copy}" />
                                                 <PathIcon Width="{StaticResource MetadataIconSize}"
                                                           Height="{StaticResource MetadataIconSize}"
                                                           IsVisible="{Binding IsPromptCopied}"
@@ -233,8 +232,7 @@
                                 <StackPanel Orientation="Horizontal"
                                             Spacing="8">
                                     <Path Classes="metadata-outline-icon"
-                                          Data="{StaticResource MetadataRepeatIcon}"
-                                          Stroke="{Binding $parent[Button].Foreground}" />
+                                          Data="{StaticResource MetadataRepeatIcon}" />
                                     <TextBlock Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Repeat}}" />
                                 </StackPanel>
                             </Button>

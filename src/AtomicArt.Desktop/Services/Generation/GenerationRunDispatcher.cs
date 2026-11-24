@@ -68,7 +68,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
 
         GenerationAdmissionLease admissionLease =
             await _generationAdmissionGate.EnterAsync(ct).ConfigureAwait(false);
-        Guid correlationId = Guid.NewGuid();
+        Guid correlationId = request.ChatRun?.Id ?? Guid.NewGuid();
         GenerationRunState runState = new();
         ImageGenerationRequestDto generationRequest = request.Request;
         string providerCredential = request.ProviderCredential;
@@ -80,11 +80,20 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
 
         try
         {
-            IReadOnlyList<GenerationReference>? references = null;
-            if (_saveReferences.CurrentValue || generationRequest.AttachedImages.Count == 0)
+            IReadOnlyList<GenerationReference>? references = request.ChatReferences;
+
+            if (references is null && (_saveReferences.CurrentValue || LocalCodexImageModel.Matches(generationRequest.ModelId)
+                || generationRequest.AttachedImages.Count == 0))
             {
                 references = await _referenceStore
                     .SaveAsync(correlationId, generationRequest.AttachedImages, ct)
+                    .ConfigureAwait(false);
+            }
+
+            if (request.StartSnapshot.ChatHistory is { } history)
+            {
+                await _referenceStore.RetainAsync(correlationId,
+                    history.Messages.SelectMany(message => message.Images).Concat(references ?? Array.Empty<GenerationReference>()), ct)
                     .ConfigureAwait(false);
             }
 
@@ -104,7 +113,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
                     correlationId,
                     generationRequest,
                     providerCredential,
-                    request.CodexTurnOptions,
+                    request,
                     runState,
                     runLifetime,
                     admissionLease),
@@ -149,12 +158,14 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         Guid correlationId,
         ImageGenerationRequestDto request,
         string providerCredential,
-        LocalCodexTurnOptions? codexTurnOptions,
+        GenerationRunRequest runRequest,
         GenerationRunState runState,
         GenerationRunLifetime runLifetime,
         GenerationAdmissionLease admissionLease)
     {
         bool limiterAcquired = false;
+        bool completionPublished = false;
+        GenerationChatResult? chatResult = null;
         CancellationToken ct = runLifetime.Token;
 
         try
@@ -170,20 +181,29 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
                 "Generation run {CorrelationId} started its request.",
                 correlationId);
 
-            GenerationBatchDto batch = await ExecuteAttemptsAsync(
-                    correlationId,
-                    request,
-                    providerCredential,
-                    codexTurnOptions,
-                    ct)
-                .ConfigureAwait(false);
+            GenerationBatchDto batch;
+
+            if (LocalCodexImageModel.Matches(request.ModelId))
+            {
+                LocalCodexGenerationClient client = _localCodex ?? throw new GenerationAttemptException(
+                    "Local Codex is unavailable.", GenerationClientFailureCodes.CodexUnavailable, false);
+                (batch, chatResult) = await client.CreateGenerationAsync(
+                    request, correlationId, runRequest.CodexTurnOptions, runRequest.StartSnapshot.ChatHistory, ct)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                batch = await ExecuteAttemptsAsync(correlationId, request, providerCredential, ct)
+                    .ConfigureAwait(false);
+            }
 
             _logger.LogInformation(
                 "Generation run {CorrelationId} completed as batch {BatchId} with {ItemCount} items.",
                 correlationId,
                 batch.BatchId,
                 batch.Items.Count);
-            _lifecyclePublisher.PublishCompleted(correlationId, batch);
+            _lifecyclePublisher.PublishCompleted(correlationId, batch, chatResult, runRequest.ChatRun);
+            completionPublished = true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -207,6 +227,17 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
             }
 
             providerCredential = string.Empty;
+
+            if (!completionPublished)
+            {
+                if (chatResult?.StorageLeaseId is Guid storageLeaseId)
+                {
+                    _referenceStore.Release(storageLeaseId);
+                }
+
+                runRequest.ChatRun?.Complete(null);
+            }
+
             CompleteRunLifetime(correlationId, runLifetime);
             admissionLease.Dispose();
         }
@@ -216,21 +247,13 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         Guid logicalGenerationId,
         ImageGenerationRequestDto request,
         string providerCredential,
-        LocalCodexTurnOptions? codexTurnOptions,
         CancellationToken ct)
     {
-        if (LocalCodexImageModel.Matches(request.ModelId))
-        {
-            LocalCodexGenerationClient client = _localCodex ?? throw new GenerationAttemptException(
-                "Local Codex is unavailable.", GenerationClientFailureCodes.CodexUnavailable, false);
-            return await client.CreateGenerationAsync(request, logicalGenerationId, codexTurnOptions, ct).ConfigureAwait(false);
-        }
-
         int maximumAttemptNumber = checked(_maxAutomaticRetries + 1);
 
         for (int attemptNumber = 1;
-             attemptNumber <= maximumAttemptNumber;
-             attemptNumber++)
+                     attemptNumber <= maximumAttemptNumber;
+                     attemptNumber++)
         {
             try
             {
@@ -311,11 +334,11 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
 
     private sealed class GenerationRunLifetime : IDisposable
     {
+        public CancellationToken Token => _cancellationTokenSource.Token;
+
         private readonly object _syncRoot = new();
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private bool _isDisposed;
-
-        public CancellationToken Token => _cancellationTokenSource.Token;
 
         public void Cancel()
         {

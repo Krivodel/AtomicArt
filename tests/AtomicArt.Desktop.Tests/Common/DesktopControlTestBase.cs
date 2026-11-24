@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media.Imaging;
-
 using SkiaSharp;
 
 using AtomicArt.Tests.Avalonia;
@@ -20,7 +19,7 @@ public abstract class DesktopControlTestBase
             .UseHeadless(new AvaloniaHeadlessPlatformOptions());
     }
 
-    private protected static void Dispatch(Action action)
+    protected static void Dispatch(Action action)
     {
         HeadlessTestSessionDispatcher.Dispatch(
             typeof(DesktopControlTestBase),
@@ -28,17 +27,17 @@ public abstract class DesktopControlTestBase
             action);
     }
 
-    private protected static Task DispatchAsync(Func<Task> action)
+    protected static Task DispatchAsync(Func<Task> action)
     {
         return DesktopControlTestBase.DispatchAsync(typeof(DesktopControlTestBase), action);
     }
 
-    private protected static Task DispatchAsync(Action action)
+    protected static Task DispatchAsync(Action action)
     {
         return DispatchAsync(typeof(DesktopControlTestBase), action);
     }
 
-    private protected static Task DispatchAsync(Type testApplicationType, Action action)
+    protected static Task DispatchAsync(Type testApplicationType, Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
 
@@ -52,22 +51,22 @@ public abstract class DesktopControlTestBase
             });
     }
 
-    private protected static Task DispatchAsync(Type testApplicationType, Func<Task> action)
+    protected static Task DispatchAsync(Type testApplicationType, Func<Task> action)
     {
         return HeadlessTestSessionDispatcher.DispatchAsync(testApplicationType, SessionLock, action);
     }
 
-    private protected static Window Show(Control control)
+    protected static Window Show(Control control)
     {
         return DesktopControlTestBase.Show(control, 640d, 640d);
     }
 
-    private protected static void Show(Control control, Action<Window> action)
+    protected static void Show(Control control, Action<Window> action)
     {
         DesktopControlTestBase.Show(control, 640d, 640d, action);
     }
 
-    private protected static Window Show(
+    protected static Window Show(
         Control control,
         double width,
         double height)
@@ -87,7 +86,7 @@ public abstract class DesktopControlTestBase
         return window;
     }
 
-    private protected static void Show(
+    protected static void Show(
         Control control,
         double width,
         double height,
@@ -107,7 +106,7 @@ public abstract class DesktopControlTestBase
         }
     }
 
-    private protected SKBitmap CaptureRenderedBitmap(Window window)
+    protected SKBitmap CaptureRenderedBitmap(Window window)
     {
         ArgumentNullException.ThrowIfNull(window);
 

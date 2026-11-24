@@ -29,6 +29,7 @@ public sealed partial class MainWindowViewModel :
     IDisposable
 {
     public GalleryViewModel Gallery { get; }
+    public GenerationChatViewModel? Chat { get; }
     public ErrorDialogViewModel ErrorDialog { get; }
     public IModelPanelViewModel ActiveGenerationPanel { get; }
     public IRelayCommand<string?>? ReplaceGenerationPromptCommand =>
@@ -80,7 +81,8 @@ public sealed partial class MainWindowViewModel :
         OpenRouterBalanceViewModel openRouterBalance,
         IMessenger messenger,
         IViewModelErrorHandler errorHandler,
-        ILocalizationTextProvider textProvider)
+        ILocalizationTextProvider textProvider,
+        GenerationChatViewModel? chat = null)
     {
         ArgumentNullException.ThrowIfNull(gallery);
         ArgumentNullException.ThrowIfNull(errorDialog);
@@ -100,6 +102,7 @@ public sealed partial class MainWindowViewModel :
 
         IReadOnlyList<IModelPanelViewModel> panels = modelPanels.ToList();
         Gallery = gallery;
+        Chat = chat;
         ErrorDialog = errorDialog;
         ActiveGenerationPanel = desktopModelPanelRegistry.GetDefaultPanel(panels);
         Gallery.ConfigureImageViewerAttachments(
@@ -109,11 +112,18 @@ public sealed partial class MainWindowViewModel :
         if (ActiveGenerationPanel is IGenerationPanelPresetTarget presetTarget)
         {
             Gallery.ConfigureGenerationPresetTarget(presetTarget);
+            Chat?.Connect(Gallery, presetTarget);
+        }
+
+        if (Chat is not null && ActiveGenerationPanel is UniversalNanoBananaPanelViewModel panel)
+        {
+            panel.ConnectChat(Chat);
+            Gallery.ConfigureChat(Chat);
         }
 
         _stateRestorePanels = panels
-            .OfType<IAppStateGenerationPanelRestoreTarget>()
-            .ToList();
+                    .OfType<IAppStateGenerationPanelRestoreTarget>()
+                    .ToList();
         _stateFlushPanels = panels
             .OfType<IAppStateGenerationPanelFlushTarget>()
             .ToList();
@@ -129,10 +139,12 @@ public sealed partial class MainWindowViewModel :
         Dlss5 = dlss5;
         OpenRouterBalance = openRouterBalance;
         Dlss5.PropertyChanged += OnAttachmentTargetChanged;
+
         if (ActiveGenerationPanel is INotifyPropertyChanged observablePanel)
         {
             observablePanel.PropertyChanged += OnAttachmentTargetChanged;
         }
+
         SubscribeToEvents();
         messenger.Register<LocalizationChangedMessage>(this);
     }
@@ -188,10 +200,12 @@ public sealed partial class MainWindowViewModel :
     public void Dispose()
     {
         Dlss5.PropertyChanged -= OnAttachmentTargetChanged;
+
         if (ActiveGenerationPanel is INotifyPropertyChanged observablePanel)
         {
             observablePanel.PropertyChanged -= OnAttachmentTargetChanged;
         }
+
         _settings.CloseRequested -= OnSettingsCloseRequested;
         _settings.Dispose();
         _uiScaleService.ScaleChanged -= OnUiScaleChanged;
@@ -217,6 +231,14 @@ public sealed partial class MainWindowViewModel :
         if (Dlss5.IsOpen)
         {
             Dlss5.BackCommand.Execute(null);
+
+            return;
+        }
+
+        if (Chat?.IsExpanded == true)
+        {
+            Chat.Collapse();
+
             return;
         }
 
@@ -275,9 +297,11 @@ public sealed partial class MainWindowViewModel :
         IAsyncRelayCommand<IReadOnlyList<ImageAttachmentInput>?> command = Dlss5.IsOpen
             ? Dlss5.AttachSourceImagesCommand
             : ActiveGenerationPanel.AttachImageInputsCommand;
+
         if (command.CanExecute(inputs))
         {
             await command.ExecuteAsync(inputs);
+
             return;
         }
 
@@ -290,17 +314,6 @@ public sealed partial class MainWindowViewModel :
         }
     }
 
-    private void OnAttachmentTargetChanged(object? sender, PropertyChangedEventArgs args)
-    {
-        if ((args.PropertyName == nameof(Dlss5SessionViewModel.IsOpen))
-            || (args.PropertyName == nameof(IModelPanelViewModel.AttachmentInputByteLimit))
-            || (args.PropertyName == nameof(IModelPanelViewModel.IsAttachmentLimitReached)))
-        {
-            OnPropertyChanged(nameof(WindowImageInputByteLimit));
-            OnPropertyChanged(nameof(IsWindowAttachmentLimitReached));
-        }
-    }
-
     private void SubscribeToEvents()
     {
         _settings.CloseRequested += OnSettingsCloseRequested;
@@ -310,6 +323,17 @@ public sealed partial class MainWindowViewModel :
     private bool CanRestoreAppState()
     {
         return !IsLoading;
+    }
+
+    private void OnAttachmentTargetChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if ((args.PropertyName == nameof(Dlss5SessionViewModel.IsOpen))
+            || (args.PropertyName == nameof(IModelPanelViewModel.AttachmentInputByteLimit))
+            || (args.PropertyName == nameof(IModelPanelViewModel.IsAttachmentLimitReached)))
+        {
+            OnPropertyChanged(nameof(WindowImageInputByteLimit));
+            OnPropertyChanged(nameof(IsWindowAttachmentLimitReached));
+        }
     }
 
     private void OnSettingsCloseRequested(object? sender, EventArgs eventArgs)

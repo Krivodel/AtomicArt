@@ -164,6 +164,9 @@ public static class DependencyInjection
         services.AddTransient<ApplicationUpdateToastPresenter>();
         services.AddTransient<Dlss5OperationToastPresenter>();
         services.AddTransient<MainWindowViewModel>();
+        services.AddSingleton<IGenerationChatStore, GenerationChatStore>();
+        services.AddTransient<GenerationChatViewModel>();
+        services.AddSingleton<GenerationChatDateFormatter>();
         services.AddTransient<OpenRouterBalanceViewModel>();
         services.AddHttpClient<IOpenRouterBalanceApiClient, OpenRouterBalanceApiClient>(
             OpenRouterBalanceApiClient.Configure)
@@ -215,12 +218,14 @@ public static class DependencyInjection
         services.AddSingleton<GalleryStatePathConverter>();
         services.AddSingleton<IGalleryStateService, GalleryStateService>();
         services.AddSingleton<IGenerationReferenceStore, GenerationReferenceStore>();
+        services.AddSingleton<GenerationChatMediaService>();
         services.AddSingleton<IGenerationReferenceDragService, GenerationReferenceDragService>();
         services.AddSingleton<GenerationReferencePreviewLoader>();
         services.AddSingleton<
             IGalleryFileOrderSynchronizer,
             GalleryFileOrderSynchronizer>();
         services.AddSingleton<IGalleryStateConsistencyService, GalleryStateConsistencyService>();
+
         return services;
     }
 
@@ -236,6 +241,8 @@ public static class DependencyInjection
             typeof(ITrayService),
             typeof(ITrayAttachmentService));
         services.AddSingleton<IUiScaleService, UiScaleService>();
+        services.AddSingleton<IChatTextSizeService, ChatTextSizeService>();
+        services.AddSingleton<IChatTextSizeController, ChatTextSizeController>();
         services.AddSingleton<IPromptTextSizeService, PromptTextSizeService>();
         services.AddSingleton<IPromptTextSizeController, PromptTextSizeController>();
         services.AddSingleton<IDeletionConfirmationService, DeletionConfirmationService>();
@@ -295,6 +302,7 @@ public static class DependencyInjection
         services.AddSingleton<ITrustedImageFileService, TrustedImageFileService>();
         services.AddSingleton<IFileRevealService, FileRevealService>();
         services.AddPicaViewer();
+
         if (OperatingSystem.IsWindows())
         {
             services.AddWindowsFileRevealPlatform();
@@ -546,5 +554,4 @@ public static class DependencyInjection
             services.AddTransient(interfaceType, provider => provider.GetRequiredService(implementationType));
         }
     }
-
 }

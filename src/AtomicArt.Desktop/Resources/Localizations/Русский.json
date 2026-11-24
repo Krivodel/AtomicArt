@@ -2,6 +2,19 @@
   "schemaVersion": 1,
   "culture": "ru-RU",
   "strings": {
+    "GenerationChat": {
+      "Chat": "Чат",
+      "History": "История",
+      "Collapse": "Свернуть чат",
+      "Edit": "Редактировать сообщение",
+      "Save": "Сохранить",
+      "ChooseVariant": "Выбрать",
+      "OpenImage": "Открыть изображение",
+      "RemoveImage": "Убрать изображение",
+      "Message": "Сообщение",
+      "Date": "{0:d MMMM}",
+      "DateWithYear": "{0:d MMMM yyyy 'г.'}"
+    },
     "Common": {
       "Error": "Ошибка",
       "Copy": "Копировать",
@@ -207,6 +220,7 @@
       "Appearance": {
         "ScaleLabel": "Масштаб",
         "PromptTextSizeLabel": "Размер текста промпта",
+        "ChatTextSizeLabel": "Размер текста чата",
         "ConfirmDeletionLabel": "Подтверждать удаление"
       },
       "ImageViewer": {

@@ -1,15 +1,27 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:i18n="https://codewf.com"
              xmlns:controls="using:AtomicArt.Desktop.Views.Gallery"
              xmlns:dlss5="using:AtomicArt.Desktop.Services.Dlss5"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:i18n="https://codewf.com"
              xmlns:picaResources="using:Pica.Viewer.Resources"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
              xmlns:uiControls="using:AtomicArt.Desktop.Controls"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationCardControl"
              x:Name="GenerationCard"
              x:DataType="gallery:GenerationItemViewModel">
+    <UserControl.Resources>
+        <MenuItem x:Key="GenerationCardChatMenuItem">
+            <MenuItem.Header>
+                <TextBlock Classes="context-menu-item-header"
+                           Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Chat}}" />
+            </MenuItem.Header>
+            <MenuItem.Icon>
+                <Path Classes="gallery-outline-icon"
+                      Data="{StaticResource AppChatIcon}" />
+            </MenuItem.Icon>
+        </MenuItem>
+    </UserControl.Resources>
     <Border x:Name="GenerationCardContainer"
             Classes="generation-card-container">
         <Border.ContextFlyout>
@@ -138,8 +150,8 @@
                 <controls:GenerationPreviewControl x:Name="GenerationPreview"
                                                    Grid.Row="0"
                                                    PreviewSize="{StaticResource GenerationCardWidth}"
-                                                   PreviewPath="{Binding DisplayThumbnailPath}"
                                                    OpenViewerCommand="{Binding $parent[controls:GenerationCardControl].OpenViewerCommand}"
+                                                   PreviewPath="{Binding DisplayThumbnailPath}"
                                                    ShowFailureDetailsCommand="{Binding $parent[controls:GenerationCardControl].ShowFailureDetailsCommand}" />
 
                 <Border x:Name="GenerationCardInfo"
@@ -169,16 +181,16 @@
 
                 <Path x:Name="FavoriteAccent"
                       Grid.Row="1"
-                      ZIndex="12"
                       Height="4"
                       Margin="2,0"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Bottom"
-                      IsHitTestVisible="False"
+                      IsVisible="{Binding IsFavorite}"
                       Data="M0,4 L0,3 C8,3 12,2.7 18,2.2 C26,1.4 31,0.1 38,0.1 L62,0.1 C69,0.1 74,1.4 82,2.2 C88,2.7 92,3 100,3 L100,4 Z"
                       Fill="{StaticResource GalleryFavoriteAccentBrush}"
+                      IsHitTestVisible="False"
                       Stretch="Fill"
-                      IsVisible="{Binding IsFavorite}" />
+                      ZIndex="12" />
 
                 <Button x:Name="PromptDragSource"
                         Grid.Row="1"
@@ -189,36 +201,36 @@
 
                 <Border x:Name="SelectionDimmingOverlay"
                         Grid.RowSpan="2"
-                        ZIndex="10"
-                        Classes="gallery-selection-dimming-overlay" />
+                        Classes="gallery-selection-dimming-overlay"
+                        ZIndex="10" />
 
                 <Border x:Name="SelectionHighlight"
                         Grid.RowSpan="2"
-                        ZIndex="15"
                         Classes="gallery-selection-highlight"
-                        Classes.selected="{Binding IsSelected}" />
+                        Classes.selected="{Binding IsSelected}"
+                        ZIndex="15" />
 
                 <Button x:Name="RevealInFolderButton"
                         Grid.Row="0"
-                        ZIndex="20"
                         Margin="{StaticResource GalleryCardActionMargin}"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Top"
                         Classes="Icon card-action card-action-left"
                         IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
-                        Click="OnRevealInFolderClick">
+                        Click="OnRevealInFolderClick"
+                        ZIndex="20">
                     <Path Classes="gallery-outline-icon"
                           Data="{x:Static picaResources:ViewerActionIconGeometry.ShowInFolder}" />
                 </Button>
 
                 <Button x:Name="DeleteButton"
                         Grid.Row="0"
-                        ZIndex="20"
                         Margin="{StaticResource GalleryCardActionMargin}"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
-                        IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
                         Classes="Icon card-action card-action-right"
+                        IsVisible="{Binding !$parent[controls:GenerationCardControl].IsSelectionMode}"
+                        ZIndex="20"
                         Command="{Binding #GenerationCard.DeleteOrCancelCommand}"
                         CommandParameter="{Binding}">
                     <Path Classes="Danger gallery-outline-icon"
@@ -226,10 +238,10 @@
                 </Button>
 
                 <Button Grid.RowSpan="2"
-                        ZIndex="30"
                         Classes="card-zone-hit-target"
                         IsVisible="{Binding $parent[controls:GenerationCardControl].IsSelectionMode}"
-                        Click="OnSelectionClick" />
+                        Click="OnSelectionClick"
+                        ZIndex="30" />
             </Grid>
         </Border>
     </Border>

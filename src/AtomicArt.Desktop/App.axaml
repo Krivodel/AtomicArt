@@ -1,6 +1,6 @@
 <Application xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:suki="using:SukiUI"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AtomicArt.Desktop.App"
              RequestedThemeVariant="Dark">
     <Application.Resources>
@@ -21,5 +21,6 @@
         <StyleInclude Source="avares://AtomicArt/Resources/TextBoxStyles.axaml" />
         <StyleInclude Source="avares://AtomicArt/Resources/Templates.axaml" />
         <StyleInclude Source="/Resources/Dlss5Styles.axaml" />
+        <StyleInclude Source="/Resources/GenerationChatStyles.axaml" />
     </Application.Styles>
 </Application>

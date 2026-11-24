@@ -24,6 +24,10 @@ public interface IGalleryItemStateSource
     string? FailureCode { get; }
     int AttachedImagesCount { get; }
     IReadOnlyList<GenerationReference>? References { get; }
+    Guid? ChatId => null;
+    IReadOnlyList<string>? ChatReferenceHashes => null;
+    GenerationChatHistory? ChatHistory => null;
+    GenerationChatResult? ChatResult => null;
     bool IsFavorite { get; }
     Guid? CorrelationId { get; }
     int? GenerationOrdinal { get; }

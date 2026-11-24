@@ -72,8 +72,12 @@ internal sealed class AttachmentVisualEntry
     public void DisposeVisual()
     {
         Unsubscribe();
-        Image.Source = null;
-        _bitmap?.Dispose();
-        _bitmap = null;
+
+        if (_bitmap is { } bitmap)
+        {
+            Image.Source = null;
+            _bitmap = null;
+            bitmap.Dispose();
+        }
     }
 }

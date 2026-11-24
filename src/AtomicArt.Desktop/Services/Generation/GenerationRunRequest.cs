@@ -9,6 +9,8 @@ public sealed record GenerationRunRequest
     public GenerationStartSnapshot StartSnapshot { get; }
     public string ProviderCredential { get; }
     public LocalCodexTurnOptions? CodexTurnOptions { get; }
+    public GenerationChatRun? ChatRun { get; init; }
+    public IReadOnlyList<GenerationReference>? ChatReferences { get; init; }
 
     public GenerationRunRequest(
         ImageGenerationRequestDto request,

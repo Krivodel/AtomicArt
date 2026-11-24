@@ -2293,38 +2293,7 @@ public sealed class UniversalNanoBananaPanelViewModelTests
         viewModel.Quote.EstimatedPrice.Should().BeGreaterThan(initialPrice);
     }
 
-    private static void SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(
-        UniversalNanoBananaPanelViewModel viewModel)
-    {
-        viewModel.PropertyChanged += (_, args) =>
-        {
-            if (string.Equals(
-                    args.PropertyName,
-                    nameof(UniversalNanoBananaPanelViewModel.AspectRatios),
-                    StringComparison.Ordinal))
-            {
-                viewModel.SelectedAspectRatio = string.Empty;
-            }
-
-            if (string.Equals(
-                    args.PropertyName,
-                    nameof(UniversalNanoBananaPanelViewModel.Resolutions),
-                    StringComparison.Ordinal))
-            {
-                viewModel.SelectedResolution = string.Empty;
-            }
-
-            if (string.Equals(
-                    args.PropertyName,
-                    nameof(UniversalNanoBananaPanelViewModel.GenerationCounts),
-                    StringComparison.Ordinal))
-            {
-                viewModel.GenerationCount = 0;
-            }
-        };
-    }
-
-    private static UniversalNanoBananaPanelViewModel CreateViewModel(
+    internal static UniversalNanoBananaPanelViewModel CreateViewModel(
         IImageGenerationApiClient? apiClient = null,
         IGenerationLifecycleEventHub? lifecycleEventHub = null,
         ISecretStore? secretStore = null,
@@ -2381,6 +2350,37 @@ public sealed class UniversalNanoBananaPanelViewModelTests
             TestApiConfiguration.CreateStateWritePolicy());
 
         return viewModel;
+    }
+
+    private static void SimulateBindingsClearingSelectionsAfterOptionSourcesRefresh(
+        UniversalNanoBananaPanelViewModel viewModel)
+    {
+        viewModel.PropertyChanged += (_, args) =>
+        {
+            if (string.Equals(
+                    args.PropertyName,
+                    nameof(UniversalNanoBananaPanelViewModel.AspectRatios),
+                    StringComparison.Ordinal))
+            {
+                viewModel.SelectedAspectRatio = string.Empty;
+            }
+
+            if (string.Equals(
+                    args.PropertyName,
+                    nameof(UniversalNanoBananaPanelViewModel.Resolutions),
+                    StringComparison.Ordinal))
+            {
+                viewModel.SelectedResolution = string.Empty;
+            }
+
+            if (string.Equals(
+                    args.PropertyName,
+                    nameof(UniversalNanoBananaPanelViewModel.GenerationCounts),
+                    StringComparison.Ordinal))
+            {
+                viewModel.GenerationCount = 0;
+            }
+        };
     }
 
     private static UniversalNanoBananaPanelViewModel CreateCompatibilityViewModel(
