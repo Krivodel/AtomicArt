@@ -22,13 +22,28 @@
                         <Grid Grid.Column="0"
                               Width="{StaticResource TitleButtonSize}"
                               Height="{StaticResource TitleButtonSize}"
-                              HorizontalAlignment="Left">
+                              HorizontalAlignment="Left"
+                              IsVisible="{Binding !CanReturnToSource}">
                             <Path HorizontalAlignment="Center"
                                   VerticalAlignment="Center"
                                   Classes="gallery-outline-icon"
                                   Data="{StaticResource AppChatIcon}"
                                   Stroke="{StaticResource MetadataTextBrush}" />
                         </Grid>
+                        <Button Grid.Column="0"
+                                Height="{StaticResource TitleButtonSize}"
+                                HorizontalAlignment="Left"
+                                IsVisible="{Binding CanReturnToSource}"
+                                Command="{Binding ReturnToSourceCommand}">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="{StaticResource GenerationChatItemSpacing}">
+                                <Path VerticalAlignment="Center"
+                                      Classes="metadata-outline-icon"
+                                      Data="{StaticResource AppBackIcon}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ReturnToSource}}" />
+                            </StackPanel>
+                        </Button>
                         <Button Grid.Column="1"
                                 Width="{StaticResource TitleButtonSize}"
                                 Height="{StaticResource TitleButtonSize}"

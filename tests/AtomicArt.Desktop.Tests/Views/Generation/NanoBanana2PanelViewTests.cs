@@ -586,7 +586,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
             try
             {
                 ComboBox resolutionComboBox = GetComboBox(view, "ResolutionComboBox");
-                Border? flashTarget = NanoBanana2PanelView.FindOptionResetFlashTarget(resolutionComboBox);
+                Border? flashTarget = NanoBanana2PanelView.FindBackgroundFlashTarget(resolutionComboBox);
                 flashTarget.Should().NotBeNull();
                 if (flashTarget is null)
                 {
@@ -600,7 +600,7 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
                 viewModel.SelectedResolution = unsupportedResolution;
                 viewModel.SelectedModel = modelWithoutResolution;
 
-                Border? activeFlashTarget = NanoBanana2PanelView.FindOptionResetFlashTarget(resolutionComboBox);
+                Border? activeFlashTarget = NanoBanana2PanelView.FindBackgroundFlashTarget(resolutionComboBox);
                 activeFlashTarget.Should().BeSameAs(flashTarget);
                 view.GetVisualDescendants()
                     .OfType<Border>()
@@ -638,6 +638,74 @@ public sealed class NanoBanana2PanelViewTests : AnimatedGalleryControlTestBase
 
                 flashTarget.Background.Should().BeSameAs(originalBackground);
                 flashTarget.BorderBrush.Should().BeSameAs(originalBorderBrush);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PromptTextBox_WithLockedInput_FlashesOnTypingAndPasteThenRestoresItsBackground(bool paste)
+    {
+        await DesktopControlTestBase.DispatchAsync(async () =>
+        {
+            using UniversalNanoBananaPanelViewModel model = NanoBanana2PanelViewTests.CreateViewModel();
+            NanoBanana2PanelView view = NanoBanana2PanelViewTests.CreateView(model);
+            Window window = DesktopControlTestBase.Show(view);
+
+            try
+            {
+                TextBox prompt = NanoBanana2PanelViewTests.GetPromptTextBox(view);
+                prompt.IsReadOnly = true;
+                prompt.Text = "Frozen request";
+                Border border = NanoBanana2PanelView.FindBackgroundFlashTarget(prompt)
+                    ?? throw new InvalidOperationException("The prompt feedback target was not found.");
+                IBrush? original = border.Background;
+
+                if (paste)
+                {
+                    prompt.RaiseEvent(new KeyEventArgs
+                    {
+                        RoutedEvent = InputElement.KeyDownEvent,
+                        Key = Key.V,
+                        KeyModifiers = KeyModifiers.Control
+                    });
+                }
+                else
+                {
+                    prompt.RaiseEvent(new TextInputEventArgs { RoutedEvent = InputElement.TextInputEvent, Text = "Changed" });
+                }
+
+                SolidColorBrush flash = border.Background.Should().BeOfType<SolidColorBrush>().Subject;
+                flash.Should().NotBeSameAs(original);
+                flash.Color.R.Should().BeGreaterThan(flash.Color.G);
+                prompt.Text.Should().Be("Frozen request");
+                TaskCompletionSource restored = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                void OnBackgroundChanged(object? sender, AvaloniaPropertyChangedEventArgs args)
+                {
+                    if (args.Property == Border.BackgroundProperty && object.ReferenceEquals(border.Background, original))
+                    {
+                        restored.TrySetResult();
+                    }
+                }
+
+                border.PropertyChanged += OnBackgroundChanged;
+
+                try
+                {
+                    await restored.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                }
+                finally
+                {
+                    border.PropertyChanged -= OnBackgroundChanged;
+                }
+
+                prompt.Text.Should().Be("Frozen request");
             }
             finally
             {

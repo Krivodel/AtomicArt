@@ -176,6 +176,7 @@ internal static class GalleryItemStateMapper
                 ? history.ReferenceHashes
                 : source.ChatReferenceHashes,
             ChatHistory = source.ChatHistory,
+            ChatGroup = source.ChatGroup,
             ChatResult = source.ChatResult is { } chatResult ? chatResult with { StorageLeaseId = null } : null,
             IsFavorite = source.IsFavorite,
             CorrelationId = ResolveGeneratingValue(source, status, source => source.CorrelationId),

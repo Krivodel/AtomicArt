@@ -14,6 +14,7 @@ public sealed record GenerationStartSnapshot
     public int AttachedImagesCount { get; }
     public IReadOnlyList<GenerationReference>? References { get; init; }
     public GenerationChatHistory? ChatHistory { get; init; }
+    public GenerationChatGroup? ChatGroup { get; init; }
     public DateTime RequestedAtUtc { get; }
 
     public GenerationStartSnapshot(

@@ -123,7 +123,7 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
     }
 
     [Fact]
-    public async Task OpenCommand_WithContinuationPending_RestoresTheCurrentVariants()
+    public async Task OpenCommand_WithContinuationPending_OpensTheOriginalAndKeepsTheGroupAccessible()
     {
         using ChatContext context = new();
         GenerationItemViewModel source = await context.RestoreSourceAsync();
@@ -137,11 +137,16 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
         context.Chat.Collapse();
         await context.Chat.OpenCommand.ExecuteAsync(source);
 
+        context.Chat.Messages.Should().HaveCount(originalCount);
+        context.Chat.Messages.Should().OnlyContain(message => !message.HasPendingResults);
+        GenerationChatGroupViewModel group = context.Chat.Messages[^1].Groups.Should().ContainSingle().Which;
+        await context.Chat.OpenGroupCommand.ExecuteAsync(group);
+
         context.Chat.Messages.Should().HaveCount(originalCount + 2);
         context.Chat.Messages[^1].HasPendingResults.Should().BeTrue();
         context.Chat.CanSubmit.Should().BeTrue();
         context.Panel.Verify(panel => panel.TryApplyPresetAsync(
-            It.IsAny<GenerationPanelPreset>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+            It.IsAny<GenerationPanelPreset>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
         batch.Runs.Should().OnlyContain(run => !run.Completion.IsCompleted);
 
         foreach (GenerationChatRun run in batch.Runs)
@@ -417,7 +422,7 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
                 double choiceBottom = (choose.TranslatePoint(new Point(0d, choose.Bounds.Height), reply) ?? throw new InvalidOperationException()).Y;
                 double toolsTop = (tools.TranslatePoint(default, reply) ?? throw new InvalidOperationException()).Y;
                 choiceTop.Should().BeGreaterThanOrEqualTo(imageBottom);
-                choose.Content.Should().Be("Choose");
+                choose.Content.Should().Be("Go to this chat");
                 choose.IsEnabled.Should().BeTrue();
                 choose.Bounds.Height.Should().BeGreaterThan(25d);
                 choiceBottom.Should().BeLessThanOrEqualTo(toolsTop);
@@ -773,7 +778,7 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
         context.Chat.Messages[^1].Text.Should().Be(result.Text);
         context.Chat.Messages[^1].Images.Should().ContainSingle().Which.Reference.Should().Be(result.Image);
         context.Panel.Verify(panel => panel.TryApplyPresetAsync(
-            It.IsAny<GenerationPanelPreset>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<GenerationPanelPreset>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
 
         if (otherResultPending)
         {
@@ -925,13 +930,18 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
         public Mock<IAttachedImagePreparationService> Preparation { get; } = new Mock<IAttachedImagePreparationService>();
         public Mock<IGenerationReferenceStore> References => _references;
         public Mock<TimeProvider> Clock { get; } = new Mock<TimeProvider>();
+        public GalleryViewModel Gallery => _gallery;
 
         private readonly LocalizationService _localization;
         private readonly Mock<IGenerationReferenceStore> _references = new();
-        private readonly GalleryViewModel _gallery = GalleryViewModelTestFactory.CreateViewModel();
+        private readonly GalleryViewModel _gallery;
+        private readonly GalleryItemsController _items = new(new PassthroughTrustedImageFileService(),
+            GenerationItemStatusDescriptorRegistryTestFactory.Create(), TestApiConfiguration.CreateGalleryOrderTimestampPolicy(),
+            TestLocalizationTextProvider.Default);
 
         public ChatContext()
         {
+            _gallery = GalleryViewModelTestFactory.CreateViewModel(galleryItemsController: _items);
             AtomicArtDataPathProvider paths = new(DesktopTestDirectories.CreateUniqueDirectoryPath());
             _localization = new LocalizationService(paths, TestApiConfiguration.CreateTrustedFileStreamFactory(),
                 NullLogger<Krivodeling.Localization.Avalonia.LocalizationService>.Instance, new WeakReferenceMessenger());
@@ -1006,18 +1016,25 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
             return _gallery.Items.Single();
         }
 
-        public GenerationChatResult AddResultCard(GenerationChatBatch batch, string text)
+        public GenerationChatResult AddResultCard(GenerationChatBatch batch, string text, int index = 0)
         {
             GenerationChatResult result = CreateResult(text);
             GenerationItemDto item = GenerationItemDtoTestFactory.Create(
-                id: batch.Runs[0].Id, prompt: batch.UserMessage.Text, imagePath: null) with
+                id: batch.Runs[index].Id, prompt: batch.UserMessage.Text, imagePath: null) with
             {
                 ModelId = LocalCodexImageModel.Option.Id
             };
-            _gallery.AddGeneratedItems(new GenerationItemDto[] { item }, 0);
-            GenerationItemViewModel card = _gallery.Items.Single(candidate => candidate.Id == item.Id);
+            GenerationStartSnapshot start = new(item.ModelId, item.ModelDisplayName, item.Prompt, item.AspectRatio,
+                item.Resolution, 1, batch.UserMessage.Images.Count, item.CreatedAtUtc)
+            {
+                ChatHistory = batch.History,
+                ChatGroup = batch.Group is { } group ? group with { VariantOrdinal = batch.Runs[index].Ordinal } : null,
+                References = batch.UserMessage.Images
+            };
+            GenerationItemViewModel card = GenerationItemViewModel.CreatePlaceholder(start, batch.Runs[index].Id, index,
+                item.CreatedAtUtc, GenerationItemStatusDescriptorRegistryTestFactory.Create(), TestLocalizationTextProvider.Default);
+            _items.AddPlaceholders(new GenerationItemViewModel[] { card });
             card.UpdateFromResult(item, null, null, result);
-            card.ChatHistory = batch.History;
 
             return result;
         }

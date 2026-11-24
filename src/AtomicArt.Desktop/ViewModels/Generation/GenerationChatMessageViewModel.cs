@@ -32,6 +32,8 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
         _images.Count, LocalCodexImageModel.Option.MaxAttachedImages);
     public bool HasPendingResults => _images.Any(image => image.IsPending);
     public bool CanEdit => !IsTurnPending && !HasPendingResults && !IsVariantChoice;
+    public IReadOnlyList<GenerationChatGroupViewModel> Groups { get; private set; } = Array.Empty<GenerationChatGroupViewModel>();
+    public bool HasGroups => Groups.Count > 0;
     public int AttachmentInputByteLimit => _media.MaxInputImageBytes;
     public bool IsAttachmentLimitReached => !HasAvailableImageSlots;
     public bool HasDateLabel => !string.IsNullOrWhiteSpace(DateLabel);
@@ -157,6 +159,24 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     {
         _images.Add(new GenerationChatImageViewModel(id, isPending: true));
         RefreshImages();
+    }
+
+    internal void RemoveVariant(Guid id)
+    {
+        GenerationChatImageViewModel? image = _images.FirstOrDefault(candidate => candidate.Id == id);
+
+        if (image is not null)
+        {
+            _images.Remove(image);
+            RefreshImages();
+        }
+    }
+
+    internal void SetGroups(IReadOnlyList<GenerationChatGroupViewModel> groups)
+    {
+        Groups = groups;
+        OnPropertyChanged(nameof(Groups));
+        OnPropertyChanged(nameof(HasGroups));
     }
 
     internal void CompleteImage(Guid id, GenerationChatResult? result)

@@ -52,7 +52,8 @@ internal static class GalleryViewModelTestFactory
         IMessenger? messenger = null,
         IPicaImageFileActions? picaImageFileActions = null,
         IGallerySaveNotificationService? saveNotificationService = null,
-        IGenerationReferenceStore? referenceStore = null)
+        IGenerationReferenceStore? referenceStore = null,
+        GalleryItemsController? galleryItemsController = null)
     {
         IFileRevealService revealService =
             fileRevealService ?? new SuccessfulFileRevealService();
@@ -94,7 +95,7 @@ internal static class GalleryViewModelTestFactory
         IMessenger localizationMessenger =
             messenger ?? new WeakReferenceMessenger();
         IGenerationReferenceStore references = referenceStore ?? Mock.Of<IGenerationReferenceStore>();
-        GalleryItemsController itemsController = new(
+        GalleryItemsController itemsController = galleryItemsController ?? new GalleryItemsController(
             trustedService,
             statusRegistry,
             TestApiConfiguration.CreateGalleryOrderTimestampPolicy(),

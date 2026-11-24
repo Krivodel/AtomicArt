@@ -22,13 +22,18 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     public string? RepeatPrompt => _active?.RepeatPrompt;
     public long ConversationVersion => _conversationVersion;
     public double TextSize => _textSizes.CurrentTextSize;
+    public bool CanReturnToSource => _active?.Group is { } group
+        && _gallery?.Items.Any(card => card.Id == group.SourceCardId) == true;
 
     private static readonly ReadOnlyObservableCollection<GenerationChatMessageViewModel> EmptyMessages =
         new(new ObservableCollection<GenerationChatMessageViewModel>());
 
     private readonly Func<GenerationChatSessionViewModel> _createSession;
     private readonly IChatTextSizeController _textSizes;
+    private readonly NanoBanana2PanelTextFormatter _formatter;
+    private readonly GenerationChatDateFormatter _dates;
     private readonly Dictionary<Guid, GenerationChatSessionViewModel> _sessions = [];
+    private readonly Dictionary<Guid, GenerationChatSessionViewModel> _groups = [];
     [ObservableProperty]
     private bool _isExpanded;
     private GenerationChatSessionViewModel? _active;
@@ -53,9 +58,12 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         ArgumentNullException.ThrowIfNull(media);
         ArgumentNullException.ThrowIfNull(references);
         ArgumentNullException.ThrowIfNull(formatter);
+        _formatter = formatter;
         ArgumentNullException.ThrowIfNull(clipboard);
         ArgumentNullException.ThrowIfNull(chats);
         ArgumentNullException.ThrowIfNull(dates);
+        _dates = dates;
+        _dates.Changed += OnGroupLabelsChanged;
         _textSizes = textSizeController ?? throw new ArgumentNullException(nameof(textSizeController));
         _textSizes.TextSizeChanged += OnTextSizeChanged;
         _createSession = () => new GenerationChatSessionViewModel(
@@ -71,6 +79,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
 
         _isDisposed = true;
         _textSizes.TextSizeChanged -= OnTextSizeChanged;
+        _dates.Changed -= OnGroupLabelsChanged;
 
         if (_gallery is not null)
         {
@@ -79,12 +88,14 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
 
         Detach();
 
-        foreach (GenerationChatSessionViewModel session in _sessions.Values)
+        foreach (GenerationChatSessionViewModel session in _sessions.Values.Concat(_groups.Values))
         {
+            session.PropertyChanged -= OnGroupChanged;
             session.Dispose();
         }
 
         _sessions.Clear();
+        _groups.Clear();
     }
 
     internal static GenerationChatHistory BuildHistory(GenerationItemViewModel item, GenerationReference? image)
@@ -125,12 +136,73 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         IsExpanded = false;
     }
 
-    internal Task SubmitAsync(
+    internal async Task SubmitAsync(
         NanoBanana2GenerationParameters parameters,
         Func<NanoBanana2GenerationParameters, CancellationToken, Task> submit,
         CancellationToken ct)
     {
-        return _active?.SubmitAsync(parameters, submit, ct) ?? Task.CompletedTask;
+        if (_active is not { } session || _gallery is null || _panel is null)
+        {
+            return;
+        }
+
+        GenerationChatSessionViewModel? original = null;
+
+        if (!session.IsGroup && session.Source is { } source)
+        {
+            original = session;
+            session = _createSession();
+            session.Connect(_gallery, _panel);
+
+            try
+            {
+                await session.OpenSessionAsync(source, null, ct);
+
+                if (_isDisposed || !session.HasChat)
+                {
+                    session.Dispose();
+                    return;
+                }
+
+                session.BeginGroup();
+                session.PropertyChanged += OnGroupChanged;
+                _groups.Add(session.GroupId.GetValueOrDefault(), session);
+
+                if (object.ReferenceEquals(_active, original))
+                {
+                    Activate(session);
+                }
+            }
+            catch (Exception)
+            {
+                session.Dispose();
+                throw;
+            }
+        }
+
+        try
+        {
+            await session.SubmitAsync(parameters, submit, ct);
+        }
+        catch (Exception)
+        {
+            if (session.IsGroup && session.Group is null)
+            {
+                _groups.Remove(session.GroupId.GetValueOrDefault());
+
+                if (object.ReferenceEquals(_active, session))
+                {
+                    Activate(original?.HasChat == true ? original : null);
+                }
+
+                session.PropertyChanged -= OnGroupChanged;
+                session.Dispose();
+            }
+
+            throw;
+        }
+
+        RefreshGroupLinks();
     }
 
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
@@ -143,6 +215,8 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
             OnPropertyChanged(nameof(CanSubmit));
             OpenCommand.NotifyCanExecuteChanged();
             ChooseVariantCommand.NotifyCanExecuteChanged();
+            ReturnToSourceCommand.NotifyCanExecuteChanged();
+            OpenGroupCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -182,7 +256,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     {
         if (image is not null && _active?.GetVariantCard(image) is { } card)
         {
-            await ExecuteAsync(token => OpenSessionAsync(card, null, token), nameof(ChooseVariantAsync), ct);
+            await OpenAsync(card, ct);
         }
     }
 
@@ -273,6 +347,9 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         OnPropertyChanged(nameof(CanAddVariants));
         OnPropertyChanged(nameof(RepeatPrompt));
         OnPropertyChanged(nameof(ConversationVersion));
+        OnPropertyChanged(nameof(CanReturnToSource));
+        ReturnToSourceCommand.NotifyCanExecuteChanged();
+        RefreshGroupLinks();
     }
 
     [RelayCommand]
@@ -295,6 +372,23 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
 
     private void OnSessionChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(GenerationChatSessionViewModel.HasGroupVariants))
+        {
+            RefreshGroupLinks();
+
+            if (_active is { IsGroup: true, HasGroupVariants: false })
+            {
+                if (CanReturnToSource)
+                {
+                    ReturnToSourceCommand.Execute(null);
+                }
+                else
+                {
+                    Detach();
+                }
+            }
+        }
+
         if (e.PropertyName is nameof(GenerationChatSessionViewModel.IsBusy) or nameof(GenerationChatSessionViewModel.CanSubmit))
         {
             OnPropertyChanged(nameof(IsBusy));
@@ -306,6 +400,14 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         {
             OnPropertyChanged(nameof(CanAddVariants));
             OnPropertyChanged(nameof(RepeatPrompt));
+        }
+
+        OnPropertyChanged(nameof(CanReturnToSource));
+        ReturnToSourceCommand.NotifyCanExecuteChanged();
+
+        if (!IsLoading && _active?.AutoContinueImage is { } image && ChooseVariantCommand.CanExecute(image))
+        {
+            ChooseVariantCommand.Execute(image);
         }
     }
 
@@ -331,5 +433,9 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
             _sessions.Remove(entry.Key);
             session.Dispose();
         }
+
+        RefreshGroupLinks();
+        OnPropertyChanged(nameof(CanReturnToSource));
+        ReturnToSourceCommand.NotifyCanExecuteChanged();
     }
 }

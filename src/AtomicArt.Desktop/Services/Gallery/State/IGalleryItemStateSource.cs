@@ -27,6 +27,7 @@ public interface IGalleryItemStateSource
     Guid? ChatId => null;
     IReadOnlyList<string>? ChatReferenceHashes => null;
     GenerationChatHistory? ChatHistory => null;
+    GenerationChatGroup? ChatGroup => null;
     GenerationChatResult? ChatResult => null;
     bool IsFavorite { get; }
     Guid? CorrelationId { get; }

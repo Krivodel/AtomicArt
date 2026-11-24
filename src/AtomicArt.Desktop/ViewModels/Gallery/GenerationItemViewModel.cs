@@ -28,6 +28,7 @@ public sealed partial class GenerationItemViewModel :
     public Guid? ChatId { get; private set; }
     public IReadOnlyList<string>? ChatReferenceHashes { get; private set; }
     public GenerationChatHistory? ChatHistory { get; internal set; }
+    public GenerationChatGroup? ChatGroup { get; private init; }
     public GenerationChatResult? ChatResult { get; private set; }
     public bool SupportsChat => LocalCodexImageModel.Matches(ModelId);
     public string DisplayImagePath => ImagePath ?? string.Empty;
@@ -145,6 +146,7 @@ public sealed partial class GenerationItemViewModel :
         AspectRatio = start.AspectRatio;
         RequestSettings = start.RequestSettings;
         References = start.References;
+        ChatGroup = start.ChatGroup;
         ChatHistory = start.ChatHistory is { } history
             ? new GenerationChatHistory(history.Messages, history.IncludesCardTurn)
             : null;
@@ -216,6 +218,7 @@ public sealed partial class GenerationItemViewModel :
             ChatId = normalizedState.ChatId,
             ChatReferenceHashes = normalizedState.ChatReferenceHashes,
             ChatHistory = normalizedState.ChatHistory,
+            ChatGroup = normalizedState.ChatGroup,
             ChatResult = normalizedState.ChatResult,
             IsFavorite = normalizedState.IsFavorite
         };

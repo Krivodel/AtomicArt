@@ -142,6 +142,11 @@ public sealed class GalleryStateService : IGalleryStateService
 
             foreach (GalleryItemState item in runtimeState.Items)
             {
+                if (item.ChatGroup is { Context: { } context } group)
+                {
+                    await _chats.SaveAsync(group.ContextId, context, ct).ConfigureAwait(false);
+                }
+
                 if (item.ChatId is Guid id && item.ChatHistory is { } history)
                 {
                     await _chats.SaveAsync(id, history, ct).ConfigureAwait(false);
@@ -184,7 +189,8 @@ public sealed class GalleryStateService : IGalleryStateService
 
     private static HashSet<Guid> GetChatIds(GalleryState? state)
     {
-        return (state?.Items ?? Array.Empty<GalleryItemState>()).Select(item => item.ChatId).OfType<Guid>().ToHashSet();
+        return (state?.Items ?? Array.Empty<GalleryItemState>())
+            .SelectMany(item => new Guid?[] { item.ChatId, item.ChatGroup?.ContextId }).OfType<Guid>().ToHashSet();
     }
 
     private static HashSet<string> GetReferenceHashes(GalleryState? state)
@@ -196,7 +202,8 @@ public sealed class GalleryStateService : IGalleryStateService
     private static IEnumerable<string> GetReferenceHashes(GalleryItemState item)
     {
         IEnumerable<string> hashes = (item.References ?? Array.Empty<GenerationReference>()).Select(reference => reference.Hash)
-            .Concat(item.ChatHistory?.ReferenceHashes ?? item.ChatReferenceHashes ?? Array.Empty<string>());
+            .Concat(item.ChatHistory?.ReferenceHashes ?? item.ChatReferenceHashes ?? Array.Empty<string>())
+            .Concat(item.ChatGroup?.ReferenceHashes ?? Array.Empty<string>());
 
         return item.ChatResult?.Image is { } result
             ? hashes.Append(result.Hash)

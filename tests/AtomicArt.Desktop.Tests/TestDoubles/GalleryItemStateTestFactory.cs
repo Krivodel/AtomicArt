@@ -30,7 +30,8 @@ internal static class GalleryItemStateTestFactory
         GenerationChatHistory? chatHistory = null,
         GenerationChatResult? chatResult = null,
         string? modelId = null,
-        Guid? chatId = null)
+        Guid? chatId = null,
+        GenerationChatGroup? chatGroup = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
 
@@ -56,6 +57,7 @@ internal static class GalleryItemStateTestFactory
             References = references,
             ChatId = chatId,
             ChatHistory = chatHistory,
+            ChatGroup = chatGroup,
             ChatResult = chatResult,
             IsFavorite = isFavorite
         };

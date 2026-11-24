@@ -116,6 +116,7 @@ public partial class NanoBanana2PanelView : UserControl
     private OptionResetFlashState? _aspectRatioResetFlashState;
     private OptionResetFlashState? _resolutionResetFlashState;
     private OptionResetFlashState? _generationCountResetFlashState;
+    private OptionResetFlashState? _promptLockedFlashState;
     private INotifyCollectionChanged? _attachmentFocusCollection;
     private UniversalNanoBananaPanelViewModel? _selectionResetViewModel;
     private ScrollViewer? _lastAspectRatioPointerScrollViewer;
@@ -160,6 +161,39 @@ public partial class NanoBanana2PanelView : UserControl
         };
         _temperaturePopupCloseTimer.Tick += OnTemperaturePopupCloseTimerTick;
         CatalogLoadingIndicatorHost.PropertyChanged += OnCatalogLoadingIndicatorHostPropertyChanged;
+        PromptTextBox.AddHandler(TextInputEvent, OnPromptTextInput, RoutingStrategies.Tunnel, handledEventsToo: true);
+        PromptTextBox.AddHandler(KeyDownEvent, OnPromptKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
+        PromptTextBox.AddHandler(TextBox.PastingFromClipboardEvent, OnPromptPasting, RoutingStrategies.Tunnel, handledEventsToo: true);
+    }
+
+    internal static Border? FindBackgroundFlashTarget(TemplatedControl control)
+    {
+        ArgumentNullException.ThrowIfNull(control);
+        control.ApplyTemplate();
+
+        Border? bestTarget = null;
+        double bestScore = double.NegativeInfinity;
+        int visualIndex = 0;
+
+        foreach (Border border in control.GetVisualDescendants().OfType<Border>())
+        {
+            if (!NanoBanana2PanelView.IsBackgroundFlashCandidate(control, border))
+            {
+                visualIndex++;
+                continue;
+            }
+
+            double score = NanoBanana2PanelView.GetBackgroundFlashCandidateScore(control, border, visualIndex);
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestTarget = border;
+            }
+
+            visualIndex++;
+        }
+
+        return bestTarget;
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -204,6 +238,73 @@ public partial class NanoBanana2PanelView : UserControl
         }
 
         UnsubscribeViewModelEvents();
+    }
+
+    private static OptionResetFlashState? RestartOptionResetFlash(
+        ComboBox comboBox,
+        OptionResetFlashState? currentState)
+    {
+        currentState?.CancelAndRestore();
+        Border? flashTarget = NanoBanana2PanelView.FindBackgroundFlashTarget(comboBox);
+        if (flashTarget is null)
+        {
+            return null;
+        }
+
+        OptionResetFlashState flashState = OptionResetFlashState.Create(flashTarget);
+        _ = NanoBanana2PanelView.RunOptionResetFlashAsync(flashState);
+
+        return flashState;
+    }
+
+    private static bool IsBackgroundFlashCandidate(TemplatedControl control, Border border)
+    {
+        double width = border.Bounds.Width;
+        double height = border.Bounds.Height;
+        if (!border.IsEffectivelyVisible || (width <= 0d) || (height <= 0d))
+        {
+            return false;
+        }
+
+        double controlWidth = control.Bounds.Width;
+        double controlHeight = control.Bounds.Height;
+        if ((controlWidth <= 0d) || (controlHeight <= 0d))
+        {
+            return true;
+        }
+
+        if (width > controlWidth + OptionResetFlashCandidateBoundsTolerance
+            || height > controlHeight + OptionResetFlashCandidateBoundsTolerance)
+        {
+            return false;
+        }
+
+        double controlArea = controlWidth * controlHeight;
+        double borderArea = NanoBanana2PanelView.GetBackgroundFlashCandidateArea(border);
+        return borderArea / controlArea >= OptionResetFlashMinimumCoverage;
+    }
+
+    private static double GetBackgroundFlashCandidateScore(
+        TemplatedControl control,
+        Border border,
+        int visualIndex)
+    {
+        double controlArea = control.Bounds.Width * control.Bounds.Height;
+        double borderArea = NanoBanana2PanelView.GetBackgroundFlashCandidateArea(border);
+        double areaScore = controlArea > 0d
+            ? 1d - Math.Abs(controlArea - borderArea) / controlArea
+            : borderArea;
+        double backgroundScore = border.Background is not null ? 1000d : 0d;
+        double borderBrushScore = border.BorderBrush is not null ? 100d : 0d;
+        double cornerScore = NanoBanana2PanelView.HasCornerRadius(border.CornerRadius) ? 10d : 0d;
+        double visualOrderScore = visualIndex / 1000d;
+
+        return backgroundScore + borderBrushScore + cornerScore + areaScore + visualOrderScore;
+    }
+
+    private static double GetBackgroundFlashCandidateArea(Border border)
+    {
+        return border.Bounds.Width * border.Bounds.Height;
     }
 
     private async void OnPromptLostFocus(object? sender, RoutedEventArgs e)
@@ -608,36 +709,6 @@ public partial class NanoBanana2PanelView : UserControl
         ];
     }
 
-    internal static Border? FindOptionResetFlashTarget(ComboBox comboBox)
-    {
-        ArgumentNullException.ThrowIfNull(comboBox);
-        comboBox.ApplyTemplate();
-
-        Border? bestTarget = null;
-        double bestScore = double.NegativeInfinity;
-        int visualIndex = 0;
-
-        foreach (Border border in comboBox.GetVisualDescendants().OfType<Border>())
-        {
-            if (!IsOptionResetFlashCandidate(comboBox, border))
-            {
-                visualIndex++;
-                continue;
-            }
-
-            double score = GetOptionResetFlashCandidateScore(comboBox, border, visualIndex);
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestTarget = border;
-            }
-
-            visualIndex++;
-        }
-
-        return bestTarget;
-    }
-
     internal static bool CanShowAspectRatioHint(string? aspectRatio)
     {
         return !string.IsNullOrWhiteSpace(aspectRatio)
@@ -744,23 +815,6 @@ public partial class NanoBanana2PanelView : UserControl
         descriptor.SetState(this, nextState);
     }
 
-    private static OptionResetFlashState? RestartOptionResetFlash(
-        ComboBox comboBox,
-        OptionResetFlashState? currentState)
-    {
-        currentState?.CancelAndRestore();
-        Border? flashTarget = FindOptionResetFlashTarget(comboBox);
-        if (flashTarget is null)
-        {
-            return null;
-        }
-
-        OptionResetFlashState flashState = OptionResetFlashState.Create(flashTarget);
-        _ = RunOptionResetFlashAsync(flashState);
-
-        return flashState;
-    }
-
     private static async Task RunOptionResetFlashAsync(OptionResetFlashState flashState)
     {
         SolidColorBrush flashBrush = new(OptionResetFlashColor)
@@ -822,6 +876,8 @@ public partial class NanoBanana2PanelView : UserControl
 
     private void StopOptionResetFlashAnimations()
     {
+        _promptLockedFlashState?.CancelAndRestore();
+        _promptLockedFlashState = null;
         foreach (OptionResetFlashDescriptor descriptor in OptionResetFlashDescriptors)
         {
             descriptor.GetState(this)?.CancelAndRestore();
@@ -829,54 +885,46 @@ public partial class NanoBanana2PanelView : UserControl
         }
     }
 
-    private static bool IsOptionResetFlashCandidate(ComboBox comboBox, Border border)
+    private void FlashLockedPrompt(RoutedEventArgs e)
     {
-        double width = border.Bounds.Width;
-        double height = border.Bounds.Height;
-        if ((width <= 0d) || (height <= 0d))
+        if (!PromptTextBox.IsReadOnly)
         {
-            return false;
+            return;
         }
 
-        double comboWidth = comboBox.Bounds.Width;
-        double comboHeight = comboBox.Bounds.Height;
-        if ((comboWidth <= 0d) || (comboHeight <= 0d))
-        {
-            return true;
-        }
+        e.Handled = true;
+        _promptLockedFlashState?.CancelAndRestore();
+        Border? border = NanoBanana2PanelView.FindBackgroundFlashTarget(PromptTextBox);
 
-        if (width > comboWidth + OptionResetFlashCandidateBoundsTolerance
-            || height > comboHeight + OptionResetFlashCandidateBoundsTolerance)
+        if (border is not null)
         {
-            return false;
+            _promptLockedFlashState = OptionResetFlashState.Create(border);
+            _ = NanoBanana2PanelView.RunOptionResetFlashAsync(_promptLockedFlashState);
         }
-
-        double comboArea = comboWidth * comboHeight;
-        double borderArea = GetOptionResetFlashCandidateArea(border);
-        return borderArea / comboArea >= OptionResetFlashMinimumCoverage;
     }
 
-    private static double GetOptionResetFlashCandidateScore(
-        ComboBox comboBox,
-        Border border,
-        int visualIndex)
+    private void OnPromptTextInput(object? sender, TextInputEventArgs e)
     {
-        double comboArea = comboBox.Bounds.Width * comboBox.Bounds.Height;
-        double borderArea = GetOptionResetFlashCandidateArea(border);
-        double areaScore = comboArea > 0d
-            ? 1d - Math.Abs(comboArea - borderArea) / comboArea
-            : borderArea;
-        double backgroundScore = border.Background is not null ? 1000d : 0d;
-        double borderBrushScore = border.BorderBrush is not null ? 100d : 0d;
-        double cornerScore = HasCornerRadius(border.CornerRadius) ? 10d : 0d;
-        double visualOrderScore = visualIndex / 1000d;
-
-        return backgroundScore + borderBrushScore + cornerScore + areaScore + visualOrderScore;
+        if (!string.IsNullOrEmpty(e.Text))
+        {
+            FlashLockedPrompt(e);
+        }
     }
 
-    private static double GetOptionResetFlashCandidateArea(Border border)
+    private void OnPromptKeyDown(object? sender, KeyEventArgs e)
     {
-        return border.Bounds.Width * border.Bounds.Height;
+        bool clipboardEdit = e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key is Key.V or Key.X;
+        bool insertPaste = e.KeyModifiers.HasFlag(KeyModifiers.Shift) && e.Key == Key.Insert;
+
+        if (clipboardEdit || insertPaste || e.Key is Key.Back or Key.Delete or Key.Enter or Key.Space)
+        {
+            FlashLockedPrompt(e);
+        }
+    }
+
+    private void OnPromptPasting(object? sender, RoutedEventArgs e)
+    {
+        FlashLockedPrompt(e);
     }
 
     private static bool HasCornerRadius(CornerRadius cornerRadius)

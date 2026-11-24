@@ -36,6 +36,8 @@ public sealed class GalleryItemState : IGalleryItemStateSource
     [JsonIgnore]
     public GenerationChatHistory? ChatHistory { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GenerationChatGroup? ChatGroup { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public GenerationChatResult? ChatResult { get; init; }
     public bool IsFavorite { get; init; }
     public Guid? CorrelationId { get; init; }

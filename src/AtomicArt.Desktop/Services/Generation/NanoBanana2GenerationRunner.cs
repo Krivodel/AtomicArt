@@ -48,7 +48,12 @@ public sealed class NanoBanana2GenerationRunner : INanoBanana2GenerationRunner, 
                 GenerationStartSnapshot startSnapshot = _requestBuilder.CreateStartSnapshot(
                     request,
                     singleGenerationParameters) with
-                { ChatHistory = parameters.ChatBatch?.History };
+                {
+                    ChatHistory = parameters.ChatBatch?.History,
+                    ChatGroup = parameters.ChatBatch?.Group is { } group
+                        ? group with { VariantOrdinal = parameters.ChatBatch.Runs[generationIndex].Ordinal }
+                        : null
+                };
                 GenerationRunRequest runRequest = new(request, startSnapshot, providerCredential,
                     singleGenerationParameters.CodexTurnOptions)
                 {

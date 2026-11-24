@@ -8,6 +8,10 @@ public static class GenerationChatLocalizationKeys
     public const string Edit = "GenerationChat.Edit";
     public const string Save = "GenerationChat.Save";
     public const string ChooseVariant = "GenerationChat.ChooseVariant";
+    public const string ReturnToSource = "GenerationChat.ReturnToSource";
+    public const string VariantsOne = "GenerationChat.VariantsOne";
+    public const string VariantsFew = "GenerationChat.VariantsFew";
+    public const string VariantsMany = "GenerationChat.VariantsMany";
     public const string OpenImage = "GenerationChat.OpenImage";
     public const string RemoveImage = "GenerationChat.RemoveImage";
     public const string Message = "GenerationChat.Message";

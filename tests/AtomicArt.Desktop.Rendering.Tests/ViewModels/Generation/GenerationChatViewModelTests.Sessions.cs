@@ -160,12 +160,15 @@ public sealed partial class GenerationChatViewModelTests
         otherReply.Images.Should().OnlyContain(image => image.IsPending);
         await context.Chat.OpenCommand.ExecuteAsync(source);
 
+        context.Chat.Messages[^1].Should().NotBeSameAs(originalReply);
+        await context.Chat.OpenGroupCommand.ExecuteAsync(context.Chat.Messages[^1].Groups.Single());
         context.Chat.Messages[^1].Should().BeSameAs(originalReply);
         originalReply.Images.Should().HaveCount(2);
         originalReply.Images[0].Reference.Should().Be(result.Image);
         originalReply.Images[0].CanChoose.Should().BeTrue();
         originalReply.Images[1].IsPending.Should().BeTrue();
         await context.Chat.OpenCommand.ExecuteAsync(other);
+        await context.Chat.OpenGroupCommand.ExecuteAsync(context.Chat.Messages[^1].Groups.Single());
         context.Chat.Messages[^1].Should().BeSameAs(otherReply);
 
         foreach (GenerationChatRun run in first.Runs.Concat(second.Runs))

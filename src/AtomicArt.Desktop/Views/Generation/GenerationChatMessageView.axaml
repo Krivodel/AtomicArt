@@ -216,6 +216,30 @@
                                                   BackdropCornerRadius="{StaticResource ShellCornerRadius}"
                                                   IsAttachmentLimitReached="{Binding IsAttachmentLimitReached}" />
             </Grid>
+            <ItemsControl IsVisible="{Binding HasGroups}"
+                          ItemsSource="{Binding Groups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="generation:GenerationChatGroupViewModel">
+                        <Button MaxWidth="{StaticResource GenerationChatBubbleMaxWidth}"
+                                Margin="{StaticResource GenerationChatEditorActionsMargin}"
+                                HorizontalAlignment="Left"
+                                HorizontalContentAlignment="Stretch"
+                                Classes="generation-chat-group"
+                                AutomationProperties.Name="{Binding Label}"
+                                Command="{Binding $parent[views:GenerationChatView].((generation:GenerationChatViewModel)DataContext).OpenGroupCommand}"
+                                CommandParameter="{Binding}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0"
+                                           TextTrimming="CharacterEllipsis"
+                                           Text="{Binding Prompt}" />
+                                <TextBlock Grid.Column="1"
+                                           Margin="{StaticResource AttachmentListMargin}"
+                                           Text="{Binding CountText}" />
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </StackPanel>
     </views:GenerationChatReveal>
 </UserControl>

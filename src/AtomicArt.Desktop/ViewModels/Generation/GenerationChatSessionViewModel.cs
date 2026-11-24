@@ -23,11 +23,11 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
     internal GenerationItemViewModel? Source => _source;
     internal bool CanSubmit => !_isSubmitting && (_pendingSourceImage is null);
-    internal bool CanAddVariants => RepeatBatch is not null;
+    internal bool CanAddVariants => IsGroup || RepeatBatch is not null;
     internal string? RepeatPrompt => RepeatBatch?.Generation.UserMessage.Text;
 
     private ConversationBatch? RepeatBatch => _repeatInFlight ?? (_conversationBatches.LastOrDefault() is { } batch
-        && (object.ReferenceEquals(batch.Reply, _variantReply) || batch.Reply.HasPendingResults) ? batch : null);
+        && (IsGroup || object.ReferenceEquals(batch.Reply, _variantReply) || batch.Reply.HasPendingResults) ? batch : null);
 
     private readonly GenerationChatMediaService _media;
     private readonly IGenerationReferenceStore _references;
@@ -219,8 +219,8 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
             }
 
             GenerationChatRun[] runs = Enumerable.Range(0, parameters.GenerationCount)
-                .Select(_ => new GenerationChatRun()).ToArray();
-            GenerationChatBatch batch = new(history, user, runs);
+                .Select(_ => new GenerationChatRun { Ordinal = _nextVariantOrdinal++ }).ToArray();
+            GenerationChatBatch batch = new(history, user, runs, CreateGroup(history, user));
 
             if (version == _sessionVersion)
             {
@@ -309,6 +309,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
     private void ResetConversation()
     {
         _sessionVersion++;
+        DetachGroupCards();
 
         if (_source is not null)
         {
@@ -331,6 +332,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
     private void AppendTurn(GenerationChatBatch batch, long version)
     {
+        _autoContinueSingle &= batch.Runs.Count == 1;
         GenerationChatMessageViewModel user = CreateMessage(batch.UserMessage);
         user.IsTurnPending = true;
         user.AnimateInsertion = true;
@@ -345,7 +347,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
         _conversationBatches.Add(new ConversationBatch(batch, user, reply));
 
-        if (batch.Runs.Count > 1)
+        if (IsGroup || batch.Runs.Count > 1)
         {
             _variantReply = reply;
             reply.IsVariantChoice = true;
@@ -354,6 +356,8 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
         _messages.Add(user);
         _messages.Add(reply);
+        LockGroupMessages();
+        RefreshGroupCards();
         UpdateDateLabels();
         NotifyRepeatState();
 
@@ -365,6 +369,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
     private void AppendVariants(ConversationBatch previous, GenerationChatBatch batch, long version)
     {
+        _autoContinueSingle = false;
         int index = _conversationBatches.IndexOf(previous);
         GenerationChatBatch combined = previous.Generation with
         {
@@ -401,6 +406,11 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
             return;
         }
 
+        if (!reply.Images.Any(image => image.Id == run.Id))
+        {
+            return;
+        }
+
         reply.CompleteImage(run.Id, result);
         user.IsTurnPending = reply.HasPendingResults;
         RefreshVariantChoices();
@@ -426,6 +436,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
         OnPropertyChanged(nameof(IsBusy));
         OnPropertyChanged(nameof(CanSubmit));
         NotifyRepeatState();
+        OnPropertyChanged(nameof(AutoContinueImage));
     }
 
     private void CompleteSource(GenerationItemViewModel item)
@@ -621,7 +632,12 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
     private void OnGalleryItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (_source is not null && _gallery?.Items.Contains(_source) == false)
+        if (IsGroup)
+        {
+            RefreshGroupCards();
+            RefreshVariantChoices();
+        }
+        else if (_source is not null && _gallery?.Items.Contains(_source) == false)
         {
             Detach();
         }

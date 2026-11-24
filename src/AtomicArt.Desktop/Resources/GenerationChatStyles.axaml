@@ -95,6 +95,10 @@
         <Setter Property="Width"
                 Value="{StaticResource TitleButtonSize}" />
     </Style>
+    <Style Selector="Button.generation-chat-group /template/ Border#RootBorder > StackPanel">
+        <Setter Property="Orientation"
+                Value="Vertical" />
+    </Style>
     <Style Selector="ItemsControl.generation-chat-images UniformGrid">
         <Setter Property="Columns"
                 Value="2" />
