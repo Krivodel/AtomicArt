@@ -162,9 +162,11 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     internal void CompleteImage(Guid id, GenerationChatResult? result)
     {
         GenerationChatImageViewModel slot = _images.Single(image => image.Id == id);
+        bool hadSuccessfulImage = _images.Any(image => image.Reference is not null);
         slot.Complete(result?.Image);
 
-        if (result is not null && string.IsNullOrWhiteSpace(Text))
+        if (result is not null && !hadSuccessfulImage
+            && (result.Image is not null || string.IsNullOrWhiteSpace(Text)))
         {
             Text = result.Text;
         }

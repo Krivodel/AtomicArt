@@ -26,18 +26,26 @@ public sealed class GalleryGenerationFailedHandler : GalleryLifecycleViewStateHa
         string failureCode =
             GenerationFailureCodeResolver.Normalize(lifecycleEvent.FailureCode);
 
-        await ViewState
-            .ApplyFailedAsync(
-                lifecycleEvent.CorrelationId,
-                failureCode,
-                ct)
-            .ConfigureAwait(false);
-        await GalleryStateSnapshotSaver
-            .SaveAsync(
-                ViewState,
-                _galleryStateService,
-                stateSaved: null,
-                ct)
-            .ConfigureAwait(false);
+        try
+        {
+            await ViewState
+                .ApplyFailedAsync(
+                    lifecycleEvent.CorrelationId,
+                    failureCode,
+                    lifecycleEvent.ChatResult,
+                    ct)
+                .ConfigureAwait(false);
+            await GalleryStateSnapshotSaver
+                .SaveAsync(
+                    ViewState,
+                    _galleryStateService,
+                    stateSaved: null,
+                    ct)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            lifecycleEvent.ChatRun?.Complete(lifecycleEvent.ChatResult);
+        }
     }
 }

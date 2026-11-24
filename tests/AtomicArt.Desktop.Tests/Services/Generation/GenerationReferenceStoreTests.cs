@@ -11,7 +11,7 @@ using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Generation;
 
-public sealed class GenerationReferenceStoreTests
+public sealed partial class GenerationReferenceStoreTests
 {
     [Fact]
     public async Task SaveAsync_WithIdenticalImages_KeepsOneFileAndEachDisplayNameAcrossRestart()

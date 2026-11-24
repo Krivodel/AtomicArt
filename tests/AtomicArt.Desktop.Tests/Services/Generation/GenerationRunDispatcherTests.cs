@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using FluentAssertions;
+using Moq;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -22,6 +23,33 @@ public sealed class GenerationRunDispatcherTests
         TestApiConfiguration.MaxConcurrentGenerations + 6;
     private static readonly DateTime RequestedAtUtc = new(2026, 7, 4, 12, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime CreatedAtUtc = new(2026, 7, 4, 12, 0, 1, DateTimeKind.Utc);
+
+    [Fact]
+    public async Task EnqueueAsync_WithFailureReply_PublishesItBeforeCompletingTheChatRun()
+    {
+        GenerationChatResult reply = new("The image generator rejected the request.", null);
+        GenerationAttemptException failure = new("Image generation failed.", GenerationClientFailureCodes.CodexNoImage, false)
+        {
+            ChatResult = reply
+        };
+        Mock<IImageGenerationApiClient> api = new();
+        api.Setup(client => client.CreateGenerationAsync(It.IsAny<ImageGenerationRequestDto>(), It.IsAny<Guid>(),
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ThrowsAsync(failure);
+        RunTestContext context = GenerationRunDispatcherTests.CreateRunContext(api.Object);
+        using GenerationRunDispatcher dispatcher = context.Dispatcher;
+        GenerationChatRun run = new();
+        GenerationRunRequest request = GenerationRunDispatcherTests.CreateRunRequest() with { ChatRun = run };
+
+        await dispatcher.EnqueueAsync(request, CancellationToken.None);
+        await GenerationRunDispatcherTests.WaitForStatusAsync(context.LifecycleEventHub, GenerationLifecycleStatus.Failed);
+
+        GenerationLifecycleEvent published = context.LifecycleEventHub.PublishedEvents
+            .Single(item => item.Status == GenerationLifecycleStatus.Failed);
+        published.ChatResult.Should().BeSameAs(reply);
+        published.ChatRun.Should().BeSameAs(run);
+        published.FailureCode.Should().Be(GenerationClientFailureCodes.CodexNoImage);
+        run.Completion.IsCompleted.Should().BeFalse();
+    }
 
     [Fact]
     public async Task EnqueueAsync_WithDelayedApi_ReturnsBeforeGenerationCompletes()

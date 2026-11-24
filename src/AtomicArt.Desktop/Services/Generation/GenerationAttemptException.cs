@@ -4,6 +4,7 @@ public sealed class GenerationAttemptException : InvalidOperationException
 {
     public string? SafeErrorCode { get; }
     public bool Retryable { get; }
+    public GenerationChatResult? ChatResult { get; init; }
 
     public GenerationAttemptException(
         string message,

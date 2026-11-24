@@ -86,6 +86,11 @@ public sealed class GalleryItemDeletionService : IGalleryItemDeletionService
             return;
         }
 
+        if (GenerationReferenceFilePolicy.IsHash(Path.GetFileNameWithoutExtension(path)))
+        {
+            return;
+        }
+
         if (!IsManagedFileForItem(path, request.ItemId))
         {
             _logger.LogWarning(

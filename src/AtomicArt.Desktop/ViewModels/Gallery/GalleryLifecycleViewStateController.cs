@@ -62,6 +62,7 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
     public Task ApplyFailedAsync(
         Guid correlationId,
         string failureCode,
+        GenerationChatResult? chatResult,
         CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
@@ -69,7 +70,8 @@ public sealed class GalleryLifecycleViewStateController : IGalleryLifecycleViewS
         return _uiThreadDispatcher.InvokeAsync(
             () => _itemsController.MarkFailedByCorrelationId(
                 correlationId,
-                failureCode),
+                failureCode,
+                chatResult),
             ct);
     }
 

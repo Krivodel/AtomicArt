@@ -164,7 +164,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
         GenerationAdmissionLease admissionLease)
     {
         bool limiterAcquired = false;
-        bool completionPublished = false;
+        bool terminalEventPublished = false;
         GenerationChatResult? chatResult = null;
         CancellationToken ct = runLifetime.Token;
 
@@ -203,7 +203,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
                 batch.BatchId,
                 batch.Items.Count);
             _lifecyclePublisher.PublishCompleted(correlationId, batch, chatResult, runRequest.ChatRun);
-            completionPublished = true;
+            terminalEventPublished = true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -217,7 +217,9 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
             LogBackgroundFailure(ex, correlationId);
             string failureCode =
                 GenerationFailureCodeResolver.GetFailureCode(ex);
-            _lifecyclePublisher.PublishFailed(correlationId, failureCode);
+            GenerationChatResult? failedResult = (ex as GenerationAttemptException)?.ChatResult;
+            _lifecyclePublisher.PublishFailed(correlationId, failureCode, failedResult, runRequest.ChatRun);
+            terminalEventPublished = true;
         }
         finally
         {
@@ -228,7 +230,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
 
             providerCredential = string.Empty;
 
-            if (!completionPublished)
+            if (!terminalEventPublished)
             {
                 if (chatResult?.StorageLeaseId is Guid storageLeaseId)
                 {

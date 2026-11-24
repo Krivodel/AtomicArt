@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 
 using Microsoft.Extensions.Logging;
 
@@ -7,11 +8,9 @@ using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Services.Generation;
 
-internal sealed class GenerationReferenceStore : IGenerationReferenceStore
+internal sealed partial class GenerationReferenceStore : IGenerationReferenceStore
 {
-    private const string HistoryDirectoryName = "History";
     private const string TrustedPathFailureMessage = "The generation reference path is unsafe.";
-    private const int HashLength = 64;
 
     private readonly IAtomicArtDataPathProvider _paths;
     private readonly IDataRootAccessCoordinator _accessCoordinator;
@@ -62,6 +61,63 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
             ct);
     }
 
+    public async Task SaveOwnedAsync(string relativeOwnerPath, AttachedImageDto image, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativeOwnerPath);
+        ArgumentNullException.ThrowIfNull(image);
+
+        if (Path.IsPathRooted(relativeOwnerPath)
+            || !SafeFileName.IsValid(Path.GetDirectoryName(relativeOwnerPath) ?? string.Empty)
+            || !SafeFileName.IsValid(Path.GetFileName(relativeOwnerPath))
+            || !relativeOwnerPath.EndsWith(GenerationReferenceFilePolicy.OwnerFileExtension, StringComparison.Ordinal))
+        {
+            throw new IOException("The shared image owner path is unsafe.");
+        }
+
+        Guid leaseId = Guid.NewGuid();
+
+        try
+        {
+            IReadOnlyList<GenerationReference> saved = await SaveAsync(leaseId, new AttachedImageDto[] { image }, ct)
+                .ConfigureAwait(false);
+            await _writeLock.WaitAsync(ct).ConfigureAwait(false);
+
+            try
+            {
+                using DataRootAccessLease access = await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+                string ownerPath = Path.Combine(_paths.StateAttachmentsDirectory, relativeOwnerPath);
+                string directory = Path.GetDirectoryName(ownerPath)
+                    ?? throw new IOException(TrustedPathFailureMessage);
+                TrustedPathGuard.EnsureTrustedDirectoryExists(directory,
+                    path => Directory.CreateDirectory(path), TrustedPathFailureMessage);
+                string tempPath = AtomicFileWriteTempPath.CreateSibling(directory, Path.GetFileName(ownerPath));
+
+                try
+                {
+                    await using (FileStream stream = _streams.CreateNewFileForWrite(directory, tempPath, TrustedPathFailureMessage))
+                    {
+                        await stream.WriteAsync(Encoding.ASCII.GetBytes(saved.Single().Hash), ct).ConfigureAwait(false);
+                        await stream.FlushAsync(ct).ConfigureAwait(false);
+                    }
+
+                    TrustedPathGuard.ReplaceTrustedFile(directory, tempPath, ownerPath, TrustedPathFailureMessage);
+                }
+                finally
+                {
+                    FileDeletion.DeleteIfExists(tempPath);
+                }
+            }
+            finally
+            {
+                _writeLock.Release();
+            }
+        }
+        finally
+        {
+            Release(leaseId);
+        }
+    }
+
     public string? ResolveExistingFilePath(GenerationReference reference)
     {
         using FileStream? stream = OpenTrustedFile(reference, out string? trustedPath);
@@ -83,27 +139,33 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
         CancellationToken ct) where TResult : class
     {
         ArgumentNullException.ThrowIfNull(read);
-        using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
-            .ConfigureAwait(false);
-        FileStream? stream = OpenTrustedFile(reference, out _);
+        Guid readLeaseId = Guid.NewGuid();
 
-        if (stream is null)
+        try
         {
-            return null;
+            await RetainReadPathsAsync(readLeaseId, new GenerationReference[] { reference }, ct).ConfigureAwait(false);
+            using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+            FileStream? stream = OpenTrustedFile(reference, out _);
+
+            if (stream is null)
+            {
+                return null;
+            }
+
+            await using (stream.ConfigureAwait(false))
+            {
+                return await read(stream, ct).ConfigureAwait(false);
+            }
         }
-
-        await using (stream.ConfigureAwait(false))
+        finally
         {
-            return await read(stream, ct).ConfigureAwait(false);
+            Release(readLeaseId);
         }
     }
 
     public void Release(Guid runId)
     {
-        lock (_pendingLock)
-        {
-            _pendingHashes.Remove(runId);
-        }
+        ReleaseCore(runId);
     }
 
     public async Task RetainAsync(Guid runId, IEnumerable<GenerationReference> references, CancellationToken ct)
@@ -121,53 +183,11 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
         }
     }
 
-    public async Task PruneAsync(IReadOnlySet<string> retainedHashes, CancellationToken ct)
+    public Task PruneAsync(IReadOnlySet<string> retainedHashes, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(retainedHashes);
-        await _writeLock.WaitAsync(ct).ConfigureAwait(false);
 
-        try
-        {
-            using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
-                .ConfigureAwait(false);
-            string directory = GetDirectory();
-
-            if (!Directory.Exists(directory))
-            {
-                return;
-            }
-
-            TrustedPathGuard.EnsureTrustedWriteTarget(_paths.StateAttachmentsDirectory, directory, TrustedPathFailureMessage);
-            HashSet<string> pendingHashes;
-
-            lock (_pendingLock)
-            {
-                pendingHashes = _pendingHashes.Values.SelectMany(hashes => hashes).ToHashSet(StringComparer.Ordinal);
-            }
-
-            foreach (string path in Directory.EnumerateFiles(directory))
-            {
-                ct.ThrowIfCancellationRequested();
-                string hash = Path.GetFileNameWithoutExtension(path);
-
-                if (!IsHash(hash) || !_formats.TryGetByFileName(path, out _)
-                    || retainedHashes.Contains(hash) || pendingHashes.Contains(hash))
-                {
-                    continue;
-                }
-
-                TrustedPathGuard.EnsureTrustedWriteTarget(directory, path, TrustedPathFailureMessage);
-                FileDeletion.DeleteIfExists(path);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _logger.LogWarning(ex, "Could not clean unused generation references.");
-        }
-        finally
-        {
-            _writeLock.Release();
-        }
+        return SynchronizeCoreAsync(null, retainedHashes, ct);
     }
 
     private static async Task<AttachedImageDto?> ReadImageAsync(
@@ -191,12 +211,6 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
         return new AttachedImageDto(reference.FileName, reference.ContentType, content);
     }
 
-    private static bool IsHash(string? hash)
-    {
-        return hash is { Length: HashLength }
-            && hash.All(character => character is (>= '0' and <= '9') or (>= 'a' and <= 'f'));
-    }
-
     private async Task<IReadOnlyList<GenerationReference>> SaveCoreAsync(
         Guid runId,
         IReadOnlyList<AttachedImageDto> images,
@@ -208,11 +222,6 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
         {
             using DataRootAccessLease lease = await _accessCoordinator.AcquireAccessAsync(ct)
                 .ConfigureAwait(false);
-            string directory = GetDirectory();
-            TrustedPathGuard.EnsureTrustedDirectoryExists(
-                directory,
-                path => Directory.CreateDirectory(path),
-                TrustedPathFailureMessage);
             GenerationReference[] references = new GenerationReference[images.Count];
 
             for (int index = 0; index < images.Count; index++)
@@ -221,9 +230,16 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
                 AttachedImageDto image = images[index];
                 string hash = Convert.ToHexStringLower(SHA256.HashData(image.Content));
                 GenerationReference reference = new(hash, image.FileName, image.ContentType);
-                string path = GetPath(directory, reference)
+                string historyPath = GetPath(GetDirectory(), reference)
                     ?? throw new InvalidDataException("The generation reference format is unsupported.");
+                string artPath = Path.Combine(_paths.ArtDirectory, Path.GetFileName(historyPath));
+                string path = File.Exists(artPath) ? artPath : historyPath;
+                string directory = Path.GetDirectoryName(path)
+                    ?? throw new IOException(TrustedPathFailureMessage);
+                TrustedPathGuard.EnsureTrustedDirectoryExists(directory,
+                    target => Directory.CreateDirectory(target), TrustedPathFailureMessage);
                 await WriteAsync(directory, path, image.Content, ct).ConfigureAwait(false);
+                _dirtyHashes.Add(hash);
                 references[index] = reference;
             }
 
@@ -241,18 +257,22 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
     {
         ArgumentNullException.ThrowIfNull(reference);
         trustedPath = null;
-        string directory = GetDirectory();
-        string? path = GetPath(directory, reference);
 
-        return path is not null && _streams.TryOpenExistingFileForRead(
-            path,
-            new string[] { directory },
-            _paths.RootDirectory,
-            TrustedPathFailureMessage,
-            out FileStream? stream,
-            out trustedPath)
-            ? stream
-            : null;
+        lock (_pendingLock)
+        {
+            foreach (string directory in new string[] { _paths.ArtDirectory, GetDirectory() })
+            {
+                string? path = GetPath(directory, reference);
+
+                if (path is not null && _streams.TryOpenExistingFileForRead(path, new string[] { directory },
+                    _paths.RootDirectory, TrustedPathFailureMessage, out FileStream? stream, out trustedPath))
+                {
+                    return stream;
+                }
+            }
+        }
+
+        return null;
     }
 
     private void Retain(Guid runId, IEnumerable<GenerationReference> references)
@@ -271,12 +291,44 @@ internal sealed class GenerationReferenceStore : IGenerationReferenceStore
 
     private string GetDirectory()
     {
-        return Path.Combine(_paths.StateAttachmentsDirectory, HistoryDirectoryName);
+        return GenerationReferenceFilePolicy.GetDirectory(_paths);
+    }
+
+    private IEnumerable<string> GetOwnedHashes()
+    {
+        string root = _paths.StateAttachmentsDirectory;
+
+        if (!Directory.Exists(root))
+        {
+            yield break;
+        }
+
+        foreach (string directory in Directory.EnumerateDirectories(root))
+        {
+            TrustedPathGuard.EnsureTrustedWriteTarget(root, directory, TrustedPathFailureMessage);
+
+            foreach (string path in Directory.EnumerateFiles(directory, $"*{GenerationReferenceFilePolicy.OwnerFileExtension}"))
+            {
+                if (!_streams.TryOpenExistingFileForRead(path, new string[] { root }, _paths.RootDirectory,
+                    TrustedPathFailureMessage, out FileStream? stream, out _) || stream is null)
+                {
+                    continue;
+                }
+
+                using (stream)
+                {
+                    string hash = GenerationReferenceFilePolicy.ReadOwnerHash(stream)
+                        ?? throw new IOException("A shared image owner record is invalid.");
+
+                    yield return hash;
+                }
+            }
+        }
     }
 
     private string? GetPath(string directory, GenerationReference reference)
     {
-        return IsHash(reference.Hash)
+        return GenerationReferenceFilePolicy.IsHash(reference.Hash)
             && !string.IsNullOrWhiteSpace(reference.FileName)
             && SafeFileName.IsValid(reference.FileName)
             && !string.IsNullOrWhiteSpace(reference.ContentType)

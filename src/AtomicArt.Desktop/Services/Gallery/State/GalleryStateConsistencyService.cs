@@ -161,13 +161,20 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
                 managedImagePath,
                 item.ModelId);
 
-            if (trustedImagePath is null
-                || !_fileNamePolicy.TryGetBatchIdForItem(
-                    Path.GetFileName(trustedImagePath),
-                    item.Id,
-                    out Guid batchId))
+            if (trustedImagePath is null)
             {
                 continue;
+            }
+
+            if (!_fileNamePolicy.TryGetBatchIdForItem(Path.GetFileName(trustedImagePath), item.Id, out Guid batchId))
+            {
+                if (item.ChatResult?.Image is not { } image
+                    || !string.Equals(Path.GetFileNameWithoutExtension(trustedImagePath), image.Hash, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                batchId = item.Id;
             }
 
             try

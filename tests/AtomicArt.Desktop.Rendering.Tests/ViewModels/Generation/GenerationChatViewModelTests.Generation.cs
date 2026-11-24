@@ -14,6 +14,46 @@ namespace AtomicArt.Desktop.Rendering.Tests.ViewModels.Generation;
 public sealed partial class GenerationChatViewModelTests
 {
     [Theory]
+    [InlineData(true, "Generated")]
+    [InlineData(false, "Generated")]
+    [InlineData(true, "")]
+    [InlineData(false, "")]
+    public async Task CompleteImage_WithMixedParallelResults_KeepsTheSuccessfulReply(bool refusalFirst, string successfulText)
+    {
+        using ChatContext context = new();
+        GenerationChatHistory history = new(new GenerationChatMessage[]
+        {
+            new GenerationChatMessage(true, string.Empty, new DateTime(2026, 11, 24), Array.Empty<GenerationReference>())
+        }, true);
+        GenerationItemViewModel source = await context.RestoreSavedChatAsync(history);
+        await context.Chat.OpenCommand.ExecuteAsync(source);
+        GenerationChatMessageViewModel reply = context.Chat.Messages.Single();
+        Guid failedId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        Guid successfulId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        reply.AddPendingImage(failedId);
+        reply.AddPendingImage(successfulId);
+        GenerationChatResult failure = new("The image generator rejected the request.", null);
+        GenerationChatResult success = context.CreateResult(successfulText);
+
+        if (refusalFirst)
+        {
+            reply.CompleteImage(failedId, failure);
+            reply.Text.Should().Be(failure.Text);
+            reply.CompleteImage(successfulId, success);
+        }
+        else
+        {
+            reply.CompleteImage(successfulId, success);
+            reply.CompleteImage(failedId, failure);
+        }
+
+        reply.Text.Should().Be(successfulText);
+        reply.Images.Should().ContainSingle(image => image.Reference == success.Image);
+        reply.Images.Should().ContainSingle(image => image.IsFailed);
+        reply.HasPendingResults.Should().BeFalse();
+    }
+
+    [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]
     [InlineData(true, false)]

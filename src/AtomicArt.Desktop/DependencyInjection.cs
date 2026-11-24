@@ -165,6 +165,7 @@ public static class DependencyInjection
         services.AddTransient<Dlss5OperationToastPresenter>();
         services.AddTransient<MainWindowViewModel>();
         services.AddSingleton<IGenerationChatStore, GenerationChatStore>();
+        services.AddSingleton<GalleryImageDeduplicationService>();
         services.AddTransient<GenerationChatViewModel>();
         services.AddSingleton<GenerationChatDateFormatter>();
         services.AddTransient<OpenRouterBalanceViewModel>();

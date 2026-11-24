@@ -91,7 +91,8 @@ public sealed class PanelAttachmentStoreTests
             savedImage.State,
             CancellationToken.None);
 
-        path.Should().Be(Path.GetFullPath(savedImage.Path));
+        path.Should().Be(Directory.GetFiles(GenerationReferenceStoreTests.GetHistoryDirectory(
+            context.PathProvider.RootDirectory)).Single());
     }
 
     [Fact]
@@ -183,7 +184,8 @@ public sealed class PanelAttachmentStoreTests
             new TestGenerationImageFormatRegistry(),
             new DataRootAccessCoordinator(),
             TestApiConfiguration.CreateTrustedFileStreamFactory(),
-            logger ?? NullLogger<PanelAttachmentStore>.Instance);
+            logger ?? NullLogger<PanelAttachmentStore>.Instance,
+            GenerationReferenceStoreTests.CreateStore(pathProvider.RootDirectory));
     }
 
     private static AttachedImageDto CreateImage(string fileName = "source.png")
@@ -288,7 +290,7 @@ public sealed class PanelAttachmentStoreTests
             return Path.Combine(
                 PathProvider.StateAttachmentsDirectory,
                 EncodedPanelId,
-                state.InternalFileName);
+                string.Concat(state.InternalFileName, GenerationReferenceFilePolicy.OwnerFileExtension));
         }
 
         public void Dispose()

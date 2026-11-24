@@ -171,7 +171,10 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
                     throw new GenerationAttemptException(
                         "Codex did not complete image generation.",
                         limitReached ? GenerationProviderFailureErrorCodes.RateLimited : GenerationClientFailureCodes.CodexNoImage,
-                        false);
+                        false)
+                    {
+                        ChatResult = answers.Count == 0 ? null : new GenerationChatResult(string.Join("\n\n", answers), null)
+                    };
             }
         }
     }

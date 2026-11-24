@@ -127,7 +127,8 @@ public sealed class GenerationChatMediaService
 
         if (!_formats.TryGetByFileName(path, out IGenerationImageFormat? format)
             || format is null
-            || !_streams.TryOpenExistingFileForRead(path, new string[] { _paths.ArtDirectory }, _paths.RootDirectory,
+            || !_streams.TryOpenExistingFileForRead(path,
+                    new string[] { _paths.ArtDirectory, GenerationReferenceFilePolicy.GetDirectory(_paths) }, _paths.RootDirectory,
                     "The conversation image path is unsafe.", out FileStream? stream, out _)
             || stream is null)
         {

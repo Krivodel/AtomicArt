@@ -20,6 +20,7 @@ public sealed class PanelAttachmentStore :
     private readonly IDataRootAccessCoordinator _accessCoordinator;
     private readonly ILogger<PanelAttachmentStore> _logger;
     private readonly TrustedFileStreamFactory _trustedFileStreamFactory;
+    private readonly IGenerationReferenceStore _references;
 
     public PanelAttachmentStore(
         IAtomicArtDataPathProvider pathProvider,
@@ -27,7 +28,8 @@ public sealed class PanelAttachmentStore :
         IGenerationImageFormatRegistry formatRegistry,
         IDataRootAccessCoordinator accessCoordinator,
         TrustedFileStreamFactory trustedFileStreamFactory,
-        ILogger<PanelAttachmentStore> logger)
+        ILogger<PanelAttachmentStore> logger,
+        IGenerationReferenceStore references)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _keyEncoder = keyEncoder ?? throw new ArgumentNullException(nameof(keyEncoder));
@@ -37,6 +39,7 @@ public sealed class PanelAttachmentStore :
         _trustedFileStreamFactory = trustedFileStreamFactory
             ?? throw new ArgumentNullException(nameof(trustedFileStreamFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _references = references ?? throw new ArgumentNullException(nameof(references));
     }
 
     public PanelAttachmentState CreateState(AttachedImageDto image)
@@ -81,9 +84,6 @@ public sealed class PanelAttachmentStore :
         ArgumentNullException.ThrowIfNull(attachment);
         ArgumentNullException.ThrowIfNull(image);
         ArgumentNullException.ThrowIfNull(image.Content);
-        using DataRootAccessLease accessLease =
-            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
-
         if (!PanelAttachmentStateSanitizer.IsValid(attachment))
         {
             throw new InvalidOperationException("Panel attachment state is invalid.");
@@ -95,41 +95,14 @@ public sealed class PanelAttachmentStore :
             throw new InvalidOperationException("Panel attachment state does not match attachment content.");
         }
 
-        string path = GetAttachmentPath(panelId, attachment.InternalFileName);
-        string panelDirectory = Path.GetDirectoryName(path)
-            ?? throw new IOException(TrustedPathFailureMessage);
-        bool attachmentFileSaved = false;
-
-        EnsurePanelDirectory(panelDirectory);
-        TrustedPathGuard.EnsureTrustedWriteTarget(
-            panelDirectory,
-            path,
-            TrustedPathFailureMessage);
-
-        try
-        {
-            await using (FileStream stream = _trustedFileStreamFactory.CreateNewFileForWrite(
-                panelDirectory,
-                path,
-                TrustedPathFailureMessage))
-            {
-                await stream.WriteAsync(image.Content, ct).ConfigureAwait(false);
-                await stream.FlushAsync(ct).ConfigureAwait(false);
-            }
-
-            attachmentFileSaved = true;
-            _logger.LogInformation(
-                "Managed panel attachment {AttachmentId} saved with {SizeBytes} bytes.",
-                attachment.Id,
-                attachment.SizeBytes);
-        }
-        finally
-        {
-            if (!attachmentFileSaved)
-            {
-                DeleteFileIfExists(path);
-            }
-        }
+        string ownerPath = string.Concat(GetRelativeAttachmentPath(panelId, attachment.InternalFileName),
+            GenerationReferenceFilePolicy.OwnerFileExtension);
+        AttachedImageDto savedImage = new(attachment.FileName, attachment.ContentType, image.Content);
+        await _references.SaveOwnedAsync(ownerPath, savedImage, ct).ConfigureAwait(false);
+        using DataRootAccessLease accessLease = await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
+        DeleteFileIfExists(GetAttachmentPath(panelId, attachment.InternalFileName));
+        _logger.LogInformation("Managed panel attachment {AttachmentId} saved with {SizeBytes} bytes.",
+            attachment.Id, attachment.SizeBytes);
     }
 
     public async Task<AttachedImageDto?> LoadAsync(
@@ -139,40 +112,59 @@ public sealed class PanelAttachmentStore :
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(panelId);
         ArgumentNullException.ThrowIfNull(attachment);
-        using DataRootAccessLease accessLease =
-            await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
 
         try
         {
-            if (!TryOpenAttachmentFileForRead(
-                    panelId,
-                    attachment,
-                    out FileStream? stream,
-                    out string? _)
-                || stream is null)
-            {
-                return null;
-            }
+            AttachedImageDto image;
+            bool isLegacy;
 
-            await using (stream.ConfigureAwait(false))
+            using (DataRootAccessLease accessLease = await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false))
             {
-                if (stream.Length > int.MaxValue)
+                if (!TryOpenAttachmentFileForRead(
+                        panelId,
+                        attachment,
+                        out FileStream? stream,
+                        out string? trustedPath)
+                    || stream is null)
                 {
-                    throw new IOException("Managed panel attachment file is too large to load.");
+                    return null;
                 }
 
-                byte[] content = new byte[checked((int)stream.Length)];
-                await stream.ReadExactlyAsync(content, ct).ConfigureAwait(false);
-                _logger.LogInformation(
-                    "Managed panel attachment {AttachmentId} loaded with {SizeBytes} bytes.",
-                    attachment.Id,
-                    content.LongLength);
+                await using (stream.ConfigureAwait(false))
+                {
+                    if (stream.Length > int.MaxValue)
+                    {
+                        throw new IOException("Managed panel attachment file is too large to load.");
+                    }
 
-                return new AttachedImageDto(
-                    attachment.FileName,
-                    attachment.ContentType,
-                    content);
+                    byte[] content = new byte[checked((int)stream.Length)];
+                    await stream.ReadExactlyAsync(content, ct).ConfigureAwait(false);
+                    _logger.LogInformation(
+                        "Managed panel attachment {AttachmentId} loaded with {SizeBytes} bytes.",
+                        attachment.Id,
+                        content.LongLength);
+
+                    image = new AttachedImageDto(
+                        attachment.FileName,
+                        attachment.ContentType,
+                        content);
+                    isLegacy = !GenerationReferenceFilePolicy.IsSharedImagePath(_pathProvider, trustedPath);
+                }
             }
+
+            if (isLegacy)
+            {
+                try
+                {
+                    await SaveAsync(panelId, attachment, image, ct).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+                {
+                    _logger.LogWarning(ex, "Could not deduplicate managed panel attachment {AttachmentId}.", attachment.Id);
+                }
+            }
+
+            return image;
         }
         catch (IOException ex)
         {
@@ -203,6 +195,7 @@ public sealed class PanelAttachmentStore :
             await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false);
 
         string path = GetAttachmentPath(panelId, attachment.InternalFileName);
+        DeleteFileIfExists(string.Concat(path, GenerationReferenceFilePolicy.OwnerFileExtension));
         DeleteFileIfExists(path);
         _logger.LogInformation(
             "Managed panel attachment {AttachmentId} deletion completed.",
@@ -274,14 +267,11 @@ public sealed class PanelAttachmentStore :
 
     private string GetAttachmentPath(string panelId, string internalFileName)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(internalFileName);
+        string root = GetAttachmentsRootDirectory();
+        string path = Path.GetFullPath(Path.Combine(root, GetRelativeAttachmentPath(panelId, internalFileName)));
+        TrustedPathGuard.EnsureInsideDirectory(root, path, TrustedPathFailureMessage);
 
-        if (!SafeFileName.IsValid(internalFileName))
-        {
-            throw new IOException("Panel attachment internal file name must be a safe file name.");
-        }
-
-        return Path.GetFullPath(Path.Combine(GetPanelDirectory(panelId), internalFileName));
+        return path;
     }
 
     private bool TryOpenAttachmentFileForRead(
@@ -293,6 +283,19 @@ public sealed class PanelAttachmentStore :
         string path = GetAttachmentPath(panelId, attachment.InternalFileName);
         string attachmentsRootDirectory = GetAttachmentsRootDirectory();
         string[] trustedDirectories = [attachmentsRootDirectory];
+        string ownerPath = string.Concat(path, GenerationReferenceFilePolicy.OwnerFileExtension);
+
+        if (_trustedFileStreamFactory.TryOpenExistingFileForRead(ownerPath, trustedDirectories,
+            attachmentsRootDirectory, TrustedPathFailureMessage, out FileStream? ownerStream, out _)
+            && ownerStream is not null)
+        {
+            using (ownerStream)
+            {
+                string? hash = GenerationReferenceFilePolicy.ReadOwnerHash(ownerStream);
+                path = hash is null ? path : _references.ResolveExistingFilePath(
+                    new GenerationReference(hash, attachment.FileName, attachment.ContentType)) ?? path;
+            }
+        }
 
         if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
                 path,
@@ -324,36 +327,17 @@ public sealed class PanelAttachmentStore :
         return false;
     }
 
-    private string GetPanelDirectory(string panelId)
+    private string GetRelativeAttachmentPath(string panelId, string internalFileName)
     {
-        string attachmentsRootDirectory = GetAttachmentsRootDirectory();
+        ArgumentException.ThrowIfNullOrWhiteSpace(internalFileName);
         string safePanelKey = _keyEncoder.Encode(panelId);
-        string panelDirectory = Path.GetFullPath(Path.Combine(
-            attachmentsRootDirectory,
-            safePanelKey));
 
-        TrustedPathGuard.EnsureInsideDirectory(
-            attachmentsRootDirectory,
-            panelDirectory,
-            TrustedPathFailureMessage);
+        if (!SafeFileName.IsValid(internalFileName) || !SafeFileName.IsValid(safePanelKey))
+        {
+            throw new IOException("Panel attachment paths must contain safe file names.");
+        }
 
-        return panelDirectory;
-    }
-
-    private void EnsurePanelDirectory(string panelDirectory)
-    {
-        TrustedPathGuard.EnsureTrustedDirectoryExists(
-            _pathProvider,
-            _pathProvider.StateDirectory,
-            TrustedPathFailureMessage);
-        TrustedPathGuard.EnsureTrustedDirectoryExists(
-            _pathProvider,
-            GetAttachmentsRootDirectory(),
-            TrustedPathFailureMessage);
-        TrustedPathGuard.EnsureTrustedDirectoryExists(
-            panelDirectory,
-            directory => Directory.CreateDirectory(directory),
-            TrustedPathFailureMessage);
+        return Path.Combine(safePanelKey, internalFileName);
     }
 
     private static string CreateSafeDisplayFileName(string fileName, string extension)

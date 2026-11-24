@@ -12,7 +12,6 @@ namespace AtomicArt.Desktop.Services.Generation.LocalCodex;
 public sealed class LocalCodexGenerationClient(
     LocalCodexSettings settings,
     LocalCodexAppServer appServer,
-    IGenerationStreamingResultStore resultStore,
     IGenerationImageFormatRegistry formatRegistry,
     TrustedFileStreamFactory fileStreamFactory,
     IAttachedImageCodec imageCodec,
@@ -52,42 +51,45 @@ public sealed class LocalCodexGenerationClient(
 
         try
         {
-            IReadOnlyList<object> inputs = await PrepareInputsAsync(request, history, workspace.FullName, timeout.Token)
-                .ConfigureAwait(false);
-            (byte[] bytes, string? modelId, string text) = await appServer.RunAsync(
+            using LocalCodexInputPreparation input = new(_referenceStore, formatRegistry, textProvider);
+            await input.PrepareAsync(request, history, timeout.Token).ConfigureAwait(false);
+            (byte[] bytes, string? modelId, string text, string resultHome, string resultThread, JsonElement resultImage) = await appServer.RunAsync(
                 configuration,
                 workspace.FullName,
                 async (protocol, home) =>
                 {
                     (string threadId, string? effectiveModelId, JsonElement image, string answer) = await protocol.GenerateAsync(
-                        workspace.FullName, inputs, turnOptions, timeout.Token, history)
+                        workspace.FullName, input.Inputs, turnOptions, timeout.Token, history)
                         .ConfigureAwait(false);
                     byte[] imageBytes = await ReadImageAsync(home, threadId, image, timeout.Token).ConfigureAwait(false);
 
-                    return (imageBytes, effectiveModelId, answer);
+                    return (imageBytes, effectiveModelId, answer, home, threadId, image);
                 },
                 timeout.Token).ConfigureAwait(false);
+            input.Dispose();
 
             AttachedImageCodecInfo info = imageCodec.ReadInfo(bytes) ?? throw InvalidImage();
-            await using GenerationTemporaryResult result = resultStore.CreateTemporaryResult();
-            await result.Stream.WriteAsync(bytes, timeout.Token).ConfigureAwait(false);
             Guid storageLeaseId = Guid.NewGuid();
             GenerationReference imageReference;
+            string imagePath;
 
             try
             {
                 AttachedImageDto attachment = new("image.png", GenerationImageContentTypes.Png, bytes);
                 IReadOnlyList<GenerationReference> references = await _referenceStore
                     .SaveAsync(storageLeaseId, new AttachedImageDto[] { attachment }, timeout.Token).ConfigureAwait(false);
+                await _referenceStore.PromoteAsync(storageLeaseId, references, timeout.Token).ConfigureAwait(false);
                 imageReference = references.Single();
-                await result.CommitAsync(generationId, generationId, GenerationImageContentTypes.Png, timeout.Token)
-                    .ConfigureAwait(false);
+                imagePath = await _referenceStore.GetExistingFilePathAsync(imageReference, timeout.Token).ConfigureAwait(false)
+                    ?? throw LocalCodexGenerationClient.InvalidImage();
             }
             catch (Exception)
             {
                 _referenceStore.Release(storageLeaseId);
                 throw;
             }
+
+            appServer.DeleteGeneratedImage(resultHome, resultThread, resultImage);
 
             GenerationItemDto item = new(
                 generationId,
@@ -100,7 +102,7 @@ public sealed class LocalCodexGenerationClient(
                 FormattableString.Invariant($"{info.Width}x{info.Height}"),
                 startedAtUtc,
                 GenerationItemStatus.Generated,
-                result.FinalPath,
+                imagePath,
                 CompletedAtUtc: DateTime.UtcNow,
                 GenerationDuration: stopwatch.Elapsed);
 
@@ -153,63 +155,6 @@ public sealed class LocalCodexGenerationClient(
             "Codex did not return a valid image.", GenerationProviderFailureErrorCodes.InvalidResponse, false);
     }
 
-    private async Task<IReadOnlyList<object>> PrepareInputsAsync(
-        ImageGenerationRequestDto request, GenerationChatHistory? history, string workspace, CancellationToken ct)
-    {
-        List<object> inputs = [];
-        Dictionary<string, string> historyFiles = new(StringComparer.Ordinal);
-
-        if (history is not null)
-        {
-            foreach (GenerationChatMessage message in history.Messages)
-            {
-                string role = message.IsAssistant ? "assistant" : "user";
-                inputs.Add(new { type = "text", text = JsonSerializer.Serialize(new { role, text = message.Text }) });
-
-                foreach (GenerationReference reference in message.Images)
-                {
-                    if (!historyFiles.TryGetValue(reference.Hash, out string? path))
-                    {
-                        AttachedImageDto image = await _referenceStore.LoadAsync(reference, ct).ConfigureAwait(false)
-                            ?? throw new GenerationAttemptException(
-                                "A Codex conversation image is unavailable.", GenerationProtocolErrorCodes.InvalidParameters, false);
-                        path = await WriteAttachmentAsync(image, workspace, inputs.Count, ct).ConfigureAwait(false);
-                        historyFiles.Add(reference.Hash, path);
-                    }
-
-                    inputs.Add(new { type = "localImage", path });
-                }
-            }
-        }
-
-        string prompt = LocalCodexGenerationClient.FormatPrompt(request, textProvider);
-        string text = inputs.Count == 0 ? prompt : JsonSerializer.Serialize(new { role = "user", text = prompt });
-        inputs.Add(new { type = "text", text });
-
-        foreach (AttachedImageDto attachment in request.AttachedImages)
-        {
-            string path = await WriteAttachmentAsync(attachment, workspace, inputs.Count, ct).ConfigureAwait(false);
-            inputs.Add(new { type = "localImage", path });
-        }
-
-        return inputs;
-    }
-
-    private async Task<string> WriteAttachmentAsync(AttachedImageDto attachment, string workspace, int index, CancellationToken ct)
-    {
-        if (!formatRegistry.TryGetByContentType(attachment.ContentType, out IGenerationImageFormat? format)
-            || format is null || !format.MatchesSignature(attachment.Content))
-        {
-            throw new GenerationAttemptException(
-                "Invalid Codex reference image.", GenerationProtocolErrorCodes.InvalidParameters, false);
-        }
-
-        string path = Path.Combine(workspace, $"attachment-{index}{format.Extension}");
-        await File.WriteAllBytesAsync(path, attachment.Content, ct).ConfigureAwait(false);
-
-        return path;
-    }
-
     private async Task<byte[]> ReadImageAsync(string home, string threadId, JsonElement image, CancellationToken ct)
     {
         if (image.TryGetProperty("result", out JsonElement inline)
@@ -237,7 +182,7 @@ public sealed class LocalCodexGenerationClient(
             throw InvalidImage();
         }
 
-        string threadDirectory = Path.Combine(home, "generated_images", threadId);
+        string threadDirectory = LocalCodexAppServer.GetGeneratedImageDirectory(home, threadId);
 
         if (!fileStreamFactory.TryOpenExistingFileForRead(
             path, new[] { threadDirectory }, threadDirectory, UntrustedImagePath, out FileStream? stream, out _)

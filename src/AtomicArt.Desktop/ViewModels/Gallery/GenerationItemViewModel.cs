@@ -245,11 +245,17 @@ public sealed partial class GenerationItemViewModel :
         RefreshComputedState();
     }
 
-    public void MarkFailed(string failureCode)
+    public void MarkFailed(string failureCode, GenerationChatResult? chatResult = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
 
         FailureCode = GenerationFailureCodeResolver.Normalize(failureCode);
+
+        if (chatResult is not null)
+        {
+            ChatResult = chatResult;
+        }
+
         StatusKind = GenerationItemStatus.Failed;
         ImagePath = null;
         ThumbnailPath = null;

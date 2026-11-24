@@ -83,6 +83,26 @@ public sealed class LocalCodexProtocolTests
     }
 
     [Fact]
+    public async Task GenerateAsync_WithFailedImageAndAssistantReply_PreservesTheReplyOnFailure()
+    {
+        using StringReader reader = new(TurnStart + """
+            {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"imageGeneration","status":"failed","failure":null,"result":""}}}
+            {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"agentMessage","text":"The image generator rejected the request."}}}
+            {"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"completed"}}}
+            """);
+        using StringWriter writer = new();
+        LocalCodexProtocol protocol = new(reader, writer);
+
+        Func<Task> generate = () => protocol.GenerateAsync(Path.GetTempPath(), Array.Empty<object>(), null, CancellationToken.None);
+
+        GenerationAttemptException failure = (await generate.Should().ThrowAsync<GenerationAttemptException>()).Which;
+        failure.SafeErrorCode.Should().Be(GenerationClientFailureCodes.CodexNoImage);
+        failure.Retryable.Should().BeFalse();
+        failure.ChatResult.Should().Be(new GenerationChatResult("The image generator rejected the request.", null));
+        failure.Message.Should().NotContain(failure.ChatResult?.Text);
+    }
+
+    [Fact]
     public async Task ListTextModelsAsync_WithPaginatedCatalog_ReturnsAllModelsAndConfiguredDefaults()
     {
         using StringReader reader = new("""

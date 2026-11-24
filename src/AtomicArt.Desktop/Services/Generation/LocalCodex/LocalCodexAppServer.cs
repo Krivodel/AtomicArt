@@ -6,11 +6,14 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Services.Generation.LocalCodex;
 
 public sealed class LocalCodexAppServer(ILogger<LocalCodexAppServer> logger)
 {
+    private const string GeneratedImagesDirectoryName = "generated_images";
+
     private static readonly TimeSpan ConnectionTimeout = TimeSpan.FromSeconds(15);
 
     public async Task CheckConnectionAsync(LocalCodexOptions options, CancellationToken ct)
@@ -24,29 +27,9 @@ public sealed class LocalCodexAppServer(ILogger<LocalCodexAppServer> logger)
         return RunQueryAsync(options, (protocol, token) => protocol.ListTextModelsAsync(token), ct);
     }
 
-    private async Task<TResult> RunQueryAsync<TResult>(
-        LocalCodexOptions options,
-        Func<LocalCodexProtocol, CancellationToken, Task<TResult>> query,
-        CancellationToken ct)
+    internal static string GetGeneratedImageDirectory(string home, string threadId)
     {
-        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(ConnectionTimeout);
-        DirectoryInfo workspace = Directory.CreateTempSubdirectory("AtomicArt-Codex-");
-
-        try
-        {
-            return await RunAsync(options, workspace.FullName, (protocol, _) => query(protocol, timeout.Token), timeout.Token)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            throw new GenerationAttemptException(
-                "Codex connection timed out.", GenerationProviderFailureErrorCodes.Timeout, false);
-        }
-        finally
-        {
-            DeleteWorkspace(workspace);
-        }
+        return Path.Combine(home, GeneratedImagesDirectoryName, threadId);
     }
 
     internal async Task<TResult> RunAsync<TResult>(
@@ -115,7 +98,38 @@ public sealed class LocalCodexAppServer(ILogger<LocalCodexAppServer> logger)
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            logger.LogWarning("Could not remove the temporary Codex workspace.");
+            logger.LogWarning(exception, "Could not remove the temporary Codex workspace.");
+        }
+    }
+
+    internal void DeleteGeneratedImage(string home, string threadId, JsonElement image)
+    {
+        if (!Guid.TryParse(threadId, out _)
+            || !image.TryGetProperty("savedPath", out JsonElement savedPath)
+            || savedPath.ValueKind != JsonValueKind.String
+            || savedPath.GetString() is not { Length: > 0 } path
+            || !Path.IsPathFullyQualified(path))
+        {
+            return;
+        }
+
+        string directory = LocalCodexAppServer.GetGeneratedImageDirectory(home, threadId);
+
+        try
+        {
+            if (!TrustedPathGuard.IsInsideDirectory(directory, path))
+            {
+                return;
+            }
+
+            TrustedPathGuard.DeleteTrustedFileIfExists(path, new string[] { directory }, home,
+                resolvedPath => TrustedPathGuard.EnsureInsideDirectory(directory, resolvedPath,
+                    "The temporary Codex result path is unsafe."));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
+            or ArgumentException or NotSupportedException)
+        {
+            logger.LogWarning(ex, "Could not remove the imported Codex image.");
         }
     }
 
@@ -129,6 +143,31 @@ public sealed class LocalCodexAppServer(ILogger<LocalCodexAppServer> logger)
         {
             throw new GenerationAttemptException(
                 "Codex executable could not start.", GenerationClientFailureCodes.CodexUnavailable, false);
+        }
+    }
+
+    private async Task<TResult> RunQueryAsync<TResult>(
+        LocalCodexOptions options,
+        Func<LocalCodexProtocol, CancellationToken, Task<TResult>> query,
+        CancellationToken ct)
+    {
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(ConnectionTimeout);
+        DirectoryInfo workspace = Directory.CreateTempSubdirectory("AtomicArt-Codex-");
+
+        try
+        {
+            return await RunAsync(options, workspace.FullName, (protocol, _) => query(protocol, timeout.Token), timeout.Token)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new GenerationAttemptException(
+                "Codex connection timed out.", GenerationProviderFailureErrorCodes.Timeout, false);
+        }
+        finally
+        {
+            DeleteWorkspace(workspace);
         }
     }
 

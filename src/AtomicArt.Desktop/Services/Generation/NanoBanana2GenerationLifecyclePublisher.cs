@@ -26,12 +26,7 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
     public void PublishCompleted(Guid correlationId, GenerationBatchDto batch, GenerationChatResult? chatResult = null,
         GenerationChatRun? chatRun = null)
     {
-        _lifecycleEventHub.Publish(new GenerationLifecycleEvent(
-            correlationId, GenerationLifecycleStatus.Completed, null, batch, null)
-        {
-            ChatResult = chatResult,
-            ChatRun = chatRun
-        });
+        PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.Completed, null, batch, null, chatResult, chatRun);
     }
 
     public void PublishStartFailed(Guid correlationId)
@@ -39,11 +34,12 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
         PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.StartFailed, null, null, null);
     }
 
-    public void PublishFailed(Guid correlationId, string failureCode)
+    public void PublishFailed(Guid correlationId, string failureCode, GenerationChatResult? chatResult = null,
+        GenerationChatRun? chatRun = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
 
-        PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.Failed, null, null, failureCode);
+        PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.Failed, null, null, failureCode, chatResult, chatRun);
     }
 
     internal void PublishCanceledGeneration(Guid correlationId, GenerationRunState runState)
@@ -82,14 +78,20 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
         GenerationLifecycleStatus status,
         GenerationStartSnapshot? start,
         GenerationBatchDto? batch,
-        string? failureCode)
+        string? failureCode,
+        GenerationChatResult? chatResult = null,
+        GenerationChatRun? chatRun = null)
     {
         GenerationLifecycleEvent lifecycleEvent = new(
             correlationId,
             status,
             start,
             batch,
-            failureCode);
+            failureCode)
+        {
+            ChatResult = chatResult,
+            ChatRun = chatRun
+        };
 
         _lifecycleEventHub.Publish(lifecycleEvent);
     }

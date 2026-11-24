@@ -190,7 +190,8 @@ public sealed class GalleryItemsController
 
     public void MarkFailedByCorrelationId(
         Guid correlationId,
-        string failureCode)
+        string failureCode,
+        GenerationChatResult? chatResult = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(failureCode);
 
@@ -198,7 +199,7 @@ public sealed class GalleryItemsController
 
         foreach (GenerationItemViewModel placeholder in placeholders)
         {
-            placeholder.MarkFailed(failureCode);
+            placeholder.MarkFailed(failureCode, chatResult);
         }
     }
 

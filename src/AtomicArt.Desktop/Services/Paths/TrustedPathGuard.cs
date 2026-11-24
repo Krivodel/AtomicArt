@@ -123,6 +123,20 @@ internal static class TrustedPathGuard
         EnsureInsideDirectory(trustedDirectory, finalPath, failureMessage);
     }
 
+    public static void ReplaceTrustedFile(
+        string trustedDirectory,
+        string tempPath,
+        string targetPath,
+        string failureMessage)
+    {
+        TrustedPathGuard.RenameTrustedFile(trustedDirectory, tempPath, targetPath, failureMessage, replaceExisting: true);
+    }
+
+    public static void MoveTrustedFile(string trustedDirectory, string sourcePath, string targetPath, string failureMessage)
+    {
+        TrustedPathGuard.RenameTrustedFile(trustedDirectory, sourcePath, targetPath, failureMessage, replaceExisting: false);
+    }
+
     internal static FileStream CreateTrustedNewFileForWrite(
         string trustedDirectory,
         string path,
@@ -207,32 +221,6 @@ internal static class TrustedPathGuard
             openedStream.Dispose();
             throw;
         }
-    }
-
-    public static void ReplaceTrustedFile(
-        string trustedDirectory,
-        string tempPath,
-        string targetPath,
-        string failureMessage)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(trustedDirectory);
-        ArgumentException.ThrowIfNullOrWhiteSpace(tempPath);
-        ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
-        ArgumentException.ThrowIfNullOrWhiteSpace(failureMessage);
-
-        if (OperatingSystem.IsWindows())
-        {
-            ReplaceTrustedFileByWindowsHandle(
-                trustedDirectory,
-                tempPath,
-                targetPath,
-                failureMessage);
-
-            return;
-        }
-
-        throw new PlatformNotSupportedException(
-            "Trusted file replacement by opened handle is supported only on Windows.");
     }
 
     public static bool TryResolveTrustedExistingFilePath(
@@ -393,11 +381,36 @@ internal static class TrustedPathGuard
         return openedPath;
     }
 
-    private static void ReplaceTrustedFileByWindowsHandle(
+    private static void RenameTrustedFile(string trustedDirectory, string tempPath, string targetPath,
+        string failureMessage, bool replaceExisting)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(trustedDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tempPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(failureMessage);
+
+        if (OperatingSystem.IsWindows())
+        {
+            TrustedPathGuard.RenameTrustedFileByWindowsHandle(
+                trustedDirectory,
+                tempPath,
+                targetPath,
+                failureMessage,
+                replaceExisting);
+
+            return;
+        }
+
+        throw new PlatformNotSupportedException(
+            "Trusted file replacement by opened handle is supported only on Windows.");
+    }
+
+    private static void RenameTrustedFileByWindowsHandle(
         string trustedDirectory,
         string tempPath,
         string targetPath,
-        string failureMessage)
+        string failureMessage,
+        bool replaceExisting)
     {
         string trustedRootDirectory = Path.GetFullPath(trustedDirectory);
         string tempFullPath = Path.GetFullPath(tempPath);
@@ -428,7 +441,8 @@ internal static class TrustedPathGuard
             failureMessage);
         RenameWindowsHandle(
             tempHandle,
-            targetFullPath);
+            targetFullPath,
+            replaceExisting);
     }
 
     private static void DeleteTrustedFileByHandle(
@@ -534,7 +548,8 @@ internal static class TrustedPathGuard
 
     private static void RenameWindowsHandle(
         SafeFileHandle sourceHandle,
-        string targetPath)
+        string targetPath,
+        bool replaceExisting)
     {
         string nativeTargetPath = ToWindowsNativePath(targetPath);
         byte[] targetFileNameBytes = Encoding.Unicode.GetBytes(string.Concat(nativeTargetPath, '\0'));
@@ -546,7 +561,7 @@ internal static class TrustedPathGuard
         {
             FileRenameInfo renameInfo = new()
             {
-                ReplaceIfExists = 1,
+                ReplaceIfExists = replaceExisting ? (byte)1 : (byte)0,
                 RootDirectory = IntPtr.Zero,
                 FileNameLength = (uint)(targetFileNameBytes.Length - sizeof(char)),
                 FileName = '\0'

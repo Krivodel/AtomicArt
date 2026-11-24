@@ -1,4 +1,5 @@
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Generation;
 
 namespace AtomicArt.Desktop.Services.Gallery;
 
@@ -13,6 +14,7 @@ public interface IGalleryLifecycleViewState
     Task ApplyFailedAsync(
         Guid correlationId,
         string failureCode,
+        GenerationChatResult? chatResult,
         CancellationToken ct);
     Task RefreshElapsedTextAsync(DateTime utcNow, CancellationToken ct);
     Task<IReadOnlyList<GalleryItemState>> CreateStateSnapshotAsync(CancellationToken ct);

@@ -11,6 +11,8 @@ public interface IGenerationReferenceStore
 
     Task<AttachedImageDto?> LoadAsync(GenerationReference reference, CancellationToken ct);
 
+    Task SaveOwnedAsync(string relativeOwnerPath, AttachedImageDto image, CancellationToken ct);
+
     string? ResolveExistingFilePath(GenerationReference reference);
 
     Task<string?> GetExistingFilePathAsync(GenerationReference reference, CancellationToken ct);
@@ -23,6 +25,12 @@ public interface IGenerationReferenceStore
     void Release(Guid runId);
 
     Task RetainAsync(Guid runId, IEnumerable<GenerationReference> references, CancellationToken ct);
+
+    Task RetainReadPathsAsync(Guid runId, IEnumerable<GenerationReference> references, CancellationToken ct);
+
+    Task PromoteAsync(Guid runId, IReadOnlyList<GenerationReference> references, CancellationToken ct);
+
+    Task SynchronizeAsync(IReadOnlySet<string> galleryHashes, IReadOnlySet<string> retainedHashes, CancellationToken ct);
 
     Task PruneAsync(IReadOnlySet<string> retainedHashes, CancellationToken ct);
 }

@@ -223,14 +223,15 @@ public sealed class TrustedImageFileService : ITrustedImageFileService
 
     private string[] GetTrustedDirectories()
     {
-        return
-        [
+        return new string[]
+        {
             Path.GetFullPath(_pathProvider.ArtDirectory),
             Path.GetFullPath(_pathProvider.ThumbnailsDirectory),
+            GenerationReferenceFilePolicy.GetDirectory(_pathProvider),
             Path.GetFullPath(Path.Combine(
                 _pathProvider.ModulesDirectory,
                 Dlss5FeatureDefinition.ModuleDirectoryName,
                 "session"))
-        ];
+        };
     }
 }

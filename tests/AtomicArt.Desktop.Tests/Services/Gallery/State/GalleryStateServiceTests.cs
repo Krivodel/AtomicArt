@@ -7,6 +7,7 @@ using Xunit;
 using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
+using AtomicArt.Desktop.Services.Gallery.Deletion;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
@@ -17,7 +18,7 @@ using AtomicArt.Tests.Common;
 
 namespace AtomicArt.Desktop.Tests.Services.Gallery.State;
 
-public sealed class GalleryStateServiceTests
+public sealed partial class GalleryStateServiceTests
 {
     private static readonly Guid GeneratedItemId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid RunningItemId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -344,7 +345,12 @@ public sealed class GalleryStateServiceTests
             pathConverter,
             new GalleryStateSection(),
             NullLogger<GalleryStateService>.Instance,
-            chats ?? new GenerationChatStore(stateStore, NullLogger<GenerationChatStore>.Instance, resolvedPathProvider, new DataRootAccessCoordinator()));
+            chats ?? new GenerationChatStore(stateStore, NullLogger<GenerationChatStore>.Instance, resolvedPathProvider, new DataRootAccessCoordinator()),
+            new GalleryImageDeduplicationService(references ?? Mock.Of<IGenerationReferenceStore>(), resolvedPathProvider,
+                new DataRootAccessCoordinator(), TestApiConfiguration.CreateTrustedFileStreamFactory(),
+                new GenerationImageFileNamePolicy(), new GalleryItemDeletionService(trustedImageFileService,
+                    new GenerationImageFileNamePolicy(), new DataRootAccessCoordinator(), NullLogger<GalleryItemDeletionService>.Instance),
+                NullLogger<GalleryImageDeduplicationService>.Instance), GenerationImageFormatRegistryTestFactory.Create());
     }
 
     private static GalleryStateService CreateLoadService(

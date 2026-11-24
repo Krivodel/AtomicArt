@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Services.Gallery.State;
@@ -35,9 +36,7 @@ public sealed class GalleryStatePathConverter
 
     public string? GetValidatedRuntimePath(string? runtimePath, string modelId)
     {
-        return _trustedImageFileService.GetTrustedImagePathOrDefault(
-            runtimePath,
-            modelId);
+        return GetTrustedImagePathOrAlternative(runtimePath, modelId);
     }
 
     public string? GetStoragePath(string? validatedRuntimePath)
@@ -65,9 +64,10 @@ public sealed class GalleryStatePathConverter
 
     public string? GetImagePathForDeletion(string? storedPath)
     {
-        return GetManagedPathForDeletion(
+        return ResolveStoredPathOrDefault(
             storedPath,
-            _pathProvider.ArtDirectory);
+            _pathProvider.ArtDirectory,
+            GetTrustedImageDeletionPath);
     }
 
     public string? GetThumbnailPathForDeletion(string? storedPath)
@@ -129,9 +129,42 @@ public sealed class GalleryStatePathConverter
         return ResolveStoredPathOrDefault(
             storedPath,
             legacyTargetDirectory,
-            path => _trustedImageFileService.GetTrustedImagePathOrDefault(
-                path,
-                modelId));
+            path => GetTrustedImagePathOrAlternative(path, modelId));
+    }
+
+    private string? GetTrustedImageDeletionPath(string? path)
+    {
+        if (!GenerationReferenceFilePolicy.IsSharedImagePath(_pathProvider, path) || path is null)
+        {
+            return GetTrustedDeletionPathOrDefault(path, _pathProvider.ArtDirectory);
+        }
+
+        string? original = GetTrustedDeletionPathOrDefault(path,
+            Path.GetDirectoryName(path) ?? _pathProvider.ArtDirectory);
+
+        if (original is not null && File.Exists(original))
+        {
+            return original;
+        }
+
+        string alternative = GenerationReferenceFilePolicy.GetAlternativePath(_pathProvider, path);
+        string? relocated = GetTrustedDeletionPathOrDefault(alternative,
+            Path.GetDirectoryName(alternative) ?? _pathProvider.ArtDirectory);
+
+        return relocated is not null && File.Exists(relocated) ? relocated : original;
+    }
+
+    private string? GetTrustedImagePathOrAlternative(string? path, string modelId)
+    {
+        string? trusted = _trustedImageFileService.GetTrustedImagePathOrDefault(path, modelId);
+
+        if (trusted is not null || path is null || !GenerationReferenceFilePolicy.IsSharedImagePath(_pathProvider, path))
+        {
+            return trusted;
+        }
+
+        return _trustedImageFileService.GetTrustedImagePathOrDefault(
+            GenerationReferenceFilePolicy.GetAlternativePath(_pathProvider, path), modelId);
     }
 
     private string? GetManagedPathForDeletion(
