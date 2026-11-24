@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using FluentAssertions;
 using Xunit;
@@ -16,6 +18,73 @@ namespace AtomicArt.Desktop.Rendering.Tests.ViewModels.Generation;
 
 public sealed partial class GenerationChatViewModelTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ChatView_WithHistoryFade_MasksOnlyTheClippedVerticalEdges(bool overflowing)
+    {
+        await DesktopControlTestBase.DispatchAsync(typeof(GenerationChatViewModelTests), async () =>
+        {
+            using ChatContext context = new();
+            GenerationChatMessage[] messages = Enumerable.Range(0, overflowing ? 40 : 1)
+                .Select(index => new GenerationChatMessage(index % 2 == 0, $"Message {index}",
+                    new DateTime(2026, 11, 25), Array.Empty<GenerationReference>())).ToArray();
+            GenerationItemViewModel source = await context.RestoreSavedChatAsync(new GenerationChatHistory(messages, includesCardTurn: true));
+            GenerationChatView view = new() { DataContext = context.Chat };
+            Window window = DesktopControlTestBase.Show(view, 560d, 360d);
+
+            try
+            {
+                await context.Chat.OpenCommand.ExecuteAsync(source);
+                await GenerationChatViewModelTests.WaitForFramesAsync(window, () => view.IsPresented);
+                ScrollViewer scroll = view.GetVisualDescendants().OfType<ScrollViewer>().First();
+                ScrollContentPresenter presenter = scroll.GetVisualDescendants().OfType<ScrollContentPresenter>().First();
+                Border header = view.GetVisualDescendants().OfType<Border>()
+                    .Single(border => border.Classes.Contains("generation-chat-header"));
+                header.OpacityMask.Should().BeNull();
+
+                if (!overflowing)
+                {
+                    presenter.OpacityMask.Should().BeNull();
+                    return;
+                }
+
+                LinearGradientBrush mask = presenter.OpacityMask.Should().BeOfType<LinearGradientBrush>().Subject;
+                mask.StartPoint.Should().Be(new RelativePoint(0d, 0d, RelativeUnit.Relative));
+                mask.EndPoint.Should().Be(new RelativePoint(0d, 1d, RelativeUnit.Relative));
+
+                scroll.Offset = Vector.Zero;
+                window.CaptureRenderedFrame()?.Dispose();
+
+                mask.GradientStops[0].Color.Should().Be(Colors.White);
+                mask.GradientStops[3].Color.Should().Be(overflowing ? Colors.Transparent : Colors.White);
+
+                if (overflowing)
+                {
+                    scroll.Offset = new Vector(0d, scroll.ScrollBarMaximum.Y / 2d);
+                    window.CaptureRenderedFrame()?.Dispose();
+
+                    mask.GradientStops[0].Color.Should().Be(Colors.Transparent);
+                    mask.GradientStops[3].Color.Should().Be(Colors.Transparent);
+                    mask.GradientStops[1].Offset.Should().BeGreaterThan(0d);
+                    mask.GradientStops[2].Offset.Should().BeLessThan(1d);
+
+                    scroll.ScrollToEnd();
+                    window.CaptureRenderedFrame()?.Dispose();
+
+                    mask.GradientStops[0].Color.Should().Be(Colors.Transparent);
+                    mask.GradientStops[3].Color.Should().Be(Colors.White);
+                }
+
+                presenter.OpacityMask.Should().BeSameAs(mask);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     [Theory]
     [InlineData(640, 240)]
     [InlineData(240, 640)]

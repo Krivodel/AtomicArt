@@ -61,6 +61,7 @@
                     <ItemsControl.Template>
                         <ControlTemplate x:DataType="ItemsControl">
                             <ScrollViewer x:Name="ChatScrollViewer"
+                                          Classes="generation-chat-scroll"
                                           BringIntoViewOnFocusChange="False"
                                           HorizontalScrollBarVisibility="Disabled"
                                           VerticalScrollBarVisibility="Auto">

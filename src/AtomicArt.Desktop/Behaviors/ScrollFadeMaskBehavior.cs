@@ -111,7 +111,6 @@ public static class ScrollFadeMaskBehavior
         LinearGradientBrush mask = CreateMask();
 
         scrollPresenter.SetValue(MaskProperty, mask);
-        scrollPresenter.OpacityMask = mask;
         scrollPresenter.PropertyChanged += OnScrollPresenterPropertyChanged;
     }
 
@@ -128,6 +127,47 @@ public static class ScrollFadeMaskBehavior
         mask.GradientStops.Add(new GradientStop(Colors.White, 1d));
 
         return mask;
+    }
+
+    private static void UpdateMask(ScrollContentPresenter scrollPresenter)
+    {
+        LinearGradientBrush? mask = scrollPresenter.GetValue(MaskProperty);
+
+        if (mask is null)
+        {
+            return;
+        }
+
+        Thickness insets = ScrollFadeMaskBehavior.GetInsets(scrollPresenter);
+        bool horizontal = ScrollFadeMaskBehavior.GetOrientation(scrollPresenter) == Orientation.Horizontal;
+        double length = horizontal ? scrollPresenter.Bounds.Width : scrollPresenter.Bounds.Height;
+        double leadingInset = horizontal ? insets.Left : insets.Top;
+        double trailingInset = horizontal ? insets.Right : insets.Bottom;
+
+        if (ScrollFadeMaskBehavior.GetFadeWhenClipped(scrollPresenter))
+        {
+            double offset = horizontal ? scrollPresenter.Offset.X : scrollPresenter.Offset.Y;
+            double extent = horizontal ? scrollPresenter.Extent.Width : scrollPresenter.Extent.Height;
+            double viewport = horizontal ? scrollPresenter.Viewport.Width : scrollPresenter.Viewport.Height;
+            leadingInset = Math.Min(leadingInset, Math.Max(0d, offset));
+            trailingInset = Math.Min(trailingInset, Math.Max(0d, extent - viewport - offset));
+        }
+
+        (double leadingFadeEnd, double trailingFadeStart) =
+            ScrollFadeMaskBehavior.CalculateFadeOffsets(length, leadingInset, trailingInset);
+
+        mask.EndPoint = horizontal
+            ? new RelativePoint(1d, 0d, RelativeUnit.Relative)
+            : new RelativePoint(0d, 1d, RelativeUnit.Relative);
+        mask.GradientStops[0].Color = leadingInset > 0d
+            ? Colors.Transparent
+            : Colors.White;
+        mask.GradientStops[1].Offset = leadingFadeEnd;
+        mask.GradientStops[2].Offset = trailingFadeStart;
+        mask.GradientStops[3].Color = trailingInset > 0d
+            ? Colors.Transparent
+            : Colors.White;
+        scrollPresenter.OpacityMask = leadingInset > 0d || trailingInset > 0d ? mask : null;
     }
 
     private static void OnScrollPresenterPropertyChanged(
@@ -165,45 +205,5 @@ public static class ScrollFadeMaskBehavior
 
         Attach(scrollPresenter);
         UpdateMask(scrollPresenter);
-    }
-
-    private static void UpdateMask(ScrollContentPresenter scrollPresenter)
-    {
-        LinearGradientBrush? mask = scrollPresenter.GetValue(MaskProperty);
-
-        if (mask is null)
-        {
-            return;
-        }
-
-        Thickness insets = GetInsets(scrollPresenter);
-        bool horizontal = GetOrientation(scrollPresenter) == Orientation.Horizontal;
-        double length = horizontal ? scrollPresenter.Bounds.Width : scrollPresenter.Bounds.Height;
-        double leadingInset = horizontal ? insets.Left : insets.Top;
-        double trailingInset = horizontal ? insets.Right : insets.Bottom;
-
-        if (GetFadeWhenClipped(scrollPresenter))
-        {
-            double offset = horizontal ? scrollPresenter.Offset.X : scrollPresenter.Offset.Y;
-            double extent = horizontal ? scrollPresenter.Extent.Width : scrollPresenter.Extent.Height;
-            double viewport = horizontal ? scrollPresenter.Viewport.Width : scrollPresenter.Viewport.Height;
-            leadingInset = Math.Min(leadingInset, Math.Max(0d, offset));
-            trailingInset = Math.Min(trailingInset, Math.Max(0d, extent - viewport - offset));
-        }
-
-        (double leadingFadeEnd, double trailingFadeStart) =
-            CalculateFadeOffsets(length, leadingInset, trailingInset);
-
-        mask.EndPoint = horizontal
-            ? new RelativePoint(1d, 0d, RelativeUnit.Relative)
-            : new RelativePoint(0d, 1d, RelativeUnit.Relative);
-        mask.GradientStops[0].Color = leadingInset > 0d
-            ? Colors.Transparent
-            : Colors.White;
-        mask.GradientStops[1].Offset = leadingFadeEnd;
-        mask.GradientStops[2].Offset = trailingFadeStart;
-        mask.GradientStops[3].Color = trailingInset > 0d
-            ? Colors.Transparent
-            : Colors.White;
     }
 }

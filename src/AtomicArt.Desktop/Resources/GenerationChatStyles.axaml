@@ -10,6 +10,7 @@
         <x:Double x:Key="GenerationChatItemSpacing">6</x:Double>
         <Thickness x:Key="GenerationChatHeaderPadding">8</Thickness>
         <Thickness x:Key="GenerationChatContentMargin">12,5,12,8</Thickness>
+        <Thickness x:Key="GenerationChatScrollInsets">0,20</Thickness>
         <Thickness x:Key="GenerationChatBubblePadding">10,8</Thickness>
         <Thickness x:Key="GenerationChatReferencesPadding">10,0,10,8</Thickness>
         <Thickness x:Key="GenerationChatEditorActionsMargin">0,6,0,0</Thickness>
@@ -52,6 +53,14 @@
                 Value="1" />
         <Setter Property="RenderTransform"
                 Value="translateY(0px)" />
+    </Style>
+    <Style Selector="ScrollViewer.generation-chat-scroll /template/ ScrollContentPresenter#PART_ContentPresenter">
+        <Setter Property="behaviors:ScrollFadeMaskBehavior.Orientation"
+                Value="Vertical" />
+        <Setter Property="behaviors:ScrollFadeMaskBehavior.FadeWhenClipped"
+                Value="True" />
+        <Setter Property="behaviors:ScrollFadeMaskBehavior.Insets"
+                Value="{StaticResource GenerationChatScrollInsets}" />
     </Style>
     <Style Selector="Border.generation-chat-header">
         <Setter Property="Background"

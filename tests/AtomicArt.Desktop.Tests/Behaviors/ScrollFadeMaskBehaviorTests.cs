@@ -32,6 +32,57 @@ public sealed class ScrollFadeMaskBehaviorTests : AnimatedGalleryControlTestBase
     [Theory]
     [InlineData(Orientation.Vertical)]
     [InlineData(Orientation.Horizontal)]
+    public async Task ScrollViewer_WhenOverflowDisappearsAndReturns_ReusesItsMaskOnlyWhenNeeded(Orientation orientation)
+    {
+        await DesktopControlTestBase.DispatchAsync(typeof(ScrollFadeMaskBehaviorTests), () =>
+        {
+            bool horizontal = orientation == Orientation.Horizontal;
+            Border content = new()
+            {
+                Width = horizontal ? 300d : 100d,
+                Height = horizontal ? 100d : 300d,
+                Background = Brushes.White
+            };
+            ScrollViewer scroll = new()
+            {
+                Content = content,
+                HorizontalScrollBarVisibility = horizontal ? ScrollBarVisibility.Hidden : ScrollBarVisibility.Disabled,
+                VerticalScrollBarVisibility = horizontal ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Hidden
+            };
+            Window window = DesktopControlTestBase.Show(scroll, 100d, 100d);
+
+            try
+            {
+                ScrollContentPresenter presenter = scroll.GetVisualDescendants().OfType<ScrollContentPresenter>().Single();
+                ScrollFadeMaskBehavior.SetOrientation(presenter, orientation);
+                ScrollFadeMaskBehavior.SetFadeWhenClipped(presenter, true);
+                ScrollFadeMaskBehavior.SetInsets(presenter, horizontal ? new Thickness(20d, 0d) : new Thickness(0d, 20d));
+                LinearGradientBrush mask = presenter.OpacityMask.Should().BeOfType<LinearGradientBrush>().Subject;
+
+                content.Width = 80d;
+                content.Height = 80d;
+                window.CaptureRenderedFrame()?.Dispose();
+
+                presenter.OpacityMask.Should().BeNull();
+
+                content.Width = horizontal ? 300d : 100d;
+                content.Height = horizontal ? 100d : 300d;
+                window.CaptureRenderedFrame()?.Dispose();
+
+                presenter.OpacityMask.Should().BeSameAs(mask);
+                mask.GradientStops[0].Color.Should().Be(Colors.White);
+                mask.GradientStops[3].Color.Should().Be(Colors.Transparent);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(Orientation.Vertical)]
+    [InlineData(Orientation.Horizontal)]
     public async Task ScrollViewer_WhenScrolled_RendersFadeAtBothViewportEdges(Orientation orientation)
     {
         await DispatchAsync(typeof(ScrollFadeMaskBehaviorTests), () =>
