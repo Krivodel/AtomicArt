@@ -958,6 +958,7 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
         public Mock<IAttachedImagePreparationService> Preparation { get; } = new Mock<IAttachedImagePreparationService>();
         public Mock<IGenerationReferenceStore> References => _references;
         public Mock<TimeProvider> Clock { get; } = new Mock<TimeProvider>();
+        public Mock<IAnimatedGalleryOperations> GalleryOperations { get; } = new Mock<IAnimatedGalleryOperations>();
         public GalleryViewModel Gallery => _gallery;
 
         private readonly LocalizationService _localization;
@@ -1002,7 +1003,8 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
                 media, _references.Object, new NanoBanana2PanelTextFormatter(TestLocalizationTextProvider.Default),
                 new RecordingTextClipboardService(), new TestViewModelErrorHandler(), new RecordingDialogService(),
                 TextSizes.Object, Chats.Object,
-                new GenerationChatDateFormatter(TestLocalizationTextProvider.Default, _localization, Clock.Object));
+                new GenerationChatDateFormatter(TestLocalizationTextProvider.Default, _localization, Clock.Object),
+                GalleryOperations.Object);
             Chat.Connect(_gallery, Panel.Object);
         }
 

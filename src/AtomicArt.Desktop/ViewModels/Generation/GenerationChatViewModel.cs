@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
+using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
@@ -33,6 +34,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     private readonly IChatTextSizeController _textSizes;
     private readonly NanoBanana2PanelTextFormatter _formatter;
     private readonly GenerationChatDateFormatter _dates;
+    private readonly IAnimatedGalleryOperations _galleryOperations;
     private readonly IGenerationChatStore _chats;
     private readonly IGenerationReferenceStore _references;
     private readonly Dictionary<Guid, GenerationChatSessionViewModel> _sessions = [];
@@ -55,7 +57,8 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         IDialogService dialogs,
         IChatTextSizeController textSizeController,
         IGenerationChatStore chats,
-        GenerationChatDateFormatter dates)
+        GenerationChatDateFormatter dates,
+        IAnimatedGalleryOperations galleryOperations)
         : base(errorHandler, dialogs)
     {
         ArgumentNullException.ThrowIfNull(media);
@@ -66,6 +69,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         _chats = chats ?? throw new ArgumentNullException(nameof(chats));
         ArgumentNullException.ThrowIfNull(dates);
         _dates = dates;
+        _galleryOperations = galleryOperations ?? throw new ArgumentNullException(nameof(galleryOperations));
         _dates.Changed += OnGroupLabelsChanged;
         BranchMap = new GenerationChatBranchMapViewModel(OpenCommand);
         _textSizes = textSizeController ?? throw new ArgumentNullException(nameof(textSizeController));
@@ -225,6 +229,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
             ReturnToSourceCommand.NotifyCanExecuteChanged();
             OpenGroupCommand.NotifyCanExecuteChanged();
             NavigateInBackgroundCommand.NotifyCanExecuteChanged();
+            ShowInGalleryCommand.NotifyCanExecuteChanged();
             BranchMap.RefreshCommands();
         }
     }
@@ -232,6 +237,23 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     private bool CanOpen(GenerationItemViewModel? item)
     {
         return !_isDisposed && !IsLoading && item is { SupportsChat: true };
+    }
+
+    private bool CanShowInGallery()
+    {
+        return !_isDisposed && !IsLoading && _active?.Source is { } source && _gallery?.Items.Contains(source) == true;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanShowInGallery))]
+    private async Task ShowInGalleryAsync(CancellationToken ct)
+    {
+        if (_active?.Source is not { } source || _gallery?.Items.Contains(source) != true)
+        {
+            return;
+        }
+
+        Collapse();
+        await ExecuteAsync(token => _galleryOperations.RevealAsync(source.Id, token), nameof(ShowInGalleryAsync), ct);
     }
 
     [RelayCommand]
@@ -380,6 +402,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         ReturnToSourceCommand.NotifyCanExecuteChanged();
         RefreshGroupLinks();
         OpenBranchMapCommand.NotifyCanExecuteChanged();
+        ShowInGalleryCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -484,6 +507,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         RefreshGroupLinks();
         OnPropertyChanged(nameof(CanReturnToSource));
         ReturnToSourceCommand.NotifyCanExecuteChanged();
+        ShowInGalleryCommand.NotifyCanExecuteChanged();
 
         if (BranchMap.IsOpen && _gallery is not null)
         {
