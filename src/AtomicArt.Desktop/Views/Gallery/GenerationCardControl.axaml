@@ -154,6 +154,17 @@
                                                    PreviewPath="{Binding DisplayThumbnailPath}"
                                                    ShowFailureDetailsCommand="{Binding $parent[controls:GenerationCardControl].ShowFailureDetailsCommand}" />
 
+                <Button Grid.Row="0"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Classes="card-zone-hit-target"
+                        IsVisible="{Binding TextReplyPreview, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Chat}}"
+                        Cursor="Hand"
+                        ZIndex="10"
+                        Command="{Binding #GenerationCard.OpenChatCommand}"
+                        CommandParameter="{Binding}" />
+
                 <Border x:Name="GenerationCardInfo"
                         Grid.Row="1"
                         Classes="generation-card-info"

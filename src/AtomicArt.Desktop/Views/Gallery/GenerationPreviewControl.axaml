@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="using:AtomicArt.Desktop.Controls"
              xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
              xmlns:generation="using:AtomicArt.Desktop.Controls.Generation"
              xmlns:i18n="https://codewf.com"
@@ -39,7 +40,28 @@
                                                   IsActive="{Binding ShowsGenerationProgress}" />
 
         <Border Classes="generation-card-empty"
-                IsVisible="{Binding ShowsEmptyPreview}" />
+                IsVisible="{Binding ShowsEmptyPreview}">
+            <ContentControl HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Center"
+                            Content="{Binding TextReplyPreview}">
+                <ContentControl.DataTemplates>
+                    <DataTemplate DataType="{x:Type x:String}"
+                                  x:DataType="x:String">
+                        <Grid Margin="{StaticResource GalleryCardInfoPadding}"
+                              RowDefinitions="Auto,Auto"
+                              RowSpacing="{StaticResource GenerationChatItemSpacing}">
+                            <Path HorizontalAlignment="Left"
+                                  Classes="metadata-outline-icon"
+                                  Data="{StaticResource AppChatIcon}"
+                                  Stroke="{StaticResource MetadataSecondaryTextBrush}" />
+                            <controls:OverflowEllipsisTextBlock Grid.Row="1"
+                                                               Classes="generation-card-prompt"
+                                                               Text="{Binding}" />
+                        </Grid>
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+        </Border>
 
         <Border x:Name="FailurePreview"
                 Classes="generation-card-error"

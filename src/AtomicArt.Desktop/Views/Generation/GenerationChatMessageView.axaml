@@ -7,6 +7,7 @@
              xmlns:i18n="https://codewf.com"
              xmlns:picaResources="using:Pica.Viewer.Resources"
              xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:uiControls="using:AtomicArt.Desktop.Controls"
              xmlns:views="using:AtomicArt.Desktop.Views.Generation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="AtomicArt.Desktop.Views.Generation.GenerationChatMessageView"
@@ -93,7 +94,12 @@
                                                                     VerticalAlignment="Top"
                                                                     Classes="generation-chat-variant"
                                                                     Background="Transparent">
-                                                            <views:GenerationChatImageFrame Preview="{Binding #ResultPreview.Source}"
+                                                            <uiControls:OverflowEllipsisTextBlock Margin="{StaticResource GalleryCardInfoPadding}"
+                                                                                                 Classes="generation-card-prompt"
+                                                                                                 IsVisible="{Binding TextReply, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                                                                 Text="{Binding TextReply}" />
+                                                            <views:GenerationChatImageFrame IsVisible="{Binding TextReply, Converter={x:Static ObjectConverters.IsNull}}"
+                                                                                            Preview="{Binding #ResultPreview.Source}"
                                                                                             PreviewAspectRatio="{Binding PreviewAspectRatio, Mode=TwoWay}">
                                                                 <Grid>
                                                                     <galleryViews:GenerationReferencePreviewControl x:Name="ResultPreview"

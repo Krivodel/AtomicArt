@@ -175,9 +175,11 @@ public sealed class GalleryStateConsistencyServiceTests
                 GenerationItemStatus.Generated,
                 Path.Combine("Art", fileName),
                 Path.Combine("Thumbnails", fileName));
+            GenerationChatResult reply = new("The recorded prompt", null) { IsTextReply = true };
+            GalleryItemState textItem = GalleryItemStateTestFactory.CreateGenerated(imagePath: null, chatResult: reply);
             GalleryState storedState = new()
             {
-                Items = [missingImageItem]
+                Items = [missingImageItem, textItem]
             };
             await stateStore.SaveAsync(
                 section,
@@ -210,7 +212,9 @@ public sealed class GalleryStateConsistencyServiceTests
             GalleryState reconciledState = await stateStore.LoadAsync<GalleryState>(
                 section,
                 CancellationToken.None);
-            reconciledState.Items.Should().BeEmpty();
+            GalleryItemState restored = reconciledState.Items.Should().ContainSingle().Subject;
+            restored.Id.Should().Be(textItem.Id);
+            restored.ChatResult.Should().Be(reply);
             File.Exists(thumbnailPath).Should().BeFalse();
         }
         finally

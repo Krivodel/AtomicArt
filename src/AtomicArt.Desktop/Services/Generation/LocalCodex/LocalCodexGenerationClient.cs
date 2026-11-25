@@ -53,60 +53,54 @@ public sealed class LocalCodexGenerationClient(
         {
             using LocalCodexInputPreparation input = new(_referenceStore, formatRegistry, textProvider);
             await input.PrepareAsync(request, history, timeout.Token).ConfigureAwait(false);
-            (byte[] bytes, string? modelId, string text, string resultHome, string resultThread, JsonElement resultImage) = await appServer.RunAsync(
+            (LocalCodexTurnResult turn, byte[]? bytes, string resultHome) = await appServer.RunAsync(
                 configuration,
                 workspace.FullName,
                 async (protocol, home) =>
                 {
-                    (string threadId, string? effectiveModelId, JsonElement image, string answer) = await protocol.GenerateAsync(
-                        workspace.FullName, input.Inputs, turnOptions, timeout.Token, history)
+                    LocalCodexTurnResult reply = await protocol.GenerateAsync(
+                        workspace.FullName, input.Inputs, turnOptions, timeout.Token)
                         .ConfigureAwait(false);
-                    byte[] imageBytes = await ReadImageAsync(home, threadId, image, timeout.Token).ConfigureAwait(false);
+                    byte[]? imageBytes = reply.Image is { } image
+                        ? await ReadImageAsync(home, reply.ThreadId, image, timeout.Token).ConfigureAwait(false) : null;
 
-                    return (imageBytes, effectiveModelId, answer, home, threadId, image);
+                    return (reply, imageBytes, home);
                 },
                 timeout.Token).ConfigureAwait(false);
             input.Dispose();
 
-            AttachedImageCodecInfo info = imageCodec.ReadInfo(bytes) ?? throw InvalidImage();
-            Guid storageLeaseId = Guid.NewGuid();
-            GenerationReference imageReference;
-            string imagePath;
+            string? imagePath = null;
+            string resolution = request.Resolution;
+            GenerationChatResult result;
 
-            try
+            if (turn.Image is { } resultImage && bytes is not null)
             {
-                AttachedImageDto attachment = new("image.png", GenerationImageContentTypes.Png, bytes);
-                IReadOnlyList<GenerationReference> references = await _referenceStore
-                    .SaveAsync(storageLeaseId, new AttachedImageDto[] { attachment }, timeout.Token).ConfigureAwait(false);
-                await _referenceStore.PromoteAsync(storageLeaseId, references, timeout.Token).ConfigureAwait(false);
-                imageReference = references.Single();
-                imagePath = await _referenceStore.GetExistingFilePathAsync(imageReference, timeout.Token).ConfigureAwait(false)
-                    ?? throw LocalCodexGenerationClient.InvalidImage();
+                AttachedImageCodecInfo info = imageCodec.ReadInfo(bytes) ?? throw InvalidImage();
+                resolution = FormattableString.Invariant($"{info.Width}x{info.Height}");
+                (result, imagePath) = await StoreImageAsync(bytes, turn, timeout.Token).ConfigureAwait(false);
+                appServer.DeleteGeneratedImage(resultHome, turn.ThreadId, resultImage);
             }
-            catch (Exception)
+            else
             {
-                _referenceStore.Release(storageLeaseId);
-                throw;
+                result = new GenerationChatResult(turn.Text, null) { IsTextReply = true };
             }
-
-            appServer.DeleteGeneratedImage(resultHome, resultThread, resultImage);
 
             GenerationItemDto item = new(
                 generationId,
                 request.ModelId,
-                LocalCodexImageModel.FormatDisplayName(turnOptions?.ModelId == modelId
+                LocalCodexImageModel.FormatDisplayName(turnOptions?.ModelId == turn.ModelId
                     ? turnOptions?.ModelDisplayName
-                    : modelId),
+                    : turn.ModelId),
                 request.Prompt,
                 request.AspectRatio,
-                FormattableString.Invariant($"{info.Width}x{info.Height}"),
+                resolution,
                 startedAtUtc,
                 GenerationItemStatus.Generated,
                 imagePath,
                 CompletedAtUtc: DateTime.UtcNow,
                 GenerationDuration: stopwatch.Elapsed);
 
-            return (new GenerationBatchDto(generationId, new GenerationItemDto[] { item }), new GenerationChatResult(text, imageReference, storageLeaseId));
+            return (new GenerationBatchDto(generationId, new GenerationItemDto[] { item }), result);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -153,6 +147,32 @@ public sealed class LocalCodexGenerationClient(
     {
         return new GenerationAttemptException(
             "Codex did not return a valid image.", GenerationProviderFailureErrorCodes.InvalidResponse, false);
+    }
+
+    private async Task<(GenerationChatResult Result, string Path)> StoreImageAsync(
+        byte[] bytes, LocalCodexTurnResult turn, CancellationToken ct)
+    {
+        Guid storageLeaseId = Guid.NewGuid();
+
+        try
+        {
+            AttachedImageDto attachment = new("image.png", GenerationImageContentTypes.Png, bytes);
+            IReadOnlyList<GenerationReference> references = await _referenceStore
+                .SaveAsync(storageLeaseId, new AttachedImageDto[] { attachment }, ct).ConfigureAwait(false);
+            await _referenceStore.PromoteAsync(storageLeaseId, references, ct).ConfigureAwait(false);
+            GenerationReference reference = references.Single();
+            string path = await _referenceStore.GetExistingFilePathAsync(reference, ct).ConfigureAwait(false)
+                ?? throw InvalidImage();
+            return (new GenerationChatResult(turn.Text, reference, storageLeaseId)
+            {
+                ImageGeneration = turn.GetImageCall(reference.Hash)
+            }, path);
+        }
+        catch (Exception)
+        {
+            _referenceStore.Release(storageLeaseId);
+            throw;
+        }
     }
 
     private async Task<byte[]> ReadImageAsync(string home, string threadId, JsonElement image, CancellationToken ct)

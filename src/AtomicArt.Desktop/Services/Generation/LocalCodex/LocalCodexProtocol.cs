@@ -80,16 +80,17 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
         return (models.Values.ToArray(), configuredModel ?? defaultModel, GetOptionalString(config, "model_reasoning_effort"));
     }
 
-    public async Task<(string ThreadId, string? ModelId, JsonElement Image, string Text)> GenerateAsync(
-        string workspace, IReadOnlyList<object> inputs, LocalCodexTurnOptions? options, CancellationToken ct,
-        GenerationChatHistory? history = null)
+    public async Task<LocalCodexTurnResult> GenerateAsync(
+        string workspace, IReadOnlyList<object> inputs, LocalCodexTurnOptions? options, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workspace);
         ArgumentNullException.ThrowIfNull(inputs);
 
-        const string ImageInstructions = "Use the built-in image generator once for the user's image request. "
-            + "Use attached images as references when supplied. Only generate the image. Do not run commands, "
-            + "call external tools, or modify files.";
+        const string Instructions = "Use the built-in image generator once for image requests and use supplied references. "
+            + "Answer questions and requests for prompts in text. Use the supplied conversation as context. "
+            + "Write replies as plain text without Markdown formatting or code fences. "
+            + "Quote recorded image prompts exactly when asked. If a prompt is unavailable, say so. "
+            + "Do not run commands, call external tools, or modify files.";
         JsonElement start = await RequestAsync("thread/start", new
         {
             cwd = workspace,
@@ -98,10 +99,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
             sandbox = "read-only",
             modelProvider = ModelProvider,
             model = options?.ModelId,
-            developerInstructions = history is { Messages.Count: > 0 }
-                ? ImageInstructions + " The input contains the earlier conversation in order. Use it as context. "
-                    + "Generate an image for the final user message only."
-                : ImageInstructions
+            developerInstructions = Instructions
         }, ct).ConfigureAwait(false);
         string threadId = GetId(start.GetProperty("thread"));
         string? modelId = GetOptionalString(start, "model") ?? options?.ModelId;
@@ -109,15 +107,17 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
         JsonElement turn = await RequestAsync("turn/start", new { threadId, input = inputs, effort = options?.ReasoningEffort }, ct, message =>
         {
             if (message.TryGetProperty("method", out JsonElement method)
-                && method.GetString() is "turn/completed" or "item/completed")
+                && method.GetString() is "turn/completed" or "item/started" or "item/completed")
             {
                 pending.Enqueue(message);
             }
         }).ConfigureAwait(false);
         string turnId = GetId(turn.GetProperty("turn"));
-        JsonElement image = default;
+        JsonElement? image = null;
         List<string> answers = [];
         bool limitReached = false;
+        bool attemptedImage = false;
+        bool hasTextAnswer = false;
 
         while (true)
         {
@@ -135,12 +135,16 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
 
             switch (method.GetString())
             {
+                case "item/started" when parameters.GetProperty("turnId").GetString() == turnId:
+                    attemptedImage |= parameters.GetProperty("item").GetProperty("type").GetString() == "imageGeneration";
+                    break;
                 case "item/completed" when parameters.GetProperty("turnId").GetString() == turnId:
                     JsonElement item = parameters.GetProperty("item");
                     string? itemType = item.GetProperty("type").GetString();
                     if (itemType == "imageGeneration")
                     {
-                        if (image.ValueKind == JsonValueKind.Undefined
+                        attemptedImage = true;
+                        if (image is null
                             && item.GetProperty("status").GetString() == "completed")
                         {
                             image = item;
@@ -148,9 +152,12 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
 
                         limitReached |= IsUsageLimit(item, "failure", "type");
                     }
-                    else if (itemType == "agentMessage" && LocalCodexProtocol.GetOptionalString(item, "text") is { } answer)
+                    else if (itemType == "agentMessage" && GetOptionalString(item, "text") is { } answer
+                        && !string.IsNullOrWhiteSpace(answer))
                     {
+                        string? phase = GetOptionalString(item, "phase");
                         answers.Add(answer);
+                        hasTextAnswer |= phase is null or "final_answer";
                     }
 
                     break;
@@ -162,9 +169,9 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
                     }
 
                     if (completed.GetProperty("status").GetString() == "completed"
-                        && image.ValueKind != JsonValueKind.Undefined)
+                        && (image is not null || (!attemptedImage && hasTextAnswer)))
                     {
-                        return (threadId, modelId, image, string.Join("\n\n", answers));
+                        return new LocalCodexTurnResult(threadId, modelId, image, string.Join("\n\n", answers));
                     }
 
                     limitReached |= IsUsageLimit(completed, "error", "codexErrorInfo");
@@ -179,19 +186,19 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
         }
     }
 
-    private static string GetId(JsonElement value)
-    {
-        return value.GetProperty("id").GetString()
-            ?? throw new InvalidDataException("Codex did not return an identifier.");
-    }
-
-    private static string? GetOptionalString(JsonElement value, string property)
+    internal static string? GetOptionalString(JsonElement value, string property)
     {
         return value.TryGetProperty(property, out JsonElement element)
             && element.ValueKind == JsonValueKind.String
             && element.GetString() is { Length: > 0 } text
             ? text
             : null;
+    }
+
+    private static string GetId(JsonElement value)
+    {
+        return value.GetProperty("id").GetString()
+            ?? throw new InvalidDataException("Codex did not return an identifier.");
     }
 
     private static bool IsUsageLimit(JsonElement value, string property, string codeProperty)

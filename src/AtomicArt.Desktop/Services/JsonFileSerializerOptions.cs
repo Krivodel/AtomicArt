@@ -6,12 +6,12 @@ namespace AtomicArt.Desktop.Services;
 
 internal static class JsonFileSerializerOptions
 {
-    internal static JsonSerializerOptions Create()
+    internal static JsonSerializerOptions Create(bool writeIndented = true)
     {
         return new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
-            WriteIndented = true
+            WriteIndented = writeIndented
         };
     }
 }

@@ -102,11 +102,9 @@ public sealed class GalleryGenerationCompletedHandler : IGalleryLifecycleEventHa
 
         foreach (GenerationItemDto item in lifecycleEvent.Batch.Items)
         {
-            GalleryCompletedItemUpdate itemUpdate = await CreateItemUpdateAsync(
-                lifecycleEvent.Batch.BatchId,
-                item,
-                ct)
-                .ConfigureAwait(false);
+            GalleryCompletedItemUpdate itemUpdate = lifecycleEvent.ChatResult is { IsTextReply: true }
+                ? new GalleryCompletedItemUpdate(item, null, null)
+                : await CreateItemUpdateAsync(lifecycleEvent.Batch.BatchId, item, ct).ConfigureAwait(false);
             itemUpdates.Add(itemUpdate with { ChatResult = lifecycleEvent.ChatResult });
         }
 

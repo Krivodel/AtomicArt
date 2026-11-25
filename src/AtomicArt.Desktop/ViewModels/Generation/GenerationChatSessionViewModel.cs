@@ -94,7 +94,8 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
     {
         GenerationChatMessage prompt = new(false, item.Prompt, item.CreatedAtUtc, item.References ?? Array.Empty<GenerationReference>());
         GenerationChatMessage reply = new(true, item.ChatResult?.Text ?? string.Empty,
-            item.CompletedAtUtc ?? item.CreatedAtUtc, image is null ? Array.Empty<GenerationReference>() : new GenerationReference[] { image }, item.IsFailed);
+            item.CompletedAtUtc ?? item.CreatedAtUtc, image is null ? Array.Empty<GenerationReference>() : new GenerationReference[] { image },
+            item.IsFailed, item.ChatResult?.ImageGeneration);
 
         return new GenerationChatHistory((item.ChatHistory?.Messages ?? Array.Empty<GenerationChatMessage>()).Concat(new GenerationChatMessage[] { prompt, reply }).ToArray(), includesCardTurn: true);
     }
@@ -428,7 +429,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
         {
             foreach (GenerationChatImageViewModel image in reply.Images)
             {
-                image.CanChoose = image is { IsPending: false, IsFailed: false, Reference: not null }
+                image.CanChoose = image is { IsPending: false, IsFailed: false }
                     && FindVariantCard(image) is not null;
             }
         }
@@ -563,6 +564,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
             messages[snapshot.IsAssistant ? ^1 : ^2] = snapshot.IsAssistant && batch.Generation.Runs.Count > 1
                 ? snapshot with
                 {
+                    ImageGeneration = item.ChatResult?.ImageGeneration,
                     Images = snapshot.Images.Where(image => image == item.ChatResult?.Image
                     || !variants.Contains(image)).ToArray()
                 }
@@ -581,12 +583,18 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
             return;
         }
 
-        GenerationChatHistory?[] previous = updates.Select(update => update.Card.ChatHistory).ToArray();
-        string[] previousPrompts = updates.Select(update => update.Card.Prompt).ToArray();
+        (GenerationChatHistory? History, string Prompt, string? Reply)[] previous = updates
+            .Select(update => (update.Card.ChatHistory, update.Card.Prompt, update.Card.TextReplyPreview)).ToArray();
+
         foreach ((GenerationItemViewModel card, GenerationChatHistory history) in updates)
         {
             card.ChatHistory = history;
             card.Prompt = history.Messages.LastOrDefault(message => !message.IsAssistant)?.Text ?? card.Prompt;
+
+            if (history.Messages.LastOrDefault() is { IsAssistant: true } reply)
+            {
+                card.UpdateTextReply(reply.Text);
+            }
         }
 
         try
@@ -599,8 +607,13 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
             {
                 if (object.ReferenceEquals(updates[index].Card.ChatHistory, updates[index].History))
                 {
-                    updates[index].Card.ChatHistory = previous[index];
-                    updates[index].Card.Prompt = previousPrompts[index];
+                    updates[index].Card.ChatHistory = previous[index].History;
+                    updates[index].Card.Prompt = previous[index].Prompt;
+
+                    if (previous[index].Reply is { } text)
+                    {
+                        updates[index].Card.UpdateTextReply(text);
+                    }
                 }
             }
 

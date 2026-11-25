@@ -149,7 +149,7 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
 
             GalleryItemState item = items[index];
 
-            if (item.Status != GenerationItemStatus.Generated
+            if (item.Status != GenerationItemStatus.Generated || item.ChatResult is { IsTextReply: true }
                 || _pathConverter.GetRuntimeThumbnailPath(item.ThumbnailPath, item.ModelId)
                     is not null)
             {
@@ -226,6 +226,7 @@ public sealed class GalleryStateConsistencyService : IGalleryStateConsistencySer
     private bool HasMissingGeneratedImage(GalleryItemState item)
     {
         return item.Status == GenerationItemStatus.Generated
+            && item.ChatResult is not { IsTextReply: true }
             && _pathConverter.IsStoredImageFileMissing(item.ImagePath);
     }
 }

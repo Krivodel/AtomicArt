@@ -16,6 +16,7 @@ using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Rendering.Tests.Controls;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services;
@@ -111,6 +112,27 @@ public sealed partial class GenerationChatViewModelTests
 
             window.KeyRelease(Key.LeftShift, RawInputModifiers.None, PhysicalKey.ShiftLeft, null);
             await WaitForFramesAsync(window, () => !panel.Children[1].Classes.Contains(GenerationPreviewExpansionVisualMetrics.ExpandedClass));
+        });
+    }
+
+    [Fact]
+    public async Task BranchPreview_WithTextReply_FitsTheVisiblePreviewArea()
+    {
+        await VerifyBranchPreviewsAsync(async (window, view, previews) =>
+        {
+            GenerationPreviewControl preview = previews[0];
+            GenerationItemViewModel card = Assert.IsType<GenerationItemViewModel>(preview.DataContext);
+            GenerationChatResult reply = new("The saved prompt describes a lake with a boat at sunset.", null) { IsTextReply = true };
+            card.UpdateFromResult(AtomicArt.Tests.Common.Generation.GenerationItemDtoTestFactory.Create(id: card.Id),
+                null, null, reply);
+            await WaitForFramesAsync(window, () => preview.GetVisualDescendants().OfType<TextBlock>()
+                .Any(block => block.IsEffectivelyVisible && block.Text == reply.Text && block.Bounds.Height > 0d));
+            TextBlock excerpt = preview.GetVisualDescendants().OfType<TextBlock>().Single(block => block.Text == reply.Text);
+            Border clip = preview.GetVisualAncestors().OfType<Border>().First(border => border.ClipToBounds);
+            Point origin = excerpt.TranslatePoint(default, clip) ?? throw new InvalidOperationException();
+
+            origin.Y.Should().BeGreaterThanOrEqualTo(0d);
+            (origin.Y + excerpt.Bounds.Height).Should().BeLessThanOrEqualTo(clip.Bounds.Height);
         });
     }
 

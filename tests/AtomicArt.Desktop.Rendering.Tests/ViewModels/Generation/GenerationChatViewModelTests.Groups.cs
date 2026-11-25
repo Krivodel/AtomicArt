@@ -84,8 +84,10 @@ public sealed partial class GenerationChatViewModelTests
         context.Chat.Messages.Should().OnlyContain(message => message.CanEdit);
     }
 
-    [Fact]
-    public async Task SubmitAsync_WithSingleResult_ContinuesFromItsCardAndPreservesTheOriginal()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SubmitAsync_WithSingleResult_ContinuesFromItsCardAndPreservesTheOriginal(bool textOnly)
     {
         using ChatContext context = new();
         GenerationItemViewModel source = await context.RestoreSourceAsync();
@@ -94,7 +96,7 @@ public sealed partial class GenerationChatViewModelTests
         NanoBanana2GenerationParameters parameters = new(model, model.DisplayName, "Single change", "auto", "auto", 0d, 1,
             Array.Empty<AtomicArt.Contracts.Generation.AttachedImageDto>());
         GenerationChatBatch batch = await GenerationChatViewModelTests.SubmitParallelAsync(context.Chat, parameters);
-        GenerationChatResult result = context.AddResultCard(batch, "Single result");
+        GenerationChatResult result = context.AddResultCard(batch, "Single result", textOnly: textOnly);
 
         await GenerationChatViewModelTests.WaitForBusyChangeAsync(context.Chat, () => batch.Runs[0].Complete(result));
         await AtomicArt.Tests.Common.AsyncTestWaiter.WaitForConditionAsync(

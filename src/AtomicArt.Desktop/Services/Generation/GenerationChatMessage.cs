@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace AtomicArt.Desktop.Services.Generation;
 
 public sealed record GenerationChatMessage(
@@ -5,4 +7,5 @@ public sealed record GenerationChatMessage(
     string Text,
     DateTime CreatedAtUtc,
     IReadOnlyList<GenerationReference> Images,
-    bool Failed = false);
+    bool Failed = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] GenerationChatImageCall? ImageGeneration = null);

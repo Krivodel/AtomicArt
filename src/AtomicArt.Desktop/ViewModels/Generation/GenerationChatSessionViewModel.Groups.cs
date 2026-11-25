@@ -142,5 +142,11 @@ internal sealed partial class GenerationChatSessionViewModel
             RefreshGroupCards();
             RefreshVariantChoices();
         }
+        else if (e.PropertyName == nameof(GenerationItemViewModel.TextReplyPreview)
+            && sender is GenerationItemViewModel { TextReplyPreview: { } text } card
+            && _variantReply?.Images.FirstOrDefault(image => image.Id == card.Id) is { TextReply: not null } variant)
+        {
+            variant.TextReply = text;
+        }
     }
 }

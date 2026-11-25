@@ -11,6 +11,8 @@ public sealed partial class GenerationChatImageViewModel(Guid id, bool isPending
 
     private GenerationReference? _reference;
     [ObservableProperty]
+    private string? _textReply;
+    [ObservableProperty]
     private bool _isFailed;
     [ObservableProperty]
     private bool _isPending = isPending;
@@ -19,10 +21,11 @@ public sealed partial class GenerationChatImageViewModel(Guid id, bool isPending
     [ObservableProperty]
     private double _previewAspectRatio = 1d;
 
-    internal void Complete(GenerationReference? reference)
+    internal void Complete(GenerationReference? reference, string? textReply = null)
     {
         SetProperty(ref _reference, reference, nameof(Reference));
-        IsFailed = reference is null;
+        TextReply = textReply;
+        IsFailed = reference is null && textReply is null;
         IsPending = false;
     }
 }

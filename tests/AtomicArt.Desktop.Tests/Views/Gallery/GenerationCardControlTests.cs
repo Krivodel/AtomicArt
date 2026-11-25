@@ -24,6 +24,7 @@ using AtomicArt.Contracts.Generation;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Resources;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
@@ -48,6 +49,32 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         return AppBuilder.Configure<DesktopControlTestApplication>()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
+    }
+
+    [Fact]
+    public void Preview_WithTextReply_ShowsTheAnswerAndOpensItsChatOnClick()
+    {
+        Dispatch(() =>
+        {
+            GenerationItemViewModel item = CreateItem("image.png", "thumbnail.png");
+            GenerationChatResult reply = new("The recorded generator prompt", null) { IsTextReply = true };
+            item.UpdateFromResult(GenerationItemDtoTestFactory.Create(), null, null, reply);
+            GenerationItemViewModel? opened = null;
+            GenerationCardControl card = new()
+            {
+                DataContext = item,
+                OpenChatCommand = new RelayCommand<GenerationItemViewModel>(value => opened = value)
+            };
+
+            Show(card, GalleryLayoutService.CardWidth, 420d, window =>
+            {
+                card.GetVisualDescendants().OfType<TextBlock>().Should()
+                    .Contain(block => block.IsEffectivelyVisible && block.Text == reply.Text);
+                window.MouseDown(new Point(110d, 110d), MouseButton.Left);
+                window.MouseUp(new Point(110d, 110d), MouseButton.Left);
+                opened.Should().BeSameAs(item);
+            });
+        });
     }
 
     [Fact]

@@ -7,12 +7,46 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Tests.Services.Generation;
+using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Generation;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Generation;
 
 public sealed class GenerationChatMessageViewModelTests
 {
+    [Theory]
+    [InlineData(true, "  First line\r\n\r\nSecond line")]
+    [InlineData(false, "  First line\r\n\r\nSecond line \r\n\t")]
+    public async Task DisplayText_WithTrailingWhitespace_KeepsAssistantReadingCopyingAndEditingConsistent(
+        bool assistant, string expected)
+    {
+        const string Original = "  First line\r\n\r\nSecond line \r\n\t";
+        GenerationChatMessage message = new(assistant, Original,
+            new DateTime(2026, 11, 24, 12, 0, 0, DateTimeKind.Utc), Array.Empty<GenerationReference>());
+        Mock<IGenerationReferenceStore> references = new();
+        GenerationChatMediaService media = GenerationChatMediaServiceTestFactory.Create(
+            references.Object, Mock.Of<IAtomicArtDataPathProvider>());
+        RecordingTextClipboardService clipboard = new();
+        using GenerationChatMessageViewModel viewModel = new(
+            message, media, references.Object,
+            new NanoBanana2PanelTextFormatter(TestLocalizationTextProvider.Default), clipboard,
+            (_, _, _) => Task.CompletedTask, new TestViewModelErrorHandler(), Mock.Of<IDialogService>());
+
+        viewModel.DisplayText.Should().Be(expected);
+        await viewModel.CopyCommand.ExecuteAsync(null);
+        clipboard.Text.Should().Be(expected);
+        viewModel.EditCommand.Execute(null);
+        viewModel.EditText.Should().Be(expected);
+        viewModel.EditText = "Draft\n\n";
+        viewModel.DisplayText.Should().Be("Draft\n\n");
+        await viewModel.CopyCommand.ExecuteAsync(null);
+        clipboard.Text.Should().Be(expected);
+        viewModel.CancelCommand.Execute(null);
+
+        viewModel.DisplayText.Should().Be(expected);
+        viewModel.Snapshot().Text.Should().Be(Original);
+    }
+
     [Fact]
     public async Task Cancel_WithAttachmentPreparing_DiscardsLateImageAndRestoresCommandState()
     {

@@ -40,6 +40,7 @@ public sealed partial class GenerationItemViewModel :
     public bool IsFailed => StatusDescriptor.VisualState == GenerationItemVisualState.Failed;
     public bool ShowsGeneratedImage => HasDisplayImagePath && !IsFailed;
     public bool ShowsGenerationProgress => IsGenerating && !HasDisplayImagePath && !IsFailed;
+    public string? TextReplyPreview => IsGenerated && ChatResult is { IsTextReply: true } reply ? reply.Text : null;
     public bool ShowsEmptyPreview => !ShowsGeneratedImage && !ShowsGenerationProgress && !IsFailed;
     public string FavoriteActionLocalizationKey =>
         GalleryLocalizationKeys.Actions.GetImbaActionKey(IsFavorite);
@@ -370,6 +371,15 @@ public sealed partial class GenerationItemViewModel :
         GalleryOrderTimestampUtc = galleryOrderTimestampUtc;
     }
 
+    internal void UpdateTextReply(string text)
+    {
+        if (ChatResult is { IsTextReply: true } reply && reply.Text != text)
+        {
+            ChatResult = reply with { Text = text };
+            OnPropertyChanged(nameof(TextReplyPreview));
+        }
+    }
+
     private string FormatElapsed(int value, string unitKey)
     {
         return string.Concat(
@@ -407,5 +417,6 @@ public sealed partial class GenerationItemViewModel :
         OnPropertyChanged(nameof(ShowsGeneratedImage));
         OnPropertyChanged(nameof(ShowsGenerationProgress));
         OnPropertyChanged(nameof(ShowsEmptyPreview));
+        OnPropertyChanged(nameof(TextReplyPreview));
     }
 }

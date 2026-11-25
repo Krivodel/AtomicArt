@@ -592,7 +592,7 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
 
             try
             {
-                GenerationItemViewModel source = await context.RestoreSourceAsync(context.CreateResult("Image caption"));
+                GenerationItemViewModel source = await context.RestoreSourceAsync(context.CreateResult("Image caption\n\n"));
                 await context.Chat.OpenCommand.ExecuteAsync(source);
                 await GenerationChatViewModelTests.WaitForFramesAsync(window, () => view.IsPresented);
                 await Task.Delay(450);
@@ -601,6 +601,9 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
                 GenerationChatImageFrame image = reply.GetVisualDescendants().OfType<GenerationChatImageFrame>().Single();
                 Border bubble = reply.GetVisualDescendants().OfType<Border>()
                     .Single(border => border.Classes.Contains("generation-chat-bubble"));
+                TextBox editor = reply.FindControl<TextBox>("MessageEditor") ?? throw new InvalidOperationException();
+                editor.Text.Should().Be("Image caption");
+                editor.GetVisualDescendants().OfType<TextPresenter>().Single().TextLayout.TextLines.Should().ContainSingle();
 
                 GenerationReferencePreviewControl preview = image.GetVisualDescendants().OfType<GenerationReferencePreviewControl>().Single();
                 preview.Loader.Should().BeSameAs(loader);
@@ -1014,9 +1017,9 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
             return _gallery.Items.Single();
         }
 
-        public GenerationChatResult AddResultCard(GenerationChatBatch batch, string text, int index = 0)
+        public GenerationChatResult AddResultCard(GenerationChatBatch batch, string text, int index = 0, bool textOnly = false)
         {
-            GenerationChatResult result = CreateResult(text);
+            GenerationChatResult result = textOnly ? new GenerationChatResult(text, null) { IsTextReply = true } : CreateResult(text);
             GenerationItemDto item = GenerationItemDtoTestFactory.Create(
                 id: batch.Runs[index].Id, prompt: batch.UserMessage.Text, imagePath: null) with
             {

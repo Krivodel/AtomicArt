@@ -43,7 +43,8 @@ public sealed class LocalCodexInputPreparationTests
             GenerationChatHistory history = new(new GenerationChatMessage[]
             {
                 new GenerationChatMessage(false, "Reference", TimestampUtc, new GenerationReference[] { reference }),
-                new GenerationChatMessage(true, "Previous result", TimestampUtc, new GenerationReference[] { reference })
+                new GenerationChatMessage(true, "Previous result", TimestampUtc, new GenerationReference[] { reference },
+                    ImageGeneration: new GenerationChatImageCall(reference.Hash, "Озеро.\nЗакат.", false, "g1"))
             });
             ImageGenerationRequestDto request = new(LocalCodexImageModel.Id, "Continue", GenerationAspectRatios.Auto,
                 LocalCodexImageModel.Automatic, LocalCodexImageModel.Option.Temperature.Default, 1,
@@ -62,6 +63,10 @@ public sealed class LocalCodexInputPreparationTests
             File.GetLastWriteTimeUtc(path).Should().Be(TimestampUtc);
             Directory.GetFiles(GenerationReferenceStoreTests.GetHistoryDirectory(root)).Should().ContainSingle();
             JsonElement inputs = JsonSerializer.SerializeToElement(second.Inputs);
+            using JsonDocument entry = JsonDocument.Parse(inputs[2].GetProperty("text").GetString() ?? string.Empty);
+            JsonElement tool = entry.RootElement.GetProperty("imageGeneration");
+            tool.GetProperty("revisedPrompt").GetString().Should().Be("Озеро.\nЗакат.");
+            tool.GetProperty("outputImageIndex").GetInt32().Should().Be(0);
             inputs.EnumerateArray().Where(input => input.GetProperty("type").GetString() == "localImage")
                 .Should().HaveCount(3).And.OnlyContain(input => input.GetProperty("path").GetString() == path);
 

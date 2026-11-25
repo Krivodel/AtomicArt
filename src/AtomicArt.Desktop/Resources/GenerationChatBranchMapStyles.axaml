@@ -104,6 +104,12 @@
         <Setter Property="CornerRadius"
                 Value="0" />
     </Style>
+    <Style Selector="gallery|GenerationPreviewControl.generation-chat-branch-preview Border.generation-card-empty">
+        <Setter Property="Height"
+                Value="{StaticResource GenerationChatBranchPreviewHeight}" />
+        <Setter Property="VerticalAlignment"
+                Value="Center" />
+    </Style>
     <Style Selector="Border.generation-chat-branch-selection">
         <Setter Property="Background"
                 Value="{StaticResource MetadataHeaderBrush}" />

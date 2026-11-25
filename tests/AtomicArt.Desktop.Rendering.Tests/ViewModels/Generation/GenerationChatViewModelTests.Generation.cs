@@ -13,6 +13,45 @@ namespace AtomicArt.Desktop.Rendering.Tests.ViewModels.Generation;
 
 public sealed partial class GenerationChatViewModelTests
 {
+    [Fact]
+    public async Task ChooseVariant_WithTextAndImageReplies_ContinuesTheSelectedTextAndPreservesTheOriginalImageCall()
+    {
+        using ChatContext context = new();
+        GenerationChatImageCall call = new("first", "Original generator prompt", false, "g1");
+        GenerationItemViewModel source = await context.RestoreSourceAsync(context.CreateResult("Image") with { ImageGeneration = call });
+        await context.Chat.OpenCommand.ExecuteAsync(source);
+        GenerationChatBatch batch = await SubmitParallelAsync(context.Chat);
+        GenerationChatMessageViewModel variants = context.Chat.Messages[^1];
+        GenerationChatResult image = context.AddResultCard(batch, "Image variant");
+        GenerationChatResult text = context.AddResultCard(batch, "Text variant", index: 1, textOnly: true);
+        await CompleteVariantAsync(variants.Images[0], () => batch.Runs[0].Complete(image));
+        await CompleteVariantAsync(variants.Images[1], () => batch.Runs[1].Complete(text));
+
+        variants.Images[1].TextReply.Should().Be(text.Text);
+        await context.Chat.ChooseVariantCommand.ExecuteAsync(variants.Images[1]);
+
+        GenerationChatMessageViewModel reply = context.Chat.Messages[^1];
+        reply.Images.Should().BeEmpty();
+        reply.Text.Should().Be(text.Text);
+        reply.EditCommand.Execute(null);
+        reply.EditText = "Edited text variant";
+        await reply.SaveCommand.ExecuteAsync(null);
+        variants.Images[1].TextReply.Should().Be(reply.Text);
+        context.Chat.OpenBranchMapCommand.Execute(null);
+        GenerationItemViewModel selected = Assert.IsType<GenerationItemViewModel>(context.Chat.BranchMap.Nodes.Single(node => node.IsCurrent).Card);
+        selected.TextReplyPreview.Should().Be(reply.Text);
+        context.Chat.BranchMap.CloseCommand.Execute(null);
+        GenerationChatBatch next = await SubmitParallelAsync(context.Chat);
+        next.History.Messages[^1].Text.Should().Be(reply.Text);
+        next.History.Messages[^1].Images.Should().BeEmpty();
+        next.History.Messages.Should().ContainSingle(message => message.ImageGeneration == call);
+
+        foreach (GenerationChatRun run in next.Runs)
+        {
+            run.Complete(null);
+        }
+    }
+
     [Theory]
     [InlineData(true, "Generated")]
     [InlineData(false, "Generated")]

@@ -39,7 +39,7 @@ public sealed class LocalCodexProtocolTests
         using StringReader reader = new(TurnStart + """
             {"method":"item/completed","params":{"threadId":"thread-1","turnId":"other","item":{"type":"imageGeneration","status":"completed","result":"other"}}}
             {"method":"item/completed","params":{"threadId":"thread-1","turnId":"other","item":{"type":"agentMessage","text":"Different turn"}}}
-            {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"imageGeneration","status":"completed","result":"actual"}}}
+            {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"imageGeneration","status":"completed","result":"actual","revisedPrompt":"Warm lake light at dusk.\nKeep the boat.","transparentBackground":false,"generationId":"g1"}}}
             {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"agentMessage","text":"Updated the reflection."}}}
             {"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"completed"}}}
             """);
@@ -48,13 +48,15 @@ public sealed class LocalCodexProtocolTests
         const string ReferencePath = "reference.png";
         LocalCodexTurnOptions options = new("gpt-6.2-astra", "GPT-6.2 Astra", "high");
 
-        (string threadId, string? modelId, JsonElement image, string text) = await protocol.GenerateAsync(
+        LocalCodexTurnResult reply = await protocol.GenerateAsync(
             Path.GetTempPath(), new object[] { new { type = "localImage", path = ReferencePath } }, options, CancellationToken.None);
 
-        threadId.Should().Be("thread-1");
-        modelId.Should().Be(options.ModelId);
-        image.GetProperty("result").GetString().Should().Be("actual");
-        text.Should().Be("Updated the reflection.");
+        reply.ThreadId.Should().Be("thread-1");
+        reply.ModelId.Should().Be(options.ModelId);
+        reply.Image?.GetProperty("result").GetString().Should().Be("actual");
+        reply.Text.Should().Be("Updated the reflection.");
+        reply.GetImageCall("hash").Should().Be(new GenerationChatImageCall("hash",
+            "Warm lake light at dusk.\nKeep the boat.", false, "g1"));
         string[] requests = writer.ToString().Split(Environment.NewLine);
         using JsonDocument startRequest = JsonDocument.Parse(requests[0]);
         startRequest.RootElement.GetProperty("params").GetProperty("model").GetString().Should().Be(options.ModelId);
@@ -63,6 +65,71 @@ public sealed class LocalCodexProtocolTests
         JsonElement attachment = request.RootElement.GetProperty("params").GetProperty("input")[0];
         attachment.GetProperty("type").GetString().Should().Be("localImage");
         attachment.GetProperty("path").GetString().Should().Be(ReferencePath);
+    }
+
+    [Theory]
+    [InlineData("commentary")]
+    [InlineData("final_answer")]
+    public async Task GenerateAsync_WithPromptInAssistantText_PreservesItWithoutInventingAnImageCall(string phase)
+    {
+        using StringReader reader = new(TurnStart + $$$$"""
+            {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"agentMessage","phase":"{{{{phase}}}}","text":"Image prompt:\nТихая бухта.\nТёплый свет."}}}
+            {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"agentMessage","phase":"final_answer","text":"Here is the recorded prompt."}}}
+            {"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"completed"}}}
+            """);
+        using StringWriter writer = new();
+        LocalCodexProtocol protocol = new(reader, writer);
+
+        LocalCodexTurnResult reply = await protocol.GenerateAsync(Path.GetTempPath(), Array.Empty<object>(), null, CancellationToken.None);
+
+        reply.Text.Should().Be("Image prompt:\nТихая бухта.\nТёплый свет.\n\nHere is the recorded prompt.");
+        reply.Image.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("Тихая бухта.\nТёплый свет.")]
+    public async Task GenerateAsync_WithOptionalToolPrompt_RecordsOnlyTheReportedValue(string? prompt)
+    {
+        string imageEvent = JsonSerializer.Serialize(new
+        {
+            method = "item/completed",
+            @params = new
+            {
+                threadId = "thread-1",
+                turnId = "turn-1",
+                item = new { type = "imageGeneration", status = "completed", revisedPrompt = prompt, result = "image" }
+            }
+        });
+        using StringReader reader = new(TurnStart + imageEvent + "\n" + """
+            {"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"completed"}}}
+            """);
+        using StringWriter writer = new();
+        LocalCodexProtocol protocol = new(reader, writer);
+
+        LocalCodexTurnResult reply = await protocol.GenerateAsync(Path.GetTempPath(), Array.Empty<object>(), null, CancellationToken.None);
+
+        reply.GetImageCall("hash").RevisedPrompt.Should().Be(string.IsNullOrEmpty(prompt) ? null : prompt);
+        reply.Text.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("completed", "commentary", "Working on it.")]
+    [InlineData("completed", "final_answer", "   ")]
+    [InlineData("failed", "final_answer", "Partial response")]
+    public async Task GenerateAsync_WithoutACompletedAnswer_ReportsFailure(string status, string phase, string text)
+    {
+        using StringReader reader = new(TurnStart + $$$$"""
+            {"method":"item/completed","params":{"threadId":"thread-1","turnId":"turn-1","item":{"type":"agentMessage","phase":"{{{{phase}}}}","text":"{{{{text}}}}"}}}
+            {"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"{{{{status}}}}"}}}
+            """);
+        using StringWriter writer = new();
+        LocalCodexProtocol protocol = new(reader, writer);
+
+        Func<Task> generate = () => protocol.GenerateAsync(Path.GetTempPath(), Array.Empty<object>(), null, CancellationToken.None);
+
+        (await generate.Should().ThrowAsync<GenerationAttemptException>()).Which.SafeErrorCode.Should().Be(GenerationClientFailureCodes.CodexNoImage);
     }
 
     [Fact]

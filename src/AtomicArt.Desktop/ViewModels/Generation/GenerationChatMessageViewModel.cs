@@ -40,7 +40,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     public bool HasDateLabel => !string.IsNullOrWhiteSpace(DateLabel);
     public string DisplayText
     {
-        get => IsEditing ? EditText : Text;
+        get => IsEditing ? EditText : ReadOnlyText;
         set
         {
             if (IsEditing)
@@ -52,6 +52,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     public ICommand? RemoveAttachment => IsEditing ? RemoveReferenceCommand : null;
     public ICommand? ReorderAttachment => IsEditing ? MoveReferenceCommand : null;
 
+    private string ReadOnlyText => IsAssistant ? Text.TrimEnd() : Text;
     private bool HasAvailableImageSlots => _images.Count < LocalCodexImageModel.Option.MaxAttachedImages;
     private bool CanPickImages => IsEditing && !IsLoading && HasAvailableImageSlots;
     private bool CanSave => IsEditing && !IsLoading;
@@ -65,6 +66,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     private readonly ObservableCollection<GenerationChatImageViewModel> _images = [];
     private readonly List<GenerationChatImageViewModel> _originalImages = [];
     private readonly Dictionary<AttachedImageViewModel, GenerationChatImageViewModel> _referenceSlots = [];
+    private GenerationChatImageCall? _imageGeneration;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsText))]
     [NotifyPropertyChangedFor(nameof(DisplayText))]
@@ -114,6 +116,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
         IsAssistant = message.IsAssistant;
         CreatedAtUtc = message.CreatedAtUtc;
         _text = message.Text;
+        _imageGeneration = message.ImageGeneration;
         _media = media ?? throw new ArgumentNullException(nameof(media));
         _references = references ?? throw new ArgumentNullException(nameof(references));
         _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
@@ -184,12 +187,21 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     {
         GenerationChatImageViewModel slot = _images.Single(image => image.Id == id);
         bool hadSuccessfulImage = _images.Any(image => image.Reference is not null);
-        slot.Complete(result?.Image);
+        slot.Complete(result?.Image, result is { IsTextReply: true } ? result.Text : null);
 
-        if (result is not null && !hadSuccessfulImage
+        if (result is { IsTextReply: true })
+        {
+            if (!IsVariantChoice)
+            {
+                Text = result.Text;
+                _images.Remove(slot);
+            }
+        }
+        else if (result is not null && !hadSuccessfulImage
             && (result.Image is not null || string.IsNullOrWhiteSpace(Text)))
         {
             Text = result.Text;
+            _imageGeneration = result.ImageGeneration;
         }
 
         RefreshImages();
@@ -238,7 +250,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
         GenerationReference[] references = slots.Select(image => image.Reference).OfType<GenerationReference>().ToArray();
         bool failed = references.Length == 0 && slots.Any(image => image.IsFailed);
 
-        return new GenerationChatMessage(IsAssistant, text, CreatedAtUtc, references, failed);
+        return new GenerationChatMessage(IsAssistant, text, CreatedAtUtc, references, failed, _imageGeneration);
     }
 
     private void AddImage(GenerationReference? reference)
@@ -288,7 +300,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
             return;
         }
 
-        EditText = Text;
+        EditText = ReadOnlyText;
         _originalImages.AddRange(_images);
         _editLeaseId = Guid.NewGuid();
         IsEditing = true;
@@ -299,7 +311,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     {
         await ExecuteAsync(async token =>
         {
-            await _clipboard.SetTextAsync(Text, token);
+            await _clipboard.SetTextAsync(ReadOnlyText, token);
             IsCopied = true;
         }, nameof(CopyAsync), ct);
     }

@@ -8,6 +8,8 @@ internal sealed class LocalCodexInputPreparation : IDisposable
 {
     internal IReadOnlyList<object> Inputs => _inputs;
 
+    private static readonly JsonSerializerOptions HistoryOptions = JsonFileSerializerOptions.Create(writeIndented: false);
+
     private readonly IGenerationReferenceStore _references;
     private readonly IGenerationImageFormatRegistry _formats;
     private readonly ILocalizationTextProvider _text;
@@ -43,7 +45,22 @@ internal sealed class LocalCodexInputPreparation : IDisposable
             foreach (GenerationChatMessage message in history.Messages)
             {
                 string role = message.IsAssistant ? "assistant" : "user";
-                _inputs.Add(new { type = "text", text = JsonSerializer.Serialize(new { role, text = message.Text }) });
+                string entry = message.ImageGeneration is { } call && message.IsAssistant
+                    ? JsonSerializer.Serialize(new
+                    {
+                        role,
+                        text = message.Text,
+                        imageGeneration = new
+                        {
+                            revisedPrompt = call.RevisedPrompt,
+                            transparentBackground = call.TransparentBackground,
+                            generationId = call.GenerationId,
+                            outputImageIndex = message.Images.Select((image, index) => (image, index))
+                                .Where(pair => pair.image.Hash == call.ImageHash).Select(pair => (int?)pair.index).FirstOrDefault()
+                        }
+                    }, HistoryOptions)
+                    : JsonSerializer.Serialize(new { role, text = message.Text }, HistoryOptions);
+                _inputs.Add(new { type = "text", text = entry });
 
                 foreach (GenerationReference reference in message.Images)
                 {
@@ -53,7 +70,7 @@ internal sealed class LocalCodexInputPreparation : IDisposable
         }
 
         string prompt = LocalCodexGenerationClient.FormatPrompt(request, _text);
-        string text = _inputs.Count == 0 ? prompt : JsonSerializer.Serialize(new { role = "user", text = prompt });
+        string text = _inputs.Count == 0 ? prompt : JsonSerializer.Serialize(new { role = "user", text = prompt }, HistoryOptions);
         _inputs.Add(new { type = "text", text });
 
         foreach (AttachedImageDto attachment in request.AttachedImages)
