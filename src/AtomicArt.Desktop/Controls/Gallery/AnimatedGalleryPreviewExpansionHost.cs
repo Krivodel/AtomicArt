@@ -9,6 +9,8 @@ internal sealed class AnimatedGalleryPreviewExpansionHost : IGenerationPreviewEx
 {
     public bool IsExpansionEnabled => !_gallery.IsSelectionMode;
     public Control Viewport => _gallery.PreviewScrollViewer;
+    public Panel? ExpansionLayer => null;
+    public Control? ActiveOwner => null;
     public KeyModifiers CurrentKeyModifiers => _gallery.GetPreviewPointerModifiers();
     public Point? PointerPosition => _gallery.GetPreviewPointerPosition();
 

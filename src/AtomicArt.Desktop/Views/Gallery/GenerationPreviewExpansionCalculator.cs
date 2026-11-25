@@ -17,6 +17,24 @@ internal static class GenerationPreviewExpansionCalculator
         EnsurePositiveSize(viewportBounds.Size, nameof(viewportBounds));
 
         Size expandedSize = CalculateExpandedSize(previewSize, sourceSize);
+
+        return PlaceExpandedPreview(expandedSize, previewBounds, viewportBounds);
+    }
+
+    public static (Size Size, Vector Translation) CalculateFitted(
+        Size previewSize,
+        Size sourceSize,
+        Rect previewBounds,
+        Rect viewportBounds)
+    {
+        (Size expandedSize, _) = Calculate(previewSize, sourceSize, previewBounds, viewportBounds);
+        double fit = Math.Min(1d, Math.Min(viewportBounds.Width / expandedSize.Width, viewportBounds.Height / expandedSize.Height));
+
+        return PlaceExpandedPreview(new Size(expandedSize.Width * fit, expandedSize.Height * fit), previewBounds, viewportBounds);
+    }
+
+    private static (Size Size, Vector Translation) PlaceExpandedPreview(Size expandedSize, Rect previewBounds, Rect viewportBounds)
+    {
         double centeredLeft = previewBounds.Center.X - (expandedSize.Width / 2d);
         double centeredTop = previewBounds.Center.Y - (expandedSize.Height / 2d);
         double fittedLeft = FitCoordinate(

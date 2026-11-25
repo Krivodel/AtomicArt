@@ -25,6 +25,7 @@ internal sealed class GenerationPreviewExpansionController
     private readonly Border _previewTrigger;
     private readonly TranslateTransform _previewTranslation = new();
     private readonly Transitions _sizeTransitions;
+    private readonly GenerationPreviewOverlayPortal _overlayPortal;
     private IDisposable? _activeSizeTransitions;
     private CancellationTokenSource? _collapseCompletionCancellation;
     private IGenerationPreviewExpansionHost? _expansionHost;
@@ -32,6 +33,8 @@ internal sealed class GenerationPreviewExpansionController
     private KeyModifiers _currentKeyModifiers;
     private bool _isPointerInsidePreview;
     private bool _isPreviewExpanded;
+    private Rect? _collapsedTriggerBounds;
+    private Point? _overlayPointerPosition;
 
     internal GenerationPreviewExpansionController(
         GenerationPreviewControl owner,
@@ -46,6 +49,7 @@ internal sealed class GenerationPreviewExpansionController
         _previewShadow = previewShadow ?? throw new ArgumentNullException(nameof(previewShadow));
         _previewImage = previewImage ?? throw new ArgumentNullException(nameof(previewImage));
         _previewTrigger = previewTrigger ?? throw new ArgumentNullException(nameof(previewTrigger));
+        _overlayPortal = new GenerationPreviewOverlayPortal(previewExpansionHost);
 
         CubicEaseOut easing = new();
         _sizeTransitions = new Transitions
@@ -91,6 +95,26 @@ internal sealed class GenerationPreviewExpansionController
         };
     }
 
+    internal void RefreshHost()
+    {
+        DetachHost();
+
+        if (TopLevel.GetTopLevel(_owner) is null)
+        {
+            return;
+        }
+
+        _expansionHost = _owner.ExpansionHost;
+        _overflowOwner = _owner.OverflowOwner ?? _owner;
+
+        if (_expansionHost is not null)
+        {
+            _expansionHost.PointerStateChanged += OnHostPointerStateChanged;
+            _expansionHost.ModifiersChanged += OnHostModifiersChanged;
+            _expansionHost.Viewport.SizeChanged += OnViewportSizeChanged;
+        }
+    }
+
     private static bool HasPositiveSize(Size size)
     {
         return size is { Width: > 0d, Height: > 0d };
@@ -130,6 +154,7 @@ internal sealed class GenerationPreviewExpansionController
         bool shouldExpand = _expansionHost is { IsExpansionEnabled: true }
             && _expansionHost.Viewport.IsPointerOver
             && _isPointerInsidePreview
+            && (_expansionHost.ActiveOwner is null || ReferenceEquals(_expansionHost.ActiveOwner, _overflowOwner))
             && HasExpansionModifier(_currentKeyModifiers)
             && _previewImage.IsVisible;
 
@@ -154,12 +179,10 @@ internal sealed class GenerationPreviewExpansionController
             return false;
         }
 
-        Point? previewPosition = _previewTrigger.TranslatePoint(
-            new Point(0d, 0d),
-            expansionHost.Viewport);
+        Matrix? transform = _previewTrigger.TransformToVisual(expansionHost.Viewport);
 
         if (source is null
-            || previewPosition is null
+            || transform is not { HasInverse: true } matrix
             || !HasPositiveSize(previewSize)
             || !HasPositiveSize(source.Size)
             || !HasPositiveSize(viewportSize))
@@ -167,21 +190,87 @@ internal sealed class GenerationPreviewExpansionController
             return false;
         }
 
-        Rect previewBounds = new(previewPosition.Value, previewSize);
-        Rect viewportBounds = new(viewportSize);
-        (Size expandedSize, Vector translation) = GenerationPreviewExpansionCalculator.Calculate(
-            previewSize,
-            source.Size,
-            previewBounds,
-            viewportBounds);
+        if (_isPreviewExpanded && _overlayPortal.IsPresented)
+        {
+            return true;
+        }
 
+        Rect triggerBounds = GetTriggerBounds();
+        Rect previewBounds = triggerBounds.TransformToAABB(matrix);
+        Size displayedSize = new Rect(previewSize).TransformToAABB(matrix).Size;
+        Rect viewportBounds = new(viewportSize);
+        Size expandedSize;
+        Point localOrigin;
+
+        if (expansionHost.ExpansionLayer is { } layer)
+        {
+            (Size size, Vector translation) = GenerationPreviewExpansionCalculator.CalculateFitted(
+                previewSize, source.Size, previewBounds, viewportBounds);
+            expandedSize = size;
+            localOrigin = previewBounds.TopLeft + translation;
+            PresentOverlay(layer, new Rect(previewSize).TransformToAABB(matrix));
+        }
+        else
+        {
+            (Size size, Vector translation) = GenerationPreviewExpansionCalculator.Calculate(
+                displayedSize, source.Size, previewBounds, viewportBounds);
+            expandedSize = new Size(size.Width * previewSize.Width / displayedSize.Width,
+                size.Height * previewSize.Height / displayedSize.Height);
+            localOrigin = (previewBounds.TopLeft + translation).Transform(matrix.Invert());
+        }
+
+        _collapsedTriggerBounds = triggerBounds;
         BeginPreviewExpansion(expansionHost, overflowOwner);
         SetExpansionSize(expandedSize);
-        _previewTranslation.X = translation.X;
-        _previewTranslation.Y = translation.Y;
+        _previewTranslation.X = localOrigin.X;
+        _previewTranslation.Y = localOrigin.Y;
         _previewShadow.Opacity = 1d;
 
         return true;
+    }
+
+    private void PresentOverlay(Panel layer, Rect initialBounds)
+    {
+        if (_overlayPortal.IsPresented)
+        {
+            return;
+        }
+
+        Transitions? transitions = _previewTranslation.Transitions;
+        _previewTranslation.Transitions = null;
+        SetExpansionSize(initialBounds.Size);
+        _previewTranslation.X = initialBounds.X;
+        _previewTranslation.Y = initialBounds.Y;
+        _overlayPortal.Present(layer, _owner.DataContext);
+        _previewTranslation.Transitions = transitions;
+    }
+
+    private Rect GetTriggerBounds()
+    {
+        if (_collapsedTriggerBounds is { } saved)
+        {
+            return saved;
+        }
+
+        Rect bounds = new(_previewTrigger.Bounds.Size);
+        Visual? current = _previewTrigger.GetVisualParent();
+
+        while (current is not null)
+        {
+            if (current.ClipToBounds && current.TransformToVisual(_previewTrigger) is { } transform)
+            {
+                bounds = bounds.Intersect(new Rect(current.Bounds.Size).TransformToAABB(transform));
+            }
+
+            if (object.ReferenceEquals(current, _overflowOwner))
+            {
+                break;
+            }
+
+            current = current.GetVisualParent();
+        }
+
+        return bounds;
     }
 
     private void BeginPreviewExpansion(
@@ -202,6 +291,13 @@ internal sealed class GenerationPreviewExpansionController
             BindingPriority.Style);
         expansionHost.EnableOverflow(overflowOwner, _previewExpansionHost);
         overflowOwner.Classes.Add(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+
+        if (_overlayPortal.IsPresented)
+        {
+            _overlayPointerPosition = expansionHost.PointerPosition;
+            expansionHost.Viewport.AddHandler(InputElement.PointerMovedEvent, OnOverlayPointerMoved,
+                RoutingStrategies.Tunnel, true);
+        }
     }
 
     private void CollapsePreview()
@@ -212,15 +308,29 @@ internal sealed class GenerationPreviewExpansionController
         }
 
         _isPreviewExpanded = false;
+        _overlayPointerPosition = null;
 
         if (_expansionHost is not null && _overflowOwner is not null)
         {
             _expansionHost.BeginOverflowCollapse(_overflowOwner);
+            _expansionHost.Viewport.RemoveHandler(InputElement.PointerMovedEvent, OnOverlayPointerMoved);
         }
 
-        SetExpansionSize(new Size(_owner.PreviewSize, _owner.PreviewSize));
-        _previewTranslation.X = 0d;
-        _previewTranslation.Y = 0d;
+        if (_overlayPortal.IsPresented && _expansionHost is not null
+            && _previewTrigger.TransformToVisual(_expansionHost.Viewport) is { } matrix)
+        {
+            Rect collapsed = new Rect(_previewTrigger.Bounds.Size).TransformToAABB(matrix);
+            SetExpansionSize(collapsed.Size);
+            _previewTranslation.X = collapsed.X;
+            _previewTranslation.Y = collapsed.Y;
+        }
+        else
+        {
+            SetExpansionSize(new Size(_owner.PreviewSize, _owner.PreviewSize));
+            _previewTranslation.X = 0d;
+            _previewTranslation.Y = 0d;
+        }
+
         _previewShadow.Opacity = 0d;
         ScheduleOverflowRestore();
     }
@@ -268,15 +378,42 @@ internal sealed class GenerationPreviewExpansionController
     private void RestoreCollapsedPreviewImmediately()
     {
         _isPreviewExpanded = false;
-        _overflowOwner?.Classes.Remove(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
+        _overlayPointerPosition = null;
+        _expansionHost?.Viewport.RemoveHandler(InputElement.PointerMovedEvent, OnOverlayPointerMoved);
         _activeSizeTransitions?.Dispose();
         _activeSizeTransitions = null;
+        Transitions? transitions = _previewTranslation.Transitions;
+        _previewTranslation.Transitions = null;
         _previewExpansionHost.ClearValue(Control.WidthProperty);
         _previewExpansionHost.ClearValue(Control.HeightProperty);
         _previewTranslation.X = 0d;
         _previewTranslation.Y = 0d;
         _previewShadow.Opacity = 0d;
+        _overlayPortal.Restore();
+        _previewTranslation.Transitions = transitions;
+        _overflowOwner?.Classes.Remove(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
         RestoreOverflow();
+        _collapsedTriggerBounds = null;
+    }
+
+    private bool IsPointerInsidePreview(Point viewportPosition)
+    {
+        if (_expansionHost is null)
+        {
+            return false;
+        }
+
+        if (_isPreviewExpanded && _overlayPortal.IsPresented
+            && _previewExpansionHost.TransformToVisual(_expansionHost.Viewport) is { } expandedTransform)
+        {
+            Size currentSize = new(_previewExpansionHost.Width, _previewExpansionHost.Height);
+
+            return new Rect(currentSize).TransformToAABB(expandedTransform).Contains(viewportPosition);
+        }
+
+        Point? position = _expansionHost.Viewport.TranslatePoint(viewportPosition, _previewTrigger);
+
+        return position is not null && GetTriggerBounds().Contains(position.Value);
     }
 
     private void SetExpansionSize(Size size)
@@ -293,29 +430,8 @@ internal sealed class GenerationPreviewExpansionController
         }
     }
 
-    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    private void DetachHost()
     {
-        _ = sender;
-        _ = e;
-
-        _expansionHost = _owner.ExpansionHost;
-        _overflowOwner = _owner.OverflowOwner ?? _owner;
-
-        if (_expansionHost is null)
-        {
-            return;
-        }
-
-        _expansionHost.PointerStateChanged += OnHostPointerStateChanged;
-        _expansionHost.ModifiersChanged += OnHostModifiersChanged;
-        _expansionHost.Viewport.SizeChanged += OnViewportSizeChanged;
-    }
-
-    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
         if (_expansionHost is not null)
         {
             _expansionHost.PointerStateChanged -= OnHostPointerStateChanged;
@@ -331,12 +447,23 @@ internal sealed class GenerationPreviewExpansionController
         _expansionHost = null;
     }
 
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        RefreshHost();
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        DetachHost();
+    }
+
     private void OnPreviewPointerMoved(object? sender, PointerEventArgs e)
     {
         _ = sender;
 
-        Point previewPosition = e.GetPosition(_previewTrigger);
-        _isPointerInsidePreview = new Rect(_previewTrigger.Bounds.Size).Contains(previewPosition);
+        _isPointerInsidePreview = _overlayPortal.IsPresented && _expansionHost is not null
+            ? IsPointerInsidePreview(e.GetPosition(_expansionHost.Viewport))
+            : GetTriggerBounds().Contains(e.GetPosition(_previewTrigger));
         _currentKeyModifiers = e.KeyModifiers;
         UpdatePreviewExpansionState();
     }
@@ -344,9 +471,9 @@ internal sealed class GenerationPreviewExpansionController
     private void OnPreviewPointerExited(object? sender, PointerEventArgs e)
     {
         _ = sender;
-        _ = e;
 
-        _isPointerInsidePreview = false;
+        _isPointerInsidePreview = _overlayPortal.IsPresented && _expansionHost is not null
+            && IsPointerInsidePreview(e.GetPosition(_expansionHost.Viewport));
         UpdatePreviewExpansionState();
     }
 
@@ -357,15 +484,7 @@ internal sealed class GenerationPreviewExpansionController
 
         IGenerationPreviewExpansionHost? expansionHost = _expansionHost;
         Point? pointerPosition = expansionHost?.PointerPosition;
-        Point? triggerPosition = expansionHost is null
-            ? null
-            : _previewTrigger.TranslatePoint(
-                new Point(0d, 0d),
-                expansionHost.Viewport);
-        _isPointerInsidePreview = pointerPosition is not null
-            && triggerPosition is not null
-            && new Rect(triggerPosition.Value, _previewTrigger.Bounds.Size)
-                .Contains(pointerPosition.Value);
+        _isPointerInsidePreview = pointerPosition is not null && IsPointerInsidePreview(pointerPosition.Value);
         _currentKeyModifiers = expansionHost?.CurrentKeyModifiers ?? KeyModifiers.None;
         UpdatePreviewExpansionState();
     }
@@ -376,7 +495,30 @@ internal sealed class GenerationPreviewExpansionController
         _ = e;
 
         _currentKeyModifiers = _expansionHost?.CurrentKeyModifiers ?? KeyModifiers.None;
+
+        if (_expansionHost?.ExpansionLayer is not null)
+        {
+            _isPointerInsidePreview = _expansionHost.PointerPosition is { } position && IsPointerInsidePreview(position);
+        }
+
         UpdatePreviewExpansionState();
+    }
+
+    private void OnOverlayPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_expansionHost is not null)
+        {
+            Point position = e.GetPosition(_expansionHost.Viewport);
+            bool pointerMoved = _overlayPointerPosition != position;
+            _overlayPointerPosition = position;
+            GenerationPreviewControl? hovered = (e.Source as Visual)?.GetSelfAndVisualAncestors()
+                .OfType<GenerationPreviewControl>().FirstOrDefault();
+            bool switchPreview = pointerMoved && hovered is not null && !ReferenceEquals(hovered, _owner)
+                && ReferenceEquals(hovered.ExpansionHost, _expansionHost);
+            _isPointerInsidePreview = !switchPreview && IsPointerInsidePreview(position);
+            _currentKeyModifiers = e.KeyModifiers;
+            UpdatePreviewExpansionState();
+        }
     }
 
     private void OnViewportSizeChanged(object? sender, SizeChangedEventArgs e)

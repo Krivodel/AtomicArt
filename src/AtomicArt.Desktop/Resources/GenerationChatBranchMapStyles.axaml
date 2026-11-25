@@ -35,6 +35,10 @@
                                               Content="{TemplateBinding Content}"
                                               ContentTemplate="{TemplateBinding ContentTemplate}" />
                         </Border>
+                        <Border IsHitTestVisible="False"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}" />
                     </Grid>
                 </ControlTemplate>
             </Setter>
@@ -65,6 +69,28 @@
                 Value="{StaticResource ShellCornerRadius}" />
         <Setter Property="ClipToBounds"
                 Value="True" />
+        <Setter Property="BorderThickness"
+                Value="{StaticResource ShellBorderThickness}" />
+        <Setter Property="BorderBrush"
+                Value="Transparent" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Duration="{StaticResource GenerationCardVisualStateTransitionDuration}"
+                                 Property="BorderBrush" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.generation-chat-branch-node:pointerover">
+        <Setter Property="BorderBrush"
+                Value="{StaticResource MetadataRepeatBrush}" />
+    </Style>
+    <Style Selector="Button.generation-chat-branch-node.generating, ContentPresenter.preview-expanded Button.generation-chat-branch-node">
+        <Setter Property="CacheMode"
+                Value="{x:Null}" />
+    </Style>
+    <Style Selector="ContentPresenter.preview-expanded Button.generation-chat-branch-node">
+        <Setter Property="Opacity"
+                Value="0" />
     </Style>
     <Style Selector="TextBlock.generation-chat-branch-prompt">
         <Setter Property="MaxLines"

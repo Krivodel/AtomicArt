@@ -12,6 +12,8 @@ internal sealed class StandaloneGenerationPreviewExpansionHost : IGenerationPrev
 {
     public bool IsExpansionEnabled => true;
     public Control Viewport => _owner;
+    public Panel? ExpansionLayer { get; }
+    public Control? ActiveOwner { get; private set; }
     public KeyModifiers CurrentKeyModifiers => _currentKeyModifiers;
     public Point? PointerPosition => _pointerPosition;
 
@@ -19,14 +21,16 @@ internal sealed class StandaloneGenerationPreviewExpansionHost : IGenerationPrev
     public event EventHandler? ModifiersChanged;
 
     private readonly Control _owner;
-    private readonly Dictionary<Control, int> _originalZIndices = [];
+    private readonly GenerationPreviewOverflowController _overflow;
     private TopLevel? _topLevel;
     private Point? _pointerPosition;
     private KeyModifiers _currentKeyModifiers;
 
-    public StandaloneGenerationPreviewExpansionHost(Control owner)
+    public StandaloneGenerationPreviewExpansionHost(Control owner, Panel? expansionLayer = null)
     {
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+        ExpansionLayer = expansionLayer;
+        _overflow = new GenerationPreviewOverflowController(owner);
         _owner.AddHandler(
             InputElement.PointerMovedEvent,
             OnPointerMoved,
@@ -57,13 +61,8 @@ internal sealed class StandaloneGenerationPreviewExpansionHost : IGenerationPrev
         _pointerPosition = null;
         _currentKeyModifiers = KeyModifiers.None;
 
-        foreach ((Control control, int originalZIndex) in _originalZIndices)
-        {
-            control.ZIndex = originalZIndex;
-            control.Classes.Remove(GenerationPreviewExpansionVisualMetrics.ExpandedClass);
-        }
-
-        _originalZIndices.Clear();
+        _overflow.Reset();
+        ActiveOwner = null;
     }
 
     public void EnableOverflow(Control owner, Visual preview)
@@ -71,32 +70,38 @@ internal sealed class StandaloneGenerationPreviewExpansionHost : IGenerationPrev
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(preview);
 
-        if (!_originalZIndices.ContainsKey(owner))
+        if (ExpansionLayer is null)
         {
-            _originalZIndices.Add(owner, owner.ZIndex);
+            _overflow.Enable(owner, preview);
         }
-
-        owner.ZIndex = GenerationPreviewExpansionVisualMetrics.ActiveZIndex;
+        else
+        {
+            ActiveOwner = owner;
+        }
     }
 
     public void BeginOverflowCollapse(Control owner)
     {
         ArgumentNullException.ThrowIfNull(owner);
 
-        if (_originalZIndices.ContainsKey(owner))
+        if (ReferenceEquals(ActiveOwner, owner))
         {
-            owner.ZIndex = GenerationPreviewExpansionVisualMetrics.CollapsingZIndex;
+            ActiveOwner = null;
         }
+
+        _overflow.BeginCollapse(owner);
     }
 
     public void DisableOverflow(Control owner)
     {
         ArgumentNullException.ThrowIfNull(owner);
 
-        if (_originalZIndices.Remove(owner, out int originalZIndex))
+        if (ReferenceEquals(ActiveOwner, owner))
         {
-            owner.ZIndex = originalZIndex;
+            ActiveOwner = null;
         }
+
+        _overflow.Disable(owner);
     }
 
     private void DetachKeyboardHandlers()

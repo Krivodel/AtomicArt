@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Input.Raw;
 using Avalonia.Media;
 using FluentAssertions;
 using Xunit;
@@ -18,6 +19,40 @@ public sealed class PanZoomControlTests : DesktopControlTestBase
     public new static AppBuilder BuildAvaloniaApp()
     {
         return GenerationChatViewModelTests.BuildAvaloniaApp();
+    }
+
+    [Theory]
+    [InlineData(900d, 600d)]
+    [InlineData(190d, 140d)]
+    public async Task FocusOn_WithAnOffscreenCard_CentersAndFitsItImmediately(double width, double height)
+    {
+        await DispatchAsync(typeof(PanZoomControlTests), () =>
+        {
+            TestUiFrameScheduler frames = new();
+            Border content = new() { Width = 2400d, Height = 1800d };
+            PanZoomControl viewport = new() { FrameScheduler = frames, Clock = frames, Child = content };
+            Window window = Show(viewport, width, height);
+            Rect target = new(1800d, 1400d, 220d, 160d);
+
+            try
+            {
+                viewport.ZoomInCommand.Execute(null);
+                viewport.FocusOn(target);
+                frames.RunFrame(TimeSpan.FromMilliseconds(16d));
+
+                Point center = content.TranslatePoint(target.Center, viewport)
+                    ?? throw new InvalidOperationException("The focused card has no position.");
+                center.X.Should().BeApproximately(viewport.Bounds.Width / 2d, 0.01d);
+                center.Y.Should().BeApproximately(viewport.Bounds.Height / 2d, 0.01d);
+                viewport.Zoom.Should().BeLessThanOrEqualTo(1d);
+                viewport.VisibleContentBounds.Contains(target).Should().BeTrue();
+                viewport.IsInteracting.Should().BeFalse();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
     }
 
     [Fact]
@@ -125,8 +160,11 @@ public sealed class PanZoomControlTests : DesktopControlTestBase
         });
     }
 
-    [Fact]
-    public async Task Pan_FromACard_CancelsItsClickAndKeepsNormalClicksWorking()
+    [Theory]
+    [InlineData(MouseButton.Left, RawInputModifiers.LeftMouseButton)]
+    [InlineData(MouseButton.Middle, RawInputModifiers.MiddleMouseButton)]
+    [InlineData(MouseButton.Right, RawInputModifiers.RightMouseButton)]
+    public async Task Pan_FromACard_CancelsItsClickAndKeepsNormalClicksWorking(MouseButton button, RawInputModifiers modifiers)
     {
         await DispatchAsync(typeof(PanZoomControlTests), () =>
         {
@@ -157,9 +195,9 @@ public sealed class PanZoomControlTests : DesktopControlTestBase
                 Point start = card.TranslatePoint(new Point(100d, 80d), window)
                     ?? throw new InvalidOperationException("The card has no position.");
                 Matrix initial = content.RenderTransform?.Value ?? throw new InvalidOperationException("The camera is unavailable.");
-                window.MouseDown(start, MouseButton.Left);
-                window.MouseMove(start + new Vector(100d, 40d));
-                window.MouseUp(start + new Vector(100d, 40d), MouseButton.Left);
+                window.MouseDown(start, button);
+                window.MouseMove(start + new Vector(100d, 40d), modifiers);
+                window.MouseUp(start + new Vector(100d, 40d), button);
 
                 for (int frame = 0; frame < 30; frame++)
                 {
@@ -238,8 +276,11 @@ public sealed class PanZoomControlTests : DesktopControlTestBase
         });
     }
 
-    [Fact]
-    public async Task Pan_WithManyPointerEvents_FollowsTheLatestPointerInOneFrame()
+    [Theory]
+    [InlineData(MouseButton.Left, RawInputModifiers.LeftMouseButton)]
+    [InlineData(MouseButton.Middle, RawInputModifiers.MiddleMouseButton)]
+    [InlineData(MouseButton.Right, RawInputModifiers.RightMouseButton)]
+    public async Task Pan_WithManyPointerEvents_FollowsTheLatestPointerInOneFrame(MouseButton button, RawInputModifiers modifiers)
     {
         await DispatchAsync(typeof(PanZoomControlTests), () =>
         {
@@ -260,11 +301,11 @@ public sealed class PanZoomControlTests : DesktopControlTestBase
                 Matrix initial = content.RenderTransform?.Value ?? throw new InvalidOperationException("The camera transform is unavailable.");
                 int requested = frames.RequestedFrameCount;
 
-                window.MouseDown(start, MouseButton.Left);
+                window.MouseDown(start, button);
 
                 for (int index = 1; index <= 100; index++)
                 {
-                    window.MouseMove(start + new Vector(index, index * 0.4d));
+                    window.MouseMove(start + new Vector(index, index * 0.4d), modifiers);
                 }
 
                 frames.RequestedFrameCount.Should().Be(requested + 1);
@@ -273,7 +314,7 @@ public sealed class PanZoomControlTests : DesktopControlTestBase
                 Matrix middle = content.RenderTransform?.Value ?? throw new InvalidOperationException("The camera transform is unavailable.");
                 middle.M31.Should().BeApproximately(initial.M31 + 100d, 0.001d);
                 middle.M32.Should().BeApproximately(initial.M32 + 40d, 0.001d);
-                window.MouseUp(start + new Vector(100d, 40d), MouseButton.Left);
+                window.MouseUp(start + new Vector(100d, 40d), button);
                 content.RenderTransform?.Value.Should().Be(middle);
 
                 for (int index = 1; index <= 30; index++)
@@ -285,6 +326,56 @@ public sealed class PanZoomControlTests : DesktopControlTestBase
                 final.M31.Should().BeApproximately(initial.M31 + 100d, 0.001d);
                 final.M32.Should().BeApproximately(initial.M32 + 40d, 0.001d);
                 viewport.IsInteracting.Should().BeFalse();
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(MouseButton.Right, MouseButton.Left, RawInputModifiers.RightMouseButton)]
+    [InlineData(MouseButton.Left, MouseButton.Right, RawInputModifiers.LeftMouseButton)]
+    public async Task Pan_WhenAnotherButtonIsPressedAndReleased_ContinuesUntilTheStartingButtonIsReleased(
+        MouseButton startingButton, MouseButton otherButton, RawInputModifiers modifiers)
+    {
+        await DispatchAsync(typeof(PanZoomControlTests), () =>
+        {
+            TestUiFrameScheduler frames = new();
+            Border content = new() { Width = 1800d, Height = 1200d };
+            PanZoomControl viewport = new()
+            {
+                FrameScheduler = frames,
+                Clock = frames,
+                Child = content,
+                Background = Brushes.Transparent
+            };
+            Window window = Show(viewport, 900d, 600d);
+
+            try
+            {
+                Point start = new(20d, 20d);
+                Vector movement = new(80d, 40d);
+                Matrix initial = content.RenderTransform?.Value ?? throw new InvalidOperationException("The camera is unavailable.");
+                window.MouseDown(start, startingButton);
+                window.MouseMove(start + movement / 2d, modifiers);
+                frames.RunFrame(TimeSpan.FromMilliseconds(8d));
+
+                window.MouseDown(start + movement / 2d, otherButton, modifiers);
+                window.MouseUp(start + movement / 2d, otherButton, modifiers);
+                viewport.IsInteracting.Should().BeTrue();
+                window.MouseMove(start + movement, modifiers);
+                frames.RunFrame(TimeSpan.FromMilliseconds(16d));
+                window.MouseUp(start + movement, startingButton);
+
+                Matrix final = content.RenderTransform?.Value ?? throw new InvalidOperationException("The moved camera is unavailable.");
+                final.M31.Should().BeApproximately(initial.M31 + movement.X, 0.001d);
+                final.M32.Should().BeApproximately(initial.M32 + movement.Y, 0.001d);
+                viewport.IsInteracting.Should().BeFalse();
+                window.MouseMove(start + movement * 2d);
+                frames.RunFrame(TimeSpan.FromMilliseconds(24d));
+                content.RenderTransform?.Value.Should().Be(final);
             }
             finally
             {

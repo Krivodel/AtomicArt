@@ -52,13 +52,19 @@ public partial class GenerationPreviewControl : UserControl
         AvaloniaProperty.Register<GenerationPreviewControl, string?>(
             nameof(PreviewPath));
 
-    internal IGenerationPreviewExpansionHost? ExpansionHost { get; set; }
+    internal IGenerationPreviewExpansionHost? ExpansionHost
+    {
+        get => _expansionHost;
+        set => SetExpansionHost(value);
+    }
     internal Control? OverflowOwner { get; set; }
+    internal bool IsImageDraggingEnabled { get; set; } = true;
     internal bool IsPreviewLoadPending => _previewLoadCancellation is not null;
 
     private const double DefaultPreviewSize = 220d;
 
     private readonly GenerationPreviewExpansionController _previewExpansionController;
+    private IGenerationPreviewExpansionHost? _expansionHost;
     private IGalleryPreviewBitmapProvider? _previewBitmapProvider;
     private GalleryPreviewSourceScheduler? _previewSourceScheduler;
     private GalleryPreviewBitmapLease? _previewBitmapLease;
@@ -192,11 +198,20 @@ public partial class GenerationPreviewControl : UserControl
         }
     }
 
+    private void SetExpansionHost(IGenerationPreviewExpansionHost? host)
+    {
+        if (!object.ReferenceEquals(_expansionHost, host))
+        {
+            _expansionHost = host;
+            _previewExpansionController.RefreshHost();
+        }
+    }
+
     private void OnPreviewDragSourcePointerPressed(object? sender, PointerPressedEventArgs e)
     {
         _ = sender;
 
-        if (DataContext is not GenerationItemViewModel item)
+        if (!IsImageDraggingEnabled || DataContext is not GenerationItemViewModel item)
         {
             return;
         }
@@ -264,6 +279,11 @@ public partial class GenerationPreviewControl : UserControl
     private void OnPreviewDragSourcePointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         _ = sender;
+
+        if (!IsImageDraggingEnabled)
+        {
+            return;
+        }
 
         GalleryImageDragCandidate? dragCandidate = _imageDragCandidate;
 

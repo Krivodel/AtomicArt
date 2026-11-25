@@ -596,6 +596,8 @@ public sealed class GenerationPreviewExpansionTests : AnimatedGalleryControlTest
 
     private sealed class StalePointerExpansionHost : IGenerationPreviewExpansionHost
     {
+        public Panel? ExpansionLayer => null;
+        public Control? ActiveOwner => null;
         public bool IsExpansionEnabled => true;
         public Control Viewport { get; }
         public KeyModifiers CurrentKeyModifiers { get; private set; }

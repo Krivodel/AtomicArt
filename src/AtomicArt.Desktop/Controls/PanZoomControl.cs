@@ -45,6 +45,7 @@ public sealed class PanZoomControl : Border
     private Size _viewportSize;
     private Vector _offset;
     private Point? _dragStart;
+    private PointerUpdateKind? _dragReleaseKind;
     private Vector _dragOffset;
     private double _zoom = 1d;
     private double _targetZoom = 1d;
@@ -79,6 +80,23 @@ public sealed class PanZoomControl : Border
         AnimateCamera(GetFittedCamera());
     }
 
+    public void FocusOn(Rect target)
+    {
+        if (!double.IsFinite(target.X) || !double.IsFinite(target.Y)
+            || !double.IsFinite(target.Width) || !double.IsFinite(target.Height)
+            || target.Width <= 0d || target.Height <= 0d)
+        {
+            throw new ArgumentOutOfRangeException(nameof(target), target, "Focus bounds must be finite and have a positive size.");
+        }
+
+        StopMotion();
+        _targetZoom = GetFitScale(target.Size);
+        _targetOffset = new Vector(_viewportSize.Width / 2d - target.Center.X * _targetZoom,
+            _viewportSize.Height / 2d - target.Center.Y * _targetZoom);
+        ApplyCamera(new MotionFrame(_targetOffset.X, _targetOffset.Y, _targetZoom, 0d, 1d));
+        IsInteracting = _dragStart is not null;
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -98,6 +116,7 @@ public sealed class PanZoomControl : Border
     {
         StopMotion();
         _dragStart = null;
+        _dragReleaseKind = null;
         _isDragging = false;
         _frames = null;
         _ownedFrames?.Dispose();
@@ -203,11 +222,17 @@ public sealed class PanZoomControl : Border
 
     private MotionFrame GetFittedCamera()
     {
-        double zoom = Math.Min(1d, Math.Min(
-            Math.Max(1d, _viewportSize.Width - FitPadding) / Math.Max(1d, _contentSize.Width),
-            Math.Max(1d, _viewportSize.Height - FitPadding) / Math.Max(1d, _contentSize.Height)));
+        double zoom = GetFitScale(_contentSize);
+
         return new MotionFrame((_viewportSize.Width - _contentSize.Width * zoom) / 2d,
             (_viewportSize.Height - _contentSize.Height * zoom) / 2d, zoom, 0d, 1d);
+    }
+
+    private double GetFitScale(Size contentSize)
+    {
+        return Math.Min(1d, Math.Min(
+            Math.Max(1d, _viewportSize.Width - FitPadding) / Math.Max(1d, contentSize.Width),
+            Math.Max(1d, _viewportSize.Height - FitPadding) / Math.Max(1d, contentSize.Height)));
     }
 
     private void AnimateCamera(MotionFrame target)
@@ -244,6 +269,7 @@ public sealed class PanZoomControl : Border
     private void EndDrag()
     {
         _dragStart = null;
+        _dragReleaseKind = null;
         _isDragging = false;
 
         if ((_targetOffset - _offset).Length > MotionStopDistance)
@@ -299,16 +325,24 @@ public sealed class PanZoomControl : Border
     private void OnPointerPressedTunnel(object? sender, PointerPressedEventArgs e)
     {
         PointerPointProperties properties = e.GetCurrentPoint(this).Properties;
+        PointerUpdateKind? releaseKind = properties.PointerUpdateKind switch
+        {
+            PointerUpdateKind.LeftButtonPressed => PointerUpdateKind.LeftButtonReleased,
+            PointerUpdateKind.MiddleButtonPressed => PointerUpdateKind.MiddleButtonReleased,
+            PointerUpdateKind.RightButtonPressed => PointerUpdateKind.RightButtonReleased,
+            _ => null
+        };
 
-        if (properties.IsLeftButtonPressed || properties.IsMiddleButtonPressed)
+        if (_dragStart is null && releaseKind is not null)
         {
             StopMotion();
             _dragStart = e.GetPosition(this);
+            _dragReleaseKind = releaseKind;
             _dragOffset = _offset;
             _targetOffset = _offset;
             _targetZoom = _zoom;
             bool onButton = e.Source is Visual source && source.GetSelfAndVisualAncestors().OfType<Button>().Any();
-            _isDragging = properties.IsMiddleButtonPressed || !onButton;
+            _isDragging = properties.IsMiddleButtonPressed || properties.IsRightButtonPressed || !onButton;
 
             if (_isDragging)
             {
@@ -344,7 +378,7 @@ public sealed class PanZoomControl : Border
 
     private void OnPointerReleasedTunnel(object? sender, PointerReleasedEventArgs e)
     {
-        if (_dragStart is not null)
+        if (_dragStart is not null && e.GetCurrentPoint(this).Properties.PointerUpdateKind == _dragReleaseKind)
         {
             bool wasDragging = _isDragging;
             EndDrag();

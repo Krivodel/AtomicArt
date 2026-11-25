@@ -76,8 +76,10 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="generation:GenerationChatBranchNodeViewModel">
                             <Button Classes="generation-chat-branch-node"
+                                    Classes.generating="{Binding Card.IsGenerating}"
                                     Classes.selected="{Binding IsSelected}"
                                     Theme="{StaticResource GenerationChatBranchButtonTheme}"
+                                    CacheMode="{Binding #Root.CardCache, Priority=Style}"
                                     DoubleTapped="OnNodeDoubleTapped"
                                     PointerEntered="OnNodePointerEntered"
                                     PointerExited="OnNodePointerExited"
@@ -93,7 +95,6 @@
                                                     <DataTemplate x:DataType="gallery:GenerationItemViewModel">
                                                         <galleryViews:GenerationPreviewControl PreviewSize="{x:Static generationControls:GenerationChatBranchPanel.NodeWidth}"
                                                                                                Classes="generation-chat-branch-preview"
-                                                                                               IsHitTestVisible="False"
                                                                                                Loaded="OnPreviewLoaded"
                                                                                                Unloaded="OnPreviewUnloaded"
                                                                                                PreviewPath="{Binding DisplayThumbnailPath}" />
@@ -134,6 +135,11 @@
                 </ItemsControl>
             </generationControls:GenerationChatBranchConnectionsControl>
         </controls:PanZoomControl>
+        <Canvas x:Name="PreviewLayer"
+                Grid.Row="1"
+                ClipToBounds="True"
+                IsHitTestVisible="False"
+                UseLayoutRounding="False" />
         <Border Grid.Row="2"
                 Classes="generation-chat-branch-selection">
             <Grid ColumnDefinitions="*,Auto">

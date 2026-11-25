@@ -86,7 +86,7 @@ public sealed class PixelLoadingRenderingTests : DesktopControlTestBase
         });
     }
 
-    private static int CountChangedPixels(SKBitmap before, SKBitmap after)
+    internal static int CountChangedPixels(SKBitmap before, SKBitmap after)
     {
         int count = 0;
 

@@ -1,5 +1,3 @@
-using System.ComponentModel;
-
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -9,8 +7,8 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 using AtomicArt.Desktop.Controls;
+using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Controls.Generation;
-using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Gallery;
 
@@ -18,22 +16,25 @@ namespace AtomicArt.Desktop.Views.Generation;
 
 public partial class GenerationChatBranchMapView : UserControl
 {
+    public BitmapCache CardCache { get; } = new();
+
     private const double PreviewRetentionRatio = 2d;
     private const int QualityUpdateDelayMilliseconds = 300;
 
-    private readonly BitmapCache _cardCache = new();
+    private readonly StandaloneGenerationPreviewExpansionHost _previewExpansionHost;
     private readonly DispatcherTimer _qualityUpdate = new()
     {
         Interval = TimeSpan.FromMilliseconds(QualityUpdateDelayMilliseconds)
     };
     private readonly HashSet<GenerationPreviewControl> _previews = [];
-    private readonly Dictionary<GenerationPreviewControl, (GenerationItemViewModel Card, Control Host)> _observedPreviews = [];
+    private readonly Dictionary<GenerationPreviewControl, Control> _observedPreviews = [];
     private readonly IGenerationPreviewSessionFactory? _previewSessionFactory;
     private IGenerationPreviewSession? _previewSession;
 
     public GenerationChatBranchMapView()
     {
         InitializeComponent();
+        _previewExpansionHost = new StandaloneGenerationPreviewExpansionHost(MapViewport, PreviewLayer);
         Loaded += OnLoaded;
         _qualityUpdate.Tick += OnQualityUpdate;
         MapViewport.PropertyChanged += OnCameraPropertyChanged;
@@ -51,12 +52,7 @@ public partial class GenerationChatBranchMapView : UserControl
         _previewSession?.Dispose();
         _previewSession = null;
         _previews.Clear();
-
-        foreach (GenerationItemViewModel card in _observedPreviews.Values.Select(preview => preview.Card))
-        {
-            card.PropertyChanged -= OnPreviewCardChanged;
-        }
-
+        _previewExpansionHost.Detach();
         _observedPreviews.Clear();
         base.OnDetachedFromVisualTree(e);
     }
@@ -81,22 +77,13 @@ public partial class GenerationChatBranchMapView : UserControl
         }
     }
 
-    private void UpdateCardCache(GenerationPreviewControl preview)
-    {
-        if (preview.GetVisualAncestors().OfType<Button>().FirstOrDefault() is { } button
-            && preview.DataContext is GenerationItemViewModel card)
-        {
-            button.CacheMode = card.IsGenerating ? null : _cardCache;
-        }
-    }
-
     private void UpdateVisiblePreviews()
     {
         (Rect load, Rect retain) = GetPreviewBounds();
 
-        foreach (KeyValuePair<GenerationPreviewControl, (GenerationItemViewModel Card, Control Host)> preview in _observedPreviews)
+        foreach (KeyValuePair<GenerationPreviewControl, Control> preview in _observedPreviews)
         {
-            UpdatePreviewVisibility(preview.Key, preview.Value.Host, load, retain);
+            UpdatePreviewVisibility(preview.Key, preview.Value, load, retain);
         }
     }
 
@@ -110,7 +97,7 @@ public partial class GenerationChatBranchMapView : UserControl
 
     private void UpdatePreviewVisibility(GenerationPreviewControl preview, Control host, Rect load, Rect retain)
     {
-        if (host.Bounds.Intersects(load))
+        if (host.Bounds.Intersects(load) || host.Classes.Contains(GenerationPreviewExpansionVisualMetrics.ExpandedClass))
         {
             AttachPreview(preview);
         }
@@ -120,33 +107,20 @@ public partial class GenerationChatBranchMapView : UserControl
         }
     }
 
-    private void OnPreviewCardChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(GenerationItemViewModel.IsGenerating))
-        {
-            foreach (GenerationPreviewControl preview in _observedPreviews.Where(pair => ReferenceEquals(pair.Value.Card, sender)).Select(pair => pair.Key))
-            {
-                UpdateCardCache(preview);
-            }
-        }
-    }
-
     private void OnPreviewLoaded(object? sender, RoutedEventArgs e)
     {
-        if (sender is GenerationPreviewControl loaded && loaded.DataContext is GenerationItemViewModel card
+        if (sender is GenerationPreviewControl loaded
             && loaded.GetVisualAncestors().OfType<Control>().FirstOrDefault(control => control.GetVisualParent() is GenerationChatBranchPanel) is { } host)
         {
-            if (_observedPreviews.TryAdd(loaded, (card, host)))
-            {
-                card.PropertyChanged += OnPreviewCardChanged;
-            }
+            _observedPreviews.TryAdd(loaded, host);
+            loaded.IsImageDraggingEnabled = false;
+            loaded.OverflowOwner = host;
+            loaded.ExpansionHost = _previewExpansionHost;
 
             foreach (AttachmentPixelLoadingControl indicator in loaded.GetVisualDescendants().OfType<AttachmentPixelLoadingControl>())
             {
                 indicator.CacheFrames = true;
             }
-
-            UpdateCardCache(loaded);
 
             (Rect load, Rect retain) = GetPreviewBounds();
             UpdatePreviewVisibility(loaded, host, load, retain);
@@ -155,6 +129,14 @@ public partial class GenerationChatBranchMapView : UserControl
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        _previewExpansionHost.Attach();
+
+        if (BranchItems.ItemsPanelRoot is GenerationChatBranchPanel panel
+            && panel.Children.FirstOrDefault(child => child.DataContext is GenerationChatBranchNodeViewModel { IsCurrent: true }) is { } current)
+        {
+            MapViewport.FocusOn(current.Bounds);
+        }
+
         UpdateVisiblePreviews();
         MapViewport.Focus();
     }
@@ -163,11 +145,8 @@ public partial class GenerationChatBranchMapView : UserControl
     {
         if (sender is GenerationPreviewControl preview)
         {
-            if (_observedPreviews.Remove(preview, out (GenerationItemViewModel Card, Control Host) observed))
-            {
-                observed.Card.PropertyChanged -= OnPreviewCardChanged;
-            }
-
+            _observedPreviews.Remove(preview);
+            preview.ExpansionHost = null;
             DetachPreview(preview);
         }
     }
@@ -201,7 +180,7 @@ public partial class GenerationChatBranchMapView : UserControl
             return;
         }
 
-        _cardCache.RenderAtScale = Math.Max(1d, Math.Ceiling(MapViewport.Zoom));
+        CardCache.RenderAtScale = Math.Max(1d, Math.Ceiling(MapViewport.Zoom));
     }
 
     private void OnNodeDoubleTapped(object? sender, TappedEventArgs e)

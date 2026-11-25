@@ -9,6 +9,8 @@ internal interface IGenerationPreviewExpansionHost
 {
     bool IsExpansionEnabled { get; }
     Control Viewport { get; }
+    Panel? ExpansionLayer { get; }
+    Control? ActiveOwner { get; }
     KeyModifiers CurrentKeyModifiers { get; }
     Point? PointerPosition { get; }
 

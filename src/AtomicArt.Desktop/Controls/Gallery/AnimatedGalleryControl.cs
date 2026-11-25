@@ -191,10 +191,7 @@ public partial class AnimatedGalleryControl : UserControl
     private readonly AnimatedGallerySelectionBrushController _selectionBrushController;
     private readonly CollectionChangedSubscription _itemsSubscription;
     private readonly PropertyChangedItemsSubscription<IGalleryItemViewModel> _itemPropertyChangedSubscription;
-    private readonly Dictionary<Control, int> _previewOriginalZIndices = [];
-    private readonly Dictionary<Control, IReadOnlyList<Visual>> _previewOverflowPaths = [];
-    private readonly Dictionary<Visual, PreviewClipState> _previewClipStates = [];
-    private readonly HashSet<Control> _previewOverflowCards = [];
+    private readonly GenerationPreviewOverflowController _previewOverflow;
     private AnimatedGalleryResizeController? _resizeController;
     private TopLevel? _previewTopLevel;
     private Point? _previewPointerPosition;
@@ -215,6 +212,7 @@ public partial class AnimatedGalleryControl : UserControl
             new PropertyChangedItemsSubscription<IGalleryItemViewModel>(
                 OnGalleryItemPropertyChanged);
         InitializeComponent();
+        _previewOverflow = new GenerationPreviewOverflowController(GalleryScrollViewer);
         PreviewExpansionHost = new AnimatedGalleryPreviewExpansionHost(this);
         _sceneController = new AnimatedGallerySceneController(
             this,
@@ -274,60 +272,17 @@ public partial class AnimatedGalleryControl : UserControl
 
     internal void EnablePreviewOverflow(Control card, Visual preview)
     {
-        ArgumentNullException.ThrowIfNull(card);
-        ArgumentNullException.ThrowIfNull(preview);
-
-        if (!_previewOverflowCards.Add(card))
-        {
-            card.ZIndex = GenerationPreviewExpansionVisualMetrics.ActiveZIndex;
-
-            return;
-        }
-
-        _previewOriginalZIndices.Add(card, card.ZIndex);
-        card.ZIndex = GenerationPreviewExpansionVisualMetrics.ActiveZIndex;
-        IReadOnlyList<Visual> overflowPath = GetPreviewOverflowPath(preview);
-        _previewOverflowPaths.Add(card, overflowPath);
-
-        foreach (Visual visual in overflowPath)
-        {
-            DisableVisualClipping(visual);
-        }
-
+        _previewOverflow.Enable(card, preview);
     }
 
     internal void BeginPreviewOverflowCollapse(Control card)
     {
-        ArgumentNullException.ThrowIfNull(card);
-
-        if (_previewOverflowCards.Contains(card))
-        {
-            card.ZIndex = GenerationPreviewExpansionVisualMetrics.CollapsingZIndex;
-        }
+        _previewOverflow.BeginCollapse(card);
     }
 
     internal void DisablePreviewOverflow(Control card)
     {
-        ArgumentNullException.ThrowIfNull(card);
-
-        if (!_previewOverflowCards.Remove(card))
-        {
-            return;
-        }
-
-        if (_previewOriginalZIndices.Remove(card, out int originalZIndex))
-        {
-            card.ZIndex = originalZIndex;
-        }
-
-        if (_previewOverflowPaths.Remove(card, out IReadOnlyList<Visual>? overflowPath))
-        {
-            foreach (Visual visual in overflowPath)
-            {
-                RestoreVisualClipping(visual);
-            }
-        }
-
+        _previewOverflow.Disable(card);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs eventArgs)
@@ -523,78 +478,7 @@ public partial class AnimatedGalleryControl : UserControl
 
     private void ResetPreviewOverflow()
     {
-        foreach ((Control card, int originalZIndex) in _previewOriginalZIndices)
-        {
-            card.ZIndex = originalZIndex;
-        }
-
-        _previewOriginalZIndices.Clear();
-        _previewOverflowPaths.Clear();
-        _previewOverflowCards.Clear();
-
-        foreach ((Visual visual, PreviewClipState state) in _previewClipStates)
-        {
-            visual.ClipToBounds = state.ClipToBounds;
-            visual.Clip = state.Clip;
-        }
-
-        _previewClipStates.Clear();
-    }
-
-    private IReadOnlyList<Visual> GetPreviewOverflowPath(Visual preview)
-    {
-        List<Visual> path = [];
-        Visual? current = preview;
-
-        while (current is not null)
-        {
-            path.Add(current);
-
-            Visual? parent = current.GetVisualParent();
-
-            if (ReferenceEquals(parent, GalleryScrollViewer))
-            {
-                return path;
-            }
-
-            current = parent;
-        }
-
-        throw new InvalidOperationException("Generation preview is not inside the gallery scroll viewer.");
-    }
-
-    private void DisableVisualClipping(Visual visual)
-    {
-        if (_previewClipStates.TryGetValue(visual, out PreviewClipState? existingState))
-        {
-            existingState.ReferenceCount++;
-
-            return;
-        }
-
-        PreviewClipState state = new(visual.ClipToBounds, visual.Clip);
-        _previewClipStates.Add(visual, state);
-        visual.ClipToBounds = false;
-        visual.Clip = null;
-    }
-
-    private void RestoreVisualClipping(Visual visual)
-    {
-        if (!_previewClipStates.TryGetValue(visual, out PreviewClipState? state))
-        {
-            return;
-        }
-
-        state.ReferenceCount--;
-
-        if (state.ReferenceCount > 0)
-        {
-            return;
-        }
-
-        visual.ClipToBounds = state.ClipToBounds;
-        visual.Clip = state.Clip;
-        _previewClipStates.Remove(visual);
+        _previewOverflow.Reset();
     }
 
     private void SchedulePreviewPointerStateChanged()
@@ -758,18 +642,5 @@ public partial class AnimatedGalleryControl : UserControl
     {
         Down,
         Up
-    }
-
-    private sealed class PreviewClipState
-    {
-        public bool ClipToBounds { get; }
-        public Geometry? Clip { get; }
-        public int ReferenceCount { get; set; } = 1;
-
-        public PreviewClipState(bool clipToBounds, Geometry? clip)
-        {
-            ClipToBounds = clipToBounds;
-            Clip = clip;
-        }
     }
 }
