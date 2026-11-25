@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 
 using AtomicArt.Contracts.Generation;
@@ -86,11 +87,11 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
         ArgumentException.ThrowIfNullOrWhiteSpace(workspace);
         ArgumentNullException.ThrowIfNull(inputs);
 
-        const string Instructions = "Use the built-in image generator once for image requests and use supplied references. "
-            + "Answer questions and requests for prompts in text. Use the supplied conversation as context. "
-            + "Write replies as plain text without Markdown formatting or code fences. "
-            + "Quote recorded image prompts exactly when asked. If a prompt is unavailable, say so. "
-            + "Do not run commands, call external tools, or modify files.";
+        const string Instructions = """
+            By default, create or edit an image, even if the description is short or ambiguous. Use the built-in image generator once per request. Use the supplied references and conversation context.
+
+            Reply with text alone only when explicitly asked for information, explanations, recommendations, prompts, or a text response. Use plain text without Markdown. Quote recorded image prompts verbatim. If the exact prompt is unavailable, say so explicitly. Say if the image generator is unavailable. Do not run commands, use external tools, or modify files.
+            """;
         JsonElement start = await RequestAsync("thread/start", new
         {
             cwd = workspace,
@@ -114,7 +115,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
         }).ConfigureAwait(false);
         string turnId = GetId(turn.GetProperty("turn"));
         JsonElement? image = null;
-        List<string> answers = [];
+        StringBuilder answers = new();
         bool limitReached = false;
         bool attemptedImage = false;
         bool hasTextAnswer = false;
@@ -152,11 +153,10 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
 
                         limitReached |= IsUsageLimit(item, "failure", "type");
                     }
-                    else if (itemType == "agentMessage" && GetOptionalString(item, "text") is { } answer
-                        && !string.IsNullOrWhiteSpace(answer))
+                    else if (itemType == "agentMessage" && GetOptionalString(item, "text") is { } answer)
                     {
                         string? phase = GetOptionalString(item, "phase");
-                        answers.Add(answer);
+                        answers.Append(answer);
                         hasTextAnswer |= phase is null or "final_answer";
                     }
 
@@ -168,10 +168,12 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
                         break;
                     }
 
+                    string responseText = answers.ToString();
+
                     if (completed.GetProperty("status").GetString() == "completed"
                         && (image is not null || (!attemptedImage && hasTextAnswer)))
                     {
-                        return new LocalCodexTurnResult(threadId, modelId, image, string.Join("\n\n", answers));
+                        return new LocalCodexTurnResult(threadId, modelId, image, responseText);
                     }
 
                     limitReached |= IsUsageLimit(completed, "error", "codexErrorInfo");
@@ -180,7 +182,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
                         limitReached ? GenerationProviderFailureErrorCodes.RateLimited : GenerationClientFailureCodes.CodexNoImage,
                         false)
                     {
-                        ChatResult = answers.Count == 0 ? null : new GenerationChatResult(string.Join("\n\n", answers), null)
+                        ChatResult = responseText.Length == 0 ? null : new GenerationChatResult(responseText, null)
                     };
             }
         }

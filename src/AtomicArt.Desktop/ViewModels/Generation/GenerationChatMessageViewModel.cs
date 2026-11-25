@@ -26,7 +26,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     public GenerationChatImageSet ImageSet { get; private set; } = new GenerationChatImageSet(Array.Empty<GenerationChatImageViewModel>());
     public bool HasReferenceThumbnails => !IsAssistant && _attachments.Count != 0;
     public bool ShowsReferenceStrip => IsEditing || HasReferenceThumbnails;
-    public bool ShowsText => IsEditing || !string.IsNullOrWhiteSpace(Text);
+    public bool ShowsText => IsEditing || !string.IsNullOrEmpty(Text);
     public bool ShowsAttachmentActions => IsEditing;
     public bool ShowsAttachmentStrip => !IsAssistant;
     public string AttachmentCounterText => _formatter.FormatAttachmentCounterText(
@@ -40,7 +40,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     public bool HasDateLabel => !string.IsNullOrWhiteSpace(DateLabel);
     public string DisplayText
     {
-        get => IsEditing ? EditText : ReadOnlyText;
+        get => IsEditing ? EditText : Text;
         set
         {
             if (IsEditing)
@@ -52,7 +52,6 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     public ICommand? RemoveAttachment => IsEditing ? RemoveReferenceCommand : null;
     public ICommand? ReorderAttachment => IsEditing ? MoveReferenceCommand : null;
 
-    private string ReadOnlyText => IsAssistant ? Text.TrimEnd() : Text;
     private bool HasAvailableImageSlots => _images.Count < LocalCodexImageModel.Option.MaxAttachedImages;
     private bool CanPickImages => IsEditing && !IsLoading && HasAvailableImageSlots;
     private bool CanSave => IsEditing && !IsLoading;
@@ -300,7 +299,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
             return;
         }
 
-        EditText = ReadOnlyText;
+        EditText = Text;
         _originalImages.AddRange(_images);
         _editLeaseId = Guid.NewGuid();
         IsEditing = true;
@@ -311,7 +310,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     {
         await ExecuteAsync(async token =>
         {
-            await _clipboard.SetTextAsync(ReadOnlyText, token);
+            await _clipboard.SetTextAsync(Text, token);
             IsCopied = true;
         }, nameof(CopyAsync), ct);
     }
@@ -324,7 +323,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
             return;
         }
 
-        GenerationChatMessage edited = CreateMessage(EditText.Trim(), _images);
+        GenerationChatMessage edited = CreateMessage(IsAssistant ? EditText : EditText.Trim(), _images);
 
         try
         {

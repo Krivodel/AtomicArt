@@ -138,6 +138,23 @@ public sealed class PanelAttachmentStoreTests
     }
 
     [Fact]
+    public async Task LoadAsync_WithLegacyAttachment_MovesContentToSharedStorage()
+    {
+        using PanelAttachmentTestContext context = new();
+        PanelAttachmentState state = context.Store.CreateState(context.Image);
+        string path = Path.Combine(context.PathProvider.StateAttachmentsDirectory, EncodedPanelId, state.InternalFileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(path) ?? throw new InvalidOperationException());
+        await File.WriteAllBytesAsync(path, context.Image.Content);
+
+        AttachedImageDto? loaded = await context.Store.LoadAsync(RawPanelId, state, CancellationToken.None);
+
+        loaded.Should().BeEquivalentTo(context.Image);
+        File.Exists(path).Should().BeFalse();
+        File.Exists(context.GetAttachmentPath(state)).Should().BeTrue();
+        Directory.GetFiles(GenerationReferenceFilePolicy.GetDirectory(context.PathProvider)).Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task LoadAsync_WithMissingManagedFile_LogsWarningAndReturnsNull()
     {
         PanelAttachmentState state = CreateState(

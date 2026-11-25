@@ -25,6 +25,41 @@ namespace AtomicArt.Desktop.Rendering.Tests.ViewModels.Generation;
 public sealed partial class GenerationChatViewModelTests
 {
     [Theory]
+    [InlineData("          Answer          \n\n\n\n\n")]
+    [InlineData("          \n\n\n\n\n")]
+    public async Task ChatView_WithAssistantWhitespace_DisplaysEveryLine(string original)
+    {
+        await DesktopControlTestBase.DispatchAsync(typeof(GenerationChatViewModelTests), async () =>
+        {
+            using ChatContext context = new();
+            GenerationChatResult result = new(original, null) { IsTextReply = true };
+            await context.Chat.OpenCommand.ExecuteAsync(await context.RestoreSourceAsync(result));
+            GenerationChatView view = new() { DataContext = context.Chat };
+            Window window = DesktopControlTestBase.Show(view, 560d, 640d);
+
+            try
+            {
+                await GenerationChatViewModelTests.WaitForFramesAsync(window, () => view.IsPresented);
+
+                GenerationChatMessageView reply = view.GetVisualDescendants().OfType<GenerationChatMessageView>()
+                    .Single(message => message.DataContext is GenerationChatMessageViewModel { IsAssistant: true });
+                TextBox text = reply.FindControl<TextBox>("MessageEditor") ?? throw new InvalidOperationException();
+                TextPresenter presenter = text.GetVisualDescendants().OfType<TextPresenter>().Single();
+                const int ExpectedLines = 6;
+                text.Text.Should().Be(original);
+                text.IsEffectivelyVisible.Should().BeTrue();
+                presenter.Text.Should().Be(original);
+                presenter.TextLayout.TextLines.Count.Should().Be(ExpectedLines);
+                text.Bounds.Height.Should().BeGreaterThanOrEqualTo(presenter.TextLayout.Height);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ChatView_WithShortMessageEditor_PreservesTextOriginAndFitsActions(bool assistant)

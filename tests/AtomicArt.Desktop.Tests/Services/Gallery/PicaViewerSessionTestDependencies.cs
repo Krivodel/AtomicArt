@@ -31,7 +31,9 @@ internal sealed class PicaViewerSessionTestDependencies
 
     internal PicaViewerSessionDependencies CreateDependencies(
         IGenerationImageFormatRegistry? formatRegistry = null,
-        IUiThreadDispatcher? uiThreadDispatcher = null)
+        IUiThreadDispatcher? uiThreadDispatcher = null,
+        IPanelAttachmentFilePathResolver? panelAttachments = null,
+        IGenerationReferenceStore? references = null)
     {
         return new PicaViewerSessionDependencies(
             ClipboardImageWriter.Object,
@@ -42,8 +44,8 @@ internal sealed class PicaViewerSessionTestDependencies
             GalleryOperations.Object,
             new AtomicArtPicaActions(TestLocalizationTextProvider.Default),
             Dlss5SourceOpener.Object,
-            PanelAttachments.Object,
-            References.Object,
+            panelAttachments ?? PanelAttachments.Object,
+            references ?? References.Object,
             NullLoggerFactory.Instance);
     }
 }

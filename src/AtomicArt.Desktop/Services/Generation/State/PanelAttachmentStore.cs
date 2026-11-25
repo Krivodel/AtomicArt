@@ -115,53 +115,36 @@ public sealed class PanelAttachmentStore :
 
         try
         {
-            AttachedImageDto image;
-            bool isLegacy;
+            GenerationReference? reference;
+            AttachedImageDto? image = null;
 
             using (DataRootAccessLease accessLease = await _accessCoordinator.AcquireAccessAsync(ct).ConfigureAwait(false))
             {
-                if (!TryOpenAttachmentFileForRead(
-                        panelId,
-                        attachment,
-                        out FileStream? stream,
-                        out string? trustedPath)
-                    || stream is null)
+                reference = ReadOwnerReference(panelId, attachment);
+
+                if (reference is null)
                 {
-                    return null;
-                }
-
-                await using (stream.ConfigureAwait(false))
-                {
-                    if (stream.Length > int.MaxValue)
-                    {
-                        throw new IOException("Managed panel attachment file is too large to load.");
-                    }
-
-                    byte[] content = new byte[checked((int)stream.Length)];
-                    await stream.ReadExactlyAsync(content, ct).ConfigureAwait(false);
-                    _logger.LogInformation(
-                        "Managed panel attachment {AttachmentId} loaded with {SizeBytes} bytes.",
-                        attachment.Id,
-                        content.LongLength);
-
-                    image = new AttachedImageDto(
-                        attachment.FileName,
-                        attachment.ContentType,
-                        content);
-                    isLegacy = !GenerationReferenceFilePolicy.IsSharedImagePath(_pathProvider, trustedPath);
+                    image = await LoadLegacyAttachmentAsync(panelId, attachment, ct).ConfigureAwait(false);
                 }
             }
 
-            if (isLegacy)
+            if (reference is not null)
             {
-                try
-                {
-                    await SaveAsync(panelId, attachment, image, ct).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
-                {
-                    _logger.LogWarning(ex, "Could not deduplicate managed panel attachment {AttachmentId}.", attachment.Id);
-                }
+                return await _references.LoadAsync(reference, ct).ConfigureAwait(false);
+            }
+
+            if (image is null)
+            {
+                return null;
+            }
+
+            try
+            {
+                await SaveAsync(panelId, attachment, image, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                _logger.LogWarning(ex, "Could not deduplicate managed panel attachment {AttachmentId}.", attachment.Id);
             }
 
             return image;
@@ -221,7 +204,12 @@ public sealed class PanelAttachmentStore :
 
         try
         {
-            if (!TryOpenAttachmentFileForRead(
+            if (ReadOwnerReference(panelId, attachment) is { } reference)
+            {
+                return _references.ResolveExistingFilePath(reference);
+            }
+
+            if (!TryOpenLegacyAttachmentFileForRead(
                     panelId,
                     attachment,
                     out FileStream? stream,
@@ -274,7 +262,57 @@ public sealed class PanelAttachmentStore :
         return path;
     }
 
-    private bool TryOpenAttachmentFileForRead(
+    private async Task<AttachedImageDto?> LoadLegacyAttachmentAsync(
+        string panelId,
+        PanelAttachmentState attachment,
+        CancellationToken ct)
+    {
+        if (!TryOpenLegacyAttachmentFileForRead(panelId, attachment, out FileStream? stream, out _)
+            || stream is null)
+        {
+            return null;
+        }
+
+        await using (stream.ConfigureAwait(false))
+        {
+            if (stream.Length > int.MaxValue)
+            {
+                throw new IOException("Managed panel attachment file is too large to load.");
+            }
+
+            byte[] content = new byte[checked((int)stream.Length)];
+            await stream.ReadExactlyAsync(content, ct).ConfigureAwait(false);
+            _logger.LogInformation(
+                "Managed panel attachment {AttachmentId} loaded with {SizeBytes} bytes.",
+                attachment.Id,
+                content.LongLength);
+
+            return new AttachedImageDto(attachment.FileName, attachment.ContentType, content);
+        }
+    }
+
+    private GenerationReference? ReadOwnerReference(string panelId, PanelAttachmentState attachment)
+    {
+        string ownerPath = string.Concat(GetAttachmentPath(panelId, attachment.InternalFileName),
+            GenerationReferenceFilePolicy.OwnerFileExtension);
+        string root = GetAttachmentsRootDirectory();
+
+        if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(ownerPath, new string[] { root },
+                root, TrustedPathFailureMessage, out FileStream? stream, out _)
+            || stream is null)
+        {
+            return null;
+        }
+
+        using (stream)
+        {
+            string? hash = GenerationReferenceFilePolicy.ReadOwnerHash(stream);
+
+            return hash is null ? null : new GenerationReference(hash, attachment.FileName, attachment.ContentType);
+        }
+    }
+
+    private bool TryOpenLegacyAttachmentFileForRead(
         string panelId,
         PanelAttachmentState attachment,
         out FileStream? stream,
@@ -283,19 +321,6 @@ public sealed class PanelAttachmentStore :
         string path = GetAttachmentPath(panelId, attachment.InternalFileName);
         string attachmentsRootDirectory = GetAttachmentsRootDirectory();
         string[] trustedDirectories = [attachmentsRootDirectory];
-        string ownerPath = string.Concat(path, GenerationReferenceFilePolicy.OwnerFileExtension);
-
-        if (_trustedFileStreamFactory.TryOpenExistingFileForRead(ownerPath, trustedDirectories,
-            attachmentsRootDirectory, TrustedPathFailureMessage, out FileStream? ownerStream, out _)
-            && ownerStream is not null)
-        {
-            using (ownerStream)
-            {
-                string? hash = GenerationReferenceFilePolicy.ReadOwnerHash(ownerStream);
-                path = hash is null ? path : _references.ResolveExistingFilePath(
-                    new GenerationReference(hash, attachment.FileName, attachment.ContentType)) ?? path;
-            }
-        }
 
         if (!_trustedFileStreamFactory.TryOpenExistingFileForRead(
                 path,

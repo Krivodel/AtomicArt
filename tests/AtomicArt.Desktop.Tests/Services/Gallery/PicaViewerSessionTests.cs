@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.Abstractions;
+
 using Avalonia;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
@@ -6,6 +8,7 @@ using Moq;
 using Pica.Protocol;
 using Pica.Viewer.Resources;
 using Pica.Viewer.Services;
+using SkiaSharp;
 using Xunit;
 
 using AtomicArt.Contracts.Generation;
@@ -14,7 +17,10 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.State;
+using AtomicArt.Desktop.Services.Paths;
+using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Common;
+using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Tests.Common;
 
@@ -95,6 +101,67 @@ public sealed class PicaViewerSessionTests : DesktopControlTestBase
 
         byte[] storedContent = await File.ReadAllBytesAsync(path);
         storedContent.Should().Equal(PngContent);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PrepareAsync_WithGeneratedPanelAttachment_UsesSharedFileAndKeepsTransparency(bool galleryDeleted)
+    {
+        using TemporaryDirectory files = new(typeof(PicaViewerSessionTests),
+            nameof(PrepareAsync_WithGeneratedPanelAttachment_UsesSharedFileAndKeepsTransparency));
+        AtomicArtDataPathProvider paths = new(files.DirectoryPath);
+        GenerationReferenceStore references = GenerationReferenceStoreTests.CreateStore(files.DirectoryPath);
+        PanelAttachmentStore attachments = new(paths, new StatePathKeyEncoder(),
+            GenerationImageFormatRegistryTestFactory.Create(), new DataRootAccessCoordinator(),
+            TestApiConfiguration.CreateTrustedFileStreamFactory(), NullLogger<PanelAttachmentStore>.Instance, references);
+        const byte Alpha = 128;
+        const string PanelId = "panel";
+        AttachedImageDto image = new("transparent.png", GenerationImageContentTypes.Png,
+            GalleryThumbnailTestImages.CreatePngBytes(32, 32, SKColors.CornflowerBlue.WithAlpha(Alpha)));
+        Guid runId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        GenerationReference reference = (await references.SaveAsync(runId,
+            new AttachedImageDto[] { image }, CancellationToken.None)).Single();
+        HashSet<string> hashes = [reference.Hash];
+        HashSet<string> empty = [];
+        await references.PromoteAsync(runId, new GenerationReference[] { reference }, CancellationToken.None);
+        await references.SynchronizeAsync(hashes, hashes, CancellationToken.None);
+        references.Release(runId);
+        PanelAttachmentState state = attachments.CreateState(image);
+        await attachments.SaveAsync(PanelId, state, image, CancellationToken.None);
+
+        if (galleryDeleted)
+        {
+            await references.SynchronizeAsync(empty, hashes, CancellationToken.None);
+        }
+
+        string sharedPath = references.ResolveExistingFilePath(reference)
+            ?? throw new InvalidOperationException("Expected the shared generated image.");
+        GalleryImageViewerItem[] items =
+        [
+            new GalleryImageViewerItem(runId, new GalleryReferenceImageViewerSource(reference)),
+            new GalleryImageViewerItem(ItemId, new GalleryAttachedImageViewerSource(PanelId, state))
+        ];
+        GalleryImageViewerRequest request = new(new GalleryStaticImageViewerItemsSource(items), ItemId, null);
+        PicaViewerSessionTestDependencies dependencies = new();
+
+        await using (PicaViewerSession session = new(dependencies.CreateDependencies(
+            panelAttachments: attachments, references: references)))
+        {
+            await session.PrepareAsync(request, CancellationToken.None);
+
+            PicaViewerRequest prepared = GetPreparedRequest(session);
+            prepared.Items.Should().HaveCount(2).And.OnlyContain(item => item.FilePath == sharedPath && !item.IsTemporary);
+            (await attachments.GetExistingFilePathAsync(PanelId, state, CancellationToken.None)).Should().Be(sharedPath);
+            (await attachments.LoadAsync(PanelId, state, CancellationToken.None)).Should().BeEquivalentTo(image);
+            using SKBitmap decoded = SKBitmap.Decode(sharedPath)
+                ?? throw new InvalidOperationException("Expected a decodable transparent PNG.");
+            decoded.GetPixel(0, 0).Alpha.Should().Be(Alpha);
+        }
+
+        File.Exists(sharedPath).Should().BeTrue();
+        Directory.GetFiles(paths.ArtDirectory).Should().HaveCount(galleryDeleted ? 0 : 1);
+        Directory.GetFiles(GenerationReferenceFilePolicy.GetDirectory(paths)).Should().HaveCount(galleryDeleted ? 1 : 0);
     }
 
     [Fact]

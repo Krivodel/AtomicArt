@@ -15,36 +15,47 @@ namespace AtomicArt.Desktop.Tests.ViewModels.Generation;
 public sealed class GenerationChatMessageViewModelTests
 {
     [Theory]
-    [InlineData(true, "  First line\r\n\r\nSecond line")]
-    [InlineData(false, "  First line\r\n\r\nSecond line \r\n\t")]
-    public async Task DisplayText_WithTrailingWhitespace_KeepsAssistantReadingCopyingAndEditingConsistent(
-        bool assistant, string expected)
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DisplayText_WithWhitespace_PreservesReadingCopyingAndEditing(bool assistant)
     {
-        const string Original = "  First line\r\n\r\nSecond line \r\n\t";
+        const string Original = "          First line\r\n\r\nSecond line          \n\n\n\n\n";
         GenerationChatMessage message = new(assistant, Original,
             new DateTime(2026, 11, 24, 12, 0, 0, DateTimeKind.Utc), Array.Empty<GenerationReference>());
         Mock<IGenerationReferenceStore> references = new();
         GenerationChatMediaService media = GenerationChatMediaServiceTestFactory.Create(
             references.Object, Mock.Of<IAtomicArtDataPathProvider>());
         RecordingTextClipboardService clipboard = new();
+        GenerationChatMessage? saved = null;
         using GenerationChatMessageViewModel viewModel = new(
             message, media, references.Object,
             new NanoBanana2PanelTextFormatter(TestLocalizationTextProvider.Default), clipboard,
-            (_, _, _) => Task.CompletedTask, new TestViewModelErrorHandler(), Mock.Of<IDialogService>());
+            (_, edited, _) =>
+            {
+                saved = edited;
+                return Task.CompletedTask;
+            }, new TestViewModelErrorHandler(), Mock.Of<IDialogService>());
 
-        viewModel.DisplayText.Should().Be(expected);
+        viewModel.DisplayText.Should().Be(Original);
         await viewModel.CopyCommand.ExecuteAsync(null);
-        clipboard.Text.Should().Be(expected);
+        clipboard.Text.Should().Be(Original);
         viewModel.EditCommand.Execute(null);
-        viewModel.EditText.Should().Be(expected);
+        viewModel.EditText.Should().Be(Original);
         viewModel.EditText = "Draft\n\n";
         viewModel.DisplayText.Should().Be("Draft\n\n");
         await viewModel.CopyCommand.ExecuteAsync(null);
-        clipboard.Text.Should().Be(expected);
+        clipboard.Text.Should().Be(Original);
         viewModel.CancelCommand.Execute(null);
 
-        viewModel.DisplayText.Should().Be(expected);
+        viewModel.DisplayText.Should().Be(Original);
         viewModel.Snapshot().Text.Should().Be(Original);
+        viewModel.EditCommand.Execute(null);
+        await viewModel.SaveCommand.ExecuteAsync(null);
+
+        string expectedSaved = assistant ? Original : Original.Trim();
+        saved?.Text.Should().Be(expectedSaved);
+        viewModel.DisplayText.Should().Be(expectedSaved);
+        viewModel.Snapshot().Text.Should().Be(expectedSaved);
     }
 
     [Fact]

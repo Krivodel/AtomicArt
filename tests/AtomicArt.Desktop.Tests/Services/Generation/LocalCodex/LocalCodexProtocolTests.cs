@@ -82,7 +82,58 @@ public sealed class LocalCodexProtocolTests
 
         LocalCodexTurnResult reply = await protocol.GenerateAsync(Path.GetTempPath(), Array.Empty<object>(), null, CancellationToken.None);
 
-        reply.Text.Should().Be("Image prompt:\nТихая бухта.\nТёплый свет.\n\nHere is the recorded prompt.");
+        reply.Text.Should().Be("Image prompt:\nТихая бухта.\nТёплый свет.Here is the recorded prompt.");
+        reply.Image.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("completed")]
+    [InlineData("failed")]
+    public async Task GenerateAsync_WithWhitespaceAcrossTextItems_PreservesEveryCharacter(string status)
+    {
+        string[] texts = ["          First\r\n", "\n\n\n\n", "Second          line\n\n\n\n\n"];
+        string events = string.Join("\n", texts.Select(text => CreateTextEvent(text, "final_answer")));
+        string completed = JsonSerializer.Serialize(new
+        {
+            method = "turn/completed",
+            @params = new { threadId = "thread-1", turn = new { id = "turn-1", status } }
+        });
+        using StringReader reader = new(TurnStart + events + "\n" + completed);
+        using StringWriter writer = new();
+        LocalCodexProtocol protocol = new(reader, writer);
+        const string Expected = "          First\r\n\n\n\n\nSecond          line\n\n\n\n\n";
+
+        if (status == "completed")
+        {
+            LocalCodexTurnResult reply = await protocol.GenerateAsync(
+                Path.GetTempPath(), Array.Empty<object>(), null, CancellationToken.None);
+
+            reply.Text.Should().Be(Expected);
+        }
+        else
+        {
+            Func<Task> generate = () => protocol.GenerateAsync(
+                Path.GetTempPath(), Array.Empty<object>(), null, CancellationToken.None);
+
+            GenerationAttemptException failure = (await generate.Should().ThrowAsync<GenerationAttemptException>()).Which;
+            failure.ChatResult?.Text.Should().Be(Expected);
+        }
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WithWhitespaceOnlyFinalAnswer_PreservesIt()
+    {
+        const string Text = "          \n\n\n\n\n";
+        using StringReader reader = new(TurnStart + CreateTextEvent(Text, "final_answer") + "\n" + """
+            {"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"completed"}}}
+            """);
+        using StringWriter writer = new();
+        LocalCodexProtocol protocol = new(reader, writer);
+
+        LocalCodexTurnResult reply = await protocol.GenerateAsync(
+            Path.GetTempPath(), Array.Empty<object>(), null, CancellationToken.None);
+
+        reply.Text.Should().Be(Text);
         reply.Image.Should().BeNull();
     }
 
@@ -116,7 +167,7 @@ public sealed class LocalCodexProtocolTests
 
     [Theory]
     [InlineData("completed", "commentary", "Working on it.")]
-    [InlineData("completed", "final_answer", "   ")]
+    [InlineData("completed", "final_answer", "")]
     [InlineData("failed", "final_answer", "Partial response")]
     public async Task GenerateAsync_WithoutACompletedAnswer_ReportsFailure(string status, string phase, string text)
     {
@@ -189,5 +240,19 @@ public sealed class LocalCodexProtocolTests
         defaultEffort.Should().Be("high");
         using JsonDocument nextPageRequest = JsonDocument.Parse(writer.ToString().Split(Environment.NewLine)[1]);
         nextPageRequest.RootElement.GetProperty("params").GetProperty("cursor").GetString().Should().Be("page-2");
+    }
+
+    private static string CreateTextEvent(string text, string phase)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            method = "item/completed",
+            @params = new
+            {
+                threadId = "thread-1",
+                turnId = "turn-1",
+                item = new { type = "agentMessage", phase, text }
+            }
+        });
     }
 }
