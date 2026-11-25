@@ -166,7 +166,7 @@ public sealed partial class GenerationChatViewModelTests
 
                 opened.Should().Be(0);
                 map.IsOpen.Should().BeTrue();
-                map.CanOpenSelected.Should().BeFalse();
+                map.OpenNodeCommand.CanExecute(map.SelectedNode).Should().BeFalse();
                 map.SelectedNode?.Id.Should().Be(rootId);
             }
             finally

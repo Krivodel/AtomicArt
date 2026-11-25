@@ -16,53 +16,11 @@
         <KeyBinding Gesture="Escape"
                     Command="{Binding CloseCommand}" />
     </UserControl.KeyBindings>
-    <Grid RowDefinitions="Auto,*,Auto">
-        <Border Grid.Row="0"
-                Classes="generation-chat-header">
-            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
-                <Button Grid.Column="0"
-                        Classes="Icon"
-                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.BackToChat}}"
-                        Command="{Binding CloseCommand}">
-                    <Path Classes="metadata-outline-icon"
-                          Data="{StaticResource AppBackIcon}" />
-                </Button>
-                <StackPanel Grid.Column="1"
-                            Margin="{StaticResource GenerationChatBranchTitleMargin}"
-                            VerticalAlignment="Center"
-                            Orientation="Horizontal"
-                            Spacing="{StaticResource GenerationChatItemSpacing}">
-                    <TextBlock Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Branches}}" />
-                    <TextBlock Foreground="{StaticResource MetadataSecondaryTextBrush}"
-                               Text="{Binding Nodes.Count}" />
-                </StackPanel>
-                <Button Grid.Column="2"
-                        Classes="Icon"
-                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ZoomOut}}"
-                        Command="{Binding #MapViewport.ZoomOutCommand}">
-                    <PathIcon Data="{StaticResource AppZoomOutIcon}" />
-                </Button>
-                <Button Grid.Column="3"
-                        Classes="Icon"
-                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ZoomIn}}"
-                        Command="{Binding #MapViewport.ZoomInCommand}">
-                    <PathIcon Data="{StaticResource AppAddIcon}" />
-                </Button>
-                <Button Grid.Column="4"
-                        Classes="Icon"
-                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.FitBranches}}"
-                        Command="{Binding #MapViewport.FitCommand}">
-                    <Path Classes="metadata-outline-icon"
-                          Data="{StaticResource AppFitIcon}" />
-                </Button>
-            </Grid>
-        </Border>
-        <Border Grid.Row="1"
-                IsHitTestVisible="False"
+    <Grid>
+        <Border IsHitTestVisible="False"
                 Background="{StaticResource GenerationChatBranchGridBrush}"
                 CacheMode="BitmapCache" />
         <controls:PanZoomControl x:Name="MapViewport"
-                                 Grid.Row="1"
                                  Background="Transparent">
             <generationControls:GenerationChatBranchConnectionsControl>
                 <ItemsControl x:Name="BranchItems"
@@ -132,23 +90,25 @@
             </generationControls:GenerationChatBranchConnectionsControl>
         </controls:PanZoomControl>
         <Canvas x:Name="PreviewLayer"
-                Grid.Row="1"
                 ClipToBounds="True"
                 IsHitTestVisible="False"
                 UseLayoutRounding="False" />
-        <Border Grid.Row="2"
-                Classes="generation-chat-branch-selection">
-            <Grid ColumnDefinitions="*,Auto">
-                <controls:OverflowEllipsisTextBlock Grid.Column="0"
-                                                   Margin="{StaticResource GenerationChatBranchTitleMargin}"
-                                                   VerticalAlignment="Center"
-                                                   Classes="generation-chat-branch-prompt"
-                                                   Text="{Binding SelectedNode.PreviewCard.Prompt}" />
-                <Button Grid.Column="1"
-                        Classes="metadata-repeat"
-                        Command="{Binding OpenSelectedCommand}"
-                        Content="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ChooseVariant}}" />
-            </Grid>
-        </Border>
+        <StackPanel Margin="{StaticResource GenerationChatHeaderPadding}"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Orientation="Horizontal">
+            <Button Classes="Icon"
+                    AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.BackToChat}}"
+                    Command="{Binding CloseCommand}">
+                <Path Classes="metadata-outline-icon"
+                      Data="{StaticResource AppBackIcon}" />
+            </Button>
+            <TextBlock Margin="{StaticResource GenerationChatBranchTitleMargin}"
+                       VerticalAlignment="Center"
+                       Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Branches}}" />
+            <TextBlock VerticalAlignment="Center"
+                       Foreground="{StaticResource MetadataSecondaryTextBrush}"
+                       Text="{Binding Nodes.Count}" />
+        </StackPanel>
     </Grid>
 </UserControl>

@@ -125,7 +125,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
     }
 
     [Fact]
-    public async Task OpenSelectedCommand_WithPendingCard_UsesTheNormalChatCommand()
+    public async Task OpenNodeCommand_WithPendingCard_UsesTheNormalChatCommand()
     {
         GenerationItemViewModel pending = CreateCard(FirstId, RootId);
         pending.StatusKind = GenerationItemStatus.Generating;
@@ -138,9 +138,9 @@ public sealed partial class GenerationChatBranchMapViewModelTests
         map.Open(new GenerationItemViewModel[] { CreateCard(RootId), pending }, RootId, RootId);
         map.SelectCommand.Execute(map.Nodes.Single(node => node.Id == FirstId));
 
-        await map.OpenSelectedCommand.ExecuteAsync(null);
+        await map.OpenNodeCommand.ExecuteAsync(map.SelectedNode);
 
-        map.CanOpenSelected.Should().BeTrue();
+        map.OpenNodeCommand.CanExecute(map.SelectedNode).Should().BeTrue();
         opened.Should().BeSameAs(pending);
     }
 

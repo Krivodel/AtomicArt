@@ -6,9 +6,6 @@ public static class GenerationChatLocalizationKeys
     public const string History = "GenerationChat.History";
     public const string Branches = "GenerationChat.Branches";
     public const string BackToChat = "GenerationChat.BackToChat";
-    public const string ZoomIn = "GenerationChat.ZoomIn";
-    public const string ZoomOut = "GenerationChat.ZoomOut";
-    public const string FitBranches = "GenerationChat.FitBranches";
     public const string CurrentChat = "GenerationChat.CurrentChat";
     public const string DeletedChat = "GenerationChat.DeletedChat";
     public const string Collapse = "GenerationChat.Collapse";

@@ -11,7 +11,6 @@ namespace AtomicArt.Desktop.ViewModels.Generation;
 
 public sealed partial class GenerationChatBranchMapViewModel : ObservableObject, IDisposable
 {
-    public bool CanOpenSelected => CanOpenNode(SelectedNode);
     public GenerationChatBranchMapViewModel? Presentation => IsOpen ? this : null;
     public ReadOnlyObservableCollection<GenerationChatBranchNodeViewModel> Nodes { get; }
 
@@ -78,8 +77,6 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
 
     internal void RefreshCommands()
     {
-        OnPropertyChanged(nameof(CanOpenSelected));
-        OpenSelectedCommand.NotifyCanExecuteChanged();
         OpenNodeCommand.NotifyCanExecuteChanged();
     }
 
@@ -192,12 +189,6 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
         {
             SelectedNode = node;
         }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanOpenSelected))]
-    private Task OpenSelectedAsync()
-    {
-        return OpenNodeAsync(SelectedNode);
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenNode))]

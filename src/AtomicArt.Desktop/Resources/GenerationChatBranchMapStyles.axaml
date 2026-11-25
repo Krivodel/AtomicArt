@@ -127,10 +127,4 @@
         <Setter Property="Foreground"
                 Value="{StaticResource MetadataFailedBrush}" />
     </Style>
-    <Style Selector="Border.generation-chat-branch-selection">
-        <Setter Property="Background"
-                Value="{StaticResource MetadataHeaderBrush}" />
-        <Setter Property="Padding"
-                Value="{StaticResource GenerationChatHeaderPadding}" />
-    </Style>
 </Styles>

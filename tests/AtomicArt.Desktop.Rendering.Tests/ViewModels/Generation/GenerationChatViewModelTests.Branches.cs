@@ -394,7 +394,7 @@ public sealed partial class GenerationChatViewModelTests
     }
 
     [Fact]
-    public async Task OpenSelectedCommand_WithGeneratingSource_OpensItsPendingReply()
+    public async Task OpenNodeCommand_WithGeneratingSource_OpensItsPendingReply()
     {
         using ChatContext context = new();
         GenerationItemViewModel source = await context.RestoreSourceAsync();
@@ -402,7 +402,7 @@ public sealed partial class GenerationChatViewModelTests
         await context.Chat.OpenCommand.ExecuteAsync(source);
         context.Chat.OpenBranchMapCommand.Execute(null);
 
-        await context.Chat.BranchMap.OpenSelectedCommand.ExecuteAsync(null);
+        await context.Chat.BranchMap.OpenNodeCommand.ExecuteAsync(context.Chat.BranchMap.SelectedNode);
 
         context.Chat.BranchMap.IsOpen.Should().BeFalse();
         context.Chat.Messages[^1].Images.Should().ContainSingle(image => image.IsPending);
@@ -473,6 +473,7 @@ public sealed partial class GenerationChatViewModelTests
                 PanZoomControl viewport = view.GetVisualDescendants().OfType<PanZoomControl>().Single();
                 GenerationChatBranchPanel panel = view.GetVisualDescendants().OfType<GenerationChatBranchPanel>().Single();
                 Rect[] positions = panel.Children.Select(child => child.Bounds).ToArray();
+                viewport.Bounds.Size.Should().Be(view.Bounds.Size);
                 Control current = panel.Children.Single(child => child.DataContext is GenerationChatBranchNodeViewModel { IsCurrent: true });
                 Point center = current.TranslatePoint(new Rect(current.Bounds.Size).Center, viewport)
                     ?? throw new InvalidOperationException("The current chat has no position.");
