@@ -26,6 +26,9 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
     private readonly double _completionProgress;
     private readonly bool _usesUniformCompletionFade;
     private readonly PixelLoadingState[] _pixels;
+    private readonly bool _cacheFrames;
+    private SKImage? _cachedFrame;
+    private GRContext? _graphicsContext;
 
     public PixelLoadingDrawOperation(
         Rect bounds,
@@ -38,7 +41,8 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
         double elapsedSeconds,
         double completionProgress,
         bool usesUniformCompletionFade,
-        PixelLoadingState[] pixels)
+        PixelLoadingState[] pixels,
+        bool cacheFrames)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(gridSize, 1);
         ArgumentNullException.ThrowIfNull(pixels);
@@ -54,6 +58,7 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
         _completionProgress = completionProgress;
         _usesUniformCompletionFade = usesUniformCompletionFade;
         _pixels = pixels;
+        _cacheFrames = cacheFrames;
     }
 
     public bool HitTest(Point point)
@@ -74,6 +79,7 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
             && operation._elapsedSeconds == _elapsedSeconds
             && operation._completionProgress == _completionProgress
             && operation._usesUniformCompletionFade == _usesUniformCompletionFade
+            && operation._cacheFrames == _cacheFrames
             && ReferenceEquals(operation._pixels, _pixels);
     }
 
@@ -88,6 +94,51 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
 
         using ISkiaSharpApiLease lease = leaseFeature.Lease();
         SKCanvas canvas = lease.SkCanvas;
+
+        if (!_cacheFrames)
+        {
+            DrawPixels(canvas);
+            return;
+        }
+
+        if (_cachedFrame is null || !ReferenceEquals(_graphicsContext, lease.GrContext))
+        {
+            _cachedFrame?.Dispose();
+            _cachedFrame = null;
+            _graphicsContext = lease.GrContext;
+            SKImageInfo info = new(Math.Max(1, (int)Math.Ceiling(Bounds.Width)), Math.Max(1, (int)Math.Ceiling(Bounds.Height)));
+            using SKSurface? surface = lease.GrContext is { } graphicsContext
+                ? SKSurface.Create(graphicsContext, false, info)
+                : SKSurface.Create(info);
+
+            if (surface is not null)
+            {
+                surface.Canvas.Clear(SKColors.Transparent);
+                DrawPixels(surface.Canvas);
+                _cachedFrame = surface.Snapshot();
+            }
+        }
+
+        if (_cachedFrame is { } frame)
+        {
+            canvas.DrawImage(frame, new SKRect(0f, 0f, (float)Bounds.Width, (float)Bounds.Height),
+                new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), null);
+        }
+        else
+        {
+            DrawPixels(canvas);
+        }
+    }
+
+    public void Dispose()
+    {
+        _cachedFrame?.Dispose();
+        _cachedFrame = null;
+        _graphicsContext = null;
+    }
+
+    private void DrawPixels(SKCanvas canvas)
+    {
         using SKPaint paint = new()
         {
             IsAntialias = true,
@@ -112,10 +163,6 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
                 (float)_pixelCornerRadius,
                 paint);
         }
-    }
-
-    public void Dispose()
-    {
     }
 
     private double CalculateOpacity(PixelLoadingState pixel)

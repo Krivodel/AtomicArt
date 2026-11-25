@@ -22,6 +22,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     public string? RepeatPrompt => _active?.RepeatPrompt;
     public long ConversationVersion => _conversationVersion;
     public double TextSize => _textSizes.CurrentTextSize;
+    public GenerationChatBranchMapViewModel BranchMap { get; }
     public bool CanReturnToSource => _active?.Group is { } group
         && _gallery?.Items.Any(card => card.Id == group.SourceCardId) == true;
 
@@ -64,6 +65,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         ArgumentNullException.ThrowIfNull(dates);
         _dates = dates;
         _dates.Changed += OnGroupLabelsChanged;
+        BranchMap = new GenerationChatBranchMapViewModel(OpenCommand);
         _textSizes = textSizeController ?? throw new ArgumentNullException(nameof(textSizeController));
         _textSizes.TextSizeChanged += OnTextSizeChanged;
         _createSession = () => new GenerationChatSessionViewModel(
@@ -78,6 +80,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         }
 
         _isDisposed = true;
+        BranchMap.Dispose();
         _textSizes.TextSizeChanged -= OnTextSizeChanged;
         _dates.Changed -= OnGroupLabelsChanged;
 
@@ -126,11 +129,13 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     [RelayCommand]
     internal void Collapse()
     {
+        BranchMap.Close();
         IsExpanded = false;
     }
 
     internal void Detach()
     {
+        BranchMap.Close();
         _openVersion++;
         Activate(null);
         IsExpanded = false;
@@ -217,6 +222,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
             ChooseVariantCommand.NotifyCanExecuteChanged();
             ReturnToSourceCommand.NotifyCanExecuteChanged();
             OpenGroupCommand.NotifyCanExecuteChanged();
+            BranchMap.RefreshCommands();
         }
     }
 
@@ -310,6 +316,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         }
 
         Activate(session);
+        BranchMap.Close();
         IsExpanded = true;
     }
 
@@ -350,6 +357,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         OnPropertyChanged(nameof(CanReturnToSource));
         ReturnToSourceCommand.NotifyCanExecuteChanged();
         RefreshGroupLinks();
+        OpenBranchMapCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -367,6 +375,15 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         if (HasChat)
         {
             IsExpanded = true;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasChat))]
+    private void OpenBranchMap()
+    {
+        if (_gallery is not null && _active?.Source is { } source)
+        {
+            BranchMap.Open(_gallery.Items, source.Id, source.Id);
         }
     }
 
@@ -437,5 +454,10 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         RefreshGroupLinks();
         OnPropertyChanged(nameof(CanReturnToSource));
         ReturnToSourceCommand.NotifyCanExecuteChanged();
+
+        if (BranchMap.IsOpen && _gallery is not null)
+        {
+            BranchMap.Refresh(_gallery.Items);
+        }
     }
 }

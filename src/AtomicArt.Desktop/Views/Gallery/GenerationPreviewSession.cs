@@ -6,7 +6,7 @@ internal sealed class GenerationPreviewSession : IGenerationPreviewSession
 {
     private readonly IGalleryPreviewBitmapProvider _previewBitmapProvider;
     private readonly GalleryPreviewSourceScheduler _previewSourceScheduler;
-    private GenerationPreviewControl? _previewControl;
+    private readonly HashSet<GenerationPreviewControl> _previewControls = [];
     private IDisposable? _lifetime;
 
     public GenerationPreviewSession(
@@ -23,25 +23,38 @@ internal sealed class GenerationPreviewSession : IGenerationPreviewSession
     {
         ArgumentNullException.ThrowIfNull(previewControl);
 
-        if (_previewControl is not null)
+        if (!_previewControls.Add(previewControl))
         {
             throw new InvalidOperationException(
                 "Generation preview session is already attached.");
         }
 
-        _previewControl = previewControl;
         previewControl.SetPreviewBitmapServices(
             _previewBitmapProvider,
             _previewSourceScheduler);
     }
 
+    public void Detach(GenerationPreviewControl previewControl)
+    {
+        ArgumentNullException.ThrowIfNull(previewControl);
+
+        if (_previewControls.Remove(previewControl))
+        {
+            previewControl.ClearPreviewBitmapServices();
+        }
+    }
+
     public void Dispose()
     {
-        GenerationPreviewControl? previewControl = _previewControl;
         IDisposable? lifetime = _lifetime;
-        _previewControl = null;
         _lifetime = null;
-        previewControl?.ClearPreviewBitmapServices();
+
+        foreach (GenerationPreviewControl previewControl in _previewControls)
+        {
+            previewControl.ClearPreviewBitmapServices();
+        }
+
+        _previewControls.Clear();
         lifetime?.Dispose();
     }
 

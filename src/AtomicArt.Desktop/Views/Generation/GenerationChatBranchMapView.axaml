@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="using:AtomicArt.Desktop.Controls"
+             xmlns:generationControls="using:AtomicArt.Desktop.Controls.Generation"
+             xmlns:gallery="using:AtomicArt.Desktop.ViewModels.Gallery"
+             xmlns:galleryViews="using:AtomicArt.Desktop.Views.Gallery"
+             xmlns:generation="using:AtomicArt.Desktop.ViewModels.Generation"
+             xmlns:i18n="https://codewf.com"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AtomicArt.Desktop.Views.Generation.GenerationChatBranchMapView"
+             x:Name="Root"
+             x:DataType="generation:GenerationChatBranchMapViewModel"
+             Background="{DynamicResource SukiPopupBackground}"
+             Foreground="{StaticResource MetadataTextBrush}">
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Escape"
+                    Command="{Binding CloseCommand}" />
+    </UserControl.KeyBindings>
+    <Grid RowDefinitions="Auto,*,Auto">
+        <Border Grid.Row="0"
+                Classes="generation-chat-header">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto">
+                <Button Grid.Column="0"
+                        Classes="Icon"
+                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.BackToChat}}"
+                        Command="{Binding CloseCommand}">
+                    <Path Classes="metadata-outline-icon"
+                          Data="{StaticResource AppBackIcon}" />
+                </Button>
+                <StackPanel Grid.Column="1"
+                            Margin="{StaticResource GenerationChatBranchTitleMargin}"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="{StaticResource GenerationChatItemSpacing}">
+                    <TextBlock Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Branches}}" />
+                    <TextBlock Foreground="{StaticResource MetadataSecondaryTextBrush}"
+                               Text="{Binding Nodes.Count}" />
+                </StackPanel>
+                <Button Grid.Column="2"
+                        Classes="Icon"
+                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ZoomOut}}"
+                        Command="{Binding #MapViewport.ZoomOutCommand}">
+                    <PathIcon Data="{StaticResource AppZoomOutIcon}" />
+                </Button>
+                <Button Grid.Column="3"
+                        Classes="Icon"
+                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ZoomIn}}"
+                        Command="{Binding #MapViewport.ZoomInCommand}">
+                    <PathIcon Data="{StaticResource AppAddIcon}" />
+                </Button>
+                <Button Grid.Column="4"
+                        Classes="Icon"
+                        AutomationProperties.Name="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.FitBranches}}"
+                        Command="{Binding #MapViewport.FitCommand}">
+                    <Path Classes="metadata-outline-icon"
+                          Data="{StaticResource AppFitIcon}" />
+                </Button>
+            </Grid>
+        </Border>
+        <Border Grid.Row="1"
+                IsHitTestVisible="False"
+                Background="{StaticResource GenerationChatBranchGridBrush}"
+                CacheMode="BitmapCache" />
+        <controls:PanZoomControl x:Name="MapViewport"
+                                 Grid.Row="1"
+                                 Background="Transparent">
+            <generationControls:GenerationChatBranchConnectionsControl>
+                <ItemsControl x:Name="BranchItems"
+                              ItemsSource="{Binding Nodes}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <generationControls:GenerationChatBranchPanel ConnectionBrush="{StaticResource MetadataDividerBrush}"
+                                                                         CurrentConnectionBrush="{StaticResource MetadataRepeatBrush}" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="generation:GenerationChatBranchNodeViewModel">
+                            <Button Classes="generation-chat-branch-node"
+                                    Classes.selected="{Binding IsSelected}"
+                                    Theme="{StaticResource GenerationChatBranchButtonTheme}"
+                                    DoubleTapped="OnNodeDoubleTapped"
+                                    PointerEntered="OnNodePointerEntered"
+                                    PointerExited="OnNodePointerExited"
+                                    Command="{Binding #Root.DataContext.SelectCommand}"
+                                    CommandParameter="{Binding}">
+                                <Grid RowDefinitions="Auto,*">
+                                    <Border Grid.Row="0"
+                                            Height="{StaticResource GenerationChatBranchPreviewHeight}"
+                                            ClipToBounds="True">
+                                        <Grid>
+                                            <ContentControl Content="{Binding Card}">
+                                                <ContentControl.ContentTemplate>
+                                                    <DataTemplate x:DataType="gallery:GenerationItemViewModel">
+                                                        <galleryViews:GenerationPreviewControl PreviewSize="{x:Static generationControls:GenerationChatBranchPanel.NodeWidth}"
+                                                                                               Classes="generation-chat-branch-preview"
+                                                                                               IsHitTestVisible="False"
+                                                                                               Loaded="OnPreviewLoaded"
+                                                                                               Unloaded="OnPreviewUnloaded"
+                                                                                               PreviewPath="{Binding DisplayThumbnailPath}" />
+                                                    </DataTemplate>
+                                                </ContentControl.ContentTemplate>
+                                            </ContentControl>
+                                            <Path HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Classes="metadata-outline-icon"
+                                                  IsVisible="{Binding IsDeleted}"
+                                                  Data="{StaticResource AppChatIcon}" />
+                                            <Border Margin="{StaticResource GenerationChatChoiceMargin}"
+                                                    Padding="{StaticResource GenerationChatBranchBadgePadding}"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    IsVisible="{Binding IsCurrent}"
+                                                    Background="{DynamicResource SukiPopupBackground}"
+                                                    CornerRadius="{StaticResource ShellCornerRadius}">
+                                                <TextBlock Foreground="{StaticResource MetadataRepeatBrush}"
+                                                           Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.CurrentChat}}" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                    <controls:OverflowEllipsisTextBlock Grid.Row="1"
+                                                                       Margin="{StaticResource GenerationChatBranchPromptMargin}"
+                                                                       Classes="generation-chat-branch-prompt"
+                                                                       IsVisible="{Binding !IsDeleted}"
+                                                                       Text="{Binding Card.Prompt}" />
+                                    <TextBlock Grid.Row="1"
+                                               Margin="{StaticResource GenerationChatBranchPromptMargin}"
+                                               IsVisible="{Binding IsDeleted}"
+                                               Foreground="{StaticResource MetadataSecondaryTextBrush}"
+                                               Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.DeletedChat}}" />
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </generationControls:GenerationChatBranchConnectionsControl>
+        </controls:PanZoomControl>
+        <Border Grid.Row="2"
+                Classes="generation-chat-branch-selection">
+            <Grid ColumnDefinitions="*,Auto">
+                <controls:OverflowEllipsisTextBlock Grid.Column="0"
+                                                   Margin="{StaticResource GenerationChatBranchTitleMargin}"
+                                                   VerticalAlignment="Center"
+                                                   Classes="generation-chat-branch-prompt"
+                                                   Text="{Binding SelectedNode.Card.Prompt}" />
+                <Button Grid.Column="1"
+                        Classes="metadata-repeat"
+                        Command="{Binding OpenSelectedCommand}"
+                        Content="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ChooseVariant}}" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

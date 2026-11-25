@@ -5,6 +5,13 @@
     "GenerationChat": {
       "Chat": "Chat",
       "History": "Chat history",
+      "Branches": "Related chats",
+      "BackToChat": "Back to chat",
+      "ZoomIn": "Zoom in",
+      "ZoomOut": "Zoom out",
+      "FitBranches": "Fit tree",
+      "CurrentChat": "Open",
+      "DeletedChat": "Deleted chat",
       "Collapse": "Collapse chat",
       "Edit": "Edit message",
       "Save": "Save",

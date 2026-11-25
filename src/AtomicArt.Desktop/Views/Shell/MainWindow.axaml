@@ -24,7 +24,7 @@
                  IsMenuVisible="False"
                  Title="{x:Static resources:ProductInformation.Name}"
                  TitleBarAutoHideDelay="0"
-                 behaviors:ImageDropBehavior.IsEnabled="True"
+                 behaviors:ImageDropBehavior.IsEnabled="{Binding !Chat.BranchMap.IsOpen, FallbackValue=True}"
                  behaviors:ImageDropBehavior.TargetKind="ExternalFiles"
                  behaviors:Dlss5ClipboardPasteBehavior.IsEnabled="{Binding Dlss5.IsOpen}"
                  behaviors:Dlss5ClipboardPasteBehavior.PasteCommand="{Binding Dlss5.PasteSourceCommand}"
@@ -93,10 +93,18 @@
                         <Binding Path="!Dlss5.IsOpen" />
                         <Binding Path="!IsSettingsOpen" />
                         <Binding Path="!ErrorDialog.IsOpen" />
+                        <Binding FallbackValue="True"
+                                 Path="!Chat.BranchMap.IsOpen" />
                     </MultiBinding>
                 </behaviors:ImageDropBehavior.IsEnabled>
-                <Grid x:Name="ShellContentGrid"
-                      IsVisible="{Binding !Dlss5.IsOpen}">
+                <Grid x:Name="ShellContentGrid">
+                    <Grid.IsVisible>
+                        <MultiBinding Converter="{x:Static converters:BoolConverters.And}">
+                            <Binding Path="!Dlss5.IsOpen" />
+                            <Binding FallbackValue="True"
+                                     Path="!Chat.BranchMap.IsOpen" />
+                        </MultiBinding>
+                    </Grid.IsVisible>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"
                                        MinHeight="0" />
@@ -210,6 +218,15 @@
 
                 <ContentControl IsVisible="{Binding Dlss5.IsOpen}"
                                 Content="{Binding Dlss5}" />
+
+                <TransitioningContentControl x:Name="BranchMapHost"
+                                             ZIndex="5"
+                                             IsHitTestVisible="{Binding Chat.BranchMap.IsOpen, FallbackValue=False}"
+                                             Content="{Binding Chat.BranchMap.Presentation}">
+                    <TransitioningContentControl.PageTransition>
+                        <CrossFade Duration="{StaticResource GenerationChatBranchTransitionDuration}" />
+                    </TransitioningContentControl.PageTransition>
+                </TransitioningContentControl>
 
                 <overlays:ModalOverlayLayerControl ZIndex="10"
                                                    EscapeFallbackCommand="{Binding HandleEscapeCommand}">

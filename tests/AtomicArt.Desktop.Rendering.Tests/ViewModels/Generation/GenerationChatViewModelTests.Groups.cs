@@ -110,6 +110,7 @@ public sealed partial class GenerationChatViewModelTests
         context.Chat.Messages.Should().OnlyContain(message => message.CanEdit);
         GenerationChatBatch next = await GenerationChatViewModelTests.SubmitParallelAsync(context.Chat);
         next.Group?.SourceCardId.Should().Be(batch.Runs[0].Id);
+        next.Group?.AncestorCardIds.Should().Equal(source.Id, batch.Runs[0].Id);
         await context.Chat.OpenCommand.ExecuteAsync(source);
         context.Chat.Messages.Should().HaveCount(2);
 

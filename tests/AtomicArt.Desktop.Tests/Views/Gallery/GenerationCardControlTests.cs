@@ -1838,6 +1838,16 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         });
     }
 
+    internal static string GetRenderedText(TextBlock textBlock)
+    {
+        ArgumentNullException.ThrowIfNull(textBlock);
+
+        return string.Concat(
+            textBlock.TextLayout.TextLines
+                .SelectMany(line => line.TextRuns)
+                .Select(run => run.Text.ToString()));
+    }
+
     private static TextBlock GetPromptTextBlock(
         GenerationCardControl control,
         string prompt)
@@ -1849,14 +1859,6 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 textBlock.Text,
                 prompt,
                 StringComparison.Ordinal));
-    }
-
-    private static string GetRenderedText(TextBlock textBlock)
-    {
-        return string.Concat(
-            textBlock.TextLayout.TextLines
-                .SelectMany(line => line.TextRuns)
-                .Select(run => run.Text.ToString()));
     }
 
     private static void ClickMenuItem(

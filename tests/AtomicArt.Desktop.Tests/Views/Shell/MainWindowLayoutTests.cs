@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 using Avalonia;
@@ -77,6 +78,89 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         TimeSpan.FromMilliseconds(200d);
     private static readonly TimeSpan ConfirmationDialogOpacityTransitionDuration =
         TimeSpan.FromMilliseconds(100d);
+
+    [Fact]
+    public async Task MainWindow_WithoutChat_KeepsTheGenerationPanelVisibleAndDropsEnabled()
+    {
+        await DispatchAsync(() =>
+        {
+            using MainWindowTestContext context = new(services => services.RemoveAll<GenerationChatViewModel>());
+            MainWindow window = context.Window;
+            window.Show();
+            window.CaptureRenderedFrame();
+            MainWindowViewModel viewModel = window.DataContext.Should().BeOfType<MainWindowViewModel>().Subject;
+            Grid shell = window.FindControl<Grid>(ShellContentGridName)
+                ?? throw new InvalidOperationException("The shell content is unavailable.");
+            Border panel = window.FindControl<Border>(GenerationPanelHostName)
+                ?? throw new InvalidOperationException("The generation panel is unavailable.");
+            TransitioningContentControl mapHost = window.FindControl<TransitioningContentControl>("BranchMapHost")
+                ?? throw new InvalidOperationException("The branch map host is unavailable.");
+
+            viewModel.Chat.Should().BeNull();
+            shell.IsVisible.Should().BeTrue();
+            panel.IsEffectivelyVisible.Should().BeTrue();
+            ImageDropBehavior.GetIsEnabled(window).Should().BeTrue();
+            mapHost.IsHitTestVisible.Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task BranchMap_WhenOpened_CoversThePanelAndEscapeReturnsToChat()
+    {
+        await DispatchAsync(async () =>
+        {
+            using MainWindowTestContext context = new(includeAllViewTemplates: true);
+            MainWindow window = context.Window;
+            MainWindowViewModel viewModel = window.DataContext.Should().BeOfType<MainWindowViewModel>().Subject;
+            GenerationChatViewModel chat = viewModel.Chat ?? throw new InvalidOperationException("The chat view model is unavailable.");
+            GenerationItemViewModel card = AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests
+                .CreateCard(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+            window.Show();
+            window.CaptureRenderedFrame();
+            chat.IsExpanded = true;
+            Grid shell = window.FindControl<Grid>("ShellContentGrid")
+                ?? throw new InvalidOperationException("The shell content is unavailable.");
+            chat.BranchMap.Open(new GenerationItemViewModel[] { card }, card.Id, card.Id);
+            shell.Opacity.Should().Be(1d);
+            shell.IsVisible.Should().BeFalse();
+            window.CaptureRenderedFrame();
+            AtomicArt.Desktop.Views.Generation.GenerationChatBranchMapView map = window.GetVisualDescendants()
+                .OfType<AtomicArt.Desktop.Views.Generation.GenerationChatBranchMapView>().Single();
+            Border panel = window.FindControl<Border>(GenerationPanelHostName)
+                ?? throw new InvalidOperationException("The generation panel is unavailable.");
+            Point panelTop = panel.TranslatePoint(default, map)
+                ?? throw new InvalidOperationException("The generation panel has no position.");
+            Point panelBottom = panel.TranslatePoint(new Point(panel.Bounds.Width, panel.Bounds.Height), map)
+                ?? throw new InvalidOperationException("The generation panel has no lower edge.");
+
+            panelTop.Y.Should().BeGreaterThanOrEqualTo(0d);
+            panelBottom.Y.Should().BeLessThanOrEqualTo(map.Bounds.Height);
+            map.Bounds.Width.Should().BeGreaterThanOrEqualTo(panel.Bounds.Width);
+            map.IsKeyboardFocusWithin.Should().BeTrue();
+            TimeSpan fade = window.FindResource("GenerationChatBranchTransitionDuration").Should().BeOfType<TimeSpan>().Subject;
+            await Task.Delay(fade + TimeSpan.FromMilliseconds(80d));
+            window.CaptureRenderedFrame();
+            shell.Opacity.Should().Be(1d);
+            window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
+
+            chat.BranchMap.IsOpen.Should().BeFalse();
+            chat.IsExpanded.Should().BeTrue();
+            shell.Opacity.Should().Be(1d);
+            shell.IsVisible.Should().BeTrue();
+
+            for (int cycle = 0; cycle < 4; cycle++)
+            {
+                chat.BranchMap.Open(new GenerationItemViewModel[] { card }, card.Id, card.Id);
+                window.CaptureRenderedFrame();
+                chat.BranchMap.Close();
+            }
+
+            await Task.Delay(fade + TimeSpan.FromMilliseconds(80d));
+            window.CaptureRenderedFrame();
+            shell.Opacity.Should().Be(1d);
+            panel.IsEffectivelyVisible.Should().BeTrue();
+        });
+    }
 
     [Fact]
     public async Task MainWindow_WithMetadataLayer_RoutesGalleryDragsToGenerationPanel()

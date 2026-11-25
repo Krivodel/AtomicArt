@@ -9,6 +9,9 @@
     <StreamGeometry x:Key="Dlss5CloseIcon">M5.5,5.5 L18.5,18.5 M18.5,5.5 L5.5,18.5</StreamGeometry>
     <StreamGeometry x:Key="Dlss5PlaceholderIcon">M2,4 L94,4 L94,68 L2,68 Z M2,54 L30,26 L57,53 L73,37 L94,58 M61,19 A7,7 0 1 0 75,19 A7,7 0 1 0 61,19</StreamGeometry>
     <StreamGeometry x:Key="AppBackIcon">M14.5,5 L7.5,12 L14.5,19 M8,12 L20,12</StreamGeometry>
+    <StreamGeometry x:Key="AppBranchIcon">M6,8 A3,3 0 1 0 6,2 A3,3 0 1 0 6,8 M6,22 A3,3 0 1 0 6,16 A3,3 0 1 0 6,22 M18,8 A3,3 0 1 0 18,2 A3,3 0 1 0 18,8 M6,8 V16 M6,16 C6,10 18,14 18,8</StreamGeometry>
+    <StreamGeometry x:Key="AppZoomOutIcon">M5,11 H19 V13 H5 Z</StreamGeometry>
+    <StreamGeometry x:Key="AppFitIcon">M8,3 H3 V8 M16,3 H21 V8 M3,16 V21 H8 M21,16 V21 H16</StreamGeometry>
     <StreamGeometry x:Key="AppSearchIcon">F0 M10,3 A7,7 0 1 1 10,17 A7,7 0 1 1 10,3 M10,5 A5,5 0 1 0 10,15 A5,5 0 1 0 10,5 M15,14 L21,20 L20,21 L14,15 Z</StreamGeometry>
     <StreamGeometry x:Key="AppTemperatureIcon">M12,2 A2,2 0 0 1 14,4 L14,14 A5,5 0 1 1 10,14 L10,4 A2,2 0 0 1 12,2 Z</StreamGeometry>
     <StreamGeometry x:Key="AppQualityIcon">F0 M12,4 C12.5,4 12.8,4.3 13,4.8 L14.4,9.2 C14.6,9.8 15.2,10.4 15.8,10.6 L20.2,12 C21.3,12.4 21.3,13.6 20.2,14 L15.8,15.4 C15.2,15.6 14.6,16.2 14.4,16.8 L13,21.2 C12.6,22.3 11.4,22.3 11,21.2 L9.6,16.8 C9.4,16.2 8.8,15.6 8.2,15.4 L3.8,14 C2.7,13.6 2.7,12.4 3.8,12 L8.2,10.6 C8.8,10.4 9.4,9.8 9.6,9.2 L11,4.8 C11.2,4.3 11.5,4 12,4 Z M12,7 L11.1,9.7 C10.7,10.8 9.8,11.7 8.7,12.1 L6,13 L8.7,13.9 C9.8,14.3 10.7,15.2 11.1,16.3 L12,19 L12.9,16.3 C13.3,15.2 14.2,14.3 15.3,13.9 L18,13 L15.3,12.1 C14.2,11.7 13.3,10.8 12.9,9.7 Z M19.25,0.75 H20.75 V3.25 H23.25 V4.75 H20.75 V7.25 H19.25 V4.75 H16.75 V3.25 H19.25 Z M4.5,16 L5.7,18.8 L8.5,20 L5.7,21.2 L4.5,24 L3.3,21.2 L0.5,20 L3.3,18.8 Z M4.5,19 L4.2,19.7 L3.5,20 L4.2,20.3 L4.5,21 L4.8,20.3 L5.5,20 L4.8,19.7 Z</StreamGeometry>

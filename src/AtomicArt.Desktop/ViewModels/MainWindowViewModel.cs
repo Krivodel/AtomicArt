@@ -228,6 +228,13 @@ public sealed partial class MainWindowViewModel :
     [RelayCommand]
     private void HandleEscape()
     {
+        if (Chat?.BranchMap.IsOpen == true)
+        {
+            Chat.BranchMap.CloseCommand.Execute(null);
+
+            return;
+        }
+
         if (Dlss5.IsOpen)
         {
             Dlss5.BackCommand.Execute(null);

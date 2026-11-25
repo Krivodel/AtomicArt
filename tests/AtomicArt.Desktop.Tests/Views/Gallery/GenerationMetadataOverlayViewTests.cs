@@ -1138,6 +1138,16 @@ public sealed class GenerationMetadataOverlayViewTests : AnimatedGalleryControlT
             PreviewControl = previewControl;
         }
 
+        public void Detach(GenerationPreviewControl previewControl)
+        {
+            ArgumentNullException.ThrowIfNull(previewControl);
+
+            if (ReferenceEquals(PreviewControl, previewControl))
+            {
+                PreviewControl = null;
+            }
+        }
+
         public void Dispose()
         {
             DisposeCount++;

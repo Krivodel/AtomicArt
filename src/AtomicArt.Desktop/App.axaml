@@ -22,5 +22,6 @@
         <StyleInclude Source="avares://AtomicArt/Resources/Templates.axaml" />
         <StyleInclude Source="/Resources/Dlss5Styles.axaml" />
         <StyleInclude Source="/Resources/GenerationChatStyles.axaml" />
+        <StyleInclude Source="/Resources/GenerationChatBranchMapStyles.axaml" />
     </Application.Styles>
 </Application>

@@ -140,6 +140,7 @@ public static class DependencyInjection
     {
         services.AddTransient<MainWindow>();
         services.AddViewTemplate<GalleryViewModel, GalleryView>();
+        services.AddViewTemplate<GenerationChatBranchMapViewModel, GenerationChatBranchMapView>();
         services.AddViewTemplate<Dlss5SessionViewModel, Dlss5SessionView>();
         services.AddViewTemplate<IModelPanelViewModel, GenerationPanelView>();
         services.AddViewTemplate<SettingsViewModel, SettingsOverlayView>();

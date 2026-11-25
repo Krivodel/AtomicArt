@@ -68,7 +68,10 @@ internal sealed partial class GenerationChatSessionViewModel
             _group = new GenerationChatGroup(id, source.Id, context.Id, context.ReferenceHashes)
             {
                 Context = context,
-                CreatedAtUtc = user.CreatedAtUtc
+                CreatedAtUtc = user.CreatedAtUtc,
+                AncestorCardIds = (source.ChatGroup is { } sourceGroup
+                    ? sourceGroup.AncestorCardIds.Append(sourceGroup.SourceCardId)
+                    : Enumerable.Empty<Guid>()).Append(source.Id).Distinct().ToArray()
             };
         }
 

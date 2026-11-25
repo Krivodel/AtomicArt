@@ -822,10 +822,8 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
 
     private static void SaveChatFrame(Window window, string name)
     {
-        string artifacts = Path.Combine(AppContext.BaseDirectory, "ChatVisualChecks");
-        Directory.CreateDirectory(artifacts);
         using Bitmap frame = window.CaptureRenderedFrame() ?? throw new InvalidOperationException("The chat frame was not captured.");
-        frame.Save(Path.Combine(artifacts, name));
+        GenerationChatViewModelTests.SaveRenderedFrame(frame, name);
         using MemoryStream stream = new();
         frame.Save(stream);
         stream.Position = 0;
@@ -939,9 +937,9 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
             GenerationItemStatusDescriptorRegistryTestFactory.Create(), TestApiConfiguration.CreateGalleryOrderTimestampPolicy(),
             TestLocalizationTextProvider.Default);
 
-        public ChatContext()
+        public ChatContext(IGalleryStateService? galleryStateService = null)
         {
-            _gallery = GalleryViewModelTestFactory.CreateViewModel(galleryItemsController: _items);
+            _gallery = GalleryViewModelTestFactory.CreateViewModel(galleryItemsController: _items, galleryStateService: galleryStateService);
             AtomicArtDataPathProvider paths = new(DesktopTestDirectories.CreateUniqueDirectoryPath());
             _localization = new LocalizationService(paths, TestApiConfiguration.CreateTrustedFileStreamFactory(),
                 NullLogger<Krivodeling.Localization.Avalonia.LocalizationService>.Instance, new WeakReferenceMessenger());

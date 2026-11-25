@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Contracts.Generation;
+using AtomicArt.Desktop.Helpers;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Generation;
@@ -231,31 +232,6 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
         }
     }
 
-    private static void Synchronize<T>(ObservableCollection<T> collection, IReadOnlyList<T> desired)
-    {
-        for (int index = collection.Count - 1; index >= 0; index--)
-        {
-            if (!desired.Contains(collection[index]))
-            {
-                collection.RemoveAt(index);
-            }
-        }
-
-        for (int index = 0; index < desired.Count; index++)
-        {
-            int previous = collection.IndexOf(desired[index]);
-
-            if (previous < 0)
-            {
-                collection.Insert(index, desired[index]);
-            }
-            else if (previous != index)
-            {
-                collection.Move(previous, index);
-            }
-        }
-    }
-
     private GenerationChatMessage CreateMessage(string text, IEnumerable<GenerationChatImageViewModel> images)
     {
         GenerationChatImageViewModel[] slots = images.ToArray();
@@ -368,7 +344,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
         GenerationChatImageViewModel[] desired = images.ToArray();
         Dictionary<GenerationChatImageViewModel, AttachedImageViewModel> previous =
             _referenceSlots.ToDictionary(pair => pair.Value, pair => pair.Key);
-        GenerationChatMessageViewModel.Synchronize(_images, desired);
+        ObservableCollectionSynchronizer.Synchronize(_images, desired);
         AttachedImageViewModel[] attachments = IsAssistant
             ? Array.Empty<AttachedImageViewModel>()
             : desired.Where(image => image.Reference is not null)
@@ -377,7 +353,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
                     : new AttachedImageViewModel(image.Reference
                         ?? throw new InvalidOperationException("The restored attachment has no image reference.")))
                 .ToArray();
-        GenerationChatMessageViewModel.Synchronize(_attachments, attachments);
+        ObservableCollectionSynchronizer.Synchronize(_attachments, attachments);
         _referenceSlots.Clear();
         int index = 0;
 

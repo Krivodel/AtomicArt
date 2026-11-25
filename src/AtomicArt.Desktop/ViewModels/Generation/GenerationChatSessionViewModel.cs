@@ -582,9 +582,11 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
         }
 
         GenerationChatHistory?[] previous = updates.Select(update => update.Card.ChatHistory).ToArray();
+        string[] previousPrompts = updates.Select(update => update.Card.Prompt).ToArray();
         foreach ((GenerationItemViewModel card, GenerationChatHistory history) in updates)
         {
             card.ChatHistory = history;
+            card.Prompt = history.Messages.LastOrDefault(message => !message.IsAssistant)?.Text ?? card.Prompt;
         }
 
         try
@@ -598,6 +600,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
                 if (object.ReferenceEquals(updates[index].Card.ChatHistory, updates[index].History))
                 {
                     updates[index].Card.ChatHistory = previous[index];
+                    updates[index].Card.Prompt = previousPrompts[index];
                 }
             }
 

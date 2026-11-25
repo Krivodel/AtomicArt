@@ -13,6 +13,11 @@ namespace AtomicArt.Desktop.Controls.Generation;
 
 public sealed class AttachmentPixelLoadingControl : Control
 {
+    public bool CacheFrames
+    {
+        get => GetValue(CacheFramesProperty);
+        set => SetValue(CacheFramesProperty, value);
+    }
     public Guid AnimationSeed
     {
         get => GetValue(AnimationSeedProperty);
@@ -35,6 +40,8 @@ public sealed class AttachmentPixelLoadingControl : Control
     private const int FrameIntervalMilliseconds = 40;
     private const int CompletionDurationMilliseconds = 520;
 
+    public static readonly StyledProperty<bool> CacheFramesProperty =
+        AvaloniaProperty.Register<AttachmentPixelLoadingControl, bool>(nameof(CacheFrames));
     public static readonly StyledProperty<Guid> AnimationSeedProperty =
         AvaloniaProperty.Register<AttachmentPixelLoadingControl, Guid>(
             nameof(AnimationSeed));
@@ -69,6 +76,7 @@ public sealed class AttachmentPixelLoadingControl : Control
 
     static AttachmentPixelLoadingControl()
     {
+        AffectsRender<AttachmentPixelLoadingControl>(CacheFramesProperty);
         AnimationSeedProperty.Changed.AddClassHandler<AttachmentPixelLoadingControl>(
             OnAnimationSeedChanged);
         GridSizeProperty.Changed.AddClassHandler<AttachmentPixelLoadingControl>(
@@ -157,7 +165,8 @@ public sealed class AttachmentPixelLoadingControl : Control
                 elapsedSeconds,
                 completionProgress,
                 _usesUniformCompletionFade,
-                _pixels));
+                _pixels,
+                CacheFrames));
     }
 
     internal void FadeOut(int durationMilliseconds)

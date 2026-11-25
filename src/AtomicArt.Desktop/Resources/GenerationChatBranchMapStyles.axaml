@@ -1,0 +1,87 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:generation="using:AtomicArt.Desktop.Controls.Generation"
+        xmlns:gallery="using:AtomicArt.Desktop.Views.Gallery"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <x:Double x:Key="GenerationChatBranchPreviewHeight">100</x:Double>
+        <Thickness x:Key="GenerationChatBranchPromptMargin">10,6</Thickness>
+        <Thickness x:Key="GenerationChatBranchTitleMargin">8,0</Thickness>
+        <Thickness x:Key="GenerationChatBranchBadgePadding">6,2</Thickness>
+        <DrawingBrush x:Key="GenerationChatBranchGridBrush"
+                      DestinationRect="0,0,24,24"
+                      Stretch="None"
+                      TileMode="Tile">
+            <DrawingBrush.Drawing>
+                <GeometryDrawing Brush="{StaticResource MetadataDividerBrush}">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="12,12"
+                                         RadiusX="0.7"
+                                         RadiusY="0.7" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+        <ControlTheme x:Key="GenerationChatBranchButtonTheme"
+                      TargetType="Button">
+            <Setter Property="Template">
+                <ControlTemplate x:DataType="Button">
+                    <Grid>
+                        <Border ClipToBounds="True"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{TemplateBinding CornerRadius}">
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </Styles.Resources>
+    <Style Selector="generation|GenerationChatBranchConnectionControl">
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Duration="{StaticResource GenerationCardVisualStateTransitionDuration}"
+                                 Property="Stroke" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.generation-chat-branch-node">
+        <Setter Property="Width"
+                Value="{x:Static generation:GenerationChatBranchPanel.NodeWidth}" />
+        <Setter Property="Height"
+                Value="{x:Static generation:GenerationChatBranchPanel.NodeHeight}" />
+        <Setter Property="Padding"
+                Value="{StaticResource ZeroThickness}" />
+        <Setter Property="HorizontalContentAlignment"
+                Value="Stretch" />
+        <Setter Property="VerticalContentAlignment"
+                Value="Stretch" />
+        <Setter Property="Background"
+                Value="{StaticResource MetadataHeaderBrush}" />
+        <Setter Property="CornerRadius"
+                Value="{StaticResource ShellCornerRadius}" />
+        <Setter Property="ClipToBounds"
+                Value="True" />
+    </Style>
+    <Style Selector="TextBlock.generation-chat-branch-prompt">
+        <Setter Property="MaxLines"
+                Value="2" />
+        <Setter Property="TextWrapping"
+                Value="Wrap" />
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataPromptTextBrush}" />
+    </Style>
+    <Style Selector="gallery|GenerationPreviewControl.generation-chat-branch-preview Border.generation-card-preview">
+        <Setter Property="CornerRadius"
+                Value="0" />
+    </Style>
+    <Style Selector="Border.generation-chat-branch-selection">
+        <Setter Property="Background"
+                Value="{StaticResource MetadataHeaderBrush}" />
+        <Setter Property="Padding"
+                Value="{StaticResource GenerationChatHeaderPadding}" />
+    </Style>
+</Styles>

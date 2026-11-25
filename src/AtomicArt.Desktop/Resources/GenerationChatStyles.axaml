@@ -9,6 +9,7 @@
         <Thickness x:Key="GenerationChatChoiceMargin">6</Thickness>
         <x:Double x:Key="GenerationChatItemSpacing">6</x:Double>
         <Thickness x:Key="GenerationChatHeaderPadding">8</Thickness>
+        <Thickness x:Key="GenerationChatReturnPadding">12,4</Thickness>
         <Thickness x:Key="GenerationChatContentMargin">12,5,12,8</Thickness>
         <Thickness x:Key="GenerationChatScrollInsets">0,20</Thickness>
         <Thickness x:Key="GenerationChatBubblePadding">10,8</Thickness>
