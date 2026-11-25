@@ -83,6 +83,26 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Fact]
+    public void LocalCodexSettings_WhenOnlySystemPromptChanges_PreservesModelAndReasoningSelection()
+    {
+        LocalCodexSettings settings = new();
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel(
+            imageModelOptionCatalog: new ImageModelOptionCatalog(settings), localCodexSettings: settings);
+        LocalCodexTextModel model = new("gpt-6.2-astra", "GPT-6.2 Astra", new[] { "medium", "high" }, "medium");
+        LocalCodexTextModel[] models = [model];
+        viewModel.CodexTextModels = models;
+        viewModel.SelectedCodexTextModel = model;
+        GenerationOptionViewModel effort = viewModel.CodexReasoningEfforts.Single(option => option.Value == "high");
+        viewModel.SelectedCodexReasoningEffort = effort;
+
+        settings.ApplySerializedValue(JsonSerializer.Serialize(settings.Current with { SystemPrompt = "Use the supplied style." }));
+
+        viewModel.CodexTextModels.Should().BeSameAs(models);
+        viewModel.SelectedCodexTextModel.Should().BeSameAs(model);
+        viewModel.SelectedCodexReasoningEffort.Should().BeSameAs(effort);
+    }
+
+    [Fact]
     public void SelectedCodexTextModel_WithNoEffortOverride_PrefersVeryHighOnEachModel()
     {
         using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();

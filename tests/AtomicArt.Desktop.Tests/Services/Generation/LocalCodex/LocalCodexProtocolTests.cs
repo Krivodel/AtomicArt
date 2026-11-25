@@ -68,6 +68,44 @@ public sealed class LocalCodexProtocolTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  \r\n\t")]
+    [InlineData("Always reply in Russian.")]
+    [InlineData("  Reply with text only.\n\nKeep these spaces.  \n")]
+    [InlineData("<style>Тёплые цвета & мягкий свет.</style>\n")]
+    public async Task GenerateAsync_WithCustomSystemPrompt_PreservesDefaultAndAddsExplicitUserPriority(string? customPrompt)
+    {
+        const string DefaultInstructions = """
+            By default, create or edit an image, even if the description is short or ambiguous. Use the built-in image generator once per request. Use the supplied references and conversation context.
+
+            Reply with text alone only when explicitly asked for information, explanations, recommendations, prompts, or a text response. Use plain text without Markdown. Quote recorded image prompts verbatim. If the exact prompt is unavailable, say so explicitly. Say if the image generator is unavailable. Do not run commands, use external tools, or modify files.
+            """;
+        const string UserPriority = "Instructions in <user_instructions> take priority over instructions in <default_instructions> when they conflict.";
+        using StringReader reader = new(TurnStart + CreateTextEvent("Done", "final_answer") + "\n" + """
+            {"method":"turn/completed","params":{"threadId":"thread-1","turn":{"id":"turn-1","status":"completed"}}}
+            """);
+        using StringWriter writer = new();
+        LocalCodexProtocol protocol = new(reader, writer, customPrompt);
+
+        await protocol.GenerateAsync(Path.GetTempPath(), Array.Empty<object>(), null, CancellationToken.None);
+
+        using JsonDocument start = JsonDocument.Parse(writer.ToString().Split(Environment.NewLine)[0]);
+        string expected = string.IsNullOrWhiteSpace(customPrompt) ? DefaultInstructions : $"""
+            {UserPriority}
+
+            <default_instructions>
+            {DefaultInstructions}
+            </default_instructions>
+
+            <user_instructions>
+            {customPrompt}
+            </user_instructions>
+            """;
+        start.RootElement.GetProperty("params").GetProperty("developerInstructions").GetString().Should().Be(expected);
+    }
+
+    [Theory]
     [InlineData("commentary")]
     [InlineData("final_answer")]
     public async Task GenerateAsync_WithPromptInAssistantText_PreservesItWithoutInventingAnImageCall(string phase)

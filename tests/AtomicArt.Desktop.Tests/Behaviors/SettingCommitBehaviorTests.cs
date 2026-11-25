@@ -44,13 +44,15 @@ public sealed class SettingCommitBehaviorTests : AnimatedGalleryControlTestBase
         });
     }
 
-    [Fact]
-    public async Task Command_WhenTextBoxLosesFocus_Executes()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Command_WhenTextBoxLosesFocus_Executes(bool multiline)
     {
         await DispatchAsync(() =>
         {
             int executionCount = 0;
-            TextBox textBox = new();
+            TextBox textBox = new() { AcceptsReturn = multiline };
             TextBox nextTextBox = new();
             SettingCommitBehavior.SetCommand(
                 textBox,
@@ -67,6 +69,34 @@ public sealed class SettingCommitBehaviorTests : AnimatedGalleryControlTestBase
                 nextTextBox.Focus();
 
                 executionCount.Should().Be(1);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Command_WhenEnterIsPressedInMultilineEditor_InsertsNewlineWithoutCommitting()
+    {
+        await DispatchAsync(() =>
+        {
+            const string FirstLine = "First line";
+            int executionCount = 0;
+            TextBox textBox = new() { AcceptsReturn = true, Text = FirstLine };
+            SettingCommitBehavior.SetCommand(textBox, new RelayCommand(() => executionCount++));
+            Window window = Show(textBox);
+
+            try
+            {
+                textBox.Focus();
+                textBox.CaretIndex = FirstLine.Length;
+
+                window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, null);
+
+                executionCount.Should().Be(0);
+                textBox.Text.Should().StartWith(FirstLine).And.EndWith("\n");
             }
             finally
             {

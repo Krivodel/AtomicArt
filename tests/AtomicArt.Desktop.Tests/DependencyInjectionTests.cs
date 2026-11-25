@@ -297,6 +297,7 @@ public sealed class DependencyInjectionTests
         Type[] expectedViewModelTypes =
             [
                 typeof(GalleryViewModel),
+                typeof(GenerationChatBranchMapViewModel),
                 typeof(Dlss5SessionViewModel),
                 typeof(IModelPanelViewModel),
                 typeof(SettingsViewModel),
@@ -370,12 +371,13 @@ public sealed class DependencyInjectionTests
         LocalCodexSettingViewModel viewModel = settings.Settings.OfType<LocalCodexSettingViewModel>().Single();
         LocalCodexSettingDefinition definition = services.GetRequiredService<ISettingsDefinitionCatalog>()
             .GetRequired<LocalCodexSettingDefinition>();
-        LocalCodexOptions options = new(true, Path.GetTempPath());
+        LocalCodexOptions options = new(true, Path.GetTempPath(), SystemPrompt: "Custom instructions\nwith a second line.");
 
         services.GetRequiredService<ISettingsStateService>().ApplyValue(definition, JsonSerializer.Serialize(options));
 
         viewModel.Enabled.Should().BeTrue();
         viewModel.Folder.Should().Be(options.Folder);
+        viewModel.SystemPrompt.Should().Be(options.SystemPrompt);
         viewModel.CommitCommand.CanExecute(null).Should().BeFalse();
     }
 
@@ -428,6 +430,39 @@ public sealed class DependencyInjectionTests
             .LoadValueAsync(definition, CancellationToken.None);
         JsonSerializer.Deserialize<LocalCodexOptions>(savedValue!).Should()
             .Be(LocalCodexOptions.Default with { Folder = folder });
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  Сначала изучи референсы.\n\nKeep all spacing.  \n")]
+    public async Task CommitCommand_WithSystemPrompt_PreservesItAcrossFolderChangesAndRestart(string prompt)
+    {
+        using TemporaryDirectory directory = new(typeof(DependencyInjectionTests),
+            nameof(CommitCommand_WithSystemPrompt_PreservesItAcrossFolderChangesAndRestart));
+        ServiceCollection services = CreateServices(directory.DirectoryPath);
+        services.AddSingleton<IUiThreadDispatcher>(new ImmediateUiThreadDispatcher());
+        using ServiceProvider provider = services.BuildServiceProvider();
+        LocalCodexSettingViewModel viewModel = provider.GetRequiredService<SettingsViewModel>()
+            .Settings.OfType<LocalCodexSettingViewModel>().Single();
+        LocalCodexSettingDefinition definition = provider.GetRequiredService<ISettingsDefinitionCatalog>()
+            .GetRequired<LocalCodexSettingDefinition>();
+        provider.GetRequiredService<ISettingsStateService>().ApplyValue(definition,
+            JsonSerializer.Serialize(LocalCodexOptions.Default with { SystemPrompt = "Original instructions" }));
+
+        viewModel.SystemPrompt = prompt;
+        await viewModel.CommitCommand.ExecuteAsync(null);
+        viewModel.Folder = Path.GetTempPath();
+        await viewModel.CommitCommand.ExecuteAsync(null);
+        await provider.GetRequiredService<IStateWriteScheduler>().FlushAsync(CancellationToken.None);
+        using ServiceProvider restarted = services.BuildServiceProvider();
+        await restarted.GetRequiredService<ISettingsStateService>().ApplySavedSettingsAsync(CancellationToken.None);
+
+        restarted.GetRequiredService<LocalCodexSettings>().Current.SystemPrompt.Should().Be(prompt);
+        restarted.GetRequiredService<LocalCodexSettings>().Current.Folder.Should().Be(viewModel.Folder);
+        LocalCodexSettingViewModel restored = restarted.GetRequiredService<SettingsViewModel>()
+            .Settings.OfType<LocalCodexSettingViewModel>().Single();
+        restored.SystemPrompt.Should().Be(prompt);
+        restored.CommitCommand.CanExecute(null).Should().BeFalse();
     }
 
     [Theory]

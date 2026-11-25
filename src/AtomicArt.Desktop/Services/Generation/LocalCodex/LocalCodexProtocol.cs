@@ -5,7 +5,7 @@ using AtomicArt.Contracts.Generation;
 
 namespace AtomicArt.Desktop.Services.Generation.LocalCodex;
 
-internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
+internal sealed class LocalCodexProtocol(TextReader input, TextWriter output, string? systemPrompt = null)
 {
     private const string ModelProvider = "openai";
 
@@ -87,11 +87,23 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
         ArgumentException.ThrowIfNullOrWhiteSpace(workspace);
         ArgumentNullException.ThrowIfNull(inputs);
 
-        const string Instructions = """
+        const string DefaultInstructions = """
             By default, create or edit an image, even if the description is short or ambiguous. Use the built-in image generator once per request. Use the supplied references and conversation context.
 
             Reply with text alone only when explicitly asked for information, explanations, recommendations, prompts, or a text response. Use plain text without Markdown. Quote recorded image prompts verbatim. If the exact prompt is unavailable, say so explicitly. Say if the image generator is unavailable. Do not run commands, use external tools, or modify files.
             """;
+        string instructions = string.IsNullOrWhiteSpace(systemPrompt) ? DefaultInstructions : $"""
+            Instructions in <user_instructions> take priority over instructions in <default_instructions> when they conflict.
+
+            <default_instructions>
+            {DefaultInstructions}
+            </default_instructions>
+
+            <user_instructions>
+            {systemPrompt}
+            </user_instructions>
+            """;
+
         JsonElement start = await RequestAsync("thread/start", new
         {
             cwd = workspace,
@@ -100,7 +112,7 @@ internal sealed class LocalCodexProtocol(TextReader input, TextWriter output)
             sandbox = "read-only",
             modelProvider = ModelProvider,
             model = options?.ModelId,
-            developerInstructions = Instructions
+            developerInstructions = instructions
         }, ct).ConfigureAwait(false);
         string threadId = GetId(start.GetProperty("thread"));
         string? modelId = GetOptionalString(start, "model") ?? options?.ModelId;

@@ -13,6 +13,17 @@ namespace AtomicArt.Desktop.ViewModels.Settings;
 
 public sealed partial class LocalCodexSettingViewModel : SettingItemViewModel, IDisposable
 {
+    public bool IsConnectionCheckSuccessful => ConnectionCheckSucceeded == true;
+    public bool IsConnectionCheckFailed => ConnectionCheckSucceeded == false;
+    public string? ConnectionCheckDescription => ConnectionCheckSucceeded switch
+    {
+        true => TextProvider.Get(SettingsLocalizationKeys.LocalCodex.Connected),
+        false => TextProvider.Get(SettingsLocalizationKeys.LocalCodex.Unavailable),
+        null => null
+    };
+
+    protected override IRelayCommand OperationCommand => CommitCommand;
+
     private readonly LocalCodexSettingDefinition _definition;
     private readonly ISettingsStateService _state;
     private readonly LocalCodexSettings _settings;
@@ -29,21 +40,14 @@ public sealed partial class LocalCodexSettingViewModel : SettingItemViewModel, I
     private string _folder;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CommitCommand))]
+    private string _systemPrompt;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConnectionCheckSuccessful))]
     [NotifyPropertyChangedFor(nameof(IsConnectionCheckFailed))]
     [NotifyPropertyChangedFor(nameof(ConnectionCheckDescription))]
     private bool? _connectionCheckSucceeded;
-
-    public bool IsConnectionCheckSuccessful => ConnectionCheckSucceeded == true;
-    public bool IsConnectionCheckFailed => ConnectionCheckSucceeded == false;
-    public string? ConnectionCheckDescription => ConnectionCheckSucceeded switch
-    {
-        true => TextProvider.Get(SettingsLocalizationKeys.LocalCodex.Connected),
-        false => TextProvider.Get(SettingsLocalizationKeys.LocalCodex.Unavailable),
-        null => null
-    };
-
-    protected override IRelayCommand OperationCommand => CommitCommand;
 
     public LocalCodexSettingViewModel(
         LocalCodexSettingDefinition definition,
@@ -61,12 +65,15 @@ public sealed partial class LocalCodexSettingViewModel : SettingItemViewModel, I
         LocalCodexOptions current = settings.Current;
         _enabled = current.Enabled;
         _folder = current.DisplayFolder;
+        _systemPrompt = current.SystemPrompt;
         _settings.OptionsChanged += OnOptionsChanged;
+        _settings.ConnectionChanged += OnConnectionChanged;
     }
 
     public void Dispose()
     {
         _settings.OptionsChanged -= OnOptionsChanged;
+        _settings.ConnectionChanged -= OnConnectionChanged;
     }
 
     public override void RefreshLocalization()
@@ -146,9 +153,11 @@ public sealed partial class LocalCodexSettingViewModel : SettingItemViewModel, I
     {
         LocalCodexOptions current = _settings.Current;
         string folder = NormalizePath(Folder);
-        return string.Equals(folder, current.DisplayFolder, StringComparison.Ordinal)
-            ? current with { Enabled = Enabled }
+        LocalCodexOptions options = string.Equals(folder, current.DisplayFolder, StringComparison.Ordinal)
+            ? current
             : new LocalCodexOptions(Enabled, folder);
+
+        return options with { Enabled = Enabled, SystemPrompt = SystemPrompt };
     }
 
     private static string NormalizePath(string? value)
@@ -169,11 +178,16 @@ public sealed partial class LocalCodexSettingViewModel : SettingItemViewModel, I
 
     private void OnOptionsChanged(object? sender, EventArgs e)
     {
-        ResetConnectionCheck();
         LocalCodexOptions current = _settings.Current;
         SynchronizeEnabled(current.Enabled);
         Folder = current.DisplayFolder;
+        SystemPrompt = current.SystemPrompt;
         CommitCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnConnectionChanged(object? sender, EventArgs e)
+    {
+        ResetConnectionCheck();
     }
 
     private void SynchronizeEnabled(bool value)

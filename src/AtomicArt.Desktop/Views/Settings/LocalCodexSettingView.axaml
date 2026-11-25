@@ -18,31 +18,45 @@
             </CheckBox>
         </controls:SettingItemControl.Header>
         <controls:SettingItemControl.Editor>
-            <Grid ColumnDefinitions="*,Auto"
-                  IsEnabled="{Binding !IsLoading}">
-                <TextBox AutomationProperties.Name="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.Folder}}"
-                         PlaceholderText="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.Folder}}"
-                         Text="{Binding Folder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+            <StackPanel IsEnabled="{Binding !IsLoading}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox AutomationProperties.Name="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.Folder}}"
+                             PlaceholderText="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.Folder}}"
+                             Text="{Binding Folder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             behaviors:SettingCommitBehavior.Command="{Binding CommitCommand}" />
+                    <Button Grid.Column="1"
+                            Margin="{StaticResource SettingsActionButtonMargin}"
+                            AutomationProperties.HelpText="{Binding ConnectionCheckDescription}"
+                            AutomationProperties.Name="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.Check}}"
+                            Command="{Binding CheckConnectionCommand}">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8">
+                            <TextBlock Text="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.Check}}" />
+                            <Panel Width="14"
+                                   Height="14"
+                                   VerticalAlignment="Center">
+                                <PathIcon IsVisible="{Binding IsConnectionCheckSuccessful}"
+                                          Data="{StaticResource AppCheckIcon}" />
+                                <PathIcon IsVisible="{Binding IsConnectionCheckFailed}"
+                                          Data="{StaticResource AppCloseIcon}" />
+                            </Panel>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+                <TextBlock Margin="{StaticResource SettingsDescriptionMargin}"
+                           Classes="settings-label"
+                           TextWrapping="Wrap"
+                           Text="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.SystemPrompt}}" />
+                <TextBox MinHeight="110"
+                         MaxHeight="260"
+                         Margin="{StaticResource SettingsEditorMargin}"
+                         AcceptsReturn="True"
+                         AutomationProperties.Name="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.SystemPrompt}}"
+                         TextWrapping="Wrap"
+                         VerticalContentAlignment="Top"
+                         Text="{Binding SystemPrompt, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          behaviors:SettingCommitBehavior.Command="{Binding CommitCommand}" />
-                <Button Grid.Column="1"
-                        Margin="{StaticResource SettingsActionButtonMargin}"
-                        AutomationProperties.HelpText="{Binding ConnectionCheckDescription}"
-                        AutomationProperties.Name="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.Check}}"
-                        Command="{Binding CheckConnectionCommand}">
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="8">
-                        <TextBlock Text="{i18n:I18n {x:Static resources:SettingsLocalizationKeys+LocalCodex.Check}}" />
-                        <Panel Width="14"
-                               Height="14"
-                               VerticalAlignment="Center">
-                            <PathIcon IsVisible="{Binding IsConnectionCheckSuccessful}"
-                                      Data="{StaticResource AppCheckIcon}" />
-                            <PathIcon IsVisible="{Binding IsConnectionCheckFailed}"
-                                      Data="{StaticResource AppCloseIcon}" />
-                        </Panel>
-                    </StackPanel>
-                </Button>
-            </Grid>
+            </StackPanel>
         </controls:SettingItemControl.Editor>
     </controls:SettingItemControl>
 </UserControl>

@@ -219,6 +219,7 @@
       "LocalCodex": {
         "Title": "Local Codex",
         "Folder": "Codex folder",
+        "SystemPrompt": "Custom system prompt",
         "Check": "Check",
         "Connected": "Codex is connected through ChatGPT.",
         "Unavailable": "Could not start or connect to Codex",

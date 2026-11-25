@@ -6,7 +6,8 @@ public sealed record LocalCodexOptions(
     bool Enabled,
     string Folder = "",
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ExecutablePath = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? HomeDirectory = null)
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? HomeDirectory = null,
+    string SystemPrompt = "")
 {
     public static LocalCodexOptions Default { get; } = new(Enabled: true);
 

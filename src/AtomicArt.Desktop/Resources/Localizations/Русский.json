@@ -219,6 +219,7 @@
       "LocalCodex": {
         "Title": "Локальный Codex",
         "Folder": "Папка Codex",
+        "SystemPrompt": "Пользовательский системный промпт",
         "Check": "Проверить",
         "Connected": "Codex подключён через ChatGPT.",
         "Unavailable": "Не удалось запустить или подключить Codex",

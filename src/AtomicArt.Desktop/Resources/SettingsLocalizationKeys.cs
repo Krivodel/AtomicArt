@@ -62,6 +62,7 @@ public static class SettingsLocalizationKeys
     {
         public const string Title = "Settings.LocalCodex.Title";
         public const string Folder = "Settings.LocalCodex.Folder";
+        public const string SystemPrompt = "Settings.LocalCodex.SystemPrompt";
         public const string Check = "Settings.LocalCodex.Check";
         public const string Connected = "Settings.LocalCodex.Connected";
         public const string Unavailable = "Settings.LocalCodex.Unavailable";

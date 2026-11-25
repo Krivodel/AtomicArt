@@ -156,7 +156,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel
         RestoreCodexSelection(modelId, settings.GetString(GenerationParameterNames.ThinkingLevel));
     }
 
-    private void OnCodexOptionsChanged(object? sender, EventArgs e)
+    private void OnCodexConnectionChanged(object? sender, EventArgs e)
     {
         CancelCodexModelLoad();
         ApplyCodexSelection(Array.Empty<LocalCodexTextModel>());

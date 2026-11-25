@@ -48,6 +48,7 @@ public static class SettingCommitBehavior
     {
         if (sender is Control control
             && e.Key == Key.Enter
+            && control is not TextBox { AcceptsReturn: true }
             && TryExecute(control))
         {
             e.Handled = true;

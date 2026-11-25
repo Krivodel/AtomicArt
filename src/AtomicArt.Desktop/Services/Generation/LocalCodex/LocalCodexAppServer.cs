@@ -69,7 +69,7 @@ public sealed class LocalCodexAppServer(ILogger<LocalCodexAppServer> logger)
 
         try
         {
-            LocalCodexProtocol protocol = new(process.StandardOutput, process.StandardInput);
+            LocalCodexProtocol protocol = new(process.StandardOutput, process.StandardInput, options.SystemPrompt);
             await protocol.InitializeAsync(ct).ConfigureAwait(false);
             return await operation(protocol, home).ConfigureAwait(false);
         }

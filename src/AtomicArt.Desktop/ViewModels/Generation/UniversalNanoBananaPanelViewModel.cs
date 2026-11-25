@@ -245,7 +245,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
         if (_codexSettings is not null)
         {
-            _codexSettings.OptionsChanged += OnCodexOptionsChanged;
+            _codexSettings.ConnectionChanged += OnCodexConnectionChanged;
         }
 
         _modelScope = modelScope;
@@ -404,7 +404,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
         if (_codexSettings is not null)
         {
-            _codexSettings.OptionsChanged -= OnCodexOptionsChanged;
+            _codexSettings.ConnectionChanged -= OnCodexConnectionChanged;
         }
 
         CancelCodexModelLoad();
