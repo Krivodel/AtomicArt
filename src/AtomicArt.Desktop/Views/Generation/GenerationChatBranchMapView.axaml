@@ -90,7 +90,7 @@
                                             Height="{StaticResource GenerationChatBranchPreviewHeight}"
                                             ClipToBounds="True">
                                         <Grid>
-                                            <ContentControl Content="{Binding Card}">
+                                            <ContentControl Content="{Binding PreviewCard}">
                                                 <ContentControl.ContentTemplate>
                                                     <DataTemplate x:DataType="gallery:GenerationItemViewModel">
                                                         <galleryViews:GenerationPreviewControl PreviewSize="{x:Static generationControls:GenerationChatBranchPanel.NodeWidth}"
@@ -104,30 +104,26 @@
                                             <Path HorizontalAlignment="Center"
                                                   VerticalAlignment="Center"
                                                   Classes="metadata-outline-icon"
-                                                  IsVisible="{Binding IsDeleted}"
+                                                  IsVisible="{Binding !HasPreview}"
                                                   Data="{StaticResource AppChatIcon}" />
                                             <Border Margin="{StaticResource GenerationChatChoiceMargin}"
                                                     Padding="{StaticResource GenerationChatBranchBadgePadding}"
                                                     HorizontalAlignment="Right"
                                                     VerticalAlignment="Top"
-                                                    IsVisible="{Binding IsCurrent}"
+                                                    Classes="generation-chat-branch-status"
+                                                    Classes.deleted="{Binding IsDeleted}"
+                                                    IsVisible="{Binding HasStatus}"
                                                     Background="{DynamicResource SukiPopupBackground}"
                                                     CornerRadius="{StaticResource ShellCornerRadius}">
-                                                <TextBlock Foreground="{StaticResource MetadataRepeatBrush}"
-                                                           Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.CurrentChat}}" />
+                                                <TextBlock Classes="generation-chat-branch-status-label"
+                                                           Text="{i18n:I18n {Binding StatusLocalizationKey}}" />
                                             </Border>
                                         </Grid>
                                     </Border>
                                     <controls:OverflowEllipsisTextBlock Grid.Row="1"
                                                                        Margin="{StaticResource GenerationChatBranchPromptMargin}"
                                                                        Classes="generation-chat-branch-prompt"
-                                                                       IsVisible="{Binding !IsDeleted}"
-                                                                       Text="{Binding Card.Prompt}" />
-                                    <TextBlock Grid.Row="1"
-                                               Margin="{StaticResource GenerationChatBranchPromptMargin}"
-                                               IsVisible="{Binding IsDeleted}"
-                                               Foreground="{StaticResource MetadataSecondaryTextBrush}"
-                                               Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.DeletedChat}}" />
+                                                                       Text="{Binding PreviewCard.Prompt}" />
                                 </Grid>
                             </Button>
                         </DataTemplate>
@@ -147,7 +143,7 @@
                                                    Margin="{StaticResource GenerationChatBranchTitleMargin}"
                                                    VerticalAlignment="Center"
                                                    Classes="generation-chat-branch-prompt"
-                                                   Text="{Binding SelectedNode.Card.Prompt}" />
+                                                   Text="{Binding SelectedNode.PreviewCard.Prompt}" />
                 <Button Grid.Column="1"
                         Classes="metadata-repeat"
                         Command="{Binding OpenSelectedCommand}"

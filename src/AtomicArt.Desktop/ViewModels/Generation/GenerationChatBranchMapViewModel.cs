@@ -58,6 +58,7 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
     internal void Refresh(IReadOnlyList<GenerationItemViewModel> cards)
     {
         ArgumentNullException.ThrowIfNull(cards);
+        _historyLoad?.Cancel();
         _cards = cards;
         _anchorId = _anchorCard?.Id ?? _anchorId;
         _currentId = _currentCard?.Id ?? _currentId;
@@ -85,6 +86,7 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
     [RelayCommand]
     internal void Close()
     {
+        _historyLoad?.Cancel();
         IsOpen = false;
         ObserveCards();
         _cards = Array.Empty<GenerationItemViewModel>();
@@ -102,13 +104,12 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
         {
             adjacent.TryAdd(card.Id, new List<Guid>());
 
-            if (card.ChatGroup is not { } group)
+            if (card.ChatGroup is null)
             {
                 continue;
             }
 
-            Guid[] route = group.AncestorCardIds.Append(group.SourceCardId).Where(id => id != card.Id && id != Guid.Empty)
-                .Distinct().Append(card.Id).ToArray();
+            Guid[] route = GetRoute(card);
 
             for (int index = 1; index < route.Length; index++)
             {
@@ -214,12 +215,26 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
     {
         Dictionary<Guid, GenerationChatBranchNodeViewModel> existing = _nodes.ToDictionary(node => node.Id);
         GenerationChatBranchNodeViewModel[] nodes = desired.Select(node =>
-            existing.TryGetValue(node.Id, out GenerationChatBranchNodeViewModel? previous)
-                && previous.ParentId == node.ParentId
+        {
+            if (!existing.TryGetValue(node.Id, out GenerationChatBranchNodeViewModel? previous))
+            {
+                return node;
+            }
+
+            if (previous.ParentId == node.ParentId
                 && previous.IsCurrent == node.IsCurrent
-                && object.ReferenceEquals(previous.Card, node.Card)
-                    ? previous
-                    : node).ToArray();
+                && object.ReferenceEquals(previous.Card, node.Card))
+            {
+                return previous;
+            }
+
+            if (previous.PreviewCard is { } preview)
+            {
+                node.RestorePreview(preview);
+            }
+
+            return node;
+        }).ToArray();
         ObservableCollectionSynchronizer.Synchronize(_nodes, nodes);
     }
 

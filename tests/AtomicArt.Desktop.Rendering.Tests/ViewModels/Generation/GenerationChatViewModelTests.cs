@@ -988,11 +988,12 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
             return _gallery.Items.Single();
         }
 
-        public async Task<GenerationItemViewModel> RestoreSavedChatAsync(GenerationChatHistory history)
+        public async Task<GenerationItemViewModel> RestoreSavedChatAsync(
+            GenerationChatHistory history, GenerationChatGroup? group = null)
         {
             Chats.Setup(store => store.LoadAsync(history.Id, It.IsAny<CancellationToken>())).ReturnsAsync(history);
             GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(imagePath: null,
-                chatId: history.Id, modelId: LocalCodexImageModel.Id);
+                chatId: history.Id, modelId: LocalCodexImageModel.Id, chatGroup: group);
             await _gallery.RestoreStateAsync(new GalleryItemState[] { state }, CancellationToken.None);
 
             return _gallery.Items.Single();

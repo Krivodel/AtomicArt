@@ -39,6 +39,13 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="{TemplateBinding CornerRadius}" />
+                        <Border Classes="generation-chat-branch-feedback"
+                                IsHitTestVisible="False"
+                                Background="{StaticResource MetadataFailedBrush}"
+                                BorderBrush="{StaticResource MetadataFailedBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                Opacity="0" />
                     </Grid>
                 </ControlTemplate>
             </Setter>
@@ -84,7 +91,9 @@
         <Setter Property="BorderBrush"
                 Value="{StaticResource MetadataRepeatBrush}" />
     </Style>
-    <Style Selector="Button.generation-chat-branch-node.generating, ContentPresenter.preview-expanded Button.generation-chat-branch-node">
+    <Style Selector="Button.generation-chat-branch-node.generating,
+                     Button.generation-chat-branch-node.feedback,
+                     ContentPresenter.preview-expanded Button.generation-chat-branch-node">
         <Setter Property="CacheMode"
                 Value="{x:Null}" />
     </Style>
@@ -109,6 +118,14 @@
                 Value="{StaticResource GenerationChatBranchPreviewHeight}" />
         <Setter Property="VerticalAlignment"
                 Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.generation-chat-branch-status-label">
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataRepeatBrush}" />
+    </Style>
+    <Style Selector="Border.generation-chat-branch-status.deleted TextBlock.generation-chat-branch-status-label">
+        <Setter Property="Foreground"
+                Value="{StaticResource MetadataFailedBrush}" />
     </Style>
     <Style Selector="Border.generation-chat-branch-selection">
         <Setter Property="Background"

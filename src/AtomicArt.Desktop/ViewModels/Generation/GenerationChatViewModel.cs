@@ -33,6 +33,8 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     private readonly IChatTextSizeController _textSizes;
     private readonly NanoBanana2PanelTextFormatter _formatter;
     private readonly GenerationChatDateFormatter _dates;
+    private readonly IGenerationChatStore _chats;
+    private readonly IGenerationReferenceStore _references;
     private readonly Dictionary<Guid, GenerationChatSessionViewModel> _sessions = [];
     private readonly Dictionary<Guid, GenerationChatSessionViewModel> _groups = [];
     [ObservableProperty]
@@ -57,11 +59,11 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         : base(errorHandler, dialogs)
     {
         ArgumentNullException.ThrowIfNull(media);
-        ArgumentNullException.ThrowIfNull(references);
+        _references = references ?? throw new ArgumentNullException(nameof(references));
         ArgumentNullException.ThrowIfNull(formatter);
         _formatter = formatter;
         ArgumentNullException.ThrowIfNull(clipboard);
-        ArgumentNullException.ThrowIfNull(chats);
+        _chats = chats ?? throw new ArgumentNullException(nameof(chats));
         ArgumentNullException.ThrowIfNull(dates);
         _dates = dates;
         _dates.Changed += OnGroupLabelsChanged;
@@ -379,12 +381,19 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     }
 
     [RelayCommand(CanExecute = nameof(HasChat))]
-    private void OpenBranchMap()
+    private async Task OpenBranchMapAsync(CancellationToken ct)
     {
         if (_gallery is not null && _active?.Source is { } source)
         {
             BranchMap.Open(_gallery.Items, source.Id, source.Id);
+            await RestoreBranchPreviewsAsync(ct);
         }
+    }
+
+    private Task RestoreBranchPreviewsAsync(CancellationToken ct)
+    {
+        return ViewModelAsyncOperation.ExecuteAsync(ErrorHandler, value => ErrorMessage = value, _ => { },
+            token => BranchMap.RestoreDeletedPreviewsAsync(_chats, _references, token), nameof(OpenBranchMapAsync), ct);
     }
 
     private void OnSessionChanged(object? sender, PropertyChangedEventArgs e)
@@ -458,6 +467,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         if (BranchMap.IsOpen && _gallery is not null)
         {
             BranchMap.Refresh(_gallery.Items);
+            _ = RestoreBranchPreviewsAsync(CancellationToken.None);
         }
     }
 }

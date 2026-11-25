@@ -366,6 +366,26 @@ public sealed partial class GenerationItemViewModel :
         RefreshComputedState();
     }
 
+    internal GenerationItemViewModel CreateHistoryPreview(
+        Guid id, GenerationChatMessage prompt, GenerationChatMessage reply, string? imagePath)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+        ArgumentNullException.ThrowIfNull(reply);
+        GenerationItemDto item = new(id, ModelId, ModelDisplayName, prompt.Text, AspectRatio, Resolution,
+            prompt.CreatedAtUtc, reply.Failed ? GenerationItemStatus.Failed : GenerationItemStatus.Generated,
+            imagePath, CompletedAtUtc: reply.CreatedAtUtc);
+
+        return new GenerationItemViewModel(item, prompt.Images.Count, imagePath, _statusDescriptorRegistry, _textProvider)
+        {
+            ThumbnailPath = imagePath,
+            ChatResult = new GenerationChatResult(reply.Text, reply.Images.FirstOrDefault())
+            {
+                IsTextReply = reply.Images.Count == 0 && !reply.Failed,
+                ImageGeneration = reply.ImageGeneration
+            }
+        };
+    }
+
     internal void SetGalleryOrderTimestamp(DateTime galleryOrderTimestampUtc)
     {
         GalleryOrderTimestampUtc = galleryOrderTimestampUtc;

@@ -9,6 +9,7 @@ using Avalonia.VisualTree;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Controls.Generation;
+using AtomicArt.Desktop.Services.UiAnimation;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Gallery;
 
@@ -20,7 +21,16 @@ public partial class GenerationChatBranchMapView : UserControl
 
     private const double PreviewRetentionRatio = 2d;
     private const int QualityUpdateDelayMilliseconds = 300;
+    private const int DeletedFeedbackDurationMilliseconds = 600;
 
+    private static readonly MotionFrame[] DeletedFeedbackFrames =
+    [
+        new MotionFrame(0d, 0d, 1d, 0d, 0d),
+        new MotionFrame(0d, 0d, 1d, 0d, 1d),
+        new MotionFrame(0d, 0d, 1d, 0d, 0d),
+        new MotionFrame(0d, 0d, 1d, 0d, 1d),
+        new MotionFrame(0d, 0d, 1d, 0d, 0d)
+    ];
     private readonly StandaloneGenerationPreviewExpansionHost _previewExpansionHost;
     private readonly DispatcherTimer _qualityUpdate = new()
     {
@@ -28,8 +38,11 @@ public partial class GenerationChatBranchMapView : UserControl
     };
     private readonly HashSet<GenerationPreviewControl> _previews = [];
     private readonly Dictionary<GenerationPreviewControl, Control> _observedPreviews = [];
+    private readonly Dictionary<Border, Button> _feedbackNodes = [];
     private readonly IGenerationPreviewSessionFactory? _previewSessionFactory;
     private IGenerationPreviewSession? _previewSession;
+    private AvaloniaUiFrameScheduler? _feedbackFrames;
+    private UiAnimationScheduler? _feedbackAnimator;
 
     public GenerationChatBranchMapView()
     {
@@ -46,6 +59,13 @@ public partial class GenerationChatBranchMapView : UserControl
         _previewSessionFactory = previewSessionFactory ?? throw new ArgumentNullException(nameof(previewSessionFactory));
     }
 
+    internal GenerationChatBranchMapView(
+        IGenerationPreviewSessionFactory previewSessionFactory, IUiFrameScheduler frameScheduler)
+        : this(previewSessionFactory)
+    {
+        _feedbackAnimator = new UiAnimationScheduler(frameScheduler);
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _qualityUpdate.Stop();
@@ -54,7 +74,45 @@ public partial class GenerationChatBranchMapView : UserControl
         _previews.Clear();
         _previewExpansionHost.Detach();
         _observedPreviews.Clear();
+
+        foreach (KeyValuePair<Border, Button> node in _feedbackNodes)
+        {
+            _feedbackAnimator?.Cancel(node.Key);
+            node.Key.Opacity = 0d;
+            node.Value.Classes.Remove("feedback");
+        }
+
+        _feedbackNodes.Clear();
+        _feedbackFrames?.Dispose();
+        _feedbackFrames = null;
+        _feedbackAnimator = null;
         base.OnDetachedFromVisualTree(e);
+    }
+
+    private void ShowDeletedFeedback(Button button)
+    {
+        if (button.GetVisualDescendants().OfType<Border>()
+            .FirstOrDefault(border => border.Classes.Contains("generation-chat-branch-feedback")) is not { } border
+            || TopLevel.GetTopLevel(this) is not { } topLevel)
+        {
+            return;
+        }
+
+        if (_feedbackAnimator is null)
+        {
+            _feedbackFrames = new AvaloniaUiFrameScheduler(topLevel);
+            _feedbackAnimator = new UiAnimationScheduler(_feedbackFrames);
+        }
+
+        _feedbackAnimator.Cancel(border);
+        _feedbackNodes[border] = button;
+        button.Classes.Set("feedback", true);
+        _ = _feedbackAnimator.AnimateAsync(border, DeletedFeedbackFrames, DeletedFeedbackDurationMilliseconds,
+            0, MotionEasing.Linear, () =>
+            {
+                _feedbackNodes.Remove(border);
+                button.Classes.Remove("feedback");
+            });
     }
 
     private void AttachPreview(GenerationPreviewControl preview)
@@ -185,8 +243,18 @@ public partial class GenerationChatBranchMapView : UserControl
 
     private void OnNodeDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (sender is Button { DataContext: GenerationChatBranchNodeViewModel node }
-            && DataContext is GenerationChatBranchMapViewModel map && map.OpenNodeCommand.CanExecute(node))
+        if (sender is not Button { DataContext: GenerationChatBranchNodeViewModel node } button
+            || DataContext is not GenerationChatBranchMapViewModel map)
+        {
+            return;
+        }
+
+        if (node.IsDeleted)
+        {
+            ShowDeletedFeedback(button);
+            e.Handled = true;
+        }
+        else if (map.OpenNodeCommand.CanExecute(node))
         {
             map.OpenNodeCommand.Execute(node);
             e.Handled = true;

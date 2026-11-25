@@ -16,7 +16,7 @@ using AtomicArt.Desktop.ViewModels.Generation;
 
 namespace AtomicArt.Desktop.Tests.ViewModels.Generation;
 
-public sealed class GenerationChatBranchMapViewModelTests
+public sealed partial class GenerationChatBranchMapViewModelTests
 {
     private static readonly Guid RootId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid FirstId = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -181,11 +181,12 @@ public sealed class GenerationChatBranchMapViewModelTests
         restored?.AncestorCardIds.Should().Equal(RootId, FirstId);
     }
 
-    internal static GenerationItemViewModel CreateCard(Guid id, Guid? parent = null, GenerationChatGroup? group = null)
+    internal static GenerationItemViewModel CreateCard(
+        Guid id, Guid? parent = null, GenerationChatGroup? group = null, Guid? chatId = null)
     {
         GalleryItemState state = GalleryItemStateTestFactory.CreateGenerated(id: id, imagePath: null,
             prompt: $"Prompt {id}", modelId: LocalCodexImageModel.Id,
-            chatGroup: group ?? (parent is Guid sourceId ? CreateGroup(sourceId) : null));
+            chatGroup: group ?? (parent is Guid sourceId ? CreateGroup(sourceId) : null), chatId: chatId);
 
         return GenerationItemViewModel.Restore(state, null, null,
             GenerationItemStatusDescriptorRegistryTestFactory.Create(), TestLocalizationTextProvider.Default);
