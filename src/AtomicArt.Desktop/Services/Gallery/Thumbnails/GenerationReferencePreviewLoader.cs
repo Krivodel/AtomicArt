@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 
+using Avalonia;
 using Avalonia.Media.Imaging;
 
 using AtomicArt.Desktop.Services.Generation;
@@ -40,15 +41,33 @@ public sealed class GenerationReferencePreviewLoader : IDisposable
         return _cache.AcquireAsync(new PreviewKey(reference, maximumPreviewPixels ?? MaximumPreviewPixels), ct);
     }
 
-    private async Task<Bitmap?> DecodeAsync(PreviewKey preview, CancellationToken ct)
+    internal Task<PreviewImageDimensions?> ReadDimensionsAsync(GenerationReference reference, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+
+        return ReadAsync<PreviewImageDimensions>(reference, (stream, token) =>
+        {
+            PixelSize size = PreviewBitmapDecoder.ReadPixelSize(stream, token);
+
+            return new PreviewImageDimensions(size.Width, size.Height);
+        }, ct);
+    }
+
+    private Task<Bitmap?> DecodeAsync(PreviewKey preview, CancellationToken ct)
+    {
+        return ReadAsync(preview.Reference,
+            (stream, token) => PreviewBitmapDecoder.Decode(stream, preview.PixelLimit, token, preview.PixelLimit), ct);
+    }
+
+    private async Task<TResult?> ReadAsync<TResult>(GenerationReference reference,
+        Func<Stream, CancellationToken, TResult> read, CancellationToken ct) where TResult : class
     {
         try
         {
             return await Task.Run(
-                () => _references.ReadAsync<Bitmap>(
-                    preview.Reference,
-                    (stream, token) => Task.FromResult<Bitmap?>(
-                        PreviewBitmapDecoder.Decode(stream, preview.PixelLimit, token, preview.PixelLimit)),
+                () => _references.ReadAsync<TResult>(
+                    reference,
+                    (stream, token) => Task.FromResult<TResult?>(read(stream, token)),
                     ct), ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException

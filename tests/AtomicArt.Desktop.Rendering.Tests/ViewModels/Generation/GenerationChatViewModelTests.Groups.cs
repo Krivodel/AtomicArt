@@ -100,9 +100,9 @@ public sealed partial class GenerationChatViewModelTests
 
         await GenerationChatViewModelTests.WaitForBusyChangeAsync(context.Chat, () => batch.Runs[0].Complete(result));
         await AtomicArt.Tests.Common.AsyncTestWaiter.WaitForConditionAsync(
-            () => context.Chat.ChooseVariantCommand.ExecutionTask is not null, CancellationToken.None);
+            () => context.Chat.NavigateInBackgroundCommand.ExecutionTask is not null, CancellationToken.None);
 
-        if (context.Chat.ChooseVariantCommand.ExecutionTask is { } opening)
+        if (context.Chat.NavigateInBackgroundCommand.ExecutionTask is { } opening)
         {
             await opening;
         }
@@ -120,6 +120,105 @@ public sealed partial class GenerationChatViewModelTests
         {
             run.Complete(null);
         }
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task SubmitAsync_WhenSingleResultCompletes_PreservesChatAndMapVisibility(bool expanded, bool mapOpen)
+    {
+        using ChatContext context = new();
+        await context.Chat.OpenCommand.ExecuteAsync(await context.RestoreSourceAsync());
+        AtomicArt.Desktop.Services.ImageModelOption model = LocalCodexImageModel.Option;
+        NanoBanana2GenerationParameters parameters = new(model, model.DisplayName, "Exact prompt", "auto", "auto", 0d, 1,
+            Array.Empty<AtomicArt.Contracts.Generation.AttachedImageDto>());
+        GenerationChatBatch batch = await SubmitParallelAsync(context.Chat, parameters);
+
+        if (!expanded)
+        {
+            context.Chat.Collapse();
+        }
+
+        if (mapOpen)
+        {
+            await context.Chat.OpenBranchMapCommand.ExecuteAsync(null);
+        }
+
+        GenerationChatResult result = context.AddResultCard(batch, "The exact image prompt", textOnly: true);
+        await WaitForBusyChangeAsync(context.Chat, () => batch.Runs[0].Complete(result));
+        await AtomicArt.Tests.Common.AsyncTestWaiter.WaitForConditionAsync(
+            () => context.Chat.NavigateInBackgroundCommand.ExecutionTask is not null, CancellationToken.None);
+
+        if (context.Chat.NavigateInBackgroundCommand.ExecutionTask is { } navigation)
+        {
+            await navigation;
+        }
+
+        context.Chat.IsExpanded.Should().Be(expanded);
+        context.Chat.BranchMap.IsOpen.Should().Be(mapOpen);
+        context.Chat.Messages[^1].Text.Should().Be(result.Text);
+        context.Chat.CanAddVariants.Should().BeFalse();
+
+        if (mapOpen)
+        {
+            context.Chat.BranchMap.Nodes.Single(node => node.IsCurrent).Id.Should().Be(batch.Runs[0].Id);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteOrCancelCommand_WithCollapsedVariantGroup_DoesNotOpenChat()
+    {
+        using ChatContext context = new();
+        GenerationItemViewModel source = await context.RestoreSourceAsync();
+        await context.Chat.OpenCommand.ExecuteAsync(source);
+        GenerationChatBatch batch = await SubmitParallelAsync(context.Chat);
+        context.AddResultCard(batch, "First");
+        context.AddResultCard(batch, "Second", index: 1);
+        context.Chat.Collapse();
+
+        foreach (GenerationChatRun run in batch.Runs)
+        {
+            await context.Gallery.DeleteOrCancelCommand.ExecuteAsync(context.Gallery.Items.Single(card => card.Id == run.Id));
+        }
+
+        if (context.Chat.NavigateInBackgroundCommand.ExecutionTask is { } navigation)
+        {
+            await navigation;
+        }
+
+        context.Chat.IsExpanded.Should().BeFalse();
+        context.Chat.BranchMap.IsOpen.Should().BeFalse();
+        context.Chat.CanReturnToSource.Should().BeFalse();
+        context.Chat.Messages.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task DeleteOrCancelCommand_DuringExplicitNavigation_KeepsTheRequestedChat()
+    {
+        using ChatContext context = new();
+        await context.Chat.OpenCommand.ExecuteAsync(await context.RestoreSourceAsync());
+        GenerationChatBatch batch = await SubmitParallelAsync(context.Chat);
+        context.AddResultCard(batch, "First");
+        context.AddResultCard(batch, "Second", index: 1);
+        GenerationItemViewModel target = context.AddSourceCard("The requested chat");
+        TaskCompletionSource<bool> apply = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        context.Panel.Setup(panel => panel.TryApplyPresetAsync(It.IsAny<GenerationPanelPreset>(), It.IsAny<CancellationToken>()))
+            .Returns(apply.Task);
+        Task opening = context.Chat.OpenCommand.ExecuteAsync(target);
+        context.Chat.IsLoading.Should().BeTrue();
+
+        foreach (GenerationChatRun run in batch.Runs)
+        {
+            await context.Gallery.DeleteOrCancelCommand.ExecuteAsync(context.Gallery.Items.Single(card => card.Id == run.Id));
+        }
+
+        apply.SetResult(true);
+        await opening;
+
+        context.Chat.Messages[0].Text.Should().Be(target.Prompt);
+        context.Chat.IsExpanded.Should().BeTrue();
+        context.Chat.NavigateInBackgroundCommand.ExecutionTask.Should().BeNull();
     }
 
     [Fact]

@@ -75,6 +75,20 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
         ObserveCards();
     }
 
+    internal void UpdateCurrentChat(GenerationItemViewModel card)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+
+        if (!IsOpen || object.ReferenceEquals(_currentCard, card))
+        {
+            return;
+        }
+
+        _currentCard = card;
+        _currentId = card.Id;
+        Refresh(_cards);
+    }
+
     internal void RefreshCommands()
     {
         OpenNodeCommand.NotifyCanExecuteChanged();

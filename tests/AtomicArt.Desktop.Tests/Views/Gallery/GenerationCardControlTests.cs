@@ -25,6 +25,7 @@ using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
@@ -122,31 +123,50 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         });
     }
 
-    [Fact]
-    public async Task ContextFlyout_WhenCreated_HasRequestedActionOrder()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ContextFlyout_WhenOpened_HasRequestedActionOrderWithoutChat(bool supportsChat)
     {
         await DispatchAsync(() =>
         {
-            GenerationCardControl control = new();
+            GenerationItemViewModel item = CreateItem("image.webp", "thumbnail.jpg");
+
+            if (supportsChat)
+            {
+                item.ModelId = LocalCodexImageModel.Id;
+            }
+
+            GenerationCardControl control = new()
+            {
+                DataContext = item,
+                OpenChatCommand = new RelayCommand(() => { })
+            };
             Border container = control.FindControl<Border>("GenerationCardContainer")
                 ?? throw new InvalidOperationException("Generation card container was not found.");
             AnimatedContextMenuFlyout flyout = container.ContextFlyout.Should()
                 .BeOfType<AnimatedContextMenuFlyout>().Subject;
 
-            string?[] actionNames = flyout.Items
-                .OfType<MenuItem>()
-                .Select(menuItem => menuItem.Name)
-                .ToArray();
+            Show(control, GalleryLayoutService.CardWidth, 420d, window =>
+            {
+                flyout.ShowAt(container);
+                window.CaptureRenderedFrame();
+                string?[] actionNames = flyout.Items
+                    .OfType<MenuItem>()
+                    .Select(menuItem => menuItem.Name)
+                    .ToArray();
 
-            actionNames.Should().Equal(
-                "CopyImageMenuItem",
-                "SaveAsMenuItem",
-                "ImbaMenuItem",
-                "OpenDlss5MenuItem",
-                "ShowInFolderMenuItem",
-                "OpenWithMenuItem",
-                "DeleteMenuItem",
-                "SelectMenuItem");
+                actionNames.Should().Equal(
+                    "CopyImageMenuItem",
+                    "SaveAsMenuItem",
+                    "ImbaMenuItem",
+                    "OpenDlss5MenuItem",
+                    "ShowInFolderMenuItem",
+                    "PropertiesMenuItem",
+                    "OpenWithMenuItem",
+                    "DeleteMenuItem",
+                    "SelectMenuItem");
+            });
 
             return Task.CompletedTask;
         });
@@ -435,7 +455,8 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 window.CaptureRenderedFrame();
                 await Task.Delay(ContextMenuRevealHost.OpeningDurationMilliseconds);
 
-                MenuItem previousItem = control.FindControl<MenuItem>("ShowInFolderMenuItem")!;
+                MenuItem previousItem = control.FindControl<MenuItem>("PropertiesMenuItem")
+                    ?? throw new InvalidOperationException("Properties menu item was not found.");
                 TopLevel menuRoot = TopLevel.GetTopLevel(openWithMenuItem)
                     ?? throw new InvalidOperationException("The context menu is not open.");
                 Point openWithCenter = GenerationCardControlTests.GetMenuItemCenter(openWithMenuItem, menuRoot);
@@ -795,20 +816,30 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
         });
     }
 
-    [Fact]
-    public async Task PromptArea_WhenClicked_OpensMetadataAsync()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PromptArea_WhenClicked_OpensChatOrMetadataForTheModel(bool supportsChat)
     {
         await DispatchAsync(() =>
         {
             bool isMetadataOpened = false;
+            bool isChatOpened = false;
             GenerationItemViewModel item = GenerationCardControlTests.CreateItem(
                 "missing-image.png",
                 "missing-thumbnail.jpg");
+
+            if (supportsChat)
+            {
+                item.ModelId = LocalCodexImageModel.Id;
+            }
+
             RelayCommand command = new(() => isMetadataOpened = true);
             GenerationCardControl control = new()
             {
                 DataContext = item,
-                OpenMetadataCommand = command
+                OpenMetadataCommand = command,
+                OpenChatCommand = new RelayCommand(() => isChatOpened = true)
             };
             Window window = Show(
                 control,
@@ -822,6 +853,19 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 window.MouseDown(promptAreaCenter, MouseButton.Left);
                 window.MouseUp(promptAreaCenter, MouseButton.Left);
 
+                isMetadataOpened.Should().Be(!supportsChat);
+                isChatOpened.Should().Be(supportsChat);
+                Border container = control.FindControl<Border>("GenerationCardContainer")
+                    ?? throw new InvalidOperationException("The card container was not found.");
+                MenuFlyout flyout = container.ContextFlyout.Should().BeAssignableTo<MenuFlyout>().Subject;
+                MenuItem properties = control.FindControl<MenuItem>("PropertiesMenuItem")
+                    ?? throw new InvalidOperationException("Properties menu item was not found.");
+                MenuItem folder = control.FindControl<MenuItem>("ShowInFolderMenuItem")
+                    ?? throw new InvalidOperationException("Show in folder menu item was not found.");
+                flyout.Items.IndexOf(properties).Should().Be(flyout.Items.IndexOf(folder) + 1);
+                properties.Command.Should().BeSameAs(command);
+                properties.CommandParameter.Should().BeSameAs(item);
+                command.Execute(properties.CommandParameter);
                 isMetadataOpened.Should().BeTrue();
             }
             finally
@@ -1258,8 +1302,8 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                 ISolidColorBrush textBrush = control.FindResource("MetadataTextBrush")
                     .Should().BeAssignableTo<ISolidColorBrush>().Subject;
                 menuFlyout.IsOpen.Should().BeTrue();
-                menuItems.Should().HaveCount(8);
-                menuItems[7].Should().BeSameAs(selectMenuItem);
+                menuItems.Should().HaveCount(9);
+                menuItems[8].Should().BeSameAs(selectMenuItem);
                 selectMenuItem.IsSelected.Should().BeFalse();
                 selectMenuItem.IsPointerOver.Should().BeFalse();
                 selectMenuItem.IsFocused.Should().BeFalse();
@@ -1272,14 +1316,14 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                     border => border.Margin == default);
                 presenterChromeBorders[0].IsVisible.Should().BeFalse();
                 presenterChromeBorders[1].IsVisible.Should().BeTrue();
-                iconSeparators.Should().HaveCount(8);
+                iconSeparators.Should().HaveCount(menuItems.Length);
                 iconSeparators.Should().OnlyContain(separator =>
                     separator.Opacity == 0d
                     && separator.Width == 0d
                     && separator.Margin == default);
-                iconPresenters.Should().HaveCount(8);
-                headerPresenters.Should().HaveCount(8);
-                menuHeaderTextBlocks.Should().HaveCount(8);
+                iconPresenters.Should().HaveCount(menuItems.Length);
+                headerPresenters.Should().HaveCount(menuItems.Length);
+                menuHeaderTextBlocks.Should().HaveCount(menuItems.Length);
                 menuHeaderTextBlocks.Should().OnlyContain(
                     textBlock => textBlock.FontWeight == FontWeight.Normal);
                 menuHeaderTextBlocks[0].Foreground.Should().BeSameAs(textBrush);
@@ -1290,7 +1334,7 @@ public sealed class GenerationCardControlTests : DesktopControlTestBase
                         .OfType<Avalonia.Controls.Shapes.Path>())
                     .Where(path => path.Classes.Contains("gallery-outline-icon"))
                     .ToArray();
-                pathIcons.Should().HaveCount(7);
+                pathIcons.Should().HaveCount(menuItems.Length - 1);
                 double contextIconSize = control.FindResource("ContextMenuIconSize")
                     .Should().BeOfType<double>().Subject;
                 contextIconSize.Should().Be(18d);

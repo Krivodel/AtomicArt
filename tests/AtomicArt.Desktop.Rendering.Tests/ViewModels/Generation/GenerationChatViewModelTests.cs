@@ -117,8 +117,35 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
         await context.Chat.OpenCommand.ExecuteAsync(source);
 
         context.Panel.Verify(panel => panel.TryApplyPresetAsync(
-            It.Is<GenerationPanelPreset>(preset => preset.ModelId == source.ModelId && preset.References == null),
+            It.Is<GenerationPanelPreset>(preset => preset.ModelId == source.ModelId && preset.Prompt == null && preset.References == null),
             It.IsAny<CancellationToken>()), Times.Once);
+        context.Chat.IsExpanded.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task OpenCommand_WithPanelDraft_PreservesPromptAndAttachments()
+    {
+        using ChatContext context = new();
+        GenerationItemViewModel source = await context.RestoreSourceAsync();
+        LocalCodexSettings settings = new();
+        using UniversalNanoBananaPanelViewModel panel =
+            AtomicArt.Desktop.Tests.ViewModels.Generation.UniversalNanoBananaPanelViewModelTests.CreateViewModel(
+                imageModelOptionCatalog: new ImageModelOptionCatalog(settings), localCodexSettings: settings);
+        context.Chat.Connect(context.Gallery, panel);
+        panel.ConnectChat(context.Chat);
+        const string Draft = "Keep this draft\nwith its second line";
+        panel.Prompt = Draft;
+        await panel.AttachImagesCommand.ExecuteAsync(new AttachedImageDto[]
+        {
+            GenerationImageTestData.CreateAttachedImage("draft.png")
+        });
+        AttachedImageViewModel attachment = panel.AttachedImages.Single();
+
+        await context.Chat.OpenCommand.ExecuteAsync(source);
+
+        panel.SelectedModel?.Id.Should().Be(source.ModelId);
+        panel.Prompt.Should().Be(Draft);
+        panel.AttachedImages.Should().ContainSingle().Which.Should().BeSameAs(attachment);
         context.Chat.IsExpanded.Should().BeTrue();
     }
 
@@ -602,8 +629,8 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
                 Border bubble = reply.GetVisualDescendants().OfType<Border>()
                     .Single(border => border.Classes.Contains("generation-chat-bubble"));
                 TextBox editor = reply.FindControl<TextBox>("MessageEditor") ?? throw new InvalidOperationException();
-                editor.Text.Should().Be("Image caption");
-                editor.GetVisualDescendants().OfType<TextPresenter>().Single().TextLayout.TextLines.Should().ContainSingle();
+                editor.Text.Should().Be("Image caption\n\n");
+                editor.GetVisualDescendants().OfType<TextPresenter>().Single().TextLayout.TextLines.Should().HaveCount(3);
 
                 GenerationReferencePreviewControl preview = image.GetVisualDescendants().OfType<GenerationReferencePreviewControl>().Single();
                 preview.Loader.Should().BeSameAs(loader);
@@ -1066,6 +1093,17 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
         public GenerationReferencePreviewLoader CreateDelayedPreviewLoader(TaskCompletionSource decoding, Task ready,
             int width = 320, int height = 320)
         {
+            byte[] bytes = GalleryThumbnailTestImages.CreatePngBytes(width, height);
+            _references.Setup(store => store.ReadAsync(
+                It.IsAny<GenerationReference>(),
+                It.IsAny<Func<Stream, CancellationToken, Task<PreviewImageDimensions?>>>(),
+                It.IsAny<CancellationToken>())).Returns(
+                    async (GenerationReference _, Func<Stream, CancellationToken, Task<PreviewImageDimensions?>> read, CancellationToken ct) =>
+                    {
+                        using MemoryStream stream = new(bytes);
+
+                        return await read(stream, ct);
+                    });
             _references.Setup(store => store.ReadAsync(
                 It.IsAny<GenerationReference>(),
                 It.IsAny<Func<Stream, CancellationToken, Task<Bitmap?>>>(),
@@ -1074,7 +1112,7 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
                     {
                         decoding.TrySetResult();
                         await ready.WaitAsync(ct);
-                        using MemoryStream stream = new(GalleryThumbnailTestImages.CreatePngBytes(width, height));
+                        using MemoryStream stream = new(bytes);
 
                         return await read(stream, ct);
                     });

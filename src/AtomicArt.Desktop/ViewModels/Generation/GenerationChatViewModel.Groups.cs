@@ -80,7 +80,7 @@ public sealed partial class GenerationChatViewModel
             return;
         }
 
-        GenerationPanelPreset preset = new(source.ModelId, string.Empty, source.AspectRatio, source.Resolution,
+        GenerationPanelPreset preset = new(source.ModelId, null, source.AspectRatio, source.Resolution,
             source.RequestSettings, References: null);
 
         if (await _panel.TryApplyPresetAsync(preset, ct) && !_isDisposed && version == _openVersion && session.HasGroupVariants)

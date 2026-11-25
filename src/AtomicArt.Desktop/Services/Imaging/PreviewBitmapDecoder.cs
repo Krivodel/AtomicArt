@@ -44,30 +44,7 @@ internal static class PreviewBitmapDecoder
         return bitmap;
     }
 
-    private static Bitmap DecodeReducedBitmap(
-        Stream stream,
-        PixelSize pixelSize,
-        PixelSize decodeSize,
-        bool useLongSide)
-    {
-        bool useWidth = useLongSide
-            ? pixelSize.Width >= pixelSize.Height
-            : pixelSize.Width < pixelSize.Height;
-        if (useWidth)
-        {
-            return Bitmap.DecodeToWidth(
-                stream,
-                decodeSize.Width,
-                BitmapInterpolationMode.MediumQuality);
-        }
-
-        return Bitmap.DecodeToHeight(
-            stream,
-            decodeSize.Height,
-            BitmapInterpolationMode.MediumQuality);
-    }
-
-    private static PixelSize ReadPixelSize(Stream stream, CancellationToken ct)
+    internal static PixelSize ReadPixelSize(Stream stream, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         using SKManagedStream managedStream = new(stream);
@@ -84,5 +61,29 @@ internal static class PreviewBitmapDecoder
         return swapDimensions
             ? new PixelSize(imageInfo.Height, imageInfo.Width)
             : new PixelSize(imageInfo.Width, imageInfo.Height);
+    }
+
+    private static Bitmap DecodeReducedBitmap(
+        Stream stream,
+        PixelSize pixelSize,
+        PixelSize decodeSize,
+        bool useLongSide)
+    {
+        bool useWidth = useLongSide
+            ? pixelSize.Width >= pixelSize.Height
+            : pixelSize.Width < pixelSize.Height;
+
+        if (useWidth)
+        {
+            return Bitmap.DecodeToWidth(
+                stream,
+                decodeSize.Width,
+                BitmapInterpolationMode.MediumQuality);
+        }
+
+        return Bitmap.DecodeToHeight(
+            stream,
+            decodeSize.Height,
+            BitmapInterpolationMode.MediumQuality);
     }
 }

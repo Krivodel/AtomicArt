@@ -40,6 +40,7 @@ public partial class GenerationChatView : UserControl
     internal ILogger<GenerationChatView> PresentationLogger { get; set; } = NullLogger<GenerationChatView>.Instance;
 
     private const int BranchFadeMilliseconds = 180;
+    private const int DimensionReadBatchSize = 8;
 
     private readonly CollectionChangedSubscription _messagesSubscription;
     private GenerationChatViewModel? _chat;
@@ -183,6 +184,13 @@ public partial class GenerationChatView : UserControl
             return;
         }
 
+        await PrepareImageLayoutAsync(version);
+
+        if (version != _presentationVersion)
+        {
+            return;
+        }
+
         scroll.ScrollToEnd();
         scroll.UpdateLayout();
         await Dispatcher.Yield(DispatcherPriority.Loaded);
@@ -203,6 +211,45 @@ public partial class GenerationChatView : UserControl
         scroll.UpdateLayout();
         scroll.ScrollToEnd();
         topLevel.RequestAnimationFrame(_ => Present(version, topLevel, scroll));
+    }
+
+    private async Task PrepareImageLayoutAsync(int version)
+    {
+        if (_chat is null || PreviewLoader is not { } loader)
+        {
+            return;
+        }
+
+        IGrouping<string?, GenerationChatImageViewModel>[] images = _chat.Messages.SelectMany(message => message.Images)
+            .Where(image => image.Reference is not null).GroupBy(image => image.Reference?.Hash).ToArray();
+
+        foreach (IGrouping<string?, GenerationChatImageViewModel>[] batch in images.Chunk(DimensionReadBatchSize))
+        {
+            if (version != _presentationVersion)
+            {
+                return;
+            }
+
+            PreviewImageDimensions?[] dimensions = await Task.WhenAll(batch.Select(group => group.First().Reference is { } reference
+                ? loader.ReadDimensionsAsync(reference, CancellationToken.None)
+                : Task.FromResult<PreviewImageDimensions?>(null)));
+
+            if (version != _presentationVersion)
+            {
+                return;
+            }
+
+            for (int index = 0; index < batch.Length; index++)
+            {
+                if (dimensions[index] is { Width: > 0, Height: > 0 } size)
+                {
+                    foreach (GenerationChatImageViewModel image in batch[index])
+                    {
+                        image.PreviewAspectRatio = size.AspectRatio;
+                    }
+                }
+            }
+        }
     }
 
     private void Present(int version, TopLevel topLevel, ScrollViewer scroll)

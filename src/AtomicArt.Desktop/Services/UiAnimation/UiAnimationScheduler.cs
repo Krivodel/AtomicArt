@@ -4,18 +4,13 @@ namespace AtomicArt.Desktop.Services.UiAnimation;
 
 internal sealed class UiAnimationScheduler
 {
-    public bool HasActiveAnimations
-    {
-        get
-        {
-            return _animations.Count > 0;
-        }
-    }
+    public bool HasActiveAnimations => _animations.Any(animation => !animation.Completion.Task.IsCompleted);
 
     private readonly IUiFrameScheduler _frameScheduler;
     private readonly Action<Control, MotionFrame> _applyFrame;
     private readonly List<ActiveAnimation> _animations = [];
     private bool _isRunning;
+    private bool _isProcessingFrame;
 
     public UiAnimationScheduler(IUiFrameScheduler frameScheduler)
         : this(frameScheduler, MotionFrameApplier.Apply)
@@ -40,34 +35,14 @@ internal sealed class UiAnimationScheduler
             return;
         }
 
-        for (int i = _animations.Count - 1; i >= 0; i--)
-        {
-            ActiveAnimation animation = _animations[i];
-            if (!controlSet.Contains(animation.Control))
-            {
-                continue;
-            }
-
-            _animations.RemoveAt(i);
-            animation.Completion.TrySetResult();
-        }
+        CancelAnimations(controlSet.Contains);
     }
 
     public void Cancel(Control control)
     {
         ArgumentNullException.ThrowIfNull(control);
 
-        for (int i = _animations.Count - 1; i >= 0; i--)
-        {
-            ActiveAnimation animation = _animations[i];
-            if (!ReferenceEquals(animation.Control, control))
-            {
-                continue;
-            }
-
-            _animations.RemoveAt(i);
-            animation.Completion.TrySetResult();
-        }
+        CancelAnimations(candidate => ReferenceEquals(candidate, control));
     }
 
     public void RequestAnimationFrame(Action<TimeSpan> frameAction)
@@ -157,6 +132,26 @@ internal sealed class UiAnimationScheduler
         return from + ((to - from) * amount);
     }
 
+    private void CancelAnimations(Predicate<Control> matches)
+    {
+        for (int i = _animations.Count - 1; i >= 0; i--)
+        {
+            ActiveAnimation animation = _animations[i];
+
+            if (!matches(animation.Control))
+            {
+                continue;
+            }
+
+            if (!_isProcessingFrame)
+            {
+                _animations.RemoveAt(i);
+            }
+
+            animation.Completion.TrySetResult();
+        }
+    }
+
     private Task AnimateProgressAsync(
         Control control,
         int durationMilliseconds,
@@ -202,29 +197,52 @@ internal sealed class UiAnimationScheduler
 
     private void OnFrame(TimeSpan now)
     {
-        for (int i = _animations.Count - 1; i >= 0; i--)
+        _isProcessingFrame = true;
+
+        try
         {
-            ActiveAnimation animation = _animations[i];
-            animation.StartTime ??= now;
-
-            TimeSpan elapsed = now - animation.StartTime.Value;
-            if (elapsed < animation.Delay)
+            for (int i = _animations.Count - 1; i >= 0; i--)
             {
-                continue;
-            }
+                ActiveAnimation animation = _animations[i];
 
-            double rawProgress = Math.Clamp(
-                (elapsed - animation.Delay).TotalMilliseconds / animation.Duration.TotalMilliseconds,
-                0d,
-                1d);
-            animation.ApplyProgress(animation.Ease(rawProgress));
+                if (animation.Completion.Task.IsCompleted)
+                {
+                    continue;
+                }
 
-            if (rawProgress >= 1d)
-            {
-                _animations.RemoveAt(i);
-                animation.Completed?.Invoke();
-                animation.Completion.TrySetResult();
+                animation.StartTime ??= now;
+                TimeSpan elapsed = now - animation.StartTime.Value;
+
+                if (elapsed < animation.Delay)
+                {
+                    continue;
+                }
+
+                double rawProgress = Math.Clamp(
+                    (elapsed - animation.Delay).TotalMilliseconds / animation.Duration.TotalMilliseconds,
+                    0d,
+                    1d);
+                double easedProgress = animation.Ease(rawProgress);
+
+                if (animation.Completion.Task.IsCompleted)
+                {
+                    continue;
+                }
+
+                animation.ApplyProgress(easedProgress);
+
+                if (rawProgress >= 1d && !animation.Completion.Task.IsCompleted)
+                {
+                    _animations.RemoveAt(i);
+                    animation.Completed?.Invoke();
+                    animation.Completion.TrySetResult();
+                }
             }
+        }
+        finally
+        {
+            _animations.RemoveAll(animation => animation.Completion.Task.IsCompleted);
+            _isProcessingFrame = false;
         }
 
         if (_animations.Count == 0)

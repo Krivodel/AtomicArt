@@ -133,6 +133,109 @@ public sealed class UiAnimationSchedulerTests
         scheduler.HasActiveAnimations.Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData(50)]
+    [InlineData(100)]
+    public async Task OnFrame_WhenProgressCancelsEarlierAnimations_DoesNotAdvanceCancelledTargets(int elapsedMilliseconds)
+    {
+        TestUiFrameScheduler frames = new();
+        UiAnimationScheduler scheduler = new(frames);
+        Border first = new();
+        Border second = new();
+        Border trigger = new();
+        List<double> cancelledValues = [];
+        Task firstTask = scheduler.AnimateValueAsync(first, 0d, 1d, 100, 0, Identity, cancelledValues.Add);
+        Task secondTask = scheduler.AnimateValueAsync(second, 0d, 1d, 100, 0, Identity, cancelledValues.Add);
+        Task triggerTask = scheduler.AnimateValueAsync(trigger, 0d, 1d, 100, 0, Identity, value =>
+        {
+            if (value >= 0.5d)
+            {
+                scheduler.Cancel(new Control[] { first, second });
+            }
+        });
+        frames.RunNextFrame(TimeSpan.Zero);
+
+        frames.RunNextFrame(TimeSpan.FromMilliseconds(elapsedMilliseconds));
+
+        await Task.WhenAll(firstTask, secondTask);
+        cancelledValues.Should().OnlyContain(value => value == 0d);
+        triggerTask.IsCompleted.Should().Be(elapsedMilliseconds == 100);
+
+        if (!triggerTask.IsCompleted)
+        {
+            frames.RunNextFrame(TimeSpan.FromMilliseconds(100d));
+        }
+
+        await triggerTask;
+        scheduler.HasActiveAnimations.Should().BeFalse();
+        frames.HasQueuedFrame.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task OnFrame_WhenCompletionCancelsOtherAnimations_DoesNotInvokeTheirCompletionActions()
+    {
+        TestUiFrameScheduler frames = new();
+        UiAnimationScheduler scheduler = new(frames);
+        Border first = new();
+        Border second = new();
+        int cancelledCompletions = 0;
+        Task firstTask = scheduler.AnimateValueAsync(first, 0d, 1d, 100, 0, Identity,
+            _ => { }, () => cancelledCompletions++);
+        Task secondTask = scheduler.AnimateValueAsync(second, 0d, 1d, 100, 0, Identity,
+            _ => { }, () => cancelledCompletions++);
+        Task triggerTask = scheduler.AnimateValueAsync(new Border(), 0d, 1d, 100, 0, Identity,
+            _ => { }, () => scheduler.Cancel(new Control[] { first, second }));
+        frames.RunNextFrame(TimeSpan.Zero);
+
+        frames.RunNextFrame(TimeSpan.FromMilliseconds(100d));
+
+        await Task.WhenAll(firstTask, secondTask, triggerTask);
+        cancelledCompletions.Should().Be(0);
+        scheduler.HasActiveAnimations.Should().BeFalse();
+        frames.HasQueuedFrame.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task OnFrame_WhenProgressRetargetsItsControl_PreservesTheReplacementAndOtherAnimations()
+    {
+        TestUiFrameScheduler frames = new();
+        UiAnimationScheduler scheduler = new(frames);
+        Border target = new();
+        double replacementValue = 0d;
+        double otherValue = 0d;
+        int cancelledCompletions = 0;
+        bool retargeted = false;
+        Task replacement = Task.CompletedTask;
+        Task other = scheduler.AnimateValueAsync(new Border(), 0d, 2d, 100, 0, Identity, value => otherValue = value);
+        Task original = scheduler.AnimateValueAsync(target, 0d, 1d, 100, 0, Identity, value =>
+        {
+            if (value >= 0.5d && !retargeted)
+            {
+                retargeted = true;
+                scheduler.Cancel(target);
+                replacement = scheduler.AnimateValueAsync(target, value, 3d, 100, 0, Identity,
+                    next => replacementValue = next);
+            }
+        }, () => cancelledCompletions++);
+        frames.RunNextFrame(TimeSpan.Zero);
+
+        frames.RunNextFrame(TimeSpan.FromMilliseconds(50d));
+
+        await original;
+        retargeted.Should().BeTrue();
+        cancelledCompletions.Should().Be(0);
+        replacement.IsCompleted.Should().BeFalse();
+        replacementValue.Should().Be(0.5d);
+        otherValue.Should().Be(1d);
+        frames.RunNextFrame(TimeSpan.FromMilliseconds(100d));
+        frames.RunNextFrame(TimeSpan.FromMilliseconds(200d));
+        await Task.WhenAll(other, replacement);
+        replacementValue.Should().Be(3d);
+        otherValue.Should().Be(2d);
+        scheduler.HasActiveAnimations.Should().BeFalse();
+        frames.HasQueuedFrame.Should().BeFalse();
+    }
+
     private static SchedulerScenario CreateScenario()
     {
         TestUiFrameScheduler frameScheduler = new();

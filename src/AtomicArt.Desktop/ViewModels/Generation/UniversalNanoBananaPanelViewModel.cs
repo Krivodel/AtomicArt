@@ -324,7 +324,10 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 ApplyPresetParameters(model, settings);
             }
 
-            Prompt = preset.Prompt;
+            if (preset.Prompt is { } prompt)
+            {
+                Prompt = prompt;
+            }
         }
         finally
         {

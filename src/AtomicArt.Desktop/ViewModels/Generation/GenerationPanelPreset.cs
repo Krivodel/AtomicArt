@@ -5,7 +5,7 @@ namespace AtomicArt.Desktop.ViewModels.Generation;
 
 public sealed record GenerationPanelPreset(
     string ModelId,
-    string Prompt,
+    string? Prompt,
     string AspectRatio,
     string Resolution,
     GenerationRequestSettings? RequestSettings = null,

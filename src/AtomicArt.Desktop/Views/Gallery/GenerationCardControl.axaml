@@ -10,18 +10,6 @@
              x:Class="AtomicArt.Desktop.Views.Gallery.GenerationCardControl"
              x:Name="GenerationCard"
              x:DataType="gallery:GenerationItemViewModel">
-    <UserControl.Resources>
-        <MenuItem x:Key="GenerationCardChatMenuItem">
-            <MenuItem.Header>
-                <TextBlock Classes="context-menu-item-header"
-                           Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.Chat}}" />
-            </MenuItem.Header>
-            <MenuItem.Icon>
-                <Path Classes="gallery-outline-icon"
-                      Data="{StaticResource AppChatIcon}" />
-            </MenuItem.Icon>
-        </MenuItem>
-    </UserControl.Resources>
     <Border x:Name="GenerationCardContainer"
             Classes="generation-card-container">
         <Border.ContextFlyout>
@@ -85,6 +73,18 @@
                     <MenuItem.Icon>
                         <Path Classes="gallery-outline-icon"
                               Data="{x:Static picaResources:ViewerActionIconGeometry.ShowInFolder}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem x:Name="PropertiesMenuItem"
+                          Command="{Binding #GenerationCard.OpenMetadataCommand}"
+                          CommandParameter="{Binding #GenerationCard.DataContext}">
+                    <MenuItem.Header>
+                        <TextBlock Classes="context-menu-item-header"
+                                   Text="{i18n:I18n {x:Static resources:GalleryLocalizationKeys+Metadata.Title}}" />
+                    </MenuItem.Header>
+                    <MenuItem.Icon>
+                        <Path Classes="gallery-outline-icon"
+                              Data="{StaticResource GalleryContextMenuPropertiesIcon}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem x:Name="OpenWithMenuItem"

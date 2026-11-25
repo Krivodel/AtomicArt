@@ -11,7 +11,7 @@ internal sealed class GenerationChatImageFrame : Decorator
         get => GetValue(PreviewProperty);
         set => SetValue(PreviewProperty, value);
     }
-    public double PreviewAspectRatio
+    public double? PreviewAspectRatio
     {
         get => GetValue(PreviewAspectRatioProperty);
         set => SetValue(PreviewAspectRatioProperty, value);
@@ -19,11 +19,11 @@ internal sealed class GenerationChatImageFrame : Decorator
 
     public static readonly StyledProperty<IImage?> PreviewProperty =
         AvaloniaProperty.Register<GenerationChatImageFrame, IImage?>(nameof(Preview));
-    public static readonly StyledProperty<double> PreviewAspectRatioProperty =
-        AvaloniaProperty.Register<GenerationChatImageFrame, double>(
-            nameof(PreviewAspectRatio), defaultValue: 1d, validate: value => double.IsFinite(value) && value > 0d);
+    public static readonly StyledProperty<double?> PreviewAspectRatioProperty =
+        AvaloniaProperty.Register<GenerationChatImageFrame, double?>(
+            nameof(PreviewAspectRatio), validate: value => value is null || value is > 0d and < double.PositiveInfinity);
 
-    private Size ImageSize => Preview?.Size ?? new Size(PreviewAspectRatio, 1d);
+    private Size ImageSize => new Size(PreviewAspectRatio ?? Preview?.Size.AspectRatio ?? 1d, 1d);
 
     static GenerationChatImageFrame()
     {
@@ -63,7 +63,8 @@ internal sealed class GenerationChatImageFrame : Decorator
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == PreviewProperty && Preview?.Size is { Width: > 0d, Height: > 0d } size)
+        if (change.Property == PreviewProperty && PreviewAspectRatio is null
+            && Preview?.Size is { Width: > 0d, Height: > 0d } size)
         {
             SetCurrentValue(PreviewAspectRatioProperty, size.AspectRatio);
         }

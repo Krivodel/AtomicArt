@@ -224,6 +224,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
             ChooseVariantCommand.NotifyCanExecuteChanged();
             ReturnToSourceCommand.NotifyCanExecuteChanged();
             OpenGroupCommand.NotifyCanExecuteChanged();
+            NavigateInBackgroundCommand.NotifyCanExecuteChanged();
             BranchMap.RefreshCommands();
         }
     }
@@ -247,7 +248,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
             return;
         }
 
-        GenerationPanelPreset preset = new(item.ModelId, string.Empty, item.AspectRatio, item.Resolution,
+        GenerationPanelPreset preset = new(item.ModelId, null, item.AspectRatio, item.Resolution,
             item.RequestSettings, References: null);
 
         if (!_panel.CanApplyPreset(preset))
@@ -256,7 +257,15 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
             return;
         }
 
-        await ExecuteAsync(token => OpenSessionAsync(item, preset, token), nameof(OpenAsync), ct);
+        await ExecuteAsync(token => OpenSessionAsync(item, preset, GenerationChatNavigationMode.ShowChat, token), nameof(OpenAsync), ct);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpen))]
+    private Task NavigateInBackgroundAsync(GenerationItemViewModel? item, CancellationToken ct)
+    {
+        return item is null ? Task.CompletedTask : ExecuteAsync(
+            token => OpenSessionAsync(item, null, GenerationChatNavigationMode.KeepPresentation, token),
+            nameof(NavigateInBackgroundAsync), ct);
     }
 
     [RelayCommand(CanExecute = nameof(CanChooseVariant))]
@@ -273,7 +282,8 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         return !IsLoading && image is { CanChoose: true } && _active?.GetVariantCard(image) is not null;
     }
 
-    private async Task OpenSessionAsync(GenerationItemViewModel item, GenerationPanelPreset? preset, CancellationToken ct)
+    private async Task OpenSessionAsync(GenerationItemViewModel item, GenerationPanelPreset? preset,
+        GenerationChatNavigationMode navigation, CancellationToken ct)
     {
         long version = ++_openVersion;
 
@@ -318,8 +328,12 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         }
 
         Activate(session);
-        BranchMap.Close();
-        IsExpanded = true;
+
+        if (navigation == GenerationChatNavigationMode.ShowChat)
+        {
+            BranchMap.Close();
+            IsExpanded = true;
+        }
     }
 
     private void Activate(GenerationChatSessionViewModel? session)
@@ -346,6 +360,12 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         if (session is not null)
         {
             session.PropertyChanged += OnSessionChanged;
+        }
+
+        if (BranchMap.IsOpen && session?.Source is { } source)
+        {
+            BranchMap.UpdateCurrentChat(source);
+            _ = RestoreBranchPreviewsAsync(CancellationToken.None);
         }
 
         _conversationVersion++;
@@ -402,11 +422,11 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         {
             RefreshGroupLinks();
 
-            if (_active is { IsGroup: true, HasGroupVariants: false })
+            if (!IsLoading && _active is { IsGroup: true, HasGroupVariants: false })
             {
-                if (CanReturnToSource)
+                if (_gallery?.Items.FirstOrDefault(card => card.Id == _active.Group?.SourceCardId) is { } source)
                 {
-                    ReturnToSourceCommand.Execute(null);
+                    NavigateInBackgroundCommand.Execute(source);
                 }
                 else
                 {
@@ -431,9 +451,10 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         OnPropertyChanged(nameof(CanReturnToSource));
         ReturnToSourceCommand.NotifyCanExecuteChanged();
 
-        if (!IsLoading && _active?.AutoContinueImage is { } image && ChooseVariantCommand.CanExecute(image))
+        if (!IsLoading && _active?.AutoContinueImage is { } image && _active.GetVariantCard(image) is { } card
+            && NavigateInBackgroundCommand.CanExecute(card))
         {
-            ChooseVariantCommand.Execute(image);
+            NavigateInBackgroundCommand.Execute(card);
         }
     }
 

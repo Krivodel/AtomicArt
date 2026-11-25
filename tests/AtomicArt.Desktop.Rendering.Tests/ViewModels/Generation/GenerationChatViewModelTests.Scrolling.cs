@@ -88,7 +88,8 @@ public sealed partial class GenerationChatViewModelTests
     [Theory]
     [InlineData(640, 240)]
     [InlineData(240, 640)]
-    public async Task ChatView_WithLateImageAboveViewport_KeepsReadingPosition(int width, int height)
+    [InlineData(1697, 927)]
+    public async Task ChatView_WithLateImageAboveViewport_KeepsScrollExtentAndReadingPosition(int width, int height)
     {
         await DesktopControlTestBase.DispatchAsync(typeof(GenerationChatViewModelTests), async () =>
         {
@@ -120,6 +121,9 @@ public sealed partial class GenerationChatViewModelTests
                 await GenerationChatViewModelTests.WaitForFramesAsync(window, () => decoding.Task.IsCompleted);
                 window.CaptureRenderedFrame()?.Dispose();
                 double top = (anchor.TranslatePoint(default, scroll) ?? throw new InvalidOperationException()).Y;
+                double extent = scroll.Extent.Height;
+                double maximum = scroll.ScrollBarMaximum.Y;
+                double offset = scroll.Offset.Y;
                 scroll.CurrentAnchor.Should().NotBeNull();
                 ready.SetResult();
 
@@ -128,10 +132,24 @@ public sealed partial class GenerationChatViewModelTests
                     await Task.Delay(16);
                     window.CaptureRenderedFrame()?.Dispose();
                     (anchor.TranslatePoint(default, scroll) ?? throw new InvalidOperationException()).Y.Should().BeApproximately(top, 1d);
+                    scroll.Extent.Height.Should().BeApproximately(extent, 0.01d);
+                    scroll.ScrollBarMaximum.Y.Should().BeApproximately(maximum, 0.01d);
+                    scroll.Offset.Y.Should().BeApproximately(offset, 0.01d);
                 }
 
                 preview.Source.Should().NotBeNull();
                 scroll.Offset.Y.Should().BeGreaterThan(0d);
+                preview.LoadInViewport = true;
+                scroll.ScrollToEnd();
+                await WaitForFramesAsync(window, () => preview.Source is null);
+                scroll.Extent.Height.Should().BeApproximately(extent, 0.01d);
+                Point imageCenter = preview.TranslatePoint(new Point(0d, preview.Bounds.Height / 2d), scroll)
+                    ?? throw new InvalidOperationException("The chat image has no position.");
+                double imageOffset = scroll.Offset.Y + imageCenter.Y - scroll.Viewport.Height / 2d;
+                scroll.Offset = new Vector(0d, imageOffset);
+                await WaitForFramesAsync(window, () => preview.Source is not null);
+                scroll.Extent.Height.Should().BeApproximately(extent, 0.01d);
+                scroll.Offset.Y.Should().BeApproximately(imageOffset, 0.01d);
             }
             finally
             {

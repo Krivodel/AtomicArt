@@ -276,6 +276,22 @@ public sealed class UniversalNanoBananaPanelViewModelTests
     }
 
     [Theory]
+    [InlineData(null, "Draft")]
+    [InlineData("", "")]
+    public async Task TryApplyPresetAsync_WithOptionalPrompt_PreservesOrExplicitlyClearsTheDraft(string? prompt, string expected)
+    {
+        using UniversalNanoBananaPanelViewModel viewModel = CreateViewModel();
+        ImageModelOption model = GetModel(viewModel, ApiModelMetadataTestCatalog.NanoBanana2ModelId);
+        viewModel.Prompt = "Draft";
+        GenerationPanelPreset preset = new(model.Id, prompt, model.AspectRatios.First(), model.Resolutions.First());
+
+        bool applied = await viewModel.TryApplyPresetAsync(preset, CancellationToken.None);
+
+        applied.Should().BeTrue();
+        viewModel.Prompt.Should().Be(expected);
+    }
+
+    [Theory]
     [InlineData(null, "draft.png")]
     [InlineData(0, null)]
     [InlineData(2, "first.png,second.png")]

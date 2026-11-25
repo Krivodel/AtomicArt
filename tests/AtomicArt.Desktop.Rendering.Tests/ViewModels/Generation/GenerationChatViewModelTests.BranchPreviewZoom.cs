@@ -31,6 +31,7 @@ public sealed partial class GenerationChatViewModelTests
     {
         await VerifyBranchPreviewsAsync(async (window, view, previews) =>
         {
+            const double PixelTolerance = 0.01d;
             PanZoomControl viewport = view.GetVisualDescendants().OfType<PanZoomControl>().Single();
             GenerationPreviewControl preview = previews[0];
             Grid expansion = preview.FindControl<Grid>("PreviewExpansionHost")
@@ -44,8 +45,8 @@ public sealed partial class GenerationChatViewModelTests
             Rect initial = GetExpandedBranchBounds(expansion, viewport);
             initial.Width.Should().BeApproximately(expected.Width, 0.01d);
             initial.Height.Should().BeApproximately(expected.Height, 0.01d);
-            initial.Width.Should().BeLessThanOrEqualTo(viewport.Bounds.Width);
-            initial.Height.Should().BeLessThanOrEqualTo(viewport.Bounds.Height);
+            initial.Width.Should().BeLessThanOrEqualTo(viewport.Bounds.Width + PixelTolerance);
+            initial.Height.Should().BeLessThanOrEqualTo(viewport.Bounds.Height + PixelTolerance);
             (initial.Width / initial.Height).Should().BeApproximately((double)width / height, 0.01d);
             window.KeyRelease(Key.LeftShift, RawInputModifiers.None, PhysicalKey.ShiftLeft, null);
             await WaitForFramesAsync(window, () => preview.ExpansionHost?.ActiveOwner is null

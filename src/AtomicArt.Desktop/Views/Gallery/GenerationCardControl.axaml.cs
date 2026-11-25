@@ -171,8 +171,6 @@ public partial class GenerationCardControl :
         set => GenerationPreview.ExpansionHost = value;
     }
 
-    private const string ChatMenuItemKey = "GenerationCardChatMenuItem";
-
     private readonly OpenWithApplicationIconStore _openWithIcons = new();
     private PromptDragCandidate? _promptDragCandidate;
     private bool _isPromptDragActive;
@@ -268,31 +266,6 @@ public partial class GenerationCardControl :
             previewSourceScheduler);
     }
 
-    internal void UpdateChatMenuItem(MenuFlyout flyout)
-    {
-        ArgumentNullException.ThrowIfNull(flyout);
-
-        if (Resources[ChatMenuItemKey] is not MenuItem chatItem)
-        {
-            return;
-        }
-
-        if (DataContext is not GenerationItemViewModel { SupportsChat: true } item || OpenChatCommand is null)
-        {
-            flyout.Items.Remove(chatItem);
-
-            return;
-        }
-
-        chatItem.Command = OpenChatCommand;
-        chatItem.CommandParameter = item;
-
-        if (!flyout.Items.Contains(chatItem))
-        {
-            flyout.Items.Insert(0, chatItem);
-        }
-    }
-
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs eventArgs)
     {
         _openWithLoadVersion++;
@@ -318,9 +291,9 @@ public partial class GenerationCardControl :
             || (visual.GetVisualAncestors().Contains(ancestor));
     }
 
-    private void ExecuteOpenMetadata(GenerationItemViewModel item)
+    private void ExecuteCardInfoAction(GenerationItemViewModel item)
     {
-        IRelayCommand? command = OpenMetadataCommand;
+        IRelayCommand? command = item.SupportsChat ? OpenChatCommand : OpenMetadataCommand;
 
         if (command?.CanExecute(item) == true)
         {
@@ -377,14 +350,10 @@ public partial class GenerationCardControl :
 
     private void OnContextFlyoutOpening(object? sender, EventArgs eventArgs)
     {
+        _ = sender;
         _ = eventArgs;
         OpenWithMenuItem.IsEnabled =
             LoadOpenWithApplicationsCommand?.CanExecute(DataContext) == true;
-
-        if (sender is MenuFlyout flyout)
-        {
-            UpdateChatMenuItem(flyout);
-        }
     }
 
     private async void OnOpenWithSubmenuOpened(
@@ -607,7 +576,7 @@ public partial class GenerationCardControl :
             return;
         }
 
-        ExecuteOpenMetadata(item);
+        ExecuteCardInfoAction(item);
         eventArgs.Handled = true;
     }
 
