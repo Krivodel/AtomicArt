@@ -90,16 +90,6 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
         TryDisposeSubmissionGate();
     }
 
-    internal static GenerationChatHistory BuildHistory(GenerationItemViewModel item, GenerationReference? image)
-    {
-        GenerationChatMessage prompt = new(false, item.Prompt, item.CreatedAtUtc, item.References ?? Array.Empty<GenerationReference>());
-        GenerationChatMessage reply = new(true, item.ChatResult?.Text ?? string.Empty,
-            item.CompletedAtUtc ?? item.CreatedAtUtc, image is null ? Array.Empty<GenerationReference>() : new GenerationReference[] { image },
-            item.IsFailed, item.ChatResult?.ImageGeneration);
-
-        return new GenerationChatHistory((item.ChatHistory?.Messages ?? Array.Empty<GenerationChatMessage>()).Concat(new GenerationChatMessage[] { prompt, reply }).ToArray(), includesCardTurn: true);
-    }
-
     internal void Connect(GalleryViewModel gallery, IGenerationPanelPresetTarget panel)
     {
         ArgumentNullException.ThrowIfNull(gallery);
@@ -478,7 +468,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
         if (image is not null || item.ImagePath is not { Length: > 0 } path)
         {
-            return GenerationChatSessionViewModel.BuildHistory(item, image);
+            return item.BuildChatHistory(image);
         }
 
         Guid storageLease = Guid.NewGuid();
@@ -494,7 +484,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
                 image = stored.Single();
             }
 
-            GenerationChatHistory imported = GenerationChatSessionViewModel.BuildHistory(item, image);
+            GenerationChatHistory imported = item.BuildChatHistory(image);
 
             if (image is not null && _gallery?.Items.Contains(item) == true)
             {
@@ -557,9 +547,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
                 continue;
             }
 
-            GenerationChatHistory current = item.ChatHistory is { IncludesCardTurn: true } existing
-                                ? existing
-                                : GenerationChatSessionViewModel.BuildHistory(item, item.ChatResult?.Image);
+            GenerationChatHistory current = item.BuildChatHistory(item.ChatResult?.Image);
             GenerationChatMessage[] messages = current.Messages.ToArray();
             messages[snapshot.IsAssistant ? ^1 : ^2] = snapshot.IsAssistant && batch.Generation.Runs.Count > 1
                 ? snapshot with

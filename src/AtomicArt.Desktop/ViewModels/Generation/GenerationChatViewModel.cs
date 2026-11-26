@@ -107,11 +107,6 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         _groups.Clear();
     }
 
-    internal static GenerationChatHistory BuildHistory(GenerationItemViewModel item, GenerationReference? image)
-    {
-        return GenerationChatSessionViewModel.BuildHistory(item, image);
-    }
-
     internal void Connect(GalleryViewModel gallery, IGenerationPanelPresetTarget panel)
     {
         ArgumentNullException.ThrowIfNull(gallery);

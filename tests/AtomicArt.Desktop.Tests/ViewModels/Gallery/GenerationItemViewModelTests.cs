@@ -8,6 +8,7 @@ using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Tests.Services.Generation;
 using AtomicArt.Desktop.Tests.TestDoubles;
 using AtomicArt.Desktop.ViewModels.Gallery;
@@ -69,6 +70,50 @@ public sealed class GenerationItemViewModelTests
         viewModel.IsFailed.Should().BeTrue();
         viewModel.HasDisplayImagePath.Should().BeTrue();
         viewModel.ShowsGeneratedImage.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void UpdateFromResult_WithCodexReply_StoresTheCompleteIndependentHistory(bool textOnly)
+    {
+        GenerationReference parentImage = new("parent", "parent.png", GenerationImageContentTypes.Png);
+        GenerationReference image = new("branch", "branch.png", GenerationImageContentTypes.Png);
+        GenerationChatImageCall parentCall = new(parentImage.Hash, "Exact parent prompt", false, "parent-call");
+        GenerationChatImageCall call = new(image.Hash, "Exact branch prompt\n  Preserve spacing.", false, "branch-call");
+        GenerationChatHistory parent = new(new GenerationChatMessage[]
+        {
+            new(false, "Parent request", CreatedAtUtc, Array.Empty<GenerationReference>()),
+            new(true, "Parent reply", CreatedAtUtc, new GenerationReference[] { parentImage }, ImageGeneration: parentCall)
+        });
+        GenerationItemViewModel viewModel = CreateViewModel(CreatedAtUtc, GenerationItemStatus.Generating);
+        viewModel.ChatHistory = parent;
+        GenerationItemDto item = GenerationItemDtoTestFactory.Create(id: ItemId, createdAtUtc: CreatedAtUtc,
+            completedAtUtc: CreatedAtUtc.AddSeconds(30)) with { ModelId = LocalCodexImageModel.Id, Prompt = "Branch request" };
+        GenerationChatResult reply = textOnly
+            ? new GenerationChatResult("Branch reply", null) { IsTextReply = true }
+            : new GenerationChatResult("Branch reply", image) { ImageGeneration = call };
+
+        viewModel.UpdateFromResult(item, textOnly ? null : "branch.png", null, reply);
+
+        GenerationChatHistory complete = viewModel.ChatHistory.Should().BeOfType<GenerationChatHistory>().Subject;
+        complete.IncludesCardTurn.Should().BeTrue();
+        complete.Messages.Should().HaveCount(4);
+        complete.Messages[1].ImageGeneration.Should().Be(parentCall);
+        complete.Messages[2].Text.Should().Be(item.Prompt);
+        complete.Messages[3].Text.Should().Be(reply.Text);
+        complete.Messages[3].ImageGeneration.Should().Be(reply.ImageGeneration);
+        complete.Messages[3].Images.Should().Equal(textOnly ? Array.Empty<GenerationReference>() : new GenerationReference[] { image });
+        complete.Id.Should().NotBe(parent.Id);
+        viewModel.ChatId.Should().Be(complete.Id);
+        viewModel.ChatReferenceHashes.Should().BeEquivalentTo(textOnly
+            ? new[] { parentImage.Hash }
+            : new[] { parentImage.Hash, image.Hash });
+        parent.Messages.Should().HaveCount(2);
+
+        viewModel.UpdateFromResult(item, textOnly ? null : "branch.png", null, reply);
+
+        viewModel.ChatHistory.Should().BeSameAs(complete);
     }
 
     [Fact]

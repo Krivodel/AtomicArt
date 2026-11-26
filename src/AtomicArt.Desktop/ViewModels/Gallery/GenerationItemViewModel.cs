@@ -246,6 +246,14 @@ public sealed partial class GenerationItemViewModel :
         ThumbnailPath = thumbnailPath;
         CorrelationId = null;
         GenerationOrdinal = null;
+
+        if (SupportsChat && chatResult is not null)
+        {
+            ChatHistory = BuildChatHistory(chatResult.Image);
+            ChatId = ChatHistory.Id;
+            ChatReferenceHashes = ChatHistory.ReferenceHashes;
+        }
+
         RefreshComputedState();
     }
 
@@ -364,6 +372,22 @@ public sealed partial class GenerationItemViewModel :
             sourceRootDirectory,
             destinationRootDirectory);
         RefreshComputedState();
+    }
+
+    internal GenerationChatHistory BuildChatHistory(GenerationReference? image)
+    {
+        if (ChatHistory is { IncludesCardTurn: true } complete)
+        {
+            return complete;
+        }
+
+        GenerationChatMessage prompt = new(false, Prompt, CreatedAtUtc, References ?? Array.Empty<GenerationReference>());
+        GenerationChatMessage reply = new(true, ChatResult?.Text ?? string.Empty,
+            CompletedAtUtc ?? CreatedAtUtc, image is null ? Array.Empty<GenerationReference>() : new GenerationReference[] { image },
+            IsFailed, ChatResult?.ImageGeneration);
+
+        return new GenerationChatHistory((ChatHistory?.Messages ?? Array.Empty<GenerationChatMessage>())
+            .Concat(new GenerationChatMessage[] { prompt, reply }).ToArray(), includesCardTurn: true);
     }
 
     internal GenerationItemViewModel CreateHistoryPreview(

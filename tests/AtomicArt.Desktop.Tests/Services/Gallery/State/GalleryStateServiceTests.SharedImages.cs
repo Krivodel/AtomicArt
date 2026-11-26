@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using Microsoft.Extensions.Logging.Abstractions;
 
 using FluentAssertions;
@@ -9,6 +11,7 @@ using AtomicArt.Desktop.Services;
 using AtomicArt.Desktop.Services.Gallery.Deletion;
 using AtomicArt.Desktop.Services.Gallery.State;
 using AtomicArt.Desktop.Services.Generation;
+using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Paths;
 using AtomicArt.Desktop.Services.State;
 using AtomicArt.Desktop.Tests.Services.Gallery.Thumbnails;
@@ -293,14 +296,24 @@ public sealed partial class GalleryStateServiceTests
             Guid lease = Guid.NewGuid();
             IReadOnlyList<GenerationReference> images = await references.SaveAsync(lease,
                 new AttachedImageDto[] { originalImage, branchImage }, CancellationToken.None);
+            GenerationChatImageCall originalCall = new(images[0].Hash, "Exact parent prompt", false, "parent-call");
+            GenerationChatImageCall branchCall = new(images[1].Hash, "Exact branch prompt\n  Keep this spacing.", false, "branch-call");
+            GenerationChatHistory originalHistory = new(new GenerationChatMessage[]
+            {
+                new(false, "Parent request", CreatedAtUtc, Array.Empty<GenerationReference>()),
+                new(true, "Original", CreatedAtUtc, new GenerationReference[] { images[0] }, ImageGeneration: originalCall)
+            }, includesCardTurn: true);
             GalleryItemState original = GalleryItemStateTestFactory.CreateGenerated(id: GeneratedItemId,
-                imagePath: references.ResolveExistingFilePath(images[0]), chatResult: new GenerationChatResult("Original", images[0]));
+                imagePath: references.ResolveExistingFilePath(images[0]), chatHistory: originalHistory,
+                chatResult: new GenerationChatResult("Original", images[0]) { ImageGeneration = originalCall });
             GalleryItemState branch = GalleryItemStateTestFactory.CreateGenerated(id: RunningItemId,
                 imagePath: references.ResolveExistingFilePath(images[1]), chatHistory: new GenerationChatHistory(new GenerationChatMessage[]
                 {
-                    new GenerationChatMessage(true, "Original", CreatedAtUtc, new GenerationReference[] { images[0] }),
-                    new GenerationChatMessage(true, "Branch", CompletedAtUtc, new GenerationReference[] { images[1] })
-                }), chatResult: new GenerationChatResult("Branch", images[1]));
+                    originalHistory.Messages[0],
+                    originalHistory.Messages[1],
+                    new(false, "Branch request", CompletedAtUtc, Array.Empty<GenerationReference>()),
+                    new(true, "Branch", CompletedAtUtc, new GenerationReference[] { images[1] }, ImageGeneration: branchCall)
+                }, includesCardTurn: true), chatResult: new GenerationChatResult("Branch", images[1]) { ImageGeneration = branchCall });
             IAppStateStore state = GalleryStateServiceTests.CreateRealStore(paths);
             TrustedImageFileService trusted = GalleryStateServiceTests.CreateSharedImageFileService(paths);
             GalleryStateService service = GalleryStateServiceTests.CreateService(state, trusted, paths, references);
@@ -309,6 +322,7 @@ public sealed partial class GalleryStateServiceTests
 
             await service.SaveAsync(new GalleryItemState[] { branch }, CancellationToken.None);
 
+            File.Exists(Path.Combine(paths.ChatsDirectory, $"{originalHistory.Id:N}.json")).Should().BeFalse();
             string? originalPath = references.ResolveExistingFilePath(images[0]);
             string? branchPath = references.ResolveExistingFilePath(images[1]);
             Path.GetDirectoryName(originalPath).Should().Be(GenerationReferenceStoreTests.GetHistoryDirectory(root));
@@ -323,6 +337,34 @@ public sealed partial class GalleryStateServiceTests
 
             restored.Items.Should().ContainSingle().Which.ImagePath.Should().Be(branchPath);
             (await restarted.LoadAsync(images[0], CancellationToken.None)).Should().BeEquivalentTo(originalImage);
+            using GenerationChatStore chats = new(state, NullLogger<GenerationChatStore>.Instance, paths, new DataRootAccessCoordinator());
+            Guid branchChatId = restored.Items.Single().ChatId ?? throw new InvalidOperationException("The branch chat identifier is missing.");
+            GenerationChatHistory history = await chats.LoadAsync(branchChatId, CancellationToken.None);
+            history.Messages[1].ImageGeneration.Should().Be(originalCall);
+            history.Messages[3].ImageGeneration.Should().Be(branchCall);
+
+            using (LocalCodexInputPreparation input = new(restarted, GenerationImageFormatRegistryTestFactory.Create(),
+                TestLocalizationTextProvider.Default))
+            {
+                ImageGenerationRequestDto request = new(LocalCodexImageModel.Id, "Give the exact prompts", GenerationAspectRatios.Auto,
+                    LocalCodexImageModel.Automatic, LocalCodexImageModel.Option.Temperature.Default, 1, Array.Empty<AttachedImageDto>());
+                await input.PrepareAsync(request, history, CancellationToken.None);
+                JsonElement wire = JsonSerializer.SerializeToElement(input.Inputs);
+                List<string?> prompts = [];
+
+                foreach (JsonElement entry in wire.EnumerateArray().Where(entry => entry.GetProperty("type").GetString() == "text"))
+                {
+                    using JsonDocument message = JsonDocument.Parse(entry.GetProperty("text").GetString()
+                        ?? throw new InvalidOperationException("The history input is missing."));
+
+                    if (message.RootElement.TryGetProperty("imageGeneration", out JsonElement call))
+                    {
+                        prompts.Add(call.GetProperty("revisedPrompt").GetString());
+                    }
+                }
+
+                prompts.Should().Equal(originalCall.RevisedPrompt, branchCall.RevisedPrompt);
+            }
 
             await service.SaveAsync(new GalleryItemState[] { original, branch }, CancellationToken.None);
 
