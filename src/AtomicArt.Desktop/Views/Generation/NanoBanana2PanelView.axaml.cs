@@ -116,7 +116,6 @@ public partial class NanoBanana2PanelView : UserControl
     private OptionResetFlashState? _aspectRatioResetFlashState;
     private OptionResetFlashState? _resolutionResetFlashState;
     private OptionResetFlashState? _generationCountResetFlashState;
-    private OptionResetFlashState? _promptLockedFlashState;
     private INotifyCollectionChanged? _attachmentFocusCollection;
     private UniversalNanoBananaPanelViewModel? _selectionResetViewModel;
     private ScrollViewer? _lastAspectRatioPointerScrollViewer;
@@ -161,9 +160,6 @@ public partial class NanoBanana2PanelView : UserControl
         };
         _temperaturePopupCloseTimer.Tick += OnTemperaturePopupCloseTimerTick;
         CatalogLoadingIndicatorHost.PropertyChanged += OnCatalogLoadingIndicatorHostPropertyChanged;
-        PromptTextBox.AddHandler(TextInputEvent, OnPromptTextInput, RoutingStrategies.Tunnel, handledEventsToo: true);
-        PromptTextBox.AddHandler(KeyDownEvent, OnPromptKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
-        PromptTextBox.AddHandler(TextBox.PastingFromClipboardEvent, OnPromptPasting, RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
     internal static Border? FindBackgroundFlashTarget(TemplatedControl control)
@@ -876,55 +872,11 @@ public partial class NanoBanana2PanelView : UserControl
 
     private void StopOptionResetFlashAnimations()
     {
-        _promptLockedFlashState?.CancelAndRestore();
-        _promptLockedFlashState = null;
         foreach (OptionResetFlashDescriptor descriptor in OptionResetFlashDescriptors)
         {
             descriptor.GetState(this)?.CancelAndRestore();
             descriptor.SetState(this, null);
         }
-    }
-
-    private void FlashLockedPrompt(RoutedEventArgs e)
-    {
-        if (!PromptTextBox.IsReadOnly)
-        {
-            return;
-        }
-
-        e.Handled = true;
-        _promptLockedFlashState?.CancelAndRestore();
-        Border? border = NanoBanana2PanelView.FindBackgroundFlashTarget(PromptTextBox);
-
-        if (border is not null)
-        {
-            _promptLockedFlashState = OptionResetFlashState.Create(border);
-            _ = NanoBanana2PanelView.RunOptionResetFlashAsync(_promptLockedFlashState);
-        }
-    }
-
-    private void OnPromptTextInput(object? sender, TextInputEventArgs e)
-    {
-        if (!string.IsNullOrEmpty(e.Text))
-        {
-            FlashLockedPrompt(e);
-        }
-    }
-
-    private void OnPromptKeyDown(object? sender, KeyEventArgs e)
-    {
-        bool clipboardEdit = e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key is Key.V or Key.X;
-        bool insertPaste = e.KeyModifiers.HasFlag(KeyModifiers.Shift) && e.Key == Key.Insert;
-
-        if (clipboardEdit || insertPaste || e.Key is Key.Back or Key.Delete or Key.Enter or Key.Space)
-        {
-            FlashLockedPrompt(e);
-        }
-    }
-
-    private void OnPromptPasting(object? sender, RoutedEventArgs e)
-    {
-        FlashLockedPrompt(e);
     }
 
     private static bool HasCornerRadius(CornerRadius cornerRadius)

@@ -862,7 +862,9 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
         {
             Point? point = presenter.TranslatePoint(default, window);
 
-            return !string.IsNullOrWhiteSpace(presenter.Text) && point is { Y: > 75d } position
+            return presenter.IsEffectivelyVisible && !string.IsNullOrWhiteSpace(presenter.Text)
+                && presenter.GetVisualAncestors().OfType<GenerationChatMessageView>().Any()
+                && point is { X: >= 0d, Y: >= 0d } position
                 && position.Y + presenter.Bounds.Height < window.Bounds.Height;
         });
         text.Should().NotBeNull();

@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
-using Avalonia.Input;
 using Avalonia.VisualTree;
 using FluentAssertions;
 using SkiaSharp;
@@ -19,12 +18,8 @@ namespace AtomicArt.Desktop.Rendering.Tests.ViewModels.Generation;
 
 public sealed partial class GenerationChatViewModelTests
 {
-    [Theory]
-    [InlineData(Key.A)]
-    [InlineData(Key.V)]
-    [InlineData(Key.Back)]
-    [InlineData(Key.Delete)]
-    public async Task Prompt_WithVariantGroupAndNativeInput_ShowsRedFeedbackAndKeepsTheOriginalText(Key key)
+    [Fact]
+    public async Task Prompt_WithVariantGroup_AllowsNativeInputWithoutFeedbackAndDisablesGeneration()
     {
         await DesktopControlTestBase.DispatchAsync(typeof(GenerationChatViewModelTests), async () =>
         {
@@ -32,60 +27,47 @@ public sealed partial class GenerationChatViewModelTests
             LocalCodexSettings settings = new();
             using UniversalNanoBananaPanelViewModel panel = UniversalNanoBananaPanelViewModelTests.CreateViewModel(
                 imageModelOptionCatalog: new ImageModelOptionCatalog(settings), localCodexSettings: settings);
+            await panel.LoadModelCatalogCommand.ExecuteAsync(null);
             panel.ConnectChat(context.Chat);
             await context.Chat.OpenCommand.ExecuteAsync(await context.RestoreSourceAsync());
-            GenerationChatBatch batch = await GenerationChatViewModelTests.SubmitParallelAsync(context.Chat);
+            GenerationChatBatch batch = await SubmitParallelAsync(context.Chat);
+            panel.Prompt = "Unsent draft";
             NanoBanana2PanelView view = new() { DataContext = panel };
-            Window window = DesktopControlTestBase.Show(view, 700d, 520d);
+            Window window = Show(view, 700d, 520d);
 
             try
             {
                 TextBox prompt = view.FindControl<TextBox>("PromptTextBox") ?? throw new InvalidOperationException();
-                await GenerationChatViewModelTests.WaitForFramesAsync(window, () => prompt.IsReadOnly && prompt.IsEffectivelyEnabled);
+                await WaitForFramesAsync(window, () => prompt.IsEffectivelyEnabled);
+                prompt.IsReadOnly.Should().BeFalse();
                 prompt.Focus().Should().BeTrue();
-                string original = panel.Prompt;
-                Point origin = prompt.TranslatePoint(default, window) ?? throw new InvalidOperationException();
-                Rect region = new(origin, prompt.Bounds.Size);
-                using SKBitmap baseline = CaptureRenderedBitmap(window);
-                const double MinimumCoverage = 0.4d;
-                double minimumPixels = region.Width * region.Height * MinimumCoverage;
+                prompt.CaretIndex = panel.Prompt.Length;
+                Border background = NanoBanana2PanelView.FindBackgroundFlashTarget(prompt)
+                    ?? throw new InvalidOperationException("The prompt background is missing.");
+                Avalonia.Media.IBrush? originalBackground = background.Background;
+                Button generate = view.GetVisualDescendants().OfType<Button>()
+                    .Single(button => object.ReferenceEquals(button.Command, panel.GenerateCommand));
 
-                if (key == Key.A)
-                {
-                    window.KeyTextInput("a");
-                }
-                else
-                {
-                    window.KeyPress(key, key == Key.V ? RawInputModifiers.Control : RawInputModifiers.None, PhysicalKey.None, null);
-                }
+                window.KeyTextInput(" next");
+                window.CaptureRenderedFrame()?.Dispose();
 
-                try
-                {
-                    await GenerationChatViewModelTests.WaitForFramesAsync(window, () =>
-                    {
-                        using SKBitmap current = CaptureRenderedBitmap(window);
-
-                        return GenerationChatViewModelTests.CountRedFeedbackPixels(baseline, current, region) >= minimumPixels;
-                    });
-                }
-                finally
-                {
-                    GenerationChatViewModelTests.SaveChatFrame(window, $"locked-prompt-{key}.png");
-                }
-
-                panel.Prompt.Should().Be(original);
-                prompt.Text.Should().Be(original);
-                await GenerationChatViewModelTests.WaitForFramesAsync(window, () =>
-                {
-                    using SKBitmap current = CaptureRenderedBitmap(window);
-
-                    return GenerationChatViewModelTests.CountRedFeedbackPixels(baseline, current, region) == 0;
-                });
+                panel.Prompt.Should().Be("Unsent draft next");
+                prompt.Text.Should().Be(panel.Prompt);
+                background.Background.Should().BeSameAs(originalBackground);
+                panel.RequiresChatBranchSelection.Should().BeTrue();
+                panel.GenerateCommand.CanExecute(null).Should().BeFalse();
+                generate.IsEffectivelyEnabled.Should().BeFalse();
+                generate.Content.Should().Be("Choose a branch");
                 await context.Chat.ReturnToSourceCommand.ExecuteAsync(null);
-                await GenerationChatViewModelTests.WaitForFramesAsync(window, () => !prompt.IsReadOnly);
-                prompt.Focus();
-                window.KeyTextInput("a");
-                panel.Prompt.Should().NotBe(original);
+                await WaitForFramesAsync(window, () => generate.IsEffectivelyEnabled);
+                panel.Prompt.Should().Be("Unsent draft next");
+                generate.Content.Should().Be(panel.Quote.GenerateButtonText);
+                panel.SelectedModel = panel.AvailableModels.First(model => !LocalCodexImageModel.Matches(model.Id));
+                string previousLabel = panel.GenerateButtonText;
+                panel.GenerationCount = panel.GenerationCount == 1 ? 2 : 1;
+                window.CaptureRenderedFrame()?.Dispose();
+                generate.Content.Should().Be(panel.Quote.GenerateButtonText);
+                panel.GenerateButtonText.Should().NotBe(previousLabel);
             }
             finally
             {

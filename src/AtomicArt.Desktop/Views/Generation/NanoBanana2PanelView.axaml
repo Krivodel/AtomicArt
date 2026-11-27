@@ -260,7 +260,6 @@
                      Classes="prompt-input"
                      IsEnabled="{Binding HasLoadedCatalog}"
                      AcceptsReturn="True"
-                     IsReadOnly="{Binding IsChatPromptLocked}"
                      LostFocus="OnPromptLostFocus"
                      PlaceholderText="{i18n:I18n {x:Static resources:GenerationUiLocalizationKeys+Prompt.Placeholder}}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -282,7 +281,7 @@
                   ColumnDefinitions="*,Auto">
                 <Button Grid.Column="0"
                         HorizontalAlignment="Stretch"
-                        Content="{Binding Quote.GenerateButtonText}"
+                        Content="{Binding GenerateButtonText}"
                         Command="{Binding GenerateCommand}" />
                 <Button Grid.Column="1"
                         Width="{StaticResource GenerationOptionButtonSize}"

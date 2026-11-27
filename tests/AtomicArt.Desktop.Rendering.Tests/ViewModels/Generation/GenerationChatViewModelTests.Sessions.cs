@@ -178,7 +178,60 @@ public sealed partial class GenerationChatViewModelTests
     }
 
     [Fact]
-    public async Task GenerateCommand_WithUnselectedVariants_LocksPromptAndAddsRequestsUntilSelection()
+    public async Task OpenCommand_AcrossChatsAndVariantGroups_PreservesTheDraftThroughBackgroundCompletion()
+    {
+        using ChatContext context = new();
+        LocalCodexSettings settings = new();
+        using UniversalNanoBananaPanelViewModel panel = UniversalNanoBananaPanelViewModelTests.CreateViewModel(
+            imageModelOptionCatalog: new ImageModelOptionCatalog(settings), localCodexSettings: settings);
+        await panel.LoadModelCatalogCommand.ExecuteAsync(null);
+        ImageModelOption otherModel = panel.AvailableModels.First(model => !LocalCodexImageModel.Matches(model.Id));
+        panel.SelectedModel = otherModel;
+        panel.ConnectChat(context.Chat);
+        context.Chat.Connect(context.Gallery, panel);
+        panel.Prompt = "Draft written before opening a chat";
+        GenerationItemViewModel source = await context.RestoreSourceAsync();
+        await context.Chat.OpenCommand.ExecuteAsync(source);
+        panel.Prompt.Should().Be("Draft written before opening a chat");
+        GenerationChatBatch batch = await SubmitParallelAsync(context.Chat);
+        GenerationChatMessageViewModel variants = context.Chat.Messages[^1];
+        GenerationChatResult result = context.AddResultCard(batch, "Ready branch");
+        panel.Prompt.Should().Be("Draft written before opening a chat");
+        panel.Prompt = batch.UserMessage.Text;
+        string draft = panel.Prompt;
+        GenerationItemViewModel other = context.AddSourceCard("Other chat");
+
+        await context.Chat.OpenCommand.ExecuteAsync(other);
+        panel.Prompt.Should().Be(draft);
+        await CompleteVariantAsync(variants.Images[0], () => batch.Runs[0].Complete(result));
+        panel.Prompt.Should().Be(draft);
+        await context.Chat.OpenCommand.ExecuteAsync(source);
+        panel.Prompt.Should().Be(draft);
+        await context.Chat.OpenGroupCommand.ExecuteAsync(context.Chat.Messages[^1].Groups.Single());
+        panel.Prompt.Should().Be(draft);
+        panel.GenerateCommand.CanExecute(null).Should().BeFalse();
+        panel.ReplacePromptCommand.Execute("Draft for the selected branch");
+        context.Chat.Collapse();
+        panel.Prompt.Should().Be("Draft for the selected branch");
+        context.Chat.ExpandCommand.Execute(null);
+        panel.Prompt.Should().Be("Draft for the selected branch");
+        await context.Chat.ChooseVariantCommand.ExecuteAsync(variants.Images[0]);
+
+        panel.Prompt.Should().Be("Draft for the selected branch");
+        panel.GenerateCommand.CanExecute(null).Should().BeTrue();
+        panel.SelectedModel = otherModel;
+        panel.Prompt.Should().Be("Draft for the selected branch");
+        panel.RequiresChatBranchSelection.Should().BeFalse();
+        panel.GenerateButtonText.Should().Be(panel.Quote.GenerateButtonText);
+
+        foreach (GenerationChatRun run in batch.Runs)
+        {
+            run.Complete(null);
+        }
+    }
+
+    [Fact]
+    public async Task GenerateCommand_WithUnselectedVariants_KeepsDraftAndBlocksRequestsUntilSelection()
     {
         using ChatContext context = new();
         await context.Chat.OpenCommand.ExecuteAsync(await context.RestoreSourceAsync());
@@ -196,15 +249,16 @@ public sealed partial class GenerationChatViewModelTests
 
         await panel.GenerateCommand.ExecuteAsync(null);
 
-        panel.IsChatPromptLocked.Should().BeTrue();
+        panel.RequiresChatBranchSelection.Should().BeTrue();
         panel.Prompt.Should().Be("The fixed prompt");
         panel.Prompt = "A different prompt";
-        panel.Prompt.Should().Be("The fixed prompt");
-        panel.ReplacePromptCommand.CanExecute("A different prompt").Should().BeFalse();
-        panel.GenerateCommand.CanExecute(null).Should().BeTrue();
+        panel.Prompt.Should().Be("A different prompt");
+        panel.ReplacePromptCommand.CanExecute("A different prompt").Should().BeTrue();
+        panel.GenerateCommand.CanExecute(null).Should().BeFalse();
+        panel.GenerateButtonText.Should().Be("Choose a branch");
         await panel.GenerateCommand.ExecuteAsync(null);
-        requests.Should().HaveCount(4).And.AllSatisfy(request => request.Request.Prompt.Should().Be("The fixed prompt"));
-        context.Chat.Messages[^1].Images.Should().HaveCount(4);
+        requests.Should().HaveCount(2).And.AllSatisfy(request => request.Request.Prompt.Should().Be("The fixed prompt"));
+        context.Chat.Messages[^1].Images.Should().HaveCount(2);
         GenerationChatHistory history = requests[0].StartSnapshot.ChatHistory ?? throw new InvalidOperationException();
         GenerationChatRun firstRun = requests[0].ChatRun ?? throw new InvalidOperationException();
         GenerationChatBatch batch = new(history, new GenerationChatMessage(false, "The fixed prompt", new DateTime(2026, 11, 24),
@@ -215,7 +269,10 @@ public sealed partial class GenerationChatViewModelTests
 
         await context.Chat.ChooseVariantCommand.ExecuteAsync(chosen);
 
-        panel.IsChatPromptLocked.Should().BeFalse();
+        panel.RequiresChatBranchSelection.Should().BeFalse();
+        panel.Prompt.Should().Be("A different prompt");
+        panel.GenerateCommand.CanExecute(null).Should().BeTrue();
+        panel.GenerateButtonText.Should().Be(panel.Quote.GenerateButtonText);
         panel.Prompt = "The next change";
         panel.Prompt.Should().Be("The next change");
 

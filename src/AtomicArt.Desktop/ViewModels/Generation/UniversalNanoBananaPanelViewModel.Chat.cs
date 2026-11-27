@@ -5,10 +5,8 @@ namespace AtomicArt.Desktop.ViewModels.Generation;
 public sealed partial class UniversalNanoBananaPanelViewModel
 {
     public GenerationChatViewModel? Chat { get; private set; }
-    public bool IsChatPromptLocked => Chat is { IsExpanded: true, CanAddVariants: true }
+    public bool RequiresChatBranchSelection => Chat is { IsExpanded: true, CanAddVariants: true }
         && Chat.IsForModel(SelectedModel?.Id);
-
-    private string? _lockedChatPrompt;
 
     internal void ConnectChat(GenerationChatViewModel chat)
     {
@@ -17,7 +15,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel
         Chat = chat;
         Chat.PropertyChanged += OnChatStateChanged;
         OnPropertyChanged(nameof(Chat));
-        RefreshChatPrompt();
+        RefreshChatState();
     }
 
     internal void DisconnectChat()
@@ -26,24 +24,22 @@ public sealed partial class UniversalNanoBananaPanelViewModel
         {
             Chat.PropertyChanged -= OnChatStateChanged;
             Chat = null;
-            RefreshChatPrompt();
+            RefreshChatState();
         }
     }
 
-    private void RefreshChatPrompt()
+    private void RefreshChatState()
     {
-        string? previous = _lockedChatPrompt;
-        _lockedChatPrompt = IsChatPromptLocked ? Chat?.RepeatPrompt : null;
-        OnPropertyChanged(nameof(IsChatPromptLocked));
-        ReplacePromptCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(RequiresChatBranchSelection));
+        OnPropertyChanged(nameof(GenerateButtonText));
+        GenerateCommand.NotifyCanExecuteChanged();
+    }
 
-        if (_lockedChatPrompt is { } prompt)
+    private void OnQuoteChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(NanoBanana2QuoteViewModel.GenerateButtonText))
         {
-            Prompt = prompt;
-        }
-        else if (previous is not null && string.Equals(Prompt, previous, StringComparison.Ordinal))
-        {
-            Prompt = string.Empty;
+            OnPropertyChanged(nameof(GenerateButtonText));
         }
     }
 
@@ -52,8 +48,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel
         if (e.PropertyName is nameof(GenerationChatViewModel.CanSubmit) or nameof(GenerationChatViewModel.IsExpanded)
             or nameof(GenerationChatViewModel.CanAddVariants) or nameof(GenerationChatViewModel.RepeatPrompt))
         {
-            RefreshChatPrompt();
-            GenerateCommand.NotifyCanExecuteChanged();
+            RefreshChatState();
         }
     }
 }

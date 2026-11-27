@@ -67,7 +67,9 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     public string AttachmentCounterText => _textFormatter.FormatAttachmentCounterText(
         AttachedImages.Count,
         SelectedModel?.MaxAttachedImages ?? 0);
-    public string GenerateButtonText => Quote.GenerateButtonText;
+    public string GenerateButtonText => RequiresChatBranchSelection
+        ? _textProvider.Get(GenerationChatLocalizationKeys.ChooseBranch)
+        : Quote.GenerateButtonText;
     public double PromptTextSize => _promptTextSizeController.CurrentTextSize;
     public bool HasErrorMessage => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsAttaching => _attachmentsViewModel.HasPendingAttachments;
@@ -114,6 +116,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                                   && !IsAttaching
                                   && (!IsLocalCodexSelected || _codexModelLoad is null)
                                   && Chat?.IsLoading != true
+                                  && !RequiresChatBranchSelection
                                   && (Chat?.IsExpanded != true || Chat.CanSubmit)
                                   && !string.IsNullOrWhiteSpace(Prompt);
     private bool CanLoadModelCatalog => !IsLoading && !IsCatalogLoading && !_imageModelOptionCatalog.IsLoaded;
@@ -258,6 +261,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _textProvider = textProvider;
         _textFormatter = textFormatter;
         _promptStateSaveDelay = stateWritePolicy.DeferredWriteDelay;
+        Quote.PropertyChanged += OnQuoteChanged;
         _attachmentsViewModel.AttachmentStateChanged += OnAttachmentStateChanged;
         _modelScope.VisibleModelsChanged += OnVisibleModelsChanged;
         _modelScope.LocalCodexAvailabilityChanged += OnLocalCodexAvailabilityChanged;
@@ -373,7 +377,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         Quote.RefreshLocalization();
         OnPropertyChanged(nameof(TemperatureText));
         OnPropertyChanged(nameof(AttachmentCounterText));
-        OnPropertyChanged(nameof(GenerateButtonText));
 
         foreach (GenerationOptionViewModel option in AspectRatioOptions)
         {
@@ -401,6 +404,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         }
 
         _isDisposed = true;
+        Quote.PropertyChanged -= OnQuoteChanged;
 
         if (_codexSettings is not null)
         {
@@ -688,7 +692,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     [RelayCommand(CanExecute = nameof(CanReplacePrompt))]
     private void ReplacePrompt(string? prompt)
     {
-        if (prompt is null || IsChatPromptLocked)
+        if (prompt is null)
         {
             return;
         }
@@ -698,7 +702,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private bool CanReplacePrompt(string? prompt)
     {
-        return prompt is not null && !IsChatPromptLocked;
+        return prompt is not null;
     }
 
     [RelayCommand]
@@ -747,6 +751,11 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     [RelayCommand(CanExecute = nameof(CanRunCommand), AllowConcurrentExecutions = true)]
     private async Task GenerateAsync(CancellationToken ct)
     {
+        if (RequiresChatBranchSelection)
+        {
+            return;
+        }
+
         try
         {
             ClearErrorMessage();
@@ -790,7 +799,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 await Chat.SubmitAsync(parameters,
                     (chatParameters, token) => _generationRunner.RunAsync(chatParameters, providerCredential, token), ct);
 
-                if (Chat.ConversationVersion == conversationVersion && !IsChatPromptLocked
+                if (Chat.ConversationVersion == conversationVersion && !RequiresChatBranchSelection
                     && string.Equals(Prompt, parameters.Prompt, StringComparison.Ordinal))
                 {
                     Prompt = string.Empty;
@@ -1052,7 +1061,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         return new NanoBanana2GenerationParameters(
             selectedModel,
             DisplayName,
-            IsChatPromptLocked ? Chat?.RepeatPrompt ?? Prompt : Prompt,
+            Prompt,
             SelectedAspectRatio,
             SelectedResolution,
             Temperature,
@@ -1621,7 +1630,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     private void OnSelectedModelChanged(ImageModelOption? value)
     {
-        RefreshChatPrompt();
+        RefreshChatState();
         if (Chat?.HasChat == true && !Chat.IsForModel(value?.Id))
         {
             Chat.Detach();
@@ -1750,12 +1759,6 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
 
     partial void OnPromptChanged(string value)
     {
-        if (IsChatPromptLocked && Chat?.RepeatPrompt is { } prompt && !string.Equals(value, prompt, StringComparison.Ordinal))
-        {
-            Prompt = prompt;
-            return;
-        }
-
         RefreshPricePreviewUnlessSuppressed();
         GenerateCommand.NotifyCanExecuteChanged();
         SchedulePromptStateSave();

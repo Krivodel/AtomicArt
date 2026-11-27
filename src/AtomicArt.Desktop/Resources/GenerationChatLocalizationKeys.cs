@@ -12,6 +12,7 @@ public static class GenerationChatLocalizationKeys
     public const string Edit = "GenerationChat.Edit";
     public const string Save = "GenerationChat.Save";
     public const string ChooseVariant = "GenerationChat.ChooseVariant";
+    public const string ChooseBranch = "GenerationChat.ChooseBranch";
     public const string ReturnToSource = "GenerationChat.ReturnToSource";
     public const string VariantsOne = "GenerationChat.VariantsOne";
     public const string VariantsFew = "GenerationChat.VariantsFew";
