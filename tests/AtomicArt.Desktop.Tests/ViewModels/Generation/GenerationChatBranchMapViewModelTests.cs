@@ -25,11 +25,30 @@ public sealed partial class GenerationChatBranchMapViewModelTests
     private static readonly Guid UnrelatedId = Guid.Parse("55555555-5555-5555-5555-555555555555");
 
     [Fact]
+    public void UpdateCurrentChat_WithAnotherCard_PreservesAllNodeInstances()
+    {
+        GenerationItemViewModel root = CreateCard(RootId);
+        GenerationItemViewModel target = CreateCard(FirstId, RootId);
+        using GenerationChatBranchMapViewModel map = CreateMap();
+        map.Open(new GenerationItemViewModel[] { root, target }, RootId, RootId);
+        GenerationChatBranchNodeViewModel original = map.Nodes.Single(node => node.Card == root);
+        GenerationChatBranchNodeViewModel selected = map.Nodes.Single(node => node.Card == target);
+
+        map.UpdateCurrentChat(target);
+
+        map.Nodes.Single(node => node.Card == root).Should().BeSameAs(original);
+        map.Nodes.Single(node => node.Card == target).Should().BeSameAs(selected);
+        original.IsCurrent.Should().BeFalse();
+        selected.IsCurrent.Should().BeTrue();
+        selected.HasStatus.Should().BeTrue();
+    }
+
+    [Fact]
     public void Refresh_WhenAddingABranch_PreservesExistingNodes()
     {
         GenerationItemViewModel root = CreateCard(RootId);
         GenerationItemViewModel first = CreateCard(FirstId, RootId);
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { root, first }, FirstId, FirstId);
         GenerationChatBranchNodeViewModel[] existing = map.Nodes.ToArray();
 
@@ -45,16 +64,18 @@ public sealed partial class GenerationChatBranchMapViewModelTests
     }
 
     [Fact]
-    public void Refresh_WhenPendingCardReceivesItsResultId_PreservesOtherNodes()
+    public void Refresh_WhenPendingCardReceivesItsResultId_PreservesAllNodes()
     {
         GenerationItemViewModel pending = CreateCard(FirstId, RootId);
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { CreateCard(RootId), pending }, FirstId, FirstId);
         GenerationChatBranchNodeViewModel root = map.Nodes.Single(node => node.Id == RootId);
+        GenerationChatBranchNodeViewModel original = map.Nodes.Single(node => node.Id == FirstId);
 
         pending.Id = LeafId;
 
         map.Nodes.Single(node => node.Id == RootId).Should().BeSameAs(root);
+        map.Nodes.Single(node => node.Id == LeafId).Should().BeSameAs(original);
         map.SelectedNode?.Id.Should().Be(LeafId);
         map.Nodes.Single(node => node.IsCurrent).Id.Should().Be(LeafId);
     }
@@ -68,7 +89,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
         GenerationItemViewModel second = CreateCard(SecondId, group: group);
         first.StatusKind = GenerationItemStatus.Generating;
         second.StatusKind = GenerationItemStatus.Generating;
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
 
         map.Open(new GenerationItemViewModel[] { root, first, second }, first.Id, first.Id);
 
@@ -79,7 +100,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
     public void Refresh_WhenPendingCardReceivesItsResultId_KeepsItsSelectionAndFamily()
     {
         GenerationItemViewModel card = CreateCard(FirstId, RootId);
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { CreateCard(RootId), card }, FirstId, FirstId);
 
         card.Id = LeafId;
@@ -98,7 +119,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
             CreateCard(RootId), CreateCard(FirstId, RootId), CreateCard(SecondId, RootId),
             CreateCard(LeafId, FirstId), CreateCard(UnrelatedId)
         ];
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
 
         map.Open(cards, LeafId, LeafId);
 
@@ -113,7 +134,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
     {
         GenerationChatGroup group = CreateGroup(FirstId) with { AncestorCardIds = new Guid[] { RootId, FirstId } };
         GenerationItemViewModel[] cards = [CreateCard(RootId), CreateCard(SecondId, RootId), CreateCard(LeafId, group: group)];
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
 
         map.Open(cards, LeafId, LeafId);
 
@@ -130,7 +151,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
         GenerationItemViewModel pending = CreateCard(FirstId, RootId);
         pending.StatusKind = GenerationItemStatus.Generating;
         GenerationItemViewModel? opened = null;
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(card =>
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(card =>
         {
             opened = card;
             return Task.CompletedTask;
@@ -148,7 +169,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
     public void Refresh_AfterDeletingSelectedCard_SelectsAnExistingCard()
     {
         GenerationItemViewModel root = CreateCard(RootId);
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { root, CreateCard(FirstId, RootId) }, RootId, RootId);
         map.SelectCommand.Execute(map.Nodes.Single(node => node.Id == FirstId));
 
@@ -161,7 +182,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
     [Fact]
     public void Open_WithCycle_ProducesAnAcyclicTree()
     {
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         GenerationItemViewModel[] cards = [CreateCard(RootId, FirstId), CreateCard(FirstId, RootId)];
 
         map.Open(cards, RootId, RootId);
@@ -179,6 +200,71 @@ public sealed partial class GenerationChatBranchMapViewModelTests
         GenerationChatGroup? restored = JsonSerializer.Deserialize<GenerationChatGroup>(JsonSerializer.Serialize(group));
 
         restored?.AncestorCardIds.Should().Equal(RootId, FirstId);
+    }
+
+    [Fact]
+    public async Task SelectCommand_WithRapidClicks_UsesOnlyTheLastQueuedBranch()
+    {
+        GenerationItemViewModel[] cards = [CreateCard(RootId), CreateCard(FirstId, RootId), CreateCard(SecondId, RootId)];
+        TaskCompletionSource ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<GenerationItemViewModel?> selected = [];
+        using GenerationChatBranchMapViewModel map = new(
+            new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask),
+            new AsyncRelayCommand<GenerationItemViewModel?>(async card =>
+            {
+                selected.Add(card);
+                await ready.Task;
+            }), new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        map.Open(cards, RootId, RootId);
+
+        Task first = map.SelectCommand.ExecuteAsync(map.Nodes.Single(node => node.Id == RootId));
+        Task second = map.SelectCommand.ExecuteAsync(map.Nodes.Single(node => node.Id == FirstId));
+        Task last = map.SelectCommand.ExecuteAsync(map.Nodes.Single(node => node.Id == SecondId));
+        map.Refresh(cards);
+        ready.SetResult();
+        await Task.WhenAll(first, second, last);
+
+        selected.Should().Equal(cards[0], cards[2]);
+        map.IsOpen.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SelectCommand_WithDeletedNode_HidesTheComposerWithoutNavigating()
+    {
+        GenerationItemViewModel card = CreateCard(FirstId, RootId);
+        using GenerationChatBranchMapViewModel map = CreateMap();
+        map.Open(new GenerationItemViewModel[] { card }, FirstId, FirstId);
+        await map.SelectCommand.ExecuteAsync(map.Nodes.Single(node => node.Id == FirstId));
+        map.IsComposerOpen.Should().BeTrue();
+
+        await map.SelectCommand.ExecuteAsync(map.Nodes.Single(node => node.IsDeleted));
+
+        map.IsOpen.Should().BeTrue();
+        map.IsComposerOpen.Should().BeFalse();
+        map.IsGenerationPanelVisible.Should().BeFalse();
+        map.Nodes.Single(node => node.IsCurrent).Card.Should().BeSameAs(card);
+    }
+
+    internal static GenerationChatBranchMapViewModel CreateMap(
+        IAsyncRelayCommand<GenerationItemViewModel?>? openChat = null,
+        IAsyncRelayCommand<GenerationItemViewModel?>? openImage = null)
+    {
+        GenerationChatBranchMapViewModel? map = null;
+        IAsyncRelayCommand<GenerationItemViewModel?> selectChat = new AsyncRelayCommand<GenerationItemViewModel?>(card =>
+        {
+            if (card is not null && map is not null)
+            {
+                map.UpdateCurrentChat(card);
+                map.ShowComposer(card);
+            }
+
+            return Task.CompletedTask;
+        });
+        map = new GenerationChatBranchMapViewModel(
+            openChat ?? new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask), selectChat,
+            openImage ?? new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+
+        return map;
     }
 
     internal static GenerationItemViewModel CreateCard(

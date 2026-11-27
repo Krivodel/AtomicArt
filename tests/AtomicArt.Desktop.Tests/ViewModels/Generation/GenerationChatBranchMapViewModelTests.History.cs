@@ -52,7 +52,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
         Mock<IGenerationReferenceStore> references = new(MockBehavior.Strict);
         references.Setup(store => store.GetExistingFilePathAsync(It.IsAny<GenerationReference>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((GenerationReference image, CancellationToken _) => Path.Combine("History", image.FileName));
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { current }, current.Id, current.Id);
 
         await map.RestoreDeletedPreviewsAsync(chats.Object, references.Object, CancellationToken.None);
@@ -107,7 +107,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
         GenerationItemViewModel sibling = CreateCard(UnrelatedId, SecondId);
         sibling.ChatHistory = new GenerationChatHistory(ancestors.Select(message => message with { Text = "Edited sibling" }).ToArray());
         GenerationItemViewModel[] cards = [root, first, current, sibling];
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(cards, current.Id, current.Id);
 
         await map.RestoreDeletedPreviewsAsync(Mock.Of<IGenerationChatStore>(), Mock.Of<IGenerationReferenceStore>(), CancellationToken.None);
@@ -142,7 +142,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
             Text = "Edited sibling text",
             Images = new GenerationReference[] { new("edited", "edited.png", GenerationImageContentTypes.Png) }
         }).ToArray());
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { current, sibling }, current.Id, current.Id);
 
         await map.RestoreDeletedPreviewsAsync(Mock.Of<IGenerationChatStore>(), Mock.Of<IGenerationReferenceStore>(), CancellationToken.None);
@@ -170,7 +170,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
             new(false, $"Request {index}", timestamp, Array.Empty<GenerationReference>()),
             new(true, $"Reply {index}", timestamp, Array.Empty<GenerationReference>())
         }).ToArray());
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { current }, current.Id, current.Id);
 
         await map.RestoreDeletedPreviewsAsync(Mock.Of<IGenerationChatStore>(), Mock.Of<IGenerationReferenceStore>(), CancellationToken.None);
@@ -199,7 +199,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
             new(false, "Old prompt", timestamp.AddMinutes(1), Array.Empty<GenerationReference>()),
             new(true, "Old reply", timestamp.AddMinutes(1).AddSeconds(20), Array.Empty<GenerationReference>())
         });
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { current, sibling }, current.Id, current.Id);
 
         await map.RestoreDeletedPreviewsAsync(Mock.Of<IGenerationChatStore>(), Mock.Of<IGenerationReferenceStore>(), CancellationToken.None);
@@ -245,7 +245,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
         Mock<IGenerationReferenceStore> references = new(MockBehavior.Strict);
         references.Setup(store => store.GetExistingFilePathAsync(It.IsAny<GenerationReference>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((GenerationReference image, CancellationToken _) => Path.Combine("History", image.FileName));
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { current }, current.Id, current.Id);
 
         await map.RestoreDeletedPreviewsAsync(chats.Object, references.Object, CancellationToken.None);
@@ -293,7 +293,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
         Mock<IGenerationReferenceStore> references = new(MockBehavior.Strict);
         references.Setup(store => store.GetExistingFilePathAsync(image, It.IsAny<CancellationToken>()))
             .ReturnsAsync("History/first.png");
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         GenerationItemViewModel current = firstOpen ? first : second;
         map.Open(new GenerationItemViewModel[] { first, second }, current.Id, current.Id);
 
@@ -314,7 +314,7 @@ public sealed partial class GenerationChatBranchMapViewModelTests
         Mock<IGenerationChatStore> chats = new();
         chats.Setup(store => store.LoadAsync(UnrelatedId, It.IsAny<CancellationToken>())).Returns(reading.Task);
         Mock<IGenerationReferenceStore> references = new(MockBehavior.Strict);
-        using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+        using GenerationChatBranchMapViewModel map = GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
         map.Open(new GenerationItemViewModel[] { current }, current.Id, current.Id);
         Task restoring = map.RestoreDeletedPreviewsAsync(chats.Object, references.Object, CancellationToken.None);
         map.Close();

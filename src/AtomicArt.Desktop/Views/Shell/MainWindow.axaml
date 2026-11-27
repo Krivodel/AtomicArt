@@ -24,7 +24,7 @@
                  IsMenuVisible="False"
                  Title="{x:Static resources:ProductInformation.Name}"
                  TitleBarAutoHideDelay="0"
-                 behaviors:ImageDropBehavior.IsEnabled="{Binding !Chat.BranchMap.IsOpen, FallbackValue=True}"
+                 behaviors:ImageDropBehavior.IsEnabled="{Binding Chat.BranchMap.IsGenerationPanelVisible, FallbackValue=True}"
                  behaviors:ImageDropBehavior.TargetKind="ExternalFiles"
                  behaviors:Dlss5ClipboardPasteBehavior.IsEnabled="{Binding Dlss5.IsOpen}"
                  behaviors:Dlss5ClipboardPasteBehavior.PasteCommand="{Binding Dlss5.PasteSourceCommand}"
@@ -94,17 +94,11 @@
                         <Binding Path="!IsSettingsOpen" />
                         <Binding Path="!ErrorDialog.IsOpen" />
                         <Binding FallbackValue="True"
-                                 Path="!Chat.BranchMap.IsOpen" />
+                                 Path="Chat.BranchMap.IsGenerationPanelVisible" />
                     </MultiBinding>
                 </behaviors:ImageDropBehavior.IsEnabled>
-                <Grid x:Name="ShellContentGrid">
-                    <Grid.IsVisible>
-                        <MultiBinding Converter="{x:Static converters:BoolConverters.And}">
-                            <Binding Path="!Dlss5.IsOpen" />
-                            <Binding FallbackValue="True"
-                                     Path="!Chat.BranchMap.IsOpen" />
-                        </MultiBinding>
-                    </Grid.IsVisible>
+                <Grid x:Name="ShellContentGrid"
+                      IsVisible="{Binding !Dlss5.IsOpen}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"
                                        MinHeight="0" />
@@ -114,11 +108,13 @@
 
                     <Border Grid.Row="0"
                             Margin="{StaticResource GalleryViewportMargin}"
+                            IsVisible="{Binding !Chat.BranchMap.IsOpen, FallbackValue=True}"
                             IsHitTestVisible="{Binding !#GenerationChat.IsPresented}">
                         <ContentControl Content="{Binding Gallery}" />
                     </Border>
 
                     <overlays:AnimatedBlurBackdropControl Grid.RowSpan="2"
+                                                          IsVisible="{Binding !Chat.BranchMap.IsOpen, FallbackValue=True}"
                                                           BlurRadius="{StaticResource ModalOverlayBlurRadius}"
                                                           UseSnapshot="True"
                                                           IsActive="{Binding #GenerationChat.IsPresented}" />
@@ -126,16 +122,28 @@
                     <Border Grid.RowSpan="2"
                             IsVisible="{Binding #GenerationChat.IsPresented}"
                             Background="Transparent"
+                            IsHitTestVisible="{Binding !Chat.BranchMap.IsOpen, FallbackValue=True}"
                             PointerPressed="OnChatBackdropPointerPressed" />
 
                     <Border Grid.Row="0"
                             Width="{Binding #GenerationPanelHost.Bounds.Width}"
-                            HorizontalAlignment="Center">
+                            HorizontalAlignment="Center"
+                            IsVisible="{Binding !Chat.BranchMap.IsOpen, FallbackValue=True}">
                         <generationViews:GenerationChatView x:Name="GenerationChat"
                                                             IsEnabled="{Binding #GenerationChat.IsPresented}"
                                                             DataContext="{Binding Chat}"
                                                             IsHitTestVisible="{Binding #GenerationChat.IsPresented}" />
                     </Border>
+
+                    <TransitioningContentControl x:Name="BranchMapHost"
+                                                 Grid.RowSpan="2"
+                                                 ZIndex="5"
+                                                 IsHitTestVisible="{Binding Chat.BranchMap.IsOpen, FallbackValue=False}"
+                                                 Content="{Binding Chat.BranchMap.Presentation}">
+                        <TransitioningContentControl.PageTransition>
+                            <CrossFade Duration="{StaticResource GenerationChatBranchTransitionDuration}" />
+                        </TransitioningContentControl.PageTransition>
+                    </TransitioningContentControl>
 
                     <Border x:Name="GenerationPanelHost"
                             Grid.Row="1"
@@ -144,7 +152,11 @@
                             Padding="0"
                             HorizontalAlignment="Stretch"
                             Classes="generation-panel"
-                            ClipToBounds="True"
+                            Classes.branch-map="{Binding Chat.BranchMap.IsOpen, FallbackValue=False}"
+                            ClipToBounds="{Binding !Chat.BranchMap.IsOpen, FallbackValue=True}"
+                            ZIndex="7"
+                            behaviors:AnimatedVisibilityBehavior.Duration="{StaticResource TransientOverlayFadeDuration}"
+                            behaviors:AnimatedVisibilityBehavior.IsShown="{Binding Chat.BranchMap.IsGenerationPanelVisible, FallbackValue=True}"
                             behaviors:PromptDropBehavior.IsEnabled="{Binding !Gallery.IsSelectionMode}"
                             behaviors:PromptDropBehavior.Overlay="{Binding #PromptDropOverlay}"
                             behaviors:PromptDropBehavior.ReplacePromptCommand="{Binding ReplaceGenerationPromptCommand}">
@@ -208,25 +220,20 @@
                                   Height="{StaticResource GenerationPanelResizeGripSize}"
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Top"
+                                  IsVisible="{Binding #GenerationPanelHost.IsVisible}"
                                   Background="Transparent"
                                   Cursor="SizeNorthSouth"
+                                  IsHitTestVisible="{Binding #GenerationPanelHost.IsHitTestVisible}"
+                                  Opacity="{Binding #GenerationPanelHost.Opacity}"
+                                  RenderTransform="{Binding #GenerationPanelHost.RenderTransform}"
                                   ResizeBehavior="PreviousAndCurrent"
                                   ResizeDirection="Rows"
                                   ShowsPreview="False"
-                                  ZIndex="1" />
+                                  ZIndex="8" />
                 </Grid>
 
                 <ContentControl IsVisible="{Binding Dlss5.IsOpen}"
                                 Content="{Binding Dlss5}" />
-
-                <TransitioningContentControl x:Name="BranchMapHost"
-                                             ZIndex="5"
-                                             IsHitTestVisible="{Binding Chat.BranchMap.IsOpen, FallbackValue=False}"
-                                             Content="{Binding Chat.BranchMap.Presentation}">
-                    <TransitioningContentControl.PageTransition>
-                        <CrossFade Duration="{StaticResource GenerationChatBranchTransitionDuration}" />
-                    </TransitioningContentControl.PageTransition>
-                </TransitioningContentControl>
 
                 <overlays:ModalOverlayLayerControl ZIndex="10"
                                                    EscapeFallbackCommand="{Binding HandleEscapeCommand}">

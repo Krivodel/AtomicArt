@@ -91,6 +91,10 @@
         <Setter Property="BorderBrush"
                 Value="{StaticResource MetadataRepeatBrush}" />
     </Style>
+    <Style Selector=":is(UserControl).composing Button.generation-chat-branch-node.selected">
+        <Setter Property="BorderBrush"
+                Value="{StaticResource MetadataReadyBrush}" />
+    </Style>
     <Style Selector="Button.generation-chat-branch-node.generating,
                      Button.generation-chat-branch-node.feedback,
                      ContentPresenter.preview-expanded Button.generation-chat-branch-node">

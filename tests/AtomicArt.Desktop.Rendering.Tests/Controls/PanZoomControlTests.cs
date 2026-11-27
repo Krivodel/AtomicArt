@@ -22,6 +22,42 @@ public sealed class PanZoomControlTests : DesktopControlTestBase
     }
 
     [Theory]
+    [InlineData(MouseButton.Left, 0d, true)]
+    [InlineData(MouseButton.Left, 30d, false)]
+    [InlineData(MouseButton.Right, 0d, false)]
+    [InlineData(MouseButton.Middle, 0d, false)]
+    public async Task BackgroundClicked_WithPointerInput_FiresOnlyForAStationaryLeftClick(
+        MouseButton button, double movement, bool expectedClick)
+    {
+        await DispatchAsync(typeof(PanZoomControlTests), () =>
+        {
+            PanZoomControl viewport = new()
+            {
+                Background = Brushes.Transparent,
+                Child = new Border { Width = 1800d, Height = 1200d }
+            };
+            int clicks = 0;
+            viewport.BackgroundClicked += (_, _) => clicks++;
+            Window window = Show(viewport, 900d, 600d);
+
+            try
+            {
+                Point point = new(100d, 100d);
+                window.MouseDown(point, button);
+                window.MouseMove(point + new Vector(movement, 0d));
+                window.MouseMove(point);
+                window.MouseUp(point, button);
+
+                clicks.Should().Be(expectedClick ? 1 : 0);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Theory]
     [InlineData(900d, 600d)]
     [InlineData(190d, 140d)]
     public async Task FocusOn_WithAnOffscreenCard_CentersAndFitsItImmediately(double width, double height)

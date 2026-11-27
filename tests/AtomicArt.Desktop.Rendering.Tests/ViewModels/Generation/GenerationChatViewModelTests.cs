@@ -961,6 +961,7 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
         public Mock<IGenerationReferenceStore> References => _references;
         public Mock<TimeProvider> Clock { get; } = new Mock<TimeProvider>();
         public Mock<IAnimatedGalleryOperations> GalleryOperations { get; } = new Mock<IAnimatedGalleryOperations>();
+        public Mock<IImageViewerService> ImageViewer { get; } = new Mock<IImageViewerService>();
         public GalleryViewModel Gallery => _gallery;
 
         private readonly LocalizationService _localization;
@@ -972,7 +973,8 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
 
         public ChatContext(IGalleryStateService? galleryStateService = null)
         {
-            _gallery = GalleryViewModelTestFactory.CreateViewModel(galleryItemsController: _items, galleryStateService: galleryStateService);
+            _gallery = GalleryViewModelTestFactory.CreateViewModel(galleryItemsController: _items,
+                galleryStateService: galleryStateService, imageViewerService: ImageViewer.Object);
             AtomicArtDataPathProvider paths = new(DesktopTestDirectories.CreateUniqueDirectoryPath());
             _localization = new LocalizationService(paths, TestApiConfiguration.CreateTrustedFileStreamFactory(),
                 NullLogger<Krivodeling.Localization.Avalonia.LocalizationService>.Instance, new WeakReferenceMessenger());
@@ -995,7 +997,7 @@ public sealed partial class GenerationChatViewModelTests : DesktopControlTestBas
                 _references.Object,
                 Mock.Of<IFilePickerService>(),
                 Preparation.Object,
-                Mock.Of<IImageViewerService>(),
+                ImageViewer.Object,
                 new DataRootAccessCoordinator(),
                 paths,
                 TestApiConfiguration.CreateTrustedFileStreamFactory(),

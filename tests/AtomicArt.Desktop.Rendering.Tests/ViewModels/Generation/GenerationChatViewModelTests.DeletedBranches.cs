@@ -85,7 +85,7 @@ public sealed partial class GenerationChatViewModelTests
             references.Setup(store => store.GetExistingFilePathAsync(reference, It.IsAny<CancellationToken>()))
                 .ReturnsAsync("History/root.png");
             int opened = 0;
-            using GenerationChatBranchMapViewModel map = new(new AsyncRelayCommand<GenerationItemViewModel?>(_ =>
+            using GenerationChatBranchMapViewModel map = AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateMap(new AsyncRelayCommand<GenerationItemViewModel?>(_ =>
             {
                 opened++;
                 return Task.CompletedTask;
@@ -127,7 +127,7 @@ public sealed partial class GenerationChatViewModelTests
                     .Single(border => border.Classes.Contains("generation-chat-branch-feedback"));
                 Point origin = deleted.TranslatePoint(default, window) ?? throw new InvalidOperationException();
                 Rect region = new(origin, deleted.Bounds.Size);
-                Point point = region.Center;
+                Point point = new(region.Center.X, region.Bottom - 18d);
                 window.MouseMove(point);
                 using SKBitmap baseline = CaptureRenderedBitmap(window);
                 using Bitmap rendered = window.CaptureRenderedFrame() ?? throw new InvalidOperationException();

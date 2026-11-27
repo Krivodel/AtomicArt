@@ -24,6 +24,61 @@ public sealed class PixelLoadingRenderingTests : DesktopControlTestBase
     }
 
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Render_WithAncestorOpacity_FadesTheEntireAnimation(bool cacheFrames, bool cacheAncestor)
+    {
+        await DispatchAsync(typeof(PixelLoadingRenderingTests), () =>
+        {
+            AttachmentPixelLoadingControl indicator = new()
+            {
+                AnimationSeed = Guid.Parse("12345678-1234-1234-1234-123456789abc"),
+                GridSize = 16,
+                CacheFrames = cacheFrames
+            };
+            Border host = new()
+            {
+                Child = indicator,
+                Opacity = 0.25d,
+                CacheMode = cacheAncestor ? new BitmapCache() : null
+            };
+            Grid surface = new() { Width = 220d, Height = 220d, Background = Brushes.Black, Children = { host } };
+            Window window = Show(surface, 220d, 220d);
+
+            try
+            {
+                using SKBitmap faded = CaptureRenderedBitmap(window);
+                host.Opacity = 1d;
+                using SKBitmap opaque = CaptureRenderedBitmap(window);
+                long fadedBrightness = 0L;
+                long opaqueBrightness = 0L;
+
+                for (int y = 0; y < faded.Height; y++)
+                {
+                    for (int x = 0; x < faded.Width; x++)
+                    {
+                        SKColor before = faded.GetPixel(x, y);
+                        SKColor after = opaque.GetPixel(x, y);
+                        fadedBrightness += before.Red + before.Green + before.Blue;
+                        opaqueBrightness += after.Red + after.Green + after.Blue;
+                    }
+                }
+
+                opaqueBrightness.Should().BeGreaterThan(0L);
+                ((double)fadedBrightness / opaqueBrightness).Should().BeApproximately(0.25d, 0.06d);
+            }
+            finally
+            {
+                window.Close();
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Render_WhileGenerating_ChangesPixelColorsBetweenFrames(bool cacheFrames)

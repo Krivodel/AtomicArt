@@ -105,7 +105,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
     }
 
     [Fact]
-    public async Task BranchMap_WhenOpened_CoversThePanelAndEscapeReturnsToChat()
+    public async Task BranchMap_WhenOpened_HidesThePanelUntilSelectionAndEscapeReturnsToChat()
     {
         await DispatchAsync(async () =>
         {
@@ -122,12 +122,22 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
                 ?? throw new InvalidOperationException("The shell content is unavailable.");
             chat.BranchMap.Open(new GenerationItemViewModel[] { card }, card.Id, card.Id);
             shell.Opacity.Should().Be(1d);
-            shell.IsVisible.Should().BeFalse();
+            shell.IsVisible.Should().BeTrue();
             window.CaptureRenderedFrame();
             AtomicArt.Desktop.Views.Generation.GenerationChatBranchMapView map = window.GetVisualDescendants()
                 .OfType<AtomicArt.Desktop.Views.Generation.GenerationChatBranchMapView>().Single();
             Border panel = window.FindControl<Border>(GenerationPanelHostName)
                 ?? throw new InvalidOperationException("The generation panel is unavailable.");
+            TimeSpan panelFade = AnimatedVisibilityBehavior.GetDuration(panel);
+            await Task.Delay(panelFade + TimeSpan.FromMilliseconds(80d));
+            window.CaptureRenderedFrame();
+            panel.IsVisible.Should().BeFalse();
+            chat.BranchMap.ShowComposer(card);
+            await Task.Delay(panelFade + TimeSpan.FromMilliseconds(80d));
+            window.CaptureRenderedFrame();
+            panel.IsEffectivelyVisible.Should().BeTrue();
+            panel.Background.Should().BeAssignableTo<ISolidColorBrush>().Which.Color.A.Should().Be(byte.MaxValue);
+            ImageDropBehavior.GetIsEnabled(window).Should().BeTrue();
             Point panelTop = panel.TranslatePoint(default, map)
                 ?? throw new InvalidOperationException("The generation panel has no position.");
             Point panelBottom = panel.TranslatePoint(new Point(panel.Bounds.Width, panel.Bounds.Height), map)
@@ -144,6 +154,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
             window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, null);
 
             chat.BranchMap.IsOpen.Should().BeFalse();
+            chat.BranchMap.IsComposerOpen.Should().BeFalse();
             chat.IsExpanded.Should().BeTrue();
             shell.Opacity.Should().Be(1d);
             shell.IsVisible.Should().BeTrue();
@@ -1364,7 +1375,7 @@ public sealed class MainWindowLayoutTests : AnimatedGalleryControlTestBase
         window.DataTemplates.Add(new ViewModelViewTemplate(registrations.ToArray()));
     }
 
-    private sealed class MainWindowTestContext : IDisposable
+    internal sealed class MainWindowTestContext : IDisposable
     {
         public MainWindow Window { get; }
         public IDialogService DialogService { get; }

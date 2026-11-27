@@ -14,8 +14,11 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
 {
     public GenerationChatBranchMapViewModel? Presentation => IsOpen ? this : null;
     public ReadOnlyObservableCollection<GenerationChatBranchNodeViewModel> Nodes { get; }
+    public IAsyncRelayCommand<GenerationItemViewModel?> OpenImageCommand { get; }
+    public bool IsGenerationPanelVisible => !IsOpen || IsComposerOpen;
 
     private readonly IAsyncRelayCommand<GenerationItemViewModel?> _openChat;
+    private readonly IAsyncRelayCommand<GenerationItemViewModel?> _selectChat;
     private readonly HashSet<GenerationItemViewModel> _observedCards = [];
     private readonly ObservableCollection<GenerationChatBranchNodeViewModel> _nodes = [];
     private readonly Dictionary<Guid, GenerationChatHistory> _histories = [];
@@ -24,16 +27,28 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
     private GenerationChatBranchNodeViewModel? _selectedNode;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Presentation))]
+    [NotifyPropertyChangedFor(nameof(IsGenerationPanelVisible))]
     private bool _isOpen;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGenerationPanelVisible))]
+    private bool _isComposerOpen;
+    private long _selectionVersion;
     private Guid _anchorId;
     private Guid? _currentId;
     private IReadOnlyList<GenerationItemViewModel> _cards = Array.Empty<GenerationItemViewModel>();
     private GenerationItemViewModel? _anchorCard;
     private GenerationItemViewModel? _currentCard;
+    private GenerationItemViewModel? _selectingCard;
+    private GenerationItemViewModel? _requestedChat;
 
-    internal GenerationChatBranchMapViewModel(IAsyncRelayCommand<GenerationItemViewModel?> openChat)
+    internal GenerationChatBranchMapViewModel(
+        IAsyncRelayCommand<GenerationItemViewModel?> openChat,
+        IAsyncRelayCommand<GenerationItemViewModel?> selectChat,
+        IAsyncRelayCommand<GenerationItemViewModel?> openImage)
     {
         _openChat = openChat ?? throw new ArgumentNullException(nameof(openChat));
+        _selectChat = selectChat ?? throw new ArgumentNullException(nameof(selectChat));
+        OpenImageCommand = openImage ?? throw new ArgumentNullException(nameof(openImage));
         Nodes = new ReadOnlyObservableCollection<GenerationChatBranchNodeViewModel>(_nodes);
         _openChat.CanExecuteChanged += OnOpenChatCanExecuteChanged;
     }
@@ -47,11 +62,15 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
     internal void Open(IReadOnlyList<GenerationItemViewModel> cards, Guid anchorId, Guid? currentId)
     {
         ArgumentNullException.ThrowIfNull(cards);
+        _selectionVersion++;
+        _requestedChat = null;
+        _selectingCard = null;
         _anchorId = anchorId;
         _currentId = currentId;
         _anchorCard = cards.FirstOrDefault(card => card.Id == anchorId);
         _currentCard = cards.FirstOrDefault(card => card.Id == currentId);
         _histories.Clear();
+        IsComposerOpen = false;
         SelectedNode = null;
         Refresh(cards);
         IsOpen = Nodes.Count > 0;
@@ -94,15 +113,48 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
         OpenNodeCommand.NotifyCanExecuteChanged();
     }
 
+    internal void ShowComposer(GenerationItemViewModel card)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+
+        if (IsOpen && Nodes.FirstOrDefault(node => object.ReferenceEquals(node.Card, card)) is { } node)
+        {
+            SelectedNode = node;
+            IsComposerOpen = true;
+        }
+    }
+
+    internal bool IsOpeningChat(GenerationItemViewModel card)
+    {
+        ArgumentNullException.ThrowIfNull(card);
+
+        return IsOpen && object.ReferenceEquals(_requestedChat, card);
+    }
+
     [RelayCommand]
     internal void Close()
     {
+        _selectionVersion++;
+        _selectChat.Cancel();
+        _requestedChat = null;
+        _selectingCard = null;
         _historyLoad?.Cancel();
         IsOpen = false;
+        IsComposerOpen = false;
         ObserveCards();
         _cards = Array.Empty<GenerationItemViewModel>();
         _histories.Clear();
         _routes.Clear();
+    }
+
+    [RelayCommand]
+    private void HideComposer()
+    {
+        _selectionVersion++;
+        _selectChat.Cancel();
+        _requestedChat = null;
+        IsComposerOpen = false;
+        SelectedNode = null;
     }
 
     private IReadOnlyList<GenerationChatBranchNodeViewModel> BuildNodes(
@@ -194,29 +246,96 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
         return result.AsReadOnly();
     }
 
-    [RelayCommand]
-    private void Select(GenerationChatBranchNodeViewModel? node)
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task SelectAsync(GenerationChatBranchNodeViewModel? node)
     {
-        if (node is not null && Nodes.Contains(node))
+        long version = ++_selectionVersion;
+
+        if (!object.ReferenceEquals(node?.Card, _requestedChat))
+        {
+            _requestedChat = null;
+        }
+
+        if (_selectChat.ExecutionTask is { IsCompleted: false } pending)
+        {
+            await pending;
+        }
+
+        if (!IsOpen || version != _selectionVersion || node is null)
+        {
+            return;
+        }
+
+        node = Nodes.FirstOrDefault(current => node.Card is { } card
+            ? object.ReferenceEquals(current.Card, card) : current.Id == node.Id);
+
+        if (node is null)
+        {
+            return;
+        }
+
+        if (node.IsDeleted)
         {
             SelectedNode = node;
+            IsComposerOpen = false;
+        }
+        else if (_selectChat.CanExecute(node.Card))
+        {
+            _selectingCard = node.Card;
+
+            try
+            {
+                await _selectChat.ExecuteAsync(node.Card);
+            }
+            finally
+            {
+                _selectingCard = null;
+
+                if (object.ReferenceEquals(_requestedChat, node.Card))
+                {
+                    _requestedChat = null;
+                }
+            }
         }
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenNode))]
-    private Task OpenNodeAsync(GenerationChatBranchNodeViewModel? node)
+    private async Task OpenNodeAsync(GenerationChatBranchNodeViewModel? node)
     {
-        return _openChat.ExecuteAsync(node?.Card);
+        if (node?.Card is not { } target)
+        {
+            return;
+        }
+
+        _requestedChat = target;
+
+        if (object.ReferenceEquals(_selectingCard, target))
+        {
+            return;
+        }
+
+        if (SelectCommand.ExecutionTask is { IsCompleted: false } selecting)
+        {
+            await selecting;
+        }
+
+        if (IsOpen && node?.Card is { } card
+            && object.ReferenceEquals(_requestedChat, card)
+            && Nodes.Any(current => object.ReferenceEquals(current.Card, card)) && _openChat.CanExecute(card))
+        {
+            await _openChat.ExecuteAsync(card);
+        }
     }
 
     private bool CanOpenNode(GenerationChatBranchNodeViewModel? node)
     {
-        return node?.Card is { } card && Nodes.Contains(node) && _openChat.CanExecute(card);
+        return node?.Card is { } card && Nodes.Contains(node)
+            && (_openChat.CanExecute(card) || SelectCommand.IsRunning);
     }
 
     private void RebuildNodes()
     {
-        Guid selectedId = SelectedNode?.Card?.Id ?? SelectedNode?.Id ?? _anchorId;
+        Guid selectedId = (IsComposerOpen ? _currentCard?.Id : SelectedNode?.Card?.Id ?? SelectedNode?.Id) ?? _anchorId;
         UpdateNodes(BuildNodes(_cards, _anchorId, _currentId));
         SelectedNode = Nodes.FirstOrDefault(node => node.Id == selectedId)
             ?? Nodes.FirstOrDefault(node => node.Id == _anchorId)
@@ -226,17 +345,29 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
     private void UpdateNodes(IReadOnlyList<GenerationChatBranchNodeViewModel> desired)
     {
         Dictionary<Guid, GenerationChatBranchNodeViewModel> existing = _nodes.ToDictionary(node => node.Id);
+        Dictionary<GenerationItemViewModel, GenerationChatBranchNodeViewModel> byCard = new(ReferenceEqualityComparer.Instance);
+
+        foreach (GenerationChatBranchNodeViewModel node in _nodes)
+        {
+            if (node.Card is { } card)
+            {
+                byCard.Add(card, node);
+            }
+        }
+
         GenerationChatBranchNodeViewModel[] nodes = desired.Select(node =>
         {
-            if (!existing.TryGetValue(node.Id, out GenerationChatBranchNodeViewModel? previous))
+            GenerationChatBranchNodeViewModel? previous = node.Card is { } card
+                ? byCard.GetValueOrDefault(card) : existing.GetValueOrDefault(node.Id);
+
+            if (previous is null)
             {
                 return node;
             }
 
-            if (previous.ParentId == node.ParentId
-                && previous.IsCurrent == node.IsCurrent
-                && object.ReferenceEquals(previous.Card, node.Card))
+            if (object.ReferenceEquals(previous.Card, node.Card))
             {
+                previous.Update(node.Id, node.ParentId, node.IsCurrent);
                 return previous;
             }
 

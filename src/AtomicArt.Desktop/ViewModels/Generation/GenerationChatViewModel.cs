@@ -18,7 +18,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     public ReadOnlyObservableCollection<GenerationChatMessageViewModel> Messages => _active?.Messages ?? EmptyMessages;
     public bool HasChat => _active?.HasChat == true;
     public bool IsBusy => IsLoading || _active?.IsBusy == true;
-    public bool CanSubmit => !IsLoading && _active?.CanSubmit == true;
+    public bool CanSubmit => !IsLoading && BranchMap.IsGenerationPanelVisible && _active?.CanSubmit == true;
     public bool CanAddVariants => _active?.CanAddVariants == true;
     public string? RepeatPrompt => _active?.RepeatPrompt;
     public long ConversationVersion => _conversationVersion;
@@ -37,6 +37,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     private readonly IAnimatedGalleryOperations _galleryOperations;
     private readonly IGenerationChatStore _chats;
     private readonly IGenerationReferenceStore _references;
+    private readonly GenerationChatMediaService _media;
     private readonly Dictionary<Guid, GenerationChatSessionViewModel> _sessions = [];
     private readonly Dictionary<Guid, GenerationChatSessionViewModel> _groups = [];
     [ObservableProperty]
@@ -61,7 +62,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         IAnimatedGalleryOperations galleryOperations)
         : base(errorHandler, dialogs)
     {
-        ArgumentNullException.ThrowIfNull(media);
+        _media = media ?? throw new ArgumentNullException(nameof(media));
         _references = references ?? throw new ArgumentNullException(nameof(references));
         ArgumentNullException.ThrowIfNull(formatter);
         _formatter = formatter;
@@ -71,11 +72,12 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         _dates = dates;
         _galleryOperations = galleryOperations ?? throw new ArgumentNullException(nameof(galleryOperations));
         _dates.Changed += OnGroupLabelsChanged;
-        BranchMap = new GenerationChatBranchMapViewModel(OpenCommand);
+        BranchMap = new GenerationChatBranchMapViewModel(OpenCommand, SelectBranchCommand, OpenBranchImageCommand);
+        BranchMap.PropertyChanged += OnBranchMapChanged;
         _textSizes = textSizeController ?? throw new ArgumentNullException(nameof(textSizeController));
         _textSizes.TextSizeChanged += OnTextSizeChanged;
         _createSession = () => new GenerationChatSessionViewModel(
-            media, references, formatter, clipboard, errorHandler, dialogs, chats, dates);
+            _media, references, formatter, clipboard, errorHandler, dialogs, chats, dates);
     }
 
     public void Dispose()
@@ -86,6 +88,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         }
 
         _isDisposed = true;
+        BranchMap.PropertyChanged -= OnBranchMapChanged;
         BranchMap.Dispose();
         _textSizes.TextSizeChanged -= OnTextSizeChanged;
         _dates.Changed -= OnGroupLabelsChanged;
@@ -220,12 +223,32 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
             OnPropertyChanged(nameof(IsBusy));
             OnPropertyChanged(nameof(CanSubmit));
             OpenCommand.NotifyCanExecuteChanged();
+            SelectBranchCommand.NotifyCanExecuteChanged();
             ChooseVariantCommand.NotifyCanExecuteChanged();
             ReturnToSourceCommand.NotifyCanExecuteChanged();
             OpenGroupCommand.NotifyCanExecuteChanged();
             NavigateInBackgroundCommand.NotifyCanExecuteChanged();
             ShowInGalleryCommand.NotifyCanExecuteChanged();
             BranchMap.RefreshCommands();
+        }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task OpenBranchImageAsync(GenerationItemViewModel? card, CancellationToken ct)
+    {
+        if (card is not { ShowsGeneratedImage: true })
+        {
+            return;
+        }
+
+        if (_gallery?.Items.Contains(card) == true && _gallery.OpenViewerCommand.CanExecute(card))
+        {
+            await _gallery.OpenViewerCommand.ExecuteAsync(card);
+        }
+        else if (card.ChatResult?.Image is { } image)
+        {
+            await ExecuteAsync(token => _media.OpenAsync(new GenerationReference[] { image }, 0, token),
+                nameof(OpenBranchImageAsync), ct);
         }
     }
 
@@ -258,7 +281,19 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     }
 
     [RelayCommand(CanExecute = nameof(CanOpen))]
-    private async Task OpenAsync(GenerationItemViewModel? item, CancellationToken ct)
+    private Task OpenAsync(GenerationItemViewModel? item, CancellationToken ct)
+    {
+        return OpenWithPresetAsync(item, GenerationChatNavigationMode.ShowChat, ct);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOpen))]
+    private Task SelectBranchAsync(GenerationItemViewModel? item, CancellationToken ct)
+    {
+        return OpenWithPresetAsync(item, GenerationChatNavigationMode.ShowBranchComposer, ct);
+    }
+
+    private async Task OpenWithPresetAsync(GenerationItemViewModel? item,
+        GenerationChatNavigationMode navigation, CancellationToken ct)
     {
         if (item is not { SupportsChat: true } || _panel is null)
         {
@@ -274,7 +309,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
             return;
         }
 
-        await ExecuteAsync(token => OpenSessionAsync(item, preset, GenerationChatNavigationMode.ShowChat, token), nameof(OpenAsync), ct);
+        await ExecuteAsync(token => OpenSessionAsync(item, preset, navigation, token), nameof(OpenWithPresetAsync), ct);
     }
 
     [RelayCommand(CanExecute = nameof(CanOpen))]
@@ -339,9 +374,15 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
 
         ct.ThrowIfCancellationRequested();
 
-        if (_isDisposed || version != _openVersion || !_gallery.Items.Contains(item))
+        if (_isDisposed || version != _openVersion || !_gallery.Items.Contains(item)
+            || (navigation == GenerationChatNavigationMode.ShowBranchComposer && !BranchMap.IsOpen))
         {
             return;
+        }
+
+        if (navigation == GenerationChatNavigationMode.ShowBranchComposer && BranchMap.IsOpeningChat(item))
+        {
+            navigation = GenerationChatNavigationMode.ShowChat;
         }
 
         Activate(session);
@@ -349,6 +390,11 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
         if (navigation == GenerationChatNavigationMode.ShowChat)
         {
             BranchMap.Close();
+            IsExpanded = true;
+        }
+        else if (navigation == GenerationChatNavigationMode.ShowBranchComposer)
+        {
+            BranchMap.ShowComposer(item);
             IsExpanded = true;
         }
     }
@@ -405,7 +451,14 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     {
         if (HasChat)
         {
-            IsExpanded = !IsExpanded;
+            if (BranchMap.IsOpen)
+            {
+                Expand();
+            }
+            else
+            {
+                IsExpanded = !IsExpanded;
+            }
         }
     }
 
@@ -414,6 +467,7 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     {
         if (HasChat)
         {
+            BranchMap.Close();
             IsExpanded = true;
         }
     }
@@ -432,6 +486,14 @@ public sealed partial class GenerationChatViewModel : AsyncOperationViewModel, I
     {
         return ViewModelAsyncOperation.ExecuteAsync(ErrorHandler, value => ErrorMessage = value, _ => { },
             token => BranchMap.RestoreDeletedPreviewsAsync(_chats, _references, token), nameof(OpenBranchMapAsync), ct);
+    }
+
+    private void OnBranchMapChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GenerationChatBranchMapViewModel.IsGenerationPanelVisible))
+        {
+            OnPropertyChanged(nameof(CanSubmit));
+        }
     }
 
     private void OnSessionChanged(object? sender, PropertyChangedEventArgs e)

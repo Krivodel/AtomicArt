@@ -6,6 +6,7 @@ using Avalonia.Input.Raw;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
+using CommunityToolkit.Mvvm.Input;
 using FluentAssertions;
 using SkiaSharp;
 using Xunit;
@@ -31,6 +32,48 @@ namespace AtomicArt.Desktop.Rendering.Tests.ViewModels.Generation;
 
 public sealed partial class GenerationChatViewModelTests
 {
+    [Fact]
+    public async Task BranchPreview_OnClick_OpensTheImageAndKeepsMapDraggingAvailable()
+    {
+        List<GenerationItemViewModel?> opened = [];
+        AsyncRelayCommand<GenerationItemViewModel?> open = new(card =>
+        {
+            opened.Add(card);
+            return Task.CompletedTask;
+        });
+
+        await VerifyBranchPreviewsAsync(async (window, view, previews) =>
+        {
+            GenerationChatBranchMapViewModel map = Assert.IsType<GenerationChatBranchMapViewModel>(view.DataContext);
+            GenerationItemViewModel image = Assert.IsType<GenerationItemViewModel>(previews[1].DataContext);
+            string path = Path.GetTempFileName();
+
+            try
+            {
+                await File.WriteAllBytesAsync(path, GalleryThumbnailTestImages.CreatePngBytes(2, 2));
+                image.ImagePath = path;
+                Point point = GetBranchPreviewPoint(previews[1], window);
+                window.MouseDown(point, MouseButton.Left);
+                window.MouseUp(point, MouseButton.Left);
+
+                opened.Should().Equal(image);
+                map.IsOpen.Should().BeTrue();
+                map.IsComposerOpen.Should().BeFalse();
+                window.MouseDown(point, MouseButton.Left);
+                window.MouseMove(point + new Vector(40d, 30d));
+                window.MouseUp(point + new Vector(40d, 30d), MouseButton.Left);
+
+                opened.Should().Equal(image);
+                map.IsOpen.Should().BeTrue();
+                map.IsComposerOpen.Should().BeFalse();
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }, openImage: open);
+    }
+
     [Theory]
     [InlineData(Key.LeftShift, RawInputModifiers.Shift, PhysicalKey.ShiftLeft, 0)]
     [InlineData(Key.LeftCtrl, RawInputModifiers.Control, PhysicalKey.ControlLeft, 0)]
@@ -231,7 +274,8 @@ public sealed partial class GenerationChatViewModelTests
     }
 
     private static async Task VerifyBranchPreviewsAsync(
-        Func<Window, GenerationChatBranchMapView, GenerationPreviewControl[], Task> verify, Size? sourceSize = null)
+        Func<Window, GenerationChatBranchMapView, GenerationPreviewControl[], Task> verify, Size? sourceSize = null,
+        IAsyncRelayCommand<GenerationItemViewModel?>? openImage = null)
     {
         await DesktopControlTestBase.DispatchAsync(typeof(GenerationChatViewModelTests), async () =>
         {
@@ -251,7 +295,7 @@ public sealed partial class GenerationChatViewModelTests
             TestUiFrameScheduler frames = new();
             GalleryPreviewSourceScheduler scheduler = new(frames, TestApiConfiguration.CreateGalleryOptionsWrapper());
             GenerationPreviewSessionFactory factory = new(_ => new GenerationPreviewSession(provider, scheduler));
-            using GenerationChatBranchMapViewModel map = new(new CommunityToolkit.Mvvm.Input.AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+            using GenerationChatBranchMapViewModel map = AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateMap(openImage: openImage);
             map.Open(cards, cards[0].Id, cards[0].Id);
             GenerationChatBranchMapView view = new(factory) { DataContext = map };
             Window window = DesktopControlTestBase.Show(view, 1100d, 850d);

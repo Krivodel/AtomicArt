@@ -10,6 +10,7 @@ using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Gallery;
 using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Services.UiAnimation;
+using AtomicArt.Desktop.ViewModels.Gallery;
 using AtomicArt.Desktop.ViewModels.Generation;
 using AtomicArt.Desktop.Views.Gallery;
 
@@ -22,6 +23,8 @@ public partial class GenerationChatBranchMapView : UserControl
     private const double PreviewRetentionRatio = 2d;
     private const int QualityUpdateDelayMilliseconds = 300;
     private const int DeletedFeedbackDurationMilliseconds = 600;
+    private const double ArrivalOffsetY = 24d;
+    private const double ArrivalScale = 0.96d;
 
     private static readonly MotionFrame[] DeletedFeedbackFrames =
     [
@@ -31,6 +34,11 @@ public partial class GenerationChatBranchMapView : UserControl
         new MotionFrame(0d, 0d, 1d, 0d, 1d),
         new MotionFrame(0d, 0d, 1d, 0d, 0d)
     ];
+    private static readonly MotionFrame[] ArrivalFrames =
+    [
+        new MotionFrame(0d, ArrivalOffsetY, ArrivalScale, 0d, 0d),
+        MotionFrame.Identity
+    ];
     private readonly StandaloneGenerationPreviewExpansionHost _previewExpansionHost;
     private readonly DispatcherTimer _qualityUpdate = new()
     {
@@ -39,10 +47,13 @@ public partial class GenerationChatBranchMapView : UserControl
     private readonly HashSet<GenerationPreviewControl> _previews = [];
     private readonly Dictionary<GenerationPreviewControl, Control> _observedPreviews = [];
     private readonly Dictionary<Border, Button> _feedbackNodes = [];
+    private readonly HashSet<GenerationItemViewModel> _knownCards = [];
+    private readonly Dictionary<Button, Control> _arrivingNodes = [];
     private readonly IGenerationPreviewSessionFactory? _previewSessionFactory;
     private IGenerationPreviewSession? _previewSession;
-    private AvaloniaUiFrameScheduler? _feedbackFrames;
-    private UiAnimationScheduler? _feedbackAnimator;
+    private AvaloniaUiFrameScheduler? _frames;
+    private UiAnimationScheduler? _animation;
+    private bool _isMapLoaded;
 
     public GenerationChatBranchMapView()
     {
@@ -52,6 +63,7 @@ public partial class GenerationChatBranchMapView : UserControl
         _qualityUpdate.Tick += OnQualityUpdate;
         MapViewport.PropertyChanged += OnCameraPropertyChanged;
         MapViewport.CameraChanged += OnCameraChanged;
+        MapViewport.BackgroundClicked += OnBackgroundClicked;
     }
 
     public GenerationChatBranchMapView(IGenerationPreviewSessionFactory previewSessionFactory) : this()
@@ -63,11 +75,33 @@ public partial class GenerationChatBranchMapView : UserControl
         IGenerationPreviewSessionFactory previewSessionFactory, IUiFrameScheduler frameScheduler)
         : this(previewSessionFactory)
     {
-        _feedbackAnimator = new UiAnimationScheduler(frameScheduler);
+        _animation = new UiAnimationScheduler(frameScheduler);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        RememberCards();
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        RememberCards();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _isMapLoaded = false;
+        _knownCards.Clear();
+
+        foreach (Control target in _arrivingNodes.Values)
+        {
+            _animation?.Cancel(target);
+            MotionFrameApplier.Apply(target, MotionFrame.Identity);
+        }
+
+        _arrivingNodes.Clear();
         _qualityUpdate.Stop();
         _previewSession?.Dispose();
         _previewSession = null;
@@ -77,15 +111,15 @@ public partial class GenerationChatBranchMapView : UserControl
 
         foreach (KeyValuePair<Border, Button> node in _feedbackNodes)
         {
-            _feedbackAnimator?.Cancel(node.Key);
+            _animation?.Cancel(node.Key);
             node.Key.Opacity = 0d;
             node.Value.Classes.Remove("feedback");
         }
 
         _feedbackNodes.Clear();
-        _feedbackFrames?.Dispose();
-        _feedbackFrames = null;
-        _feedbackAnimator = null;
+        _frames?.Dispose();
+        _frames = null;
+        _animation = null;
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -98,21 +132,44 @@ public partial class GenerationChatBranchMapView : UserControl
             return;
         }
 
-        if (_feedbackAnimator is null)
-        {
-            _feedbackFrames = new AvaloniaUiFrameScheduler(topLevel);
-            _feedbackAnimator = new UiAnimationScheduler(_feedbackFrames);
-        }
+        UiAnimationScheduler animation = GetAnimation(topLevel);
 
-        _feedbackAnimator.Cancel(border);
+        animation.Cancel(border);
         _feedbackNodes[border] = button;
         button.Classes.Set("feedback", true);
-        _ = _feedbackAnimator.AnimateAsync(border, DeletedFeedbackFrames, DeletedFeedbackDurationMilliseconds,
+        _ = animation.AnimateAsync(border, DeletedFeedbackFrames, DeletedFeedbackDurationMilliseconds,
             0, MotionEasing.Linear, () =>
             {
                 _feedbackNodes.Remove(border);
                 button.Classes.Remove("feedback");
             });
+    }
+
+    private UiAnimationScheduler GetAnimation(TopLevel topLevel)
+    {
+        if (_animation is null)
+        {
+            _frames = new AvaloniaUiFrameScheduler(topLevel);
+            _animation = new UiAnimationScheduler(_frames);
+        }
+
+        return _animation;
+    }
+
+    private void RememberCards()
+    {
+        _knownCards.Clear();
+
+        if (DataContext is GenerationChatBranchMapViewModel map)
+        {
+            foreach (GenerationChatBranchNodeViewModel node in map.Nodes)
+            {
+                if (node.Card is { } card)
+                {
+                    _knownCards.Add(card);
+                }
+            }
+        }
     }
 
     private void AttachPreview(GenerationPreviewControl preview)
@@ -187,6 +244,7 @@ public partial class GenerationChatBranchMapView : UserControl
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
+        _isMapLoaded = true;
         _previewExpansionHost.Attach();
 
         if (BranchItems.ItemsPanelRoot is GenerationChatBranchPanel panel
@@ -197,6 +255,32 @@ public partial class GenerationChatBranchMapView : UserControl
 
         UpdateVisiblePreviews();
         MapViewport.Focus();
+    }
+
+    private void OnNodeLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: GenerationChatBranchNodeViewModel { Card: { } card } } button
+            || !_knownCards.Add(card) || !_isMapLoaded
+            || button.GetVisualAncestors().OfType<Control>()
+                .FirstOrDefault(control => control.GetVisualParent() is GenerationChatBranchPanel) is not { } target
+            || TopLevel.GetTopLevel(this) is not { } topLevel
+            || this.FindResource(GenerationChatMessageView.MessageArrivalDurationResourceKey) is not TimeSpan duration)
+        {
+            return;
+        }
+
+        _arrivingNodes[button] = target;
+        _ = GetAnimation(topLevel).AnimateAsync(target, ArrivalFrames, (int)duration.TotalMilliseconds,
+            0, MotionEasing.EaseRail, () => _arrivingNodes.Remove(button));
+    }
+
+    private void OnNodeUnloaded(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && _arrivingNodes.Remove(button, out Control? target))
+        {
+            _animation?.Cancel(target);
+            MotionFrameApplier.Apply(target, MotionFrame.Identity);
+        }
     }
 
     private void OnPreviewUnloaded(object? sender, RoutedEventArgs e)
@@ -212,6 +296,14 @@ public partial class GenerationChatBranchMapView : UserControl
     private void OnCameraChanged(object? sender, EventArgs e)
     {
         UpdateVisiblePreviews();
+    }
+
+    private void OnBackgroundClicked(object? sender, EventArgs e)
+    {
+        if (DataContext is GenerationChatBranchMapViewModel map)
+        {
+            map.HideComposerCommand.Execute(null);
+        }
     }
 
     private void OnCameraPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
@@ -243,6 +335,13 @@ public partial class GenerationChatBranchMapView : UserControl
 
     private void OnNodeDoubleTapped(object? sender, TappedEventArgs e)
     {
+        if (e.Source is Visual source && source.GetSelfAndVisualAncestors().OfType<GenerationPreviewControl>()
+            .Any(preview => preview.DataContext is GenerationItemViewModel { ShowsGeneratedImage: true }))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (sender is not Button { DataContext: GenerationChatBranchNodeViewModel node } button
             || DataContext is not GenerationChatBranchMapViewModel map)
         {

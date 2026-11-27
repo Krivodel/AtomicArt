@@ -51,6 +51,15 @@
                 Value="{StaticResource ShellCornerRadius}" />
     </Style>
 
+    <Style Selector="Border.generation-panel.branch-map">
+        <Setter Property="BoxShadow"
+                Value="{DynamicResource FloatingSurfaceShadow}" />
+        <Setter Property="CacheMode"
+                Value="BitmapCache" />
+        <Setter Property="Background"
+                Value="{DynamicResource SukiPopupBackground}" />
+    </Style>
+
     <Style Selector="GridSplitter.generation-panel-width-grip">
         <Setter Property="ZIndex"
                 Value="1" />

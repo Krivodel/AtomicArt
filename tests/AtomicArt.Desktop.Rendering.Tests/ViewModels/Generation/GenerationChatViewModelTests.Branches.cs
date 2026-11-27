@@ -49,7 +49,7 @@ public sealed partial class GenerationChatViewModelTests
             TestUiFrameScheduler frames = new();
             GalleryPreviewSourceScheduler scheduler = new(frames, TestApiConfiguration.CreateGalleryOptionsWrapper());
             GenerationPreviewSessionFactory factory = new(_ => new GenerationPreviewSession(provider, scheduler));
-            using GenerationChatBranchMapViewModel map = new(new CommunityToolkit.Mvvm.Input.AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+            using GenerationChatBranchMapViewModel map = AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateMap(new CommunityToolkit.Mvvm.Input.AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
             map.Open(cards, cards[2].Id, cards[2].Id);
             GenerationChatBranchMapView view = new(factory) { DataContext = map };
             Window window = DesktopControlTestBase.Show(view, 900d, 640d);
@@ -125,7 +125,7 @@ public sealed partial class GenerationChatViewModelTests
                 .Callback((GenerationPreviewControl preview) => attached.Remove(preview));
             Mock<IGenerationPreviewSessionFactory> factory = new();
             factory.Setup(value => value.Create(It.IsAny<TopLevel>())).Returns(session.Object);
-            using GenerationChatBranchMapViewModel map = new(new CommunityToolkit.Mvvm.Input.AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
+            using GenerationChatBranchMapViewModel map = AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateMap(new CommunityToolkit.Mvvm.Input.AsyncRelayCommand<GenerationItemViewModel?>(_ => Task.CompletedTask));
             map.Open(cards, cards[2].Id, cards[2].Id);
             GenerationChatBranchMapView view = new(factory.Object) { DataContext = map };
             Window window = DesktopControlTestBase.Show(view, 900d, 640d);
@@ -194,7 +194,7 @@ public sealed partial class GenerationChatViewModelTests
             }
 
             CommunityToolkit.Mvvm.Input.AsyncRelayCommand<GenerationItemViewModel?> open = new(_ => Task.CompletedTask);
-            using GenerationChatBranchMapViewModel map = new(open);
+            using GenerationChatBranchMapViewModel map = AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateMap(open);
             map.Open(cards, child, child);
             GenerationChatBranchMapView view = new(factory) { DataContext = map };
             Window window = DesktopControlTestBase.Show(view, 900d, 640d);
@@ -259,7 +259,7 @@ public sealed partial class GenerationChatViewModelTests
                 opened = value;
                 return Task.CompletedTask;
             });
-            using GenerationChatBranchMapViewModel map = new(open);
+            using GenerationChatBranchMapViewModel map = AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateMap(open);
             map.Open(new GenerationItemViewModel[] { card }, card.Id, card.Id);
             GenerationChatBranchMapView view = new() { DataContext = map };
             Window window = DesktopControlTestBase.Show(view, 900d, 640d);
@@ -306,7 +306,7 @@ public sealed partial class GenerationChatViewModelTests
                 AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateCard(second, root)
             ];
             CommunityToolkit.Mvvm.Input.AsyncRelayCommand<GenerationItemViewModel?> open = new(_ => Task.CompletedTask);
-            using GenerationChatBranchMapViewModel map = new(open);
+            using GenerationChatBranchMapViewModel map = AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateMap(open);
             map.Open(cards, first, first);
             GenerationChatBranchMapView view = new() { DataContext = map };
             Window window = DesktopControlTestBase.Show(view, 900d, 640d);
@@ -352,6 +352,12 @@ public sealed partial class GenerationChatViewModelTests
                 await GenerationChatViewModelTests.WaitForFramesAsync(window, () =>
                     line.Stroke is Avalonia.Media.ISolidColorBrush brush && brush.Color == neutral);
                 panel.HighlightedNodeIds.Should().BeEquivalentTo(new Guid[] { root, first });
+                panel.ConnectionDrawing.Should().BeSameAs(geometry);
+
+                map.UpdateCurrentChat(cards[2]);
+                window.CaptureRenderedFrame();
+
+                panel.HighlightedNodeIds.Should().BeEquivalentTo(new Guid[] { root, second });
                 panel.ConnectionDrawing.Should().BeSameAs(geometry);
             }
             finally
@@ -514,7 +520,7 @@ public sealed partial class GenerationChatViewModelTests
                 AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateCard(leafId, firstId)
             ];
             CommunityToolkit.Mvvm.Input.AsyncRelayCommand<GenerationItemViewModel?> open = new(_ => Task.CompletedTask);
-            using GenerationChatBranchMapViewModel map = new(open);
+            using GenerationChatBranchMapViewModel map = AtomicArt.Desktop.Tests.ViewModels.Generation.GenerationChatBranchMapViewModelTests.CreateMap(open);
             map.Open(cards, leafId, leafId);
             GenerationChatBranchMapView view = new() { DataContext = map };
             Window window = DesktopControlTestBase.Show(view, 900d, 640d);

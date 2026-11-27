@@ -1,6 +1,9 @@
+using System.ComponentModel;
+
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 
 using AtomicArt.Desktop.ViewModels.Generation;
 
@@ -73,6 +76,7 @@ public sealed class GenerationChatBranchPanel : Panel
             return _layoutSize;
         }
 
+        DetachNodes();
         _bounds.Clear();
         _nodes.Clear();
         _connections.Clear();
@@ -85,6 +89,11 @@ public sealed class GenerationChatBranchPanel : Panel
                 controls.Add(node.Id, child);
                 _nodes.Add(node.Id, node);
             }
+        }
+
+        if (this.IsAttachedToVisualTree())
+        {
+            AttachNodes();
         }
 
         Dictionary<Guid, List<Control>> descendants = [];
@@ -212,6 +221,20 @@ public sealed class GenerationChatBranchPanel : Panel
         }
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        AttachNodes();
+        _layoutInvalidated = true;
+        InvalidateMeasure();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        DetachNodes();
+        base.OnDetachedFromVisualTree(e);
+    }
+
     private static void OnHoveredNodeChanged(GenerationChatBranchPanel panel, AvaloniaPropertyChangedEventArgs e)
     {
         panel.UpdateHighlightedRoute();
@@ -240,5 +263,34 @@ public sealed class GenerationChatBranchPanel : Panel
         }
 
         ConnectionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void AttachNodes()
+    {
+        foreach (GenerationChatBranchNodeViewModel node in _nodes.Values)
+        {
+            node.PropertyChanged += OnNodeChanged;
+        }
+    }
+
+    private void DetachNodes()
+    {
+        foreach (GenerationChatBranchNodeViewModel node in _nodes.Values)
+        {
+            node.PropertyChanged -= OnNodeChanged;
+        }
+    }
+
+    private void OnNodeChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GenerationChatBranchNodeViewModel.IsCurrent))
+        {
+            UpdateHighlightedRoute();
+        }
+        else if (e.PropertyName is nameof(GenerationChatBranchNodeViewModel.Id) or nameof(GenerationChatBranchNodeViewModel.ParentId))
+        {
+            _layoutInvalidated = true;
+            InvalidateMeasure();
+        }
     }
 }

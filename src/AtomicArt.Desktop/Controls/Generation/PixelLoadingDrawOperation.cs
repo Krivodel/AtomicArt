@@ -97,7 +97,7 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
 
         if (!_cacheFrames)
         {
-            DrawPixels(canvas);
+            DrawPixels(canvas, lease.CurrentOpacity);
             return;
         }
 
@@ -114,19 +114,23 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
             if (surface is not null)
             {
                 surface.Canvas.Clear(SKColors.Transparent);
-                DrawPixels(surface.Canvas);
+                DrawPixels(surface.Canvas, 1d);
                 _cachedFrame = surface.Snapshot();
             }
         }
 
         if (_cachedFrame is { } frame)
         {
+            using SKPaint paint = new()
+            {
+                Color = SKColors.White.WithAlpha(ToAlpha(lease.CurrentOpacity))
+            };
             canvas.DrawImage(frame, new SKRect(0f, 0f, (float)Bounds.Width, (float)Bounds.Height),
-                new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), null);
+                new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None), paint);
         }
         else
         {
-            DrawPixels(canvas);
+            DrawPixels(canvas, lease.CurrentOpacity);
         }
     }
 
@@ -137,7 +141,7 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
         _graphicsContext = null;
     }
 
-    private void DrawPixels(SKCanvas canvas)
+    private void DrawPixels(SKCanvas canvas, double opacity)
     {
         using SKPaint paint = new()
         {
@@ -154,9 +158,9 @@ internal sealed class PixelLoadingDrawOperation : ICustomDrawOperation
             float pixelY = (float)(_originY + (row * (_pixelSideLength + _pixelGap)));
             float pixelRight = pixelX + (float)_pixelSideLength;
             float pixelBottom = pixelY + (float)_pixelSideLength;
-            double opacity = CalculateOpacity(pixel);
+            double pixelOpacity = CalculateOpacity(pixel) * opacity;
 
-            paint.Color = pixel.Color.WithAlpha(ToAlpha(opacity));
+            paint.Color = pixel.Color.WithAlpha(ToAlpha(pixelOpacity));
             canvas.DrawRoundRect(
                 new SKRect(pixelX, pixelY, pixelRight, pixelBottom),
                 (float)_pixelCornerRadius,

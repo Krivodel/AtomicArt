@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Interactivity;
 using Avalonia.Platform;
 using Avalonia.VisualTree;
@@ -48,6 +49,7 @@ public partial class MainWindow : SukiWindow
     public MainWindow()
     {
         InitializeComponent();
+        GenerationPanelHost.LayoutUpdated += OnGenerationPanelLayoutUpdated;
         GenerationPanelContent.AddHandler(
             PointerPressedEvent,
             OnGenerationPanelPointerPressed,
@@ -131,6 +133,7 @@ public partial class MainWindow : SukiWindow
 
     protected override void OnClosed(EventArgs eventArgs)
     {
+        GenerationPanelHost.LayoutUpdated -= OnGenerationPanelLayoutUpdated;
         Loaded -= OnLoaded;
         _generationPanelLayoutTracker?.Dispose();
         _generationPanelLayoutTracker = null;
@@ -292,6 +295,20 @@ public partial class MainWindow : SukiWindow
         }
 
         contextFlyout.ShowAt(GenerationPanelContent, true);
+    }
+
+    private void OnGenerationPanelLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (GenerationPanelHost.CacheMode is BitmapCache cache
+            && GenerationPanelHost.TransformToVisual(this) is { } transform)
+        {
+            double scale = Math.Sqrt(transform.M11 * transform.M11 + transform.M12 * transform.M12);
+
+            if (double.IsFinite(scale) && scale > 0d)
+            {
+                cache.RenderAtScale = scale;
+            }
+        }
     }
 
     private async void OnLoaded(object? sender, RoutedEventArgs eventArgs)

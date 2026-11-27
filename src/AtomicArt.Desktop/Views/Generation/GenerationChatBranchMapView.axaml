@@ -10,6 +10,7 @@
              x:Class="AtomicArt.Desktop.Views.Generation.GenerationChatBranchMapView"
              x:Name="Root"
              x:DataType="generation:GenerationChatBranchMapViewModel"
+             Classes.composing="{Binding IsComposerOpen}"
              Background="{DynamicResource SukiPopupBackground}"
              Foreground="{StaticResource MetadataTextBrush}">
     <UserControl.KeyBindings>
@@ -39,8 +40,10 @@
                                     Theme="{StaticResource GenerationChatBranchButtonTheme}"
                                     CacheMode="{Binding #Root.CardCache, Priority=Style}"
                                     DoubleTapped="OnNodeDoubleTapped"
+                                    Loaded="OnNodeLoaded"
                                     PointerEntered="OnNodePointerEntered"
                                     PointerExited="OnNodePointerExited"
+                                    Unloaded="OnNodeUnloaded"
                                     Command="{Binding #Root.DataContext.SelectCommand}"
                                     CommandParameter="{Binding}">
                                 <Grid RowDefinitions="Auto,*">
@@ -55,6 +58,7 @@
                                                                                                Classes="generation-chat-branch-preview"
                                                                                                Loaded="OnPreviewLoaded"
                                                                                                Unloaded="OnPreviewUnloaded"
+                                                                                               OpenViewerCommand="{Binding #Root.DataContext.OpenImageCommand}"
                                                                                                PreviewPath="{Binding DisplayThumbnailPath}" />
                                                     </DataTemplate>
                                                 </ContentControl.ContentTemplate>

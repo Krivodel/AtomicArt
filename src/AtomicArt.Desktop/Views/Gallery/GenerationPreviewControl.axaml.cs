@@ -211,7 +211,7 @@ public partial class GenerationPreviewControl : UserControl
     {
         _ = sender;
 
-        if (!IsImageDraggingEnabled || DataContext is not GenerationItemViewModel item)
+        if (DataContext is not GenerationItemViewModel item)
         {
             return;
         }
@@ -236,10 +236,20 @@ public partial class GenerationPreviewControl : UserControl
             item,
             imagePath,
             previewPath);
+
+        if (!IsImageDraggingEnabled)
+        {
+            e.Handled = true;
+        }
     }
 
     private async void OnPreviewDragSourcePointerMoved(object? sender, PointerEventArgs e)
     {
+        if (!IsImageDraggingEnabled)
+        {
+            return;
+        }
+
         _ = sender;
 
         GalleryImageDragCandidate? dragCandidate = _imageDragCandidate;
@@ -279,11 +289,6 @@ public partial class GenerationPreviewControl : UserControl
     private void OnPreviewDragSourcePointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         _ = sender;
-
-        if (!IsImageDraggingEnabled)
-        {
-            return;
-        }
 
         GalleryImageDragCandidate? dragCandidate = _imageDragCandidate;
 

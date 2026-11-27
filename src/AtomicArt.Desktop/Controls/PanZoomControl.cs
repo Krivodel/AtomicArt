@@ -27,6 +27,7 @@ public sealed class PanZoomControl : Border
         AvaloniaProperty.RegisterDirect<PanZoomControl, bool>(nameof(IsInteracting), control => control.IsInteracting);
 
     public event EventHandler? CameraChanged;
+    public event EventHandler? BackgroundClicked;
 
     internal IUiFrameScheduler? FrameScheduler { get; init; }
     internal TimeProvider Clock { get; init; } = TimeProvider.System;
@@ -57,6 +58,7 @@ public sealed class PanZoomControl : Border
     private bool _motionFramePending;
     private bool _isInteracting;
     private bool _isDragging;
+    private bool _isBackgroundClick;
 
     public PanZoomControl()
     {
@@ -171,6 +173,7 @@ public sealed class PanZoomControl : Border
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
+        _isBackgroundClick = false;
         ChangeZoom(Math.Pow(ZoomStep, e.Delta.Y), e.GetPosition(this));
         e.Handled = true;
     }
@@ -271,6 +274,7 @@ public sealed class PanZoomControl : Border
         _dragStart = null;
         _dragReleaseKind = null;
         _isDragging = false;
+        _isBackgroundClick = false;
 
         if ((_targetOffset - _offset).Length > MotionStopDistance)
         {
@@ -342,6 +346,7 @@ public sealed class PanZoomControl : Border
             _targetOffset = _offset;
             _targetZoom = _zoom;
             bool onButton = e.Source is Visual source && source.GetSelfAndVisualAncestors().OfType<Button>().Any();
+            _isBackgroundClick = properties.IsLeftButtonPressed && !onButton;
             _isDragging = properties.IsMiddleButtonPressed || properties.IsRightButtonPressed || !onButton;
 
             if (_isDragging)
@@ -358,6 +363,11 @@ public sealed class PanZoomControl : Border
     {
         if (_dragStart is Point start)
         {
+            if (PointerDragThreshold.IsReached(start, e.GetPosition(this)))
+            {
+                _isBackgroundClick = false;
+            }
+
             if (!_isDragging)
             {
                 if (!PointerDragThreshold.IsReached(start, e.GetPosition(this)))
@@ -381,12 +391,19 @@ public sealed class PanZoomControl : Border
         if (_dragStart is not null && e.GetCurrentPoint(this).Properties.PointerUpdateKind == _dragReleaseKind)
         {
             bool wasDragging = _isDragging;
+            bool backgroundClick = _isBackgroundClick
+                && !PointerDragThreshold.IsReached(_dragStart.Value, e.GetPosition(this));
             EndDrag();
 
             if (wasDragging)
             {
                 e.Pointer.Capture(null);
                 e.Handled = true;
+            }
+
+            if (backgroundClick)
+            {
+                BackgroundClicked?.Invoke(this, EventArgs.Empty);
             }
         }
     }
