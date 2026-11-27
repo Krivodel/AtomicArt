@@ -2,6 +2,15 @@
   "schemaVersion": 1,
   "culture": "en-US",
   "strings": {
+    "Notifications": {
+      "Label": "Notifications",
+      "UploadSound": "Upload sound",
+      "ResetSound": "Reset sound",
+      "SoundPickerTitle": "Choose a notification sound",
+      "InvalidSound": "Choose a WAV or MP3 file up to 30 seconds and 16 MB.",
+      "Completed": "Generation completed",
+      "Close": "Close notification"
+    },
     "GenerationChat": {
       "Chat": "Chat",
       "History": "Chat history",

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using AtomicArt.Desktop.Resources;
 using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Localization;
+using AtomicArt.Desktop.Services.Notifications;
 using AtomicArt.Desktop.Services.Paths;
 
 namespace AtomicArt.Desktop.Services;
@@ -57,6 +58,7 @@ public sealed class ViewModelErrorHandler : IViewModelErrorHandler
 
         return exception switch
         {
+            NotificationSoundException => NotificationLocalizationKeys.InvalidSound,
             DataRootMigrationCleanupException =>
                 SettingsLocalizationKeys.DataRoot.CleanupFailed,
             DataRootMigrationException =>

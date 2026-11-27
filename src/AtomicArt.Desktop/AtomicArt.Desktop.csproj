@@ -30,6 +30,7 @@
     <AvaloniaResource Include="Assets\AppIcon.ico" />
     <AvaloniaResource Include="Assets\AspectRatioHint.png" />
     <AvaloniaResource Include="Assets\DropIcon.png" />
+    <AvaloniaResource Include="Assets\Notification.mp3" />
   </ItemGroup>
 
   <ItemGroup>
@@ -50,6 +51,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Pica.Viewer" />
+    <PackageReference Include="NAudio" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SukiUI" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />

@@ -20,6 +20,7 @@ using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Services.Generation.LocalCodex;
 using AtomicArt.Desktop.Services.Generation.State;
 using AtomicArt.Desktop.Services.Localization;
+using AtomicArt.Desktop.Services.Notifications;
 using AtomicArt.Desktop.Services.Logging;
 using AtomicArt.Desktop.Services.OpenRouter;
 using AtomicArt.Desktop.Services.Paths;
@@ -40,6 +41,7 @@ using AtomicArt.Desktop.Views;
 using AtomicArt.Desktop.Views.Dialogs;
 using AtomicArt.Desktop.Views.Dlss5;
 using AtomicArt.Desktop.Views.Gallery;
+using AtomicArt.Desktop.Views.Notifications;
 using AtomicArt.Desktop.Views.Generation;
 using AtomicArt.Desktop.Views.Settings;
 using AtomicArt.Desktop.Views.Shell;
@@ -150,6 +152,7 @@ public static class DependencyInjection
         services.AddViewTemplate<SecretSettingViewModel, SecretSettingView>();
         services.AddViewTemplate<NumericSettingViewModel, NumericSettingView>();
         services.AddViewTemplate<ImageViewerWindowLimitSettingViewModel, ImageViewerWindowLimitSettingView>();
+        services.AddViewTemplate<GenerationNotificationsSettingViewModel, GenerationNotificationsSettingView>();
         services.AddViewTemplate<BooleanSettingViewModel, BooleanSettingView>();
         services.AddViewTemplate<
             GenerationModelVisibilitySettingViewModel,
@@ -248,6 +251,12 @@ public static class DependencyInjection
         services.AddSingleton<IPromptTextSizeService, PromptTextSizeService>();
         services.AddSingleton<IPromptTextSizeController, PromptTextSizeController>();
         services.AddSingleton<IDeletionConfirmationService, DeletionConfirmationService>();
+        services.AddSingleton<GenerationNotificationSettings>();
+        services.AddSingleton<IApplicationFocusService, ApplicationFocusService>();
+        services.AddSingleton<GenerationNotificationService>();
+        services.AddSingleton<IGenerationNotificationPresenter, GenerationNotificationPresenter>();
+        services.AddSingleton<INotificationSoundStore, NotificationSoundStore>();
+        services.AddSingleton<INotificationSoundPlayer, NotificationSoundPlayer>();
         services.AddSettingsDefinitionsByConvention();
         services.AddSettingsItemViewModelFactoriesByConvention();
         services.AddSingleton<ISettingsDefinitionCatalog, SettingsDefinitionCatalog>();
@@ -276,6 +285,7 @@ public static class DependencyInjection
         services.AddSharedSingletonAliases<FilePickerService>(
             typeof(IFilePickerService),
             typeof(IFolderPickerService),
+            typeof(ISoundFilePickerService),
             typeof(IFilePickerAttachmentService));
         services.AddHttpClient<ExternalImageAttachmentReader>((serviceProvider, httpClient) =>
         {

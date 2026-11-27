@@ -13,9 +13,9 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
         _lifecycleEventHub = lifecycleEventHub;
     }
 
-    public void PublishStartRequested(Guid correlationId)
+    public void PublishStartRequested(Guid correlationId, GenerationStartSnapshot? startSnapshot = null)
     {
-        PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.StartRequested, null, null, null);
+        PublishLifecycleEvent(correlationId, GenerationLifecycleStatus.StartRequested, startSnapshot, null, null);
     }
 
     public void PublishStarted(Guid correlationId, GenerationStartSnapshot startSnapshot)
@@ -46,10 +46,13 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
     {
         if (runState.IsStarted)
         {
-            PublishGenerationFailure(
+            PublishLifecycleEvent(
                 correlationId,
-                runState,
-                GenerationClientFailureCodes.Unknown);
+                GenerationLifecycleStatus.Failed,
+                null,
+                null,
+                GenerationClientFailureCodes.Unknown,
+                isCanceled: true);
         }
     }
 
@@ -80,7 +83,8 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
         GenerationBatchDto? batch,
         string? failureCode,
         GenerationChatResult? chatResult = null,
-        GenerationChatRun? chatRun = null)
+        GenerationChatRun? chatRun = null,
+        bool isCanceled = false)
     {
         GenerationLifecycleEvent lifecycleEvent = new(
             correlationId,
@@ -90,7 +94,8 @@ public sealed class NanoBanana2GenerationLifecyclePublisher : IGenerationModelSe
             failureCode)
         {
             ChatResult = chatResult,
-            ChatRun = chatRun
+            ChatRun = chatRun,
+            IsCanceled = isCanceled
         };
 
         _lifecycleEventHub.Publish(lifecycleEvent);

@@ -11,6 +11,7 @@ public sealed record GenerationLifecycleEvent
     public GenerationBatchDto? Batch { get; }
     public string? FailureCode { get; }
     public GenerationChatResult? ChatResult { get; init; }
+    public bool IsCanceled { get; init; }
 
     internal GenerationChatRun? ChatRun { get; init; }
 

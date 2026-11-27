@@ -85,6 +85,7 @@
     <Thickness x:Key="MetadataReferencesScrollInsets">20,0</Thickness>
     <Thickness x:Key="SettingsContentPadding">26,16,26,22</Thickness>
     <Thickness x:Key="SettingsEditorMargin">0,8,0,0</Thickness>
+    <x:Double x:Key="SettingsInlineControlSpacing">8</x:Double>
     <Thickness x:Key="InputOuterInset">5</Thickness>
     <Thickness x:Key="SettingsActionButtonMargin">12,0,0,0</Thickness>
     <Thickness x:Key="SettingsDescriptionMargin">0,8,0,0</Thickness>

@@ -11,6 +11,7 @@ namespace AtomicArt.Desktop.Services;
 public sealed class FilePickerService :
     IFilePickerService,
     IFolderPickerService,
+    ISoundFilePickerService,
     IFilePickerAttachmentService
 {
     private readonly AttachedImageFileReader _fileReader;
@@ -107,5 +108,27 @@ public sealed class FilePickerService :
             !string.IsNullOrWhiteSpace(selectedPath));
 
         return selectedPath;
+    }
+
+    public async Task<string?> PickSoundAsync(CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if (_storageProvider is not { CanOpen: true })
+        {
+            return null;
+        }
+
+        FilePickerOpenOptions options = new()
+        {
+            Title = _textProvider.Get(NotificationLocalizationKeys.SoundPickerTitle),
+            AllowMultiple = false,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("WAV / MP3") { Patterns = new[] { "*.wav", "*.mp3" } }
+            }
+        };
+        IReadOnlyList<IStorageFile> files = await _storageProvider.OpenFilePickerAsync(options).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        return files.FirstOrDefault()?.TryGetLocalPath();
     }
 }

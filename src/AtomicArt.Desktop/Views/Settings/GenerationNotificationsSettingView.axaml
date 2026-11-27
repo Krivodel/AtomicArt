@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="https://codewf.com"
+             xmlns:controls="using:AtomicArt.Desktop.Controls.Settings"
+             xmlns:resources="using:AtomicArt.Desktop.Resources"
+             xmlns:settings="using:AtomicArt.Desktop.ViewModels.Settings"
+             x:Class="AtomicArt.Desktop.Views.Settings.GenerationNotificationsSettingView"
+             x:DataType="settings:GenerationNotificationsSettingViewModel">
+    <controls:SettingItemControl>
+        <controls:SettingItemControl.Header>
+            <Grid ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="{StaticResource SettingsInlineControlSpacing}">
+                <Button VerticalAlignment="Center"
+                        Theme="{StaticResource SettingsLabelButtonTheme}"
+                        Command="{Binding ToggleCommand}">
+                    <TextBlock Classes="settings-label"
+                               TextWrapping="Wrap"
+                               Text="{Binding DisplayName}" />
+                </Button>
+                <StackPanel Grid.Column="1"
+                            HorizontalAlignment="Right"
+                            Orientation="Horizontal"
+                            Spacing="{StaticResource SettingsInlineControlSpacing}">
+                    <Button Classes="settings-action"
+                            Content="{Binding SoundButtonText}"
+                            Command="{Binding UploadSoundCommand}" />
+                    <Button Width="{StaticResource TitleButtonSize}"
+                            Height="{StaticResource TitleButtonSize}"
+                            Padding="{StaticResource ZeroThickness}"
+                            Classes="Icon"
+                            IsVisible="{Binding HasCustomSound}"
+                            AutomationProperties.Name="{i18n:I18n {x:Static resources:NotificationLocalizationKeys.ResetSound}}"
+                            Command="{Binding ResetSoundCommand}">
+                        <PathIcon Data="{StaticResource AppCloseIcon}" />
+                    </Button>
+                </StackPanel>
+                <CheckBox Grid.Column="2"
+                          VerticalAlignment="Center"
+                          Classes="settings-switch"
+                          IsEnabled="{Binding !IsLoading}"
+                          AutomationProperties.Name="{Binding DisplayName}"
+                          IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+            </Grid>
+        </controls:SettingItemControl.Header>
+    </controls:SettingItemControl>
+</UserControl>

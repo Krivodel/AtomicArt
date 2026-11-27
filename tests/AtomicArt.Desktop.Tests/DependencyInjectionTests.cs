@@ -307,6 +307,7 @@ public sealed class DependencyInjectionTests
                 typeof(SecretSettingViewModel),
                 typeof(NumericSettingViewModel),
                 typeof(ImageViewerWindowLimitSettingViewModel),
+                typeof(GenerationNotificationsSettingViewModel),
                 typeof(BooleanSettingViewModel),
                 typeof(GenerationModelVisibilitySettingViewModel),
                 typeof(LocalCodexSettingViewModel),

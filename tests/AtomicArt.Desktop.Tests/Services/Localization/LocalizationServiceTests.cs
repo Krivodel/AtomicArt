@@ -433,6 +433,7 @@ public sealed class LocalizationServiceTests : IDisposable
         Type[] keyOwners =
             [
                 typeof(CommonLocalizationKeys),
+                typeof(NotificationLocalizationKeys),
                 typeof(ShellLocalizationKeys),
                 typeof(GenerationUiLocalizationKeys),
                 typeof(GenerationChatLocalizationKeys),

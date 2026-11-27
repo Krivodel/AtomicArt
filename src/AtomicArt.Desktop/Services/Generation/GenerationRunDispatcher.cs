@@ -104,7 +104,7 @@ public sealed class GenerationRunDispatcher : IGenerationRunDispatcher, IGenerat
                 correlationId,
                 generationRequest.GenerationCount,
                 generationRequest.AttachedImages.Count);
-            _lifecyclePublisher.PublishStartRequested(correlationId);
+            _lifecyclePublisher.PublishStartRequested(correlationId, start);
             _lifecyclePublisher.PublishStarted(correlationId, start);
             runState.MarkStarted();
 

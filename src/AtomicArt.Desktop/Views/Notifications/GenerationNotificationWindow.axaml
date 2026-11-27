@@ -1,0 +1,61 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i18n="https://codewf.com"
+        xmlns:resources="using:AtomicArt.Desktop.Resources"
+        xmlns:notifications="using:AtomicArt.Desktop.ViewModels.Notifications"
+        x:Class="AtomicArt.Desktop.Views.Notifications.GenerationNotificationWindow"
+        x:DataType="notifications:GenerationNotificationViewModel"
+        Width="360"
+        CanResize="False"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Background="Transparent"
+        Focusable="False"
+        Foreground="{DynamicResource SukiText}"
+        Topmost="True"
+        TransparencyLevelHint="Transparent"
+        WindowDecorations="None">
+    <Border x:Name="NotificationCard"
+            Margin="8,8,8,48"
+            Padding="12"
+            VerticalAlignment="Top"
+            Background="{DynamicResource SukiPopupBackground}"
+            BoxShadow="{DynamicResource SukiSmallPopupShadow}"
+            CornerRadius="{StaticResource OverlayCornerRadius}">
+        <Grid RowDefinitions="32,Auto,Auto">
+            <Grid ColumnDefinitions="24,*,32">
+                <Image Width="20"
+                       Height="20"
+                       Source="avares://AtomicArt/Assets/AppIcon.ico" />
+                <TextBlock Grid.Column="1"
+                           Margin="8,0,0,0"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Text="{x:Static resources:ProductInformation.Name}" />
+                <Button Grid.Column="2"
+                        Width="{StaticResource TitleButtonSize}"
+                        Height="{StaticResource TitleButtonSize}"
+                        Padding="{StaticResource ZeroThickness}"
+                        Classes="Icon"
+                        AutomationProperties.Name="{i18n:I18n {x:Static resources:NotificationLocalizationKeys.Close}}"
+                        Focusable="False"
+                        Command="{Binding CloseCommand}">
+                    <PathIcon Data="{StaticResource AppCloseIcon}" />
+                </Button>
+            </Grid>
+            <TextBlock Grid.Row="1"
+                       Margin="0,4,0,0"
+                       Classes.danger-text="{Binding IsError}"
+                       MaxLines="2"
+                       TextTrimming="CharacterEllipsis"
+                       TextWrapping="Wrap"
+                       Text="{Binding Status}" />
+            <TextBlock Grid.Row="2"
+                       Margin="0,6,0,0"
+                       MaxLines="2"
+                       TextTrimming="CharacterEllipsis"
+                       TextWrapping="Wrap"
+                       Text="{Binding Prompt}" />
+        </Grid>
+    </Border>
+</Window>

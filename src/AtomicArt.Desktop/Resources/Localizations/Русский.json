@@ -2,6 +2,15 @@
   "schemaVersion": 1,
   "culture": "ru-RU",
   "strings": {
+    "Notifications": {
+      "Label": "Уведомления",
+      "UploadSound": "Загрузить звук",
+      "ResetSound": "Сбросить звук",
+      "SoundPickerTitle": "Выбери звук уведомления",
+      "InvalidSound": "Выбери WAV или MP3 длительностью до 30 секунд и размером до 16 МБ.",
+      "Completed": "Генерация завершена",
+      "Close": "Закрыть уведомление"
+    },
     "GenerationChat": {
       "Chat": "Чат",
       "History": "История",

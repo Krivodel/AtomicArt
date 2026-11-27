@@ -31,6 +31,7 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" />
     <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="NAudio" Version="2.2.1" />
     <PackageVersion Include="Ookii.Dialogs.WinForms" Version="4.0.0" />
     <PackageVersion Include="Pica.Viewer" Version="1.4.1-preview.1" />
     <PackageVersion Include="SkiaSharp" Version="3.119.4" />

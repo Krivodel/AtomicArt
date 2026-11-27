@@ -6,7 +6,7 @@ using AtomicArt.Desktop.Services.Settings;
 
 namespace AtomicArt.Desktop.ViewModels.Settings;
 
-public sealed partial class BooleanSettingViewModel : SettingItemViewModel, IDisposable
+public partial class BooleanSettingViewModel : SettingItemViewModel, IDisposable
 {
     public bool IsChecked
     {
@@ -55,6 +55,12 @@ public sealed partial class BooleanSettingViewModel : SettingItemViewModel, IDis
         _valueSource.ValueChanged -= OnValueChanged;
     }
 
+    protected override void NotifyOperationCanExecuteChanged()
+    {
+        base.NotifyOperationCanExecuteChanged();
+        ToggleCommand.NotifyCanExecuteChanged();
+    }
+
     [RelayCommand(CanExecute = nameof(CanApply))]
     private async Task ApplyAsync(CancellationToken ct)
     {
@@ -72,6 +78,12 @@ public sealed partial class BooleanSettingViewModel : SettingItemViewModel, IDis
     private bool CanApply()
     {
         return !IsLoading;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanApply))]
+    private void Toggle()
+    {
+        IsChecked = !IsChecked;
     }
 
     private void SynchronizeValue(bool value)

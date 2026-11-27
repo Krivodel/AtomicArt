@@ -201,6 +201,7 @@ public class App : Avalonia.Application
 
         windowAttachmentService.Attach(mainWindow);
         trayAttachmentService.Attach(desktopLifetime);
+        GetRequiredService<Services.Notifications.GenerationNotificationService>();
         filePickerAttachmentService.Attach(mainWindow.StorageProvider);
         GetRequiredService<IPicaImageFileActions>().Attach(mainWindow.StorageProvider);
         virtualFileDropAttachmentService.Attach(mainWindow);
