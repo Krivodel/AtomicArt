@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using AtomicArt.Desktop.Helpers;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.ViewModels.Gallery;
 
 namespace AtomicArt.Desktop.ViewModels.Generation;
@@ -17,6 +18,8 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
     private readonly IAsyncRelayCommand<GenerationItemViewModel?> _openChat;
     private readonly HashSet<GenerationItemViewModel> _observedCards = [];
     private readonly ObservableCollection<GenerationChatBranchNodeViewModel> _nodes = [];
+    private readonly Dictionary<Guid, GenerationChatHistory> _histories = [];
+    private Dictionary<Guid, Guid[]> _routes = [];
     [ObservableProperty]
     private GenerationChatBranchNodeViewModel? _selectedNode;
     [ObservableProperty]
@@ -48,6 +51,7 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
         _currentId = currentId;
         _anchorCard = cards.FirstOrDefault(card => card.Id == anchorId);
         _currentCard = cards.FirstOrDefault(card => card.Id == currentId);
+        _histories.Clear();
         SelectedNode = null;
         Refresh(cards);
         IsOpen = Nodes.Count > 0;
@@ -61,11 +65,7 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
         _cards = cards;
         _anchorId = _anchorCard?.Id ?? _anchorId;
         _currentId = _currentCard?.Id ?? _currentId;
-        Guid selectedId = SelectedNode?.Card?.Id ?? SelectedNode?.Id ?? _anchorId;
-        UpdateNodes(BuildNodes(cards, _anchorId, _currentId));
-        SelectedNode = Nodes.FirstOrDefault(node => node.Id == selectedId)
-            ?? Nodes.FirstOrDefault(node => node.Id == _anchorId)
-            ?? Nodes.FirstOrDefault(node => !node.IsDeleted);
+        RebuildNodes();
 
         if (Nodes.All(node => node.IsDeleted))
         {
@@ -101,12 +101,15 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
         IsOpen = false;
         ObserveCards();
         _cards = Array.Empty<GenerationItemViewModel>();
+        _histories.Clear();
+        _routes.Clear();
     }
 
-    private static IReadOnlyList<GenerationChatBranchNodeViewModel> BuildNodes(
+    private IReadOnlyList<GenerationChatBranchNodeViewModel> BuildNodes(
         IReadOnlyList<GenerationItemViewModel> cards, Guid anchorId, Guid? currentId)
     {
         Dictionary<Guid, GenerationItemViewModel> byId = cards.Where(card => card.SupportsChat).ToDictionary(card => card.Id);
+        _routes = GenerationChatBranchRoutes.Build(byId.Values.ToArray(), _histories);
         Dictionary<Guid, List<Guid>> adjacent = [];
         Dictionary<Guid, Guid> parents = [];
 
@@ -114,11 +117,6 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
             .ThenBy(card => card.ChatGroup?.VariantOrdinal).ThenBy(card => card.Id))
         {
             adjacent.TryAdd(card.Id, new List<Guid>());
-
-            if (card.ChatGroup is null)
-            {
-                continue;
-            }
 
             Guid[] route = GetRoute(card);
 
@@ -214,6 +212,15 @@ public sealed partial class GenerationChatBranchMapViewModel : ObservableObject,
     private bool CanOpenNode(GenerationChatBranchNodeViewModel? node)
     {
         return node?.Card is { } card && Nodes.Contains(node) && _openChat.CanExecute(card);
+    }
+
+    private void RebuildNodes()
+    {
+        Guid selectedId = SelectedNode?.Card?.Id ?? SelectedNode?.Id ?? _anchorId;
+        UpdateNodes(BuildNodes(_cards, _anchorId, _currentId));
+        SelectedNode = Nodes.FirstOrDefault(node => node.Id == selectedId)
+            ?? Nodes.FirstOrDefault(node => node.Id == _anchorId)
+            ?? Nodes.FirstOrDefault(node => !node.IsDeleted);
     }
 
     private void UpdateNodes(IReadOnlyList<GenerationChatBranchNodeViewModel> desired)

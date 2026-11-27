@@ -69,9 +69,8 @@ internal sealed partial class GenerationChatSessionViewModel
             {
                 Context = context,
                 CreatedAtUtc = user.CreatedAtUtc,
-                AncestorCardIds = (source.ChatGroup is { } sourceGroup
-                    ? sourceGroup.AncestorCardIds.Append(sourceGroup.SourceCardId)
-                    : Enumerable.Empty<Guid>()).Append(source.Id).Distinct().ToArray()
+                AncestorCardIds = GenerationChatBranchRoutes.GetRoute(source, history,
+                    history.Messages.Count - GenerationChatBranchRoutes.MessagesPerTurn)
             };
         }
 

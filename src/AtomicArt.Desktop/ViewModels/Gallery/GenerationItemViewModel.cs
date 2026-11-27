@@ -378,13 +378,16 @@ public sealed partial class GenerationItemViewModel :
     {
         if (ChatHistory is { IncludesCardTurn: true } complete)
         {
-            return complete;
+            return complete.Messages.LastOrDefault() is { IsAssistant: true } last && last.SourceCardId != Id
+                ? new GenerationChatHistory(complete.Messages.SkipLast(1)
+                    .Append(last with { SourceCardId = Id }).ToArray(), includesCardTurn: true)
+                : complete;
         }
 
         GenerationChatMessage prompt = new(false, Prompt, CreatedAtUtc, References ?? Array.Empty<GenerationReference>());
         GenerationChatMessage reply = new(true, ChatResult?.Text ?? string.Empty,
             CompletedAtUtc ?? CreatedAtUtc, image is null ? Array.Empty<GenerationReference>() : new GenerationReference[] { image },
-            IsFailed, ChatResult?.ImageGeneration);
+            IsFailed, ChatResult?.ImageGeneration) { SourceCardId = Id };
 
         return new GenerationChatHistory((ChatHistory?.Messages ?? Array.Empty<GenerationChatMessage>())
             .Concat(new GenerationChatMessage[] { prompt, reply }).ToArray(), includesCardTurn: true);

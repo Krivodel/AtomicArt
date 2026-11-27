@@ -5,8 +5,6 @@ namespace AtomicArt.Desktop.ViewModels.Generation;
 
 public sealed partial class GenerationChatBranchMapViewModel
 {
-    private const int MessagesPerTurn = 2;
-
     private CancellationTokenSource? _historyLoad;
 
     internal async Task RestoreDeletedPreviewsAsync(
@@ -20,45 +18,27 @@ public sealed partial class GenerationChatBranchMapViewModel
 
         try
         {
-            Dictionary<Guid, GenerationChatBranchNodeViewModel> deleted = Nodes.Where(node => node.IsDeleted)
-                .ToDictionary(node => node.Id);
-            Dictionary<Guid, GenerationChatHistory> histories = [];
+            HashSet<Guid> restored = [];
             Dictionary<string, string?> paths = new(StringComparer.Ordinal);
-            GenerationItemViewModel[] cards = Nodes.Select(node => node.Card).OfType<GenerationItemViewModel>()
+            List<GenerationItemViewModel> cards = Nodes.Select(node => node.Card).OfType<GenerationItemViewModel>()
                 .OrderByDescending(card => object.ReferenceEquals(card, _currentCard))
-                .ThenByDescending(card => object.ReferenceEquals(card, _anchorCard)).ToArray();
+                .ThenByDescending(card => object.ReferenceEquals(card, _anchorCard)).ToList();
+            HashSet<GenerationItemViewModel> queued = cards.ToHashSet();
 
-            foreach (GenerationItemViewModel card in cards)
+            for (int cardIndex = 0; cardIndex < cards.Count; cardIndex++)
             {
                 load.Token.ThrowIfCancellationRequested();
-
-                if (deleted.Count == 0)
-                {
-                    break;
-                }
-
-                Guid[] route = GetRoute(card);
-                int ancestors = route.Length - 1;
-
-                if (!route.Take(ancestors).Any(deleted.ContainsKey))
-                {
-                    continue;
-                }
-
+                GenerationItemViewModel card = cards[cardIndex];
                 GenerationChatHistory? history = card.ChatHistory;
 
                 if (history is null && card.ChatId is Guid chatId)
                 {
-                    history = await ReadHistoryAsync(chatId, histories, chats, load.Token);
+                    history = await ReadHistoryAsync(chatId, _histories, chats, load.Token);
                 }
-
-                int end = history is { IncludesCardTurn: true }
-                    ? history.Messages.Count - MessagesPerTurn : history?.Messages.Count ?? 0;
 
                 if (history is null && card.ChatGroup is { } group)
                 {
-                    history = group.Context ?? await ReadHistoryAsync(group.ContextId, histories, chats, load.Token);
-                    end = history.Messages.Count - 1;
+                    history = group.Context ?? await ReadHistoryAsync(group.ContextId, _histories, chats, load.Token);
                 }
 
                 if (history is null)
@@ -67,14 +47,19 @@ public sealed partial class GenerationChatBranchMapViewModel
                 }
 
                 load.Token.ThrowIfCancellationRequested();
+                RebuildNodes();
+                ObserveCards();
+                Dictionary<Guid, GenerationChatBranchNodeViewModel> deleted = Nodes.Where(node => node.IsDeleted && !restored.Contains(node.Id))
+                    .ToDictionary(node => node.Id);
+                Guid[] route = GetRoute(card);
+                int ancestors = route.Length - 1;
+                int end = GenerationChatBranchRoutes.GetContext(card, _histories).End;
+                Dictionary<Guid, int> indexes = GenerationChatBranchRoutes.GetMessageIndexes(card, history, end);
 
                 for (int index = 0; index < ancestors; index++)
                 {
-                    int messageIndex = end - ((ancestors - index) * MessagesPerTurn);
-
                     if (!deleted.TryGetValue(route[index], out GenerationChatBranchNodeViewModel? node)
-                        || messageIndex < 0 || messageIndex + 1 >= history.Messages.Count
-                        || history.Messages[messageIndex].IsAssistant || !history.Messages[messageIndex + 1].IsAssistant)
+                        || !indexes.TryGetValue(route[index], out int messageIndex))
                     {
                         continue;
                     }
@@ -101,6 +86,20 @@ public sealed partial class GenerationChatBranchMapViewModel
                     }
 
                     deleted.Remove(node.Id);
+                    restored.Add(node.Id);
+                }
+
+                if (deleted.Count == 0)
+                {
+                    break;
+                }
+
+                foreach (GenerationItemViewModel related in Nodes.Select(node => node.Card).OfType<GenerationItemViewModel>())
+                {
+                    if (queued.Add(related))
+                    {
+                        cards.Add(related);
+                    }
                 }
             }
         }
@@ -116,23 +115,21 @@ public sealed partial class GenerationChatBranchMapViewModel
         }
     }
 
-    private static Guid[] GetRoute(GenerationItemViewModel card)
-    {
-        return (card.ChatGroup is { } group
-            ? group.AncestorCardIds.Append(group.SourceCardId)
-            : Enumerable.Empty<Guid>()).Where(id => id != card.Id && id != Guid.Empty)
-            .Distinct().Append(card.Id).ToArray();
-    }
-
     private static async Task<GenerationChatHistory> ReadHistoryAsync(
         Guid id, Dictionary<Guid, GenerationChatHistory> histories, IGenerationChatStore chats, CancellationToken ct)
     {
         if (!histories.TryGetValue(id, out GenerationChatHistory? history))
         {
             history = await chats.LoadAsync(id, ct);
+            ct.ThrowIfCancellationRequested();
             histories.Add(id, history);
         }
 
         return history;
+    }
+
+    private Guid[] GetRoute(GenerationItemViewModel card)
+    {
+        return _routes.GetValueOrDefault(card.Id) ?? GenerationChatBranchRoutes.GetDeclaredRoute(card);
     }
 }

@@ -402,7 +402,8 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
             return;
         }
 
-        reply.CompleteImage(run.Id, result);
+        GenerationItemViewModel? completed = _gallery?.Items.FirstOrDefault(card => card.Id == run.Id || card.CorrelationId == run.Id);
+        reply.CompleteImage(run.Id, result, completed?.Id);
         user.IsTurnPending = reply.HasPendingResults;
         RefreshVariantChoices();
     }
@@ -439,7 +440,7 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
         item.PropertyChanged -= OnSourceChanged;
         _pendingSourceImage = null;
-        _messages[_sourceMessageCount - 1].CompleteImage(id, item.ChatResult);
+        _messages[_sourceMessageCount - 1].CompleteImage(id, item.ChatResult, item.Id);
 
         foreach (GenerationChatMessageViewModel message in _messages.Take(_sourceMessageCount))
         {
@@ -459,14 +460,9 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
         GenerationChatHistory? history = item.ChatHistory;
 
-        if (history is { IncludesCardTurn: true })
-        {
-            return history;
-        }
-
         GenerationReference? image = item.ChatResult?.Image;
 
-        if (image is not null || item.ImagePath is not { Length: > 0 } path)
+        if (history is { IncludesCardTurn: true } || image is not null || item.ImagePath is not { Length: > 0 } path)
         {
             return item.BuildChatHistory(image);
         }
@@ -549,12 +545,14 @@ internal sealed partial class GenerationChatSessionViewModel : AsyncOperationVie
 
             GenerationChatHistory current = item.BuildChatHistory(item.ChatResult?.Image);
             GenerationChatMessage[] messages = current.Messages.ToArray();
-            messages[snapshot.IsAssistant ? ^1 : ^2] = snapshot.IsAssistant && batch.Generation.Runs.Count > 1
+            messages[snapshot.IsAssistant ? ^1 : ^2] = snapshot.IsAssistant
                 ? snapshot with
                 {
-                    ImageGeneration = item.ChatResult?.ImageGeneration,
-                    Images = snapshot.Images.Where(image => image == item.ChatResult?.Image
-                    || !variants.Contains(image)).ToArray()
+                    SourceCardId = item.Id,
+                    ImageGeneration = batch.Generation.Runs.Count > 1 ? item.ChatResult?.ImageGeneration : snapshot.ImageGeneration,
+                    Images = batch.Generation.Runs.Count > 1
+                        ? snapshot.Images.Where(image => image == item.ChatResult?.Image || !variants.Contains(image)).ToArray()
+                        : snapshot.Images
                 }
                 : snapshot;
             updates.Add((item, new GenerationChatHistory(messages, includesCardTurn: true)));

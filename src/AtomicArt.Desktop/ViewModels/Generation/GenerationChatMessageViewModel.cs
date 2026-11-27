@@ -65,7 +65,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
     private readonly ObservableCollection<GenerationChatImageViewModel> _images = [];
     private readonly List<GenerationChatImageViewModel> _originalImages = [];
     private readonly Dictionary<AttachedImageViewModel, GenerationChatImageViewModel> _referenceSlots = [];
-    private GenerationChatImageCall? _imageGeneration;
+    private GenerationChatMessage _message;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsText))]
     [NotifyPropertyChangedFor(nameof(DisplayText))]
@@ -115,7 +115,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
         IsAssistant = message.IsAssistant;
         CreatedAtUtc = message.CreatedAtUtc;
         _text = message.Text;
-        _imageGeneration = message.ImageGeneration;
+        _message = message;
         _media = media ?? throw new ArgumentNullException(nameof(media));
         _references = references ?? throw new ArgumentNullException(nameof(references));
         _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
@@ -182,11 +182,16 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
         OnPropertyChanged(nameof(HasGroups));
     }
 
-    internal void CompleteImage(Guid id, GenerationChatResult? result)
+    internal void CompleteImage(Guid id, GenerationChatResult? result, Guid? sourceCardId = null)
     {
         GenerationChatImageViewModel slot = _images.Single(image => image.Id == id);
         bool hadSuccessfulImage = _images.Any(image => image.Reference is not null);
         slot.Complete(result?.Image, result is { IsTextReply: true } ? result.Text : null);
+
+        if (!IsVariantChoice && sourceCardId is not null)
+        {
+            _message = _message with { SourceCardId = sourceCardId };
+        }
 
         if (result is { IsTextReply: true })
         {
@@ -200,7 +205,7 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
             && (result.Image is not null || string.IsNullOrWhiteSpace(Text)))
         {
             Text = result.Text;
-            _imageGeneration = result.ImageGeneration;
+            _message = _message with { ImageGeneration = result.ImageGeneration };
         }
 
         RefreshImages();
@@ -249,7 +254,12 @@ public sealed partial class GenerationChatMessageViewModel : AsyncOperationViewM
         GenerationReference[] references = slots.Select(image => image.Reference).OfType<GenerationReference>().ToArray();
         bool failed = references.Length == 0 && slots.Any(image => image.IsFailed);
 
-        return new GenerationChatMessage(IsAssistant, text, CreatedAtUtc, references, failed, _imageGeneration);
+        return _message with
+        {
+            Text = text,
+            Images = references,
+            Failed = failed
+        };
     }
 
     private void AddImage(GenerationReference? reference)

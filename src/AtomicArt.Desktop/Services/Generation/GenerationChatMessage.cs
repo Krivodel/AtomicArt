@@ -8,4 +8,8 @@ public sealed record GenerationChatMessage(
     DateTime CreatedAtUtc,
     IReadOnlyList<GenerationReference> Images,
     bool Failed = false,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] GenerationChatImageCall? ImageGeneration = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] GenerationChatImageCall? ImageGeneration = null)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? SourceCardId { get; init; }
+}

@@ -21,7 +21,10 @@ public sealed class GenerationChatMessageViewModelTests
     {
         const string Original = "          First line\r\n\r\nSecond line          \n\n\n\n\n";
         GenerationChatMessage message = new(assistant, Original,
-            new DateTime(2026, 11, 24, 12, 0, 0, DateTimeKind.Utc), Array.Empty<GenerationReference>());
+            new DateTime(2026, 11, 24, 12, 0, 0, DateTimeKind.Utc), Array.Empty<GenerationReference>())
+        {
+            SourceCardId = assistant ? Guid.Parse("11111111-1111-1111-1111-111111111111") : null
+        };
         Mock<IGenerationReferenceStore> references = new();
         GenerationChatMediaService media = GenerationChatMediaServiceTestFactory.Create(
             references.Object, Mock.Of<IAtomicArtDataPathProvider>());
@@ -49,11 +52,13 @@ public sealed class GenerationChatMessageViewModelTests
 
         viewModel.DisplayText.Should().Be(Original);
         viewModel.Snapshot().Text.Should().Be(Original);
+        viewModel.Snapshot().SourceCardId.Should().Be(message.SourceCardId);
         viewModel.EditCommand.Execute(null);
         await viewModel.SaveCommand.ExecuteAsync(null);
 
         string expectedSaved = assistant ? Original : Original.Trim();
         saved?.Text.Should().Be(expectedSaved);
+        saved?.SourceCardId.Should().Be(message.SourceCardId);
         viewModel.DisplayText.Should().Be(expectedSaved);
         viewModel.Snapshot().Text.Should().Be(expectedSaved);
     }

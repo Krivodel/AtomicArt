@@ -302,6 +302,7 @@ public sealed partial class GalleryStateServiceTests
             {
                 new(false, "Parent request", CreatedAtUtc, Array.Empty<GenerationReference>()),
                 new(true, "Original", CreatedAtUtc, new GenerationReference[] { images[0] }, ImageGeneration: originalCall)
+                { SourceCardId = GeneratedItemId }
             }, includesCardTurn: true);
             GalleryItemState original = GalleryItemStateTestFactory.CreateGenerated(id: GeneratedItemId,
                 imagePath: references.ResolveExistingFilePath(images[0]), chatHistory: originalHistory,
@@ -313,6 +314,7 @@ public sealed partial class GalleryStateServiceTests
                     originalHistory.Messages[1],
                     new(false, "Branch request", CompletedAtUtc, Array.Empty<GenerationReference>()),
                     new(true, "Branch", CompletedAtUtc, new GenerationReference[] { images[1] }, ImageGeneration: branchCall)
+                    { SourceCardId = RunningItemId }
                 }, includesCardTurn: true), chatResult: new GenerationChatResult("Branch", images[1]) { ImageGeneration = branchCall });
             IAppStateStore state = GalleryStateServiceTests.CreateRealStore(paths);
             TrustedImageFileService trusted = GalleryStateServiceTests.CreateSharedImageFileService(paths);
@@ -342,6 +344,8 @@ public sealed partial class GalleryStateServiceTests
             GenerationChatHistory history = await chats.LoadAsync(branchChatId, CancellationToken.None);
             history.Messages[1].ImageGeneration.Should().Be(originalCall);
             history.Messages[3].ImageGeneration.Should().Be(branchCall);
+            history.Messages[1].SourceCardId.Should().Be(GeneratedItemId);
+            history.Messages[3].SourceCardId.Should().Be(RunningItemId);
 
             using (LocalCodexInputPreparation input = new(restarted, GenerationImageFormatRegistryTestFactory.Create(),
                 TestLocalizationTextProvider.Default))

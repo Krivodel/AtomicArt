@@ -85,6 +85,7 @@ public sealed class GenerationItemViewModelTests
         {
             new(false, "Parent request", CreatedAtUtc, Array.Empty<GenerationReference>()),
             new(true, "Parent reply", CreatedAtUtc, new GenerationReference[] { parentImage }, ImageGeneration: parentCall)
+            { SourceCardId = Guid.Parse("66666666-6666-6666-6666-666666666666") }
         });
         GenerationItemViewModel viewModel = CreateViewModel(CreatedAtUtc, GenerationItemStatus.Generating);
         viewModel.ChatHistory = parent;
@@ -100,9 +101,11 @@ public sealed class GenerationItemViewModelTests
         complete.IncludesCardTurn.Should().BeTrue();
         complete.Messages.Should().HaveCount(4);
         complete.Messages[1].ImageGeneration.Should().Be(parentCall);
+        complete.Messages[1].SourceCardId.Should().Be(parent.Messages[1].SourceCardId);
         complete.Messages[2].Text.Should().Be(item.Prompt);
         complete.Messages[3].Text.Should().Be(reply.Text);
         complete.Messages[3].ImageGeneration.Should().Be(reply.ImageGeneration);
+        complete.Messages[3].SourceCardId.Should().Be(ItemId);
         complete.Messages[3].Images.Should().Equal(textOnly ? Array.Empty<GenerationReference>() : new GenerationReference[] { image });
         complete.Id.Should().NotBe(parent.Id);
         viewModel.ChatId.Should().Be(complete.Id);
@@ -114,6 +117,26 @@ public sealed class GenerationItemViewModelTests
         viewModel.UpdateFromResult(item, textOnly ? null : "branch.png", null, reply);
 
         viewModel.ChatHistory.Should().BeSameAs(complete);
+    }
+
+    [Fact]
+    public void UpdateFromResult_WhenTheCardIdChanges_RecordsTheFinalIdWithoutDuplicatingTheTurn()
+    {
+        GenerationItemViewModel viewModel = CreateViewModel(CreatedAtUtc, GenerationItemStatus.Generating);
+        viewModel.ChatHistory = new GenerationChatHistory(new GenerationChatMessage[]
+        {
+            new(false, "Request", CreatedAtUtc, Array.Empty<GenerationReference>()),
+            new(true, "Reply", CreatedAtUtc, Array.Empty<GenerationReference>()) { SourceCardId = viewModel.Id }
+        }, includesCardTurn: true);
+        Guid resultId = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        GenerationItemDto result = GenerationItemDtoTestFactory.Create(id: resultId, createdAtUtc: CreatedAtUtc)
+            with { ModelId = LocalCodexImageModel.Id };
+
+        viewModel.UpdateFromResult(result, null, null, new GenerationChatResult("Reply", null) { IsTextReply = true });
+
+        viewModel.ChatHistory?.Messages.Should().HaveCount(2);
+        viewModel.ChatHistory?.Messages[^1].SourceCardId.Should().Be(resultId);
+        viewModel.ChatHistory?.Messages[^1].Text.Should().Be("Reply");
     }
 
     [Fact]

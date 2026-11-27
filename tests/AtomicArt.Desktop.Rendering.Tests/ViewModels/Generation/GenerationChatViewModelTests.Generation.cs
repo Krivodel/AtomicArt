@@ -43,6 +43,10 @@ public sealed partial class GenerationChatViewModelTests
         context.Chat.BranchMap.CloseCommand.Execute(null);
         GenerationChatBatch next = await SubmitParallelAsync(context.Chat);
         next.History.Messages[^1].Text.Should().Be(reply.Text);
+        next.History.Messages[^1].SourceCardId.Should().Be(selected.Id);
+        next.History.Messages.Where(message => message.IsAssistant).Select(message => message.SourceCardId)
+            .Should().Equal(source.Id, selected.Id);
+        next.Group?.AncestorCardIds.Should().Equal(source.Id, selected.Id);
         next.History.Messages[^1].Images.Should().BeEmpty();
         next.History.Messages.Should().ContainSingle(message => message.ImageGeneration == call);
 
