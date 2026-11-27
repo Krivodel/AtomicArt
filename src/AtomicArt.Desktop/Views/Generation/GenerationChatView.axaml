@@ -21,22 +21,27 @@
                         Classes="generation-chat-header"
                         ZIndex="1">
                     <Grid ColumnDefinitions="*,Auto">
-                        <Button Grid.Column="0"
-                                MinHeight="{StaticResource TitleButtonSize}"
+                        <Border Grid.Column="0"
                                 Margin="{StaticResource GenerationChatHeaderPadding}"
-                                Padding="{StaticResource GenerationChatReturnPadding}"
                                 HorizontalAlignment="Left"
                                 IsVisible="{Binding CanReturnToSource}"
-                                Command="{Binding ReturnToSourceCommand}">
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="{StaticResource GenerationChatItemSpacing}">
-                                <Path VerticalAlignment="Center"
-                                      Classes="metadata-outline-icon"
-                                      Data="{StaticResource AppBackIcon}" />
-                                <TextBlock VerticalAlignment="Center"
-                                           Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ReturnToSource}}" />
-                            </StackPanel>
-                        </Button>
+                                Background="{DynamicResource SukiPopupBackground}"
+                                CornerRadius="{Binding #ReturnToSourceButton.CornerRadius}">
+                            <Button x:Name="ReturnToSourceButton"
+                                    MinHeight="{StaticResource TitleButtonSize}"
+                                    Padding="{StaticResource GenerationChatReturnPadding}"
+                                    Classes="metadata-repeat"
+                                    Command="{Binding ReturnToSourceCommand}">
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="{StaticResource GenerationChatItemSpacing}">
+                                    <Path VerticalAlignment="Center"
+                                          Classes="metadata-outline-icon"
+                                          Data="{StaticResource AppBackIcon}" />
+                                    <TextBlock VerticalAlignment="Center"
+                                               Text="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.ReturnToSource}}" />
+                                </StackPanel>
+                            </Button>
+                        </Border>
                         <Border Grid.Column="1"
                                 Padding="{StaticResource GenerationChatHeaderPadding}"
                                 Background="Transparent">

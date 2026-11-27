@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using FluentAssertions;
@@ -13,6 +14,7 @@ using Xunit;
 using AtomicArt.Desktop.Controls;
 using AtomicArt.Desktop.Controls.Generation;
 using AtomicArt.Desktop.Services.Gallery.Thumbnails;
+using AtomicArt.Desktop.Services.Generation;
 using AtomicArt.Desktop.Tests;
 using AtomicArt.Desktop.Tests.Common;
 using AtomicArt.Desktop.Tests.Services;
@@ -360,13 +362,20 @@ public sealed partial class GenerationChatViewModelTests
     }
 
     [Fact]
-    public async Task ReturnToSourceButton_WithText_KeepsItsWholeLineInsideTheContentArea()
+    public async Task ReturnToSourceButton_OverMessages_KeepsItsLabelVisibleAndBackgroundOpaque()
     {
         await DesktopControlTestBase.DispatchAsync(typeof(GenerationChatViewModelTests), async () =>
         {
             using ChatContext context = new();
-            await context.Chat.OpenCommand.ExecuteAsync(await context.RestoreSourceAsync());
-            AtomicArt.Desktop.Services.Generation.GenerationChatBatch batch = await GenerationChatViewModelTests.SubmitParallelAsync(context.Chat);
+            DateTime timestamp = new(2026, 11, 27, 12, 0, 0, DateTimeKind.Utc);
+            GenerationChatMessage[] messages = Enumerable.Range(0, 20).SelectMany(index => new GenerationChatMessage[]
+            {
+                new(false, $"User request {index}", timestamp, Array.Empty<GenerationReference>()),
+                new(true, $"Assistant response {index}", timestamp, Array.Empty<GenerationReference>())
+            }).ToArray();
+            await context.Chat.OpenCommand.ExecuteAsync(await context.RestoreSavedChatAsync(
+                new GenerationChatHistory(messages, includesCardTurn: true)));
+            GenerationChatBatch batch = await GenerationChatViewModelTests.SubmitParallelAsync(context.Chat);
             GenerationChatView view = new() { DataContext = context.Chat };
             Window window = DesktopControlTestBase.Show(view, 640d, 500d);
 
@@ -375,17 +384,60 @@ public sealed partial class GenerationChatViewModelTests
                 await GenerationChatViewModelTests.WaitForFramesAsync(window, () => view.IsPresented);
                 Button button = view.GetVisualDescendants().OfType<Button>()
                     .Single(control => ReferenceEquals(control.Command, context.Chat.ReturnToSourceCommand));
+                button.Background.Should().BeSameAs(view.FindResource("MetadataRepeatBrush"));
+                button.Foreground.Should().BeSameAs(view.FindResource("MetadataRepeatTextBrush"));
                 TextBlock label = button.GetVisualDescendants().OfType<TextBlock>().Single();
                 label.TextLayout.Height.Should().BeLessThanOrEqualTo(label.Bounds.Height + 0.01d);
                 Point bottom = label.TranslatePoint(new Point(0d, label.TextLayout.Height), button)
                     ?? throw new InvalidOperationException("The return button label has no position.");
                 bottom.Y.Should().BeLessThanOrEqualTo(button.Bounds.Height - button.Padding.Bottom);
+                ScrollViewer scroll = view.GetVisualDescendants().OfType<ScrollViewer>().First();
+                Border bubble = view.GetVisualDescendants().OfType<Border>()
+                    .First(border => border.Classes.Contains("generation-chat-bubble")
+                        && border.DataContext is GenerationChatMessageViewModel { IsAssistant: true });
+                Point sample = new(button.Padding.Left / 2d, button.Bounds.Height / 2d);
+                Point sampleInScroll = button.TranslatePoint(sample, scroll)
+                    ?? throw new InvalidOperationException("The button has no scroll position.");
+                Point bubbleOrigin = bubble.TranslatePoint(default, scroll)
+                    ?? throw new InvalidOperationException("The message has no scroll position.");
+                scroll.Offset = new Vector(0d, scroll.Offset.Y + bubbleOrigin.Y - sampleInScroll.Y + (bubble.Bounds.Height / 2d));
+                window.CaptureRenderedFrame()?.Dispose();
+                Point inBubble = button.TranslatePoint(sample, bubble)
+                    ?? throw new InvalidOperationException("The button and message have no shared position.");
+                new Rect(bubble.Bounds.Size).Contains(inBubble).Should().BeTrue();
+                Point pointer = button.TranslatePoint(sample, window)
+                    ?? throw new InvalidOperationException("The button has no window position.");
+                const int HoverSettlingMilliseconds = 450;
+
+                foreach (bool hovered in new bool[] { false, true })
+                {
+                    window.MouseMove(hovered ? pointer : new Point(window.Bounds.Width / 2d, window.Bounds.Height - 1d));
+                    await Task.Delay(HoverSettlingMilliseconds);
+                    button.IsPointerOver.Should().Be(hovered);
+                    button.Background.Should().BeSameAs(view.FindResource(hovered ? "MetadataRepeatHoverBrush" : "MetadataRepeatBrush"));
+                    Point pixel = button.TranslatePoint(sample, window)
+                        ?? throw new InvalidOperationException("The button sample has no window position.");
+                    bubble.Background = Brushes.LimeGreen;
+                    using SKBitmap green = CaptureRenderedBitmap(window);
+                    bubble.Background = Brushes.Blue;
+                    using SKBitmap blue = CaptureRenderedBitmap(window);
+
+                    blue.GetPixel((int)pixel.X, (int)pixel.Y).Should().Be(green.GetPixel((int)pixel.X, (int)pixel.Y),
+                        "message colors must not show through the return button");
+                }
+
+                GenerationChatViewModelTests.SaveChatFrame(window, "return-to-source-opaque.png");
+                window.MouseDown(pointer, MouseButton.Left);
+                window.MouseUp(pointer, MouseButton.Left);
+                await (context.Chat.ReturnToSourceCommand.ExecutionTask
+                    ?? throw new InvalidOperationException("The return command did not start."));
+                context.Chat.CanReturnToSource.Should().BeFalse();
             }
             finally
             {
                 window.Close();
 
-                foreach (AtomicArt.Desktop.Services.Generation.GenerationChatRun run in batch.Runs)
+                foreach (GenerationChatRun run in batch.Runs)
                 {
                     run.Complete(null);
                 }
