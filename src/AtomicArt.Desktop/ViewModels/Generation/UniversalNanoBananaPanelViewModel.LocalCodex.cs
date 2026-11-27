@@ -37,7 +37,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel
         {
             CancellationTokenSource load = CancellationTokenSource.CreateLinkedTokenSource(_disposeCancellationSource.Token);
             _codexModelLoad = load;
-            GenerateCommand.NotifyCanExecuteChanged();
+            NotifyGenerationCommandsCanExecuteChanged();
             _ = LoadCodexModelsAsync(_codexAppServer, options, load);
         }
     }
@@ -67,7 +67,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel
             if (ReferenceEquals(_codexModelLoad, load))
             {
                 _codexModelLoad = null;
-                GenerateCommand.NotifyCanExecuteChanged();
+                NotifyGenerationCommandsCanExecuteChanged();
             }
 
             load.Dispose();
@@ -161,7 +161,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel
         CancelCodexModelLoad();
         ApplyCodexSelection(Array.Empty<LocalCodexTextModel>());
         EnsureCodexModelsLoaded();
-        GenerateCommand.NotifyCanExecuteChanged();
+        NotifyGenerationCommandsCanExecuteChanged();
     }
 
     partial void OnSelectedCodexTextModelChanged(LocalCodexTextModel? value)

@@ -282,6 +282,84 @@ public sealed partial class GenerationChatViewModelTests
         }
     }
 
+    [Theory]
+    [InlineData(false, false, "Next request")]
+    [InlineData(true, false, "Next request")]
+    [InlineData(false, true, "")]
+    [InlineData(true, true, "Next request")]
+    public async Task AddVariantsCommand_WithUnselectedVariants_RepeatsTheSavedRequestAndPreservesTheDraft(
+        bool completed, bool reopened, string draft)
+    {
+        using ChatContext context = new();
+        GenerationItemViewModel source = await context.RestoreSourceAsync();
+        await context.Chat.OpenCommand.ExecuteAsync(source);
+        AttachedImageDto original = new("original.png", "image/png", GalleryThumbnailTestImages.CreatePngBytes(16, 16));
+        ImageModelOption model = LocalCodexImageModel.Option;
+        NanoBanana2GenerationParameters parameters = new(model, model.DisplayName, "Original request", "auto", "auto",
+            0d, 2, new AttachedImageDto[] { original });
+        GenerationChatBatch first = await SubmitParallelAsync(context.Chat, parameters);
+        GenerationChatMessageViewModel reply = context.Chat.Messages[^1];
+        context.References.Setup(store => store.LoadAsync(first.UserMessage.Images[0], It.IsAny<CancellationToken>()))
+            .ReturnsAsync(original);
+
+        if (completed)
+        {
+            foreach (GenerationChatRun run in first.Runs)
+            {
+                await WaitForBusyChangeAsync(context.Chat, () => run.Complete(null));
+            }
+        }
+
+        if (reopened)
+        {
+            await context.Chat.OpenCommand.ExecuteAsync(source);
+            await context.Chat.OpenGroupCommand.ExecuteAsync(context.Chat.Messages[^1].Groups.Single());
+        }
+
+        List<GenerationRunRequest> requests = [];
+        Mock<IGenerationRunDispatcher> dispatcher = new();
+        dispatcher.Setup(service => service.EnqueueAsync(It.IsAny<GenerationRunRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<GenerationRunRequest, CancellationToken>((request, _) => requests.Add(request))
+            .Returns(Task.CompletedTask);
+        LocalCodexSettings settings = new();
+        using UniversalNanoBananaPanelViewModel panel = UniversalNanoBananaPanelViewModelTests.CreateViewModel(
+            imageModelOptionCatalog: new ImageModelOptionCatalog(settings), dispatcher: dispatcher.Object, localCodexSettings: settings);
+        panel.ConnectChat(context.Chat);
+        panel.Prompt = draft;
+        panel.GenerationCount = 3;
+        await panel.AttachImagesCommand.ExecuteAsync(new AttachedImageDto[]
+        {
+            new("draft.png", "image/png", GalleryThumbnailTestImages.CreatePngBytes(8, 8))
+        });
+        AttachedImageViewModel draftAttachment = panel.AttachedImages.Single();
+        panel.GenerateCommand.CanExecute(null).Should().BeFalse();
+        panel.AddVariantsCommand.CanExecute(null).Should().BeTrue();
+
+        await panel.AddVariantsCommand.ExecuteAsync(null);
+
+        requests.Should().HaveCount(3).And.AllSatisfy(request =>
+        {
+            request.Request.Prompt.Should().Be("Original request");
+            request.Request.AttachedImages.Should().ContainSingle().Which.Content.Should().Equal(original.Content);
+            request.ChatReferences.Should().Equal(first.UserMessage.Images);
+            (request.StartSnapshot.ChatGroup?.Id).Should().Be(first.Group?.Id);
+        });
+        context.Chat.Messages[^1].Should().BeSameAs(reply);
+        reply.Images.Should().HaveCount(5);
+        panel.Prompt.Should().Be(draft);
+        panel.AttachedImages.Should().ContainSingle().Which.Should().BeSameAs(draftAttachment);
+        panel.GenerateCommand.CanExecute(null).Should().BeFalse();
+        context.Chat.Collapse();
+        panel.AddVariantsCommand.CanExecute(null).Should().BeFalse();
+        await panel.AddVariantsCommand.ExecuteAsync(null);
+        requests.Should().HaveCount(3);
+
+        foreach (GenerationChatRun run in first.Runs.Concat(requests.Select(request => request.ChatRun).OfType<GenerationChatRun>()))
+        {
+            run.Complete(null);
+        }
+    }
+
     private static async Task CompleteVariantAsync(GenerationChatImageViewModel image, Action complete)
     {
         TaskCompletionSource ready = new(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -278,12 +278,17 @@
 
             <Grid Grid.Row="4"
                   Margin="{StaticResource GenerationPanelInnerSpacing}"
-                  ColumnDefinitions="*,Auto">
+                  ColumnDefinitions="*,Auto,Auto">
                 <Button Grid.Column="0"
                         HorizontalAlignment="Stretch"
                         Content="{Binding GenerateButtonText}"
                         Command="{Binding GenerateCommand}" />
                 <Button Grid.Column="1"
+                        Margin="{StaticResource AttachmentListMargin}"
+                        IsVisible="{Binding RequiresChatBranchSelection}"
+                        Content="{i18n:I18n {x:Static resources:GenerationChatLocalizationKeys.AddVariants}}"
+                        Command="{Binding AddVariantsCommand}" />
+                <Button Grid.Column="2"
                         Width="{StaticResource GenerationOptionButtonSize}"
                         Height="{StaticResource GenerationOptionButtonSize}"
                         Margin="{StaticResource AttachmentListMargin}"

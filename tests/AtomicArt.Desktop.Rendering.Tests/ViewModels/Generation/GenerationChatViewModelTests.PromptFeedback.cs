@@ -47,6 +47,8 @@ public sealed partial class GenerationChatViewModelTests
                 Avalonia.Media.IBrush? originalBackground = background.Background;
                 Button generate = view.GetVisualDescendants().OfType<Button>()
                     .Single(button => object.ReferenceEquals(button.Command, panel.GenerateCommand));
+                Button addVariants = view.GetVisualDescendants().OfType<Button>()
+                    .Single(button => object.ReferenceEquals(button.Command, panel.AddVariantsCommand));
 
                 window.KeyTextInput(" next");
                 window.CaptureRenderedFrame()?.Dispose();
@@ -58,10 +60,15 @@ public sealed partial class GenerationChatViewModelTests
                 panel.GenerateCommand.CanExecute(null).Should().BeFalse();
                 generate.IsEffectivelyEnabled.Should().BeFalse();
                 generate.Content.Should().Be("Choose a branch");
+                addVariants.IsEffectivelyVisible.Should().BeTrue();
+                addVariants.IsEffectivelyEnabled.Should().BeTrue();
+                addVariants.Content.Should().Be("More variants");
+                generate.Bounds.Right.Should().BeLessThanOrEqualTo(addVariants.Bounds.Left);
                 await context.Chat.ReturnToSourceCommand.ExecuteAsync(null);
                 await WaitForFramesAsync(window, () => generate.IsEffectivelyEnabled);
                 panel.Prompt.Should().Be("Unsent draft next");
                 generate.Content.Should().Be(panel.Quote.GenerateButtonText);
+                addVariants.IsEffectivelyVisible.Should().BeFalse();
                 panel.SelectedModel = panel.AvailableModels.First(model => !LocalCodexImageModel.Matches(model.Id));
                 string previousLabel = panel.GenerateButtonText;
                 panel.GenerationCount = panel.GenerationCount == 1 ? 2 : 1;

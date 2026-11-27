@@ -32,7 +32,13 @@ public sealed partial class UniversalNanoBananaPanelViewModel
     {
         OnPropertyChanged(nameof(RequiresChatBranchSelection));
         OnPropertyChanged(nameof(GenerateButtonText));
+        NotifyGenerationCommandsCanExecuteChanged();
+    }
+
+    private void NotifyGenerationCommandsCanExecuteChanged()
+    {
         GenerateCommand.NotifyCanExecuteChanged();
+        AddVariantsCommand.NotifyCanExecuteChanged();
     }
 
     private void OnQuoteChanged(object? sender, PropertyChangedEventArgs e)

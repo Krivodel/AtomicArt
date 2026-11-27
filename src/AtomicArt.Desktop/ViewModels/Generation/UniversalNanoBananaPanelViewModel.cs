@@ -112,13 +112,14 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         FindParameter(GenerationParameterNames.Quality);
     private GenerationModelParameterMetadataDto? ComplexityParameter =>
         FindParameter(GenerationParameterNames.Complexity);
-    private bool CanRunCommand => HasLoadedCatalog
-                                  && !IsAttaching
-                                  && (!IsLocalCodexSelected || _codexModelLoad is null)
-                                  && Chat?.IsLoading != true
-                                  && !RequiresChatBranchSelection
-                                  && (Chat?.IsExpanded != true || Chat.CanSubmit)
-                                  && !string.IsNullOrWhiteSpace(Prompt);
+    private bool CanSubmitGeneration => HasLoadedCatalog
+        && !IsAttaching
+        && (!IsLocalCodexSelected || _codexModelLoad is null)
+        && Chat?.IsLoading != true
+        && (Chat?.IsExpanded != true || Chat.CanSubmit);
+    private bool CanRunCommand => CanSubmitGeneration && !RequiresChatBranchSelection
+        && !string.IsNullOrWhiteSpace(Prompt);
+    private bool CanAddVariants => CanSubmitGeneration && RequiresChatBranchSelection && Chat?.RepeatPrompt is not null;
     private bool CanLoadModelCatalog => !IsLoading && !IsCatalogLoading && !_imageModelOptionCatalog.IsLoaded;
     private bool CanPickImage => !IsLoading
                                  && HasLoadedCatalog
@@ -749,16 +750,30 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     }
 
     [RelayCommand(CanExecute = nameof(CanRunCommand), AllowConcurrentExecutions = true)]
-    private async Task GenerateAsync(CancellationToken ct)
+    private Task GenerateAsync(CancellationToken ct)
     {
         if (RequiresChatBranchSelection)
         {
-            return;
+            return Task.CompletedTask;
         }
 
+        return RunGenerationAsync(ct);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanAddVariants))]
+    private Task AddVariantsAsync(CancellationToken ct)
+    {
+        return CanAddVariants ? RunGenerationAsync(ct) : Task.CompletedTask;
+    }
+
+    private async Task RunGenerationAsync(CancellationToken ct)
+    {
         try
         {
             ClearErrorMessage();
+            GenerationChatViewModel? chat = Chat;
+            long? conversationVersion = chat?.ConversationVersion;
+            bool addingVariants = RequiresChatBranchSelection;
             NanoBanana2GenerationParameters parameters = CreateGenerationParameters();
             await SavePanelStateAsync(nameof(GenerateAsync), ct);
             ImageModelOption selectedModel = parameters.SelectedModel;
@@ -793,13 +808,18 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
                 providerCredential = storedCredential.Trim();
             }
 
-            if (Chat is { IsExpanded: true } && Chat.IsForModel(selectedModel.Id))
+            if (addingVariants && (!ReferenceEquals(Chat, chat) || chat?.ConversationVersion != conversationVersion
+                || !RequiresChatBranchSelection))
             {
-                long conversationVersion = Chat.ConversationVersion;
-                await Chat.SubmitAsync(parameters,
+                return;
+            }
+
+            if (chat is { IsExpanded: true } && chat.IsForModel(selectedModel.Id))
+            {
+                await chat.SubmitAsync(parameters,
                     (chatParameters, token) => _generationRunner.RunAsync(chatParameters, providerCredential, token), ct);
 
-                if (Chat.ConversationVersion == conversationVersion && !RequiresChatBranchSelection
+                if (!addingVariants && chat.ConversationVersion == conversationVersion && !RequiresChatBranchSelection
                     && string.Equals(Prompt, parameters.Prompt, StringComparison.Ordinal))
                 {
                     Prompt = string.Empty;
@@ -1541,7 +1561,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     {
         OnPropertyChanged(nameof(HasLoadedCatalog));
         LoadModelCatalogCommand.NotifyCanExecuteChanged();
-        GenerateCommand.NotifyCanExecuteChanged();
+        NotifyGenerationCommandsCanExecuteChanged();
         PickImageCommand.NotifyCanExecuteChanged();
         AttachImagesCommand.NotifyCanExecuteChanged();
         AttachImageInputsCommand.NotifyCanExecuteChanged();
@@ -1689,7 +1709,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         PickImageCommand.NotifyCanExecuteChanged();
         AttachImagesCommand.NotifyCanExecuteChanged();
         AttachImageInputsCommand.NotifyCanExecuteChanged();
-        GenerateCommand.NotifyCanExecuteChanged();
+        NotifyGenerationCommandsCanExecuteChanged();
         RefreshPricePreviewUnlessSuppressed();
         SchedulePanelStateSave(nameof(OnSelectedModelChanged));
     }
@@ -1760,7 +1780,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
     partial void OnPromptChanged(string value)
     {
         RefreshPricePreviewUnlessSuppressed();
-        GenerateCommand.NotifyCanExecuteChanged();
+        NotifyGenerationCommandsCanExecuteChanged();
         SchedulePromptStateSave();
     }
 
@@ -1769,7 +1789,7 @@ public sealed partial class UniversalNanoBananaPanelViewModel :
         _ = sender;
 
         OnPropertyChanged(nameof(IsAttaching));
-        GenerateCommand.NotifyCanExecuteChanged();
+        NotifyGenerationCommandsCanExecuteChanged();
         RefreshAttachmentState();
 
         if (e.Kind is AttachmentStateChangeKind.Completed or AttachmentStateChangeKind.Removed)
