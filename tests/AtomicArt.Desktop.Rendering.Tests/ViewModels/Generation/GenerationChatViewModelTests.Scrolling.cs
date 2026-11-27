@@ -21,7 +21,7 @@ public sealed partial class GenerationChatViewModelTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task ChatView_WithHistoryFade_MasksOnlyTheClippedVerticalEdges(bool overflowing)
+    public async Task ChatView_WithHistoryFade_FillsTheSurfaceAndMasksOnlyTheClippedBottomEdge(bool overflowing)
     {
         await DesktopControlTestBase.DispatchAsync(typeof(GenerationChatViewModelTests), async () =>
         {
@@ -41,7 +41,15 @@ public sealed partial class GenerationChatViewModelTests
                 ScrollContentPresenter presenter = scroll.GetVisualDescendants().OfType<ScrollContentPresenter>().First();
                 Border header = view.GetVisualDescendants().OfType<Border>()
                     .Single(border => border.Classes.Contains("generation-chat-header"));
+                Border chrome = view.GetVisualDescendants().OfType<Border>()
+                    .Single(border => border.Classes.Contains("generation-chat-history"));
                 header.OpacityMask.Should().BeNull();
+                (scroll.TranslatePoint(default, chrome) ?? throw new InvalidOperationException("The chat scroll position is missing."))
+                    .Y.Should().BeApproximately(0d, 0.1d);
+                scroll.Bounds.Height.Should().BeApproximately(chrome.Bounds.Height, 0.1d);
+
+                scroll.Offset = Vector.Zero;
+                window.CaptureRenderedFrame()?.Dispose();
 
                 if (!overflowing)
                 {
@@ -53,9 +61,6 @@ public sealed partial class GenerationChatViewModelTests
                 mask.StartPoint.Should().Be(new RelativePoint(0d, 0d, RelativeUnit.Relative));
                 mask.EndPoint.Should().Be(new RelativePoint(0d, 1d, RelativeUnit.Relative));
 
-                scroll.Offset = Vector.Zero;
-                window.CaptureRenderedFrame()?.Dispose();
-
                 mask.GradientStops[0].Color.Should().Be(Colors.White);
                 mask.GradientStops[3].Color.Should().Be(overflowing ? Colors.Transparent : Colors.White);
 
@@ -64,16 +69,21 @@ public sealed partial class GenerationChatViewModelTests
                     scroll.Offset = new Vector(0d, scroll.ScrollBarMaximum.Y / 2d);
                     window.CaptureRenderedFrame()?.Dispose();
 
-                    mask.GradientStops[0].Color.Should().Be(Colors.Transparent);
+                    mask.GradientStops[0].Color.Should().Be(Colors.White);
                     mask.GradientStops[3].Color.Should().Be(Colors.Transparent);
-                    mask.GradientStops[1].Offset.Should().BeGreaterThan(0d);
+                    mask.GradientStops[1].Offset.Should().Be(0d);
                     mask.GradientStops[2].Offset.Should().BeLessThan(1d);
+                    presenter.OpacityMask.Should().BeSameAs(mask);
 
                     scroll.ScrollToEnd();
                     window.CaptureRenderedFrame()?.Dispose();
 
-                    mask.GradientStops[0].Color.Should().Be(Colors.Transparent);
+                    mask.GradientStops[0].Color.Should().Be(Colors.White);
                     mask.GradientStops[3].Color.Should().Be(Colors.White);
+                    presenter.OpacityMask.Should().BeNull();
+
+                    scroll.Offset = Vector.Zero;
+                    window.CaptureRenderedFrame()?.Dispose();
                 }
 
                 presenter.OpacityMask.Should().BeSameAs(mask);

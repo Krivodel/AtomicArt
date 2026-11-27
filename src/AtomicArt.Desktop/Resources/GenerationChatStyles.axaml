@@ -11,12 +11,12 @@
         <Thickness x:Key="GenerationChatHeaderPadding">8</Thickness>
         <Thickness x:Key="GenerationChatReturnPadding">12,4</Thickness>
         <Thickness x:Key="GenerationChatContentMargin">12,5,12,8</Thickness>
-        <Thickness x:Key="GenerationChatScrollInsets">0,20</Thickness>
+        <Thickness x:Key="GenerationChatScrollInsets">0,0,0,20</Thickness>
         <Thickness x:Key="GenerationChatBubblePadding">10,8</Thickness>
         <Thickness x:Key="GenerationChatReferencesPadding">10,0,10,8</Thickness>
         <Thickness x:Key="GenerationChatEditorActionsMargin">0,6,0,0</Thickness>
         <Thickness x:Key="GenerationChatDateMargin">0,8,0,12</Thickness>
-        <Thickness x:Key="GenerationChatHistoryMargin">0,12,0,8</Thickness>
+        <Thickness x:Key="GenerationChatHistoryMargin">0,0,0,8</Thickness>
         <CornerRadius x:Key="GenerationChatAssistantCorners">6,12,12,12</CornerRadius>
         <CornerRadius x:Key="GenerationChatUserCorners">12,6,12,12</CornerRadius>
         <SolidColorBrush x:Key="GenerationChatUserBackgroundBrush"
@@ -29,7 +29,7 @@
         <Setter Property="BoxShadow"
                 Value="{DynamicResource FloatingSurfaceShadow}" />
         <Setter Property="CornerRadius"
-                Value="{StaticResource ShellCornerRadius}" />
+                Value="{StaticResource GenerationCardInfoCornerRadius}" />
         <Setter Property="Margin"
                 Value="{StaticResource GenerationChatHistoryMargin}" />
         <Setter Property="ClipToBounds"
@@ -62,12 +62,6 @@
                 Value="True" />
         <Setter Property="behaviors:ScrollFadeMaskBehavior.Insets"
                 Value="{StaticResource GenerationChatScrollInsets}" />
-    </Style>
-    <Style Selector="Border.generation-chat-header">
-        <Setter Property="Background"
-                Value="{StaticResource MetadataHeaderBrush}" />
-        <Setter Property="Padding"
-                Value="{StaticResource GenerationChatHeaderPadding}" />
     </Style>
     <Style Selector="Border.generation-chat-bubble">
         <Setter Property="Background"

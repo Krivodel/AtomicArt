@@ -47,6 +47,13 @@ public sealed partial class GenerationChatViewModelTests
                     .Single(button => object.ReferenceEquals(button.Command, context.Chat.ShowInGalleryCommand));
                 Button branches = view.GetVisualDescendants().OfType<Button>()
                     .Single(button => object.ReferenceEquals(button.Command, context.Chat.OpenBranchMapCommand));
+                Button close = view.GetVisualDescendants().OfType<Button>()
+                    .Single(button => object.ReferenceEquals(button.Command, context.Chat.CollapseCommand));
+                Border chrome = view.GetVisualDescendants().OfType<Border>()
+                    .Single(border => border.Classes.Contains("generation-chat-history"));
+                Point closeOrigin = close.TranslatePoint(default, chrome)
+                    ?? throw new InvalidOperationException("The close button has no position.");
+                closeOrigin.Y.Should().BeApproximately(chrome.Bounds.Width - closeOrigin.X - close.Bounds.Width, 0.1d);
                 PathIcon icon = reveal.Content.Should().BeOfType<PathIcon>().Subject;
                 icon.Data.Should().NotBeNull();
                 icon.Bounds.Width.Should().BeGreaterThan(0d);
@@ -79,6 +86,76 @@ public sealed partial class GenerationChatViewModelTests
                         run.Complete(null);
                     }
                 }
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task ChatToolbar_WhenHovered_BlocksTheContentBehindItsButtonsAndEdges(bool topEdge, bool rightEdge)
+    {
+        await DispatchAsync(typeof(GenerationChatViewModelTests), async () =>
+        {
+            using ChatContext context = new();
+            GenerationChatMessage[] messages = Enumerable.Range(0, 40)
+                .Select(index => new GenerationChatMessage(false, $"Message {index}",
+                    new DateTime(2026, 11, 25), Array.Empty<GenerationReference>())).ToArray();
+            GenerationItemViewModel source = await context.RestoreSavedChatAsync(new GenerationChatHistory(messages, includesCardTurn: true));
+            await context.Chat.OpenCommand.ExecuteAsync(source);
+            GenerationChatView view = new() { DataContext = context.Chat };
+            Window window = Show(view, 560d, 360d);
+
+            try
+            {
+                await WaitForFramesAsync(window, () => view.IsPresented);
+                Button close = view.GetVisualDescendants().OfType<Button>()
+                    .Single(button => object.ReferenceEquals(button.Command, context.Chat.CollapseCommand));
+                Border toolbar = close.GetVisualAncestors().OfType<Border>().First();
+                Border chrome = view.GetVisualDescendants().OfType<Border>()
+                    .Single(border => border.Classes.Contains("generation-chat-history"));
+                Point toolbarOrigin = toolbar.TranslatePoint(default, chrome)
+                    ?? throw new InvalidOperationException("The toolbar has no chat position.");
+                toolbarOrigin.Y.Should().BeApproximately(0d, 0.1d);
+                (toolbarOrigin.X + toolbar.Bounds.Width).Should().BeApproximately(chrome.Bounds.Width, 0.1d);
+                ScrollViewer scroll = view.GetVisualDescendants().OfType<ScrollViewer>().First();
+                Border bubble = view.GetVisualDescendants().OfType<Border>()
+                    .First(border => border.Classes.Contains("generation-chat-bubble"));
+                Point buttonInset = new(1d, 1d);
+                Point toolbarPoint = rightEdge
+                    ? new Point(toolbar.Bounds.Width - buttonInset.X, toolbar.Bounds.Height / 2d)
+                    : topEdge ? new Point(toolbar.Bounds.Width / 2d, buttonInset.Y)
+                    : close.TranslatePoint(buttonInset, toolbar) ?? throw new InvalidOperationException("The button has no toolbar position.");
+                Point buttonPoint = toolbar.TranslatePoint(toolbarPoint, scroll)
+                    ?? throw new InvalidOperationException("The close button has no scroll position.");
+                Point bubbleOrigin = bubble.TranslatePoint(default, scroll)
+                    ?? throw new InvalidOperationException("The message has no scroll position.");
+                scroll.Offset = new Vector(0d, scroll.Offset.Y + bubbleOrigin.Y - buttonPoint.Y + (bubble.Bounds.Height / 2d));
+                window.CaptureRenderedFrame()?.Dispose();
+                Point pointer = toolbar.TranslatePoint(toolbarPoint, window)
+                    ?? throw new InvalidOperationException("The toolbar has no window position.");
+                toolbar.IsVisible = false;
+                window.CaptureRenderedFrame()?.Dispose();
+                window.MouseMove(pointer);
+
+                if (!rightEdge)
+                {
+                    bubble.IsPointerOver.Should().BeTrue();
+                }
+
+                toolbar.IsVisible = true;
+                window.CaptureRenderedFrame()?.Dispose();
+                Point protectedPoint = pointer + new Vector(rightEdge ? -buttonInset.X : buttonInset.X, 0d);
+                window.MouseMove(protectedPoint);
+
+                bubble.IsPointerOver.Should().BeFalse();
+                Visual hit = Assert.IsAssignableFrom<Visual>(window.InputHitTest(protectedPoint));
+                hit.GetSelfAndVisualAncestors().Should().Contain(toolbar);
+            }
+            finally
+            {
+                window.Close();
             }
         });
     }
