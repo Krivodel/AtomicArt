@@ -16,6 +16,38 @@ namespace AtomicArt.Desktop.Rendering.Tests.Views.Notifications;
 
 public sealed partial class GenerationNotificationTests
 {
+    [Theory]
+    [InlineData("")]
+    [InlineData("Короткий промпт")]
+    [InlineData("A long prompt that wraps across several lines and must not move the notification outside the working area of the screen.")]
+    public async Task ShowAsync_WithDifferentPromptLengths_KeepsTheWholeCardAndCloseButtonOnScreen(string prompt)
+    {
+        await DispatchAsync(typeof(GenerationNotificationTests), async () =>
+        {
+            await using NotificationPresentationTestContext context = new();
+            _ = context.StartAsync(prompt);
+            await context.WaitForVisibleAsync(1);
+            await context.CompleteAnimationsAsync();
+            GenerationNotificationWindow window = context.Windows.Single();
+            Border card = GetCard(window);
+            GenerationNotificationViewModel model = Assert.IsType<GenerationNotificationViewModel>(window.DataContext);
+            Button close = card.GetVisualDescendants().OfType<Button>().Single(button => button.Command == model.CloseCommand);
+            Avalonia.Platform.Screen screen = window.Screens.Primary
+                ?? throw new InvalidOperationException("The notification screen is missing.");
+            PixelPoint topLeft = card.PointToScreen(default);
+            PixelPoint bottomRight = card.PointToScreen(new Point(card.Bounds.Width, card.Bounds.Height));
+            PixelPoint closeRight = close.PointToScreen(new Point(close.Bounds.Width, close.Bounds.Height / 2d));
+
+            window.CardSize.Width.Should().BeApproximately(card.Bounds.Width, 1d);
+            topLeft.X.Should().BeGreaterThanOrEqualTo(screen.WorkingArea.X);
+            topLeft.Y.Should().BeGreaterThanOrEqualTo(screen.WorkingArea.Y);
+            bottomRight.X.Should().BeLessThanOrEqualTo(screen.WorkingArea.Right);
+            bottomRight.Y.Should().BeLessThanOrEqualTo(screen.WorkingArea.Bottom);
+            closeRight.X.Should().BeLessThanOrEqualTo(bottomRight.X);
+            close.IsEffectivelyVisible.Should().BeTrue();
+        });
+    }
+
     [Fact]
     public async Task ShowAsync_WithTextReply_AnimatesWithoutAnImageOrEmptySpace()
     {

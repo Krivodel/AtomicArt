@@ -15,7 +15,7 @@ public partial class GenerationNotificationWindow : Window
     internal bool IsHovered => NotificationCard.IsPointerOver;
     internal bool IsDismissalInProgress => _closingAnimation is not null;
     internal bool IsNotificationClosed => _closed;
-    internal Size CardSize => NotificationCard.DesiredSize.Deflate(NotificationCard.Margin);
+    internal Size CardSize => new Size(Width, NotificationCard.DesiredSize.Height).Deflate(NotificationCard.Margin);
     internal Thickness CardMargin => NotificationCard.Margin;
 
     internal event EventHandler? NotificationClicked;
